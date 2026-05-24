@@ -59,10 +59,23 @@ npm run build
 | Research mechanic design and rollout status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
 | Admin Test Lab design | `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` |
 | Admin Test Lab implementation plan | `docs/superpowers/plans/2026-05-21-admin-test-lab.md` |
-| Development prompt guidance | `docs/AIpromt_newpromt.md` |
-| Documentation maintenance guidance | `docs/AIpromt_docs.md` |
-| Cleanup/refactor guidance | `docs/AIpromt_codecleaning.md` |
+| Development prompt guidance | `docs/AIdocs/AIpromt_newpromt.md` |
+| Documentation maintenance guidance | `docs/AIdocs/AIpromt_docs.md` |
+| Cleanup/refactor guidance | `docs/AIdocs/AIpromt_codecleaning.md` |
 | Version history | `docs/versionlog.md` |
+
+## Version Log Workflow
+
+Use `docs/versionlog.md` as the canonical running change history for meaningful releases and merged feature trains.
+
+- Keep entries in reverse chronological order (newest first).
+- Every entry should use the same structure:
+	- Header with `Version`, `Date`, `Commit(s)`, and `Stats`
+	- `Summary` (intent and outcome)
+	- `Changes` (file-level impact with `NEW FILE`/`REMOVED` markers when relevant)
+	- `Notes` (migration, balancing, compatibility, or follow-up context)
+- Group related commits into one entry when they represent one logical release slice.
+- Archive older entries in `docs/versionlog_legacy.md` when `docs/versionlog.md` becomes too large.
 
 ## Research Status Snapshot
 
@@ -92,7 +105,7 @@ The active test UI now lives in the Admin Dashboard `Test Systems` tab and is de
 
 This README is intentionally a short entry point. Detailed implementation status belongs in:
 
-- `docs/AIDescriptions_coregame.md`
+- `docs/AIdocs/AIDescriptions_coregame.md`
 - `docs/PROJECT_INFO.md`
 - `CONTEXT.md`
 - `docs/WineSystem_VariableRelationshipMap.md`

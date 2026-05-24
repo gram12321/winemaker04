@@ -483,13 +483,12 @@ export interface WineContract {
 export type PrestigeEventType =
   | 'company_finance'
   | 'company_story'
+  | 'admin_cheat'
   | 'sale'
-  | 'contract'
   | 'penalty'
   | 'cellar_collection'
   | 'achievement'
   | 'vineyard_sale'
-  | 'vineyard_base'
   | 'vineyard_achievement'
   | 'vineyard_age'
   | 'vineyard_land'
@@ -550,14 +549,18 @@ export interface PrestigePayloadCompanyStory extends PrestigePayloadBase {
   family?: string;
 }
 
+export interface PrestigePayloadAdminCheat extends PrestigePayloadBase {
+  reason?: string;
+  addedAmount?: number;
+}
+
 export type PrestigeEventPayload =
   | { type: 'company_finance'; payload: PrestigePayloadCompanyFinance }
   | { type: 'company_story'; payload: PrestigePayloadCompanyStory }
+  | { type: 'admin_cheat'; payload: PrestigePayloadAdminCheat }
   | { type: 'sale'; payload: { customerName: string; wineName: string; saleValue: number } }
-  | { type: 'contract'; payload: Record<string, unknown> }
   | { type: 'penalty'; payload: Record<string, unknown> }
   | { type: 'vineyard_sale'; payload: PrestigePayloadVineyardSale }
-  | { type: 'vineyard_base'; payload: PrestigePayloadVineyardCommon }
   | { type: 'vineyard_achievement'; payload: PrestigePayloadVineyardAchievement }
   | { type: 'vineyard_age'; payload: PrestigePayloadVineyardAge }
   | { type: 'vineyard_land'; payload: PrestigePayloadVineyardLand };

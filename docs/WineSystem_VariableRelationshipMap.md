@@ -61,6 +61,8 @@ flowchart LR
 - Current cellar values may continue to evolve after bottling; historical snapshots must not drift.
 - Research unlocks and permanent effects are progression modifiers that may alter upstream vineyard/process inputs (for example health decay), but should not bypass structure and taste computation layers.
 - `prestige_events` is the prestige source ledger. Permanent rows use `decay_rate = 0`; one-off rows use `0 < decay_rate < 1` and fade through weekly decay.
+- Prestige event balance depends on both event size and lifetime. The active ledger now spans sub-1 events, ordinary `+1` to `+15` events, medium penalties, and tiered achievements up to `+1000`; it should not be treated as a 0 to 1 scale.
+- Prestige impact also depends on frequency and stackability. A small event on every sale can outweigh a larger one-off research reward, while chained achievement unlocks can create long-lived prestige jumps.
 - Prestige event creators should write through `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit type, source id, decay rate, and payload metadata.
 
 ### 5.1 Progression Overlay Invariants
@@ -191,7 +193,10 @@ flowchart LR
 
   PE --> PERM["Permanent rows\ndecay_rate = 0"]
   PE --> DECAY["Decaying rows\n0 < decay_rate < 1"]
+  PE --> SIZE["Event size lens\nsub-1, 1-15,\nmedium penalties,\n50-1000 achievements"]
   DECAY --> WEEKLY["Weekly decay\namount_base *= decay_rate"]
+  DECAY --> LIFE["Lifetime lens\nhalf-life and\n1 percent remaining"]
+  PE --> STACK["Frequency and stacking lens\nper sale, per vineyard,\none-off, chain unlock"]
   WEEKLY --> PE
 
   PE --> AGG["calculateCurrentPrestige"]

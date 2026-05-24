@@ -176,7 +176,7 @@ export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
     // Add prestige event using the proper service layer
     await insertPrestigeEvent({
       id: uuidv4(),
-      type: 'admin_cheat' as any,
+      type: 'admin_cheat',
       amount_base: parsedAmount,
       created_game_week: currentWeek,
       decay_rate: 0, // Admin prestige doesn't decay

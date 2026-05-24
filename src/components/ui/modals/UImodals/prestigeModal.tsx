@@ -111,17 +111,15 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const eventConfig = {
     company_finance: { icon: DollarSign, label: 'Company Finance', color: 'bg-blue-100 text-blue-800' },
     company_story: { icon: Star, label: 'Company Story', color: 'bg-indigo-100 text-indigo-800' },
-    vineyard: { icon: Grape, label: 'Vineyard (Legacy)', color: 'bg-green-100 text-green-800' },
+    admin_cheat: { icon: Star, label: 'Admin Prestige', color: 'bg-slate-100 text-slate-800' },
     sale: { icon: TrendingUp, label: 'Company Sales', color: 'bg-emerald-100 text-emerald-800' },
     cellar_collection: { icon: TrendingUp, label: 'Cellar Collection', color: 'bg-amber-100 text-amber-800' },
     achievement: { icon: Star, label: 'Achievements', color: 'bg-yellow-100 text-yellow-800' },
     vineyard_sale: { icon: Grape, label: 'Vineyard Sales', color: 'bg-green-100 text-green-800' },
-    vineyard_base: { icon: Grape, label: 'Vineyard Base', color: 'bg-blue-100 text-blue-800' },
     vineyard_achievement: { icon: Star, label: 'Vineyard Achievements', color: 'bg-yellow-100 text-yellow-800' },
     vineyard_age: { icon: Star, label: 'Vine Age', color: 'bg-orange-100 text-orange-800' },
     vineyard_land: { icon: DollarSign, label: 'Land Value', color: 'bg-green-100 text-green-800' },
     wine_feature: { icon: Star, label: 'Wine Features', color: 'bg-purple-100 text-purple-800' },
-    contract: { icon: DollarSign, label: 'Contracts', color: 'bg-purple-100 text-purple-800' },
     penalty: { icon: Star, label: 'Penalties', color: 'bg-red-100 text-red-800' },
   };
 

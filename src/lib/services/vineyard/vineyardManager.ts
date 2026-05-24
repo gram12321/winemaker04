@@ -465,6 +465,12 @@ export async function updateVineyardAges(): Promise<void> {
         };
         
         await saveVineyard(updatedVineyard);
+        try {
+          const { updateBaseVineyardPrestigeEvent } = await import('../prestige/prestigeService');
+          await updateBaseVineyardPrestigeEvent(vineyard.id);
+        } catch (error) {
+          console.error('Failed to update prestige after annual vine aging:', error);
+        }
       } else {
         // For unplanted vineyards, still increment overgrowth for all task types
         const currentOvergrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };

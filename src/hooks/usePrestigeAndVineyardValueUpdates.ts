@@ -1,7 +1,7 @@
 // Unified hook to handle all prestige updates (company and vineyard)
 import { useEffect, useRef } from 'react';
 import { getGameState, getCurrentCompany } from '../lib/services/core/gameState';
-import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
+import { calculateCompanyValuePrestige, updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
 import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
 import { getMaxLandValue } from '@/lib/services/wine/winescore/landValueModifierCalculation';
@@ -57,14 +57,15 @@ export function usePrestigeUpdates() {
         } else if (currentCompanyValue !== lastCompanyValueRef.current) {
 
           // Update company value prestige with logarithmic scaling
-          const companyValuePrestige = Math.log(currentCompanyValue / getMaxLandValue() + 1) * 2;
+          const maxLandValue = getMaxLandValue();
+          const companyValuePrestige = calculateCompanyValuePrestige(currentCompanyValue, maxLandValue);
           await updateBasePrestigeEvent(
             'company_finance',
             'company_net_worth',
             companyValuePrestige,
             {
               companyNetWorth: currentCompanyValue,
-              maxLandValue: getMaxLandValue(),
+              maxLandValue,
               prestigeBase01: companyValuePrestige,
             }
           );

@@ -180,6 +180,18 @@ describe('vineyard lifecycle services', () => {
     expect(updatedHealth).toBeGreaterThan(0.86);
   }, 15000);
 
+  it('refreshes base vineyard prestige when vine age advances at the new year', async () => {
+    const { updateVineyardAges } = await import('@/lib/services/vineyard/vineyardManager');
+
+    await updateVineyardAges();
+
+    expect(mocks.saveVineyard).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'vineyard-1',
+      vineAge: 13
+    }));
+    expect(mocks.updateBaseVineyardPrestigeEvent).toHaveBeenCalledWith('vineyard-1');
+  }, 15000);
+
   it('creates partial harvest batches as activity work progresses and records harvested-so-far state', async () => {
     const harvestActivity = activity({ totalWork: 100, completedWork: 0 });
     mocks.setActivities([harvestActivity]);

@@ -29,13 +29,26 @@ type VineyardPrestigeFactors = {
   densityModifier: number;
 };
 
+export function calculateCompanyValuePrestige(companyValue: number, maxLandValue: number = getMaxLandValue()): number {
+  return Math.log((companyValue || 0) / Math.max(1, maxLandValue) + 1);
+}
+
+function isVineyardPrestigeEvent(event: PrestigeEvent): boolean {
+  if (event.type === 'wine_feature') {
+    const metadata: any = event.metadata ?? {};
+    return Boolean(event.sourceId) || metadata.level === 'vineyard';
+  }
+
+  return ['vineyard_sale', 'vineyard_achievement', 'vineyard_age', 'vineyard_land'].includes(event.type);
+}
+
 export async function initializeBasePrestigeEvents(): Promise<void> {
   const maxLandValue = getMaxLandValue();
 
   // Calculate company value using centralized function
   const companyValue = await calculateCompanyValue();
 
-  const companyValuePrestige = Math.log((companyValue || 0) / maxLandValue + 1);
+  const companyValuePrestige = calculateCompanyValuePrestige(companyValue, maxLandValue);
 
   await updateBasePrestigeEvent(
     'company_finance',
@@ -225,10 +238,9 @@ export async function calculateCurrentPrestige(): Promise<{
     return { totalPrestige: 1, companyPrestige: 1, vineyardPrestige: 0, eventBreakdown: [], vineyards: [] };
   }
 
-  const vineyardEventTypes = ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'wine_feature'];
   const eventBreakdown = events.map(event => ({
     ...event,
-    category: vineyardEventTypes.includes(event.type) ? 'vineyard' as const : 'company' as const
+    category: isVineyardPrestigeEvent(event) ? 'vineyard' as const : 'company' as const
   }));
 
   const companyPrestige = eventBreakdown
@@ -285,7 +297,7 @@ export async function calculateCurrentPrestige(): Promise<{
 export async function calculateVineyardPrestigeFromEvents(vineyardId: string): Promise<number> {
   try {
     const events = await listPrestigeEvents();
-    const vineyardEventTypes = ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'];
+    const vineyardEventTypes = ['vineyard_sale', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'wine_feature'];
     const vineyardEvents = events.filter(event =>
       event.source_id === vineyardId && vineyardEventTypes.includes(event.type)
     );
@@ -313,7 +325,7 @@ export async function getBaseVineyardPrestige(vineyardId: string): Promise<numbe
 }
 
 export async function updateBasePrestigeEvent(
-  type: 'company_finance' | 'vineyard' | 'vineyard_base' | 'vineyard_age' | 'vineyard_land' | 'vineyard_region' | 'cellar_collection',
+  type: 'company_finance' | 'vineyard_age' | 'vineyard_land' | 'cellar_collection',
   sourceId: string,
   newAmount: number,
   metadata?: PrestigeEvent['metadata']
@@ -334,7 +346,7 @@ export async function updateCompanyValuePrestige(_money: number): Promise<void> 
     // Calculate company value using centralized function
     const companyValue = await calculateCompanyValue();
 
-    const companyValuePrestige = Math.log((companyValue || 0) / maxLandValue + 1);
+    const companyValuePrestige = calculateCompanyValuePrestige(companyValue, maxLandValue);
     await updateBasePrestigeEvent(
       'company_finance',
       'company_net_worth',
@@ -616,7 +628,7 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
 }> {
   try {
     const events = await listPrestigeEvents();
-    const vineyardEventTypes = ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'];
+    const vineyardEventTypes = ['vineyard_sale', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'wine_feature'];
     const vineyardEvents = events.filter(event =>
       event.source_id !== null && vineyardEventTypes.includes(event.type)
     );
@@ -1035,7 +1047,16 @@ export function getEventDisplayData(event: PrestigeEvent): {
   }
 
   // Handle other event types with fallback display
-  if (['contract', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement'].includes(event.type)) {
+  if (event.type === 'admin_cheat' && event.metadata) {
+    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    return {
+      title: metadata.reason || 'Admin Prestige Grant',
+      titleBase: 'Admin Prestige',
+      amountText: `${event.amount >= 0 ? '+' : ''}${event.amount.toFixed(2)} prestige`,
+    };
+  }
+
+  if (['vineyard_sale', 'vineyard_achievement'].includes(event.type)) {
     return {
       title: event.description || event.type,
       titleBase: event.type,
@@ -1143,7 +1164,7 @@ export async function addFeaturePrestigeEvent(
     const amount = calculateAmount(prestigeConfig.company, true);
     await insertPrestigeEvent({
       id: uuidv4(),
-      type: 'wine_feature' as any,
+      type: 'wine_feature',
       amount_base: amount,
       created_game_week: currentWeek,
       decay_rate: prestigeConfig.company.decayRate,
@@ -1173,7 +1194,7 @@ export async function addFeaturePrestigeEvent(
     const amount = calculateAmount(prestigeConfig.vineyard, false);
     await insertPrestigeEvent({
       id: uuidv4(),
-      type: 'wine_feature' as any,
+      type: 'wine_feature',
       amount_base: amount,
       created_game_week: currentWeek,
       decay_rate: prestigeConfig.vineyard.decayRate,

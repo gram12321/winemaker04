@@ -1,1001 +1,1090 @@
-# Guideline for versionlog update for AI-Agents
+# Version Log Guide For AI Agents
 
-## 🎯 **Core Principles**
-- **ALWAYS use MCP GitHub tools** (`mcp_github2_get_commit`, `mcp_github2_list_commits`) - NEVER use terminal git commands
-- **ALWAYS retrieve actual commit data** - Don't guess or assume what changed
-- **Verify existing entries** against actual commits before adding new ones
-- ** Do not assume any changes from commit messages alone** - Always check the actual file changes and stats. New line-by-line code for verification of changes.
+This file tracks meaningful project changes for **winemaker04**.
 
-## 📋 **Entry Requirements**
-1. **Use `mcp_github2_get_commit` with `include_diff: true`** to get exact file changes and stats
-2. **Include specific details:**
-   - Mark **NEW FILE:** with exact line counts (e.g., "NEW FILE: component.tsx (372 lines)")
-   - Mark **REMOVED:** files that were deleted
-   - Include file change stats (e.g., "42 additions, 15 deletions")
-   - Note database schema changes explicitly
-   
-3. **Grouping commits:**
-   - Related commits (same feature) can be grouped into one version entry
-   - Each entry should cover 1-4 related commits if similiar
-   - Large refactors or feature sets may need separate entries
+## Goal
+Write clear, factual release notes that explain what changed, where, and why it matters.
 
-## 📂 **Repository Info**
+## Core Principles
+- **ALWAYS use MCP GitHub tools** (`mcp_github_get_commit`, `mcp_github_list_commits`) - do not rely on terminal git commands for log evidence.
+- **ALWAYS retrieve actual commit data** before writing.
+- **Never infer mechanics from commit message text alone**.
+- **Verify behavior claims against actual changed files**.
+
+## Scope Rules
+- Log meaningful changes only: features, balancing/mechanics changes, architecture changes, major bug fixes, test infrastructure changes, and substantial docs restructures.
+- Skip trivial noise unless bundled inside a meaningful commit.
+- Group related commits into one entry when they are one logical change set.
+
+## Evidence Rules
+- Use commit-level evidence with `mcp_github_get_commit` and `include_diff: true`.
+- For grouped entries, review each commit included in the group.
+- Do not claim player-visible impact unless it is visible in the reviewed diffs.
+- Always list exact commit hash(es), date range, and stats for grouped entries.
+
+## Entry Format (Required)
+Use this structure for every new entry:
+
+```md
+## Version <tag> - <short title>
+**Date:** YYYY-MM-DD or YYYY-MM-DD to YYYY-MM-DD | **Commit(s):** <hash or comma-separated hashes> | **Stats:** <summary>
+
+### Summary
+- 1-3 bullets describing intent and outcome.
+
+### Changes
+- `path/to/file.ts` (+A/-D) - what changed and why it matters.
+- `path/to/file.tsx` (+A/-D) - mechanic or architecture impact.
+- **NEW FILE:** `path/to/newFile.ts` (<line count> lines) - purpose.
+- **REMOVED:** `path/to/oldFile.ts` - why removed/replaced.
+
+### Notes
+- Migration, compatibility impact, balancing notes, follow-up tasks, or known limitations.
+```
+
+## Writing Rules
+- Keep entries concrete and technical.
+- Prefer file paths over vague statements.
+- Use `NEW FILE` and `REMOVED` markers exactly.
+- Explain meaningful mechanic/behavior impact, not just file creation.
+- Keep entry length proportional to change size.
+- Practical heuristic: commits with <250 added lines usually need <10 versionlog lines unless behavior impact is broad.
+
+## Ordering
+- Newest entry goes at the top, below this guide.
+- Keep entries in reverse chronological order.
+
+## Repository Info
 - **Owner:** gram12321
 - **Repository:** winemaker04
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
-## Version 0.24-0.24a - Research Expansion, Bulk Grape Sales & Docs (Combined)
-**Date:** 2026-05-21 to 2026-05-22 | **Commits:** ca1d46b (0.24), 0d106ff (0.24), b9d2e27 (0.24a) | **Stats:** Combined 4,351 additions, 466 deletions
+## Version 0.25-0.251J - Bulk Grape Buy/Sell and Weather Gameplay Expansion
+**Date:** 2026-05-22 to 2026-05-24 | **Commit(s):** e7343ef, d2174dd, 7203dc4, 4d57ed2, 8b88525, fe4874f, 515c37a, 132d92f, 3a6c6fd, 120b6f3, 87bdafb | **Stats:** 8,524 insertions(+), 2,050 deletions(-)
 
-### 🔬 **Research System Expansion**
-- **NEW FILE:** `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` (269 lines) - Research mechanic design spec
-- `src/lib/constants/researchConstants.ts` - Major research constants expansion (931 additions, 87 deletions across commits)
-- `src/components/finance/ResearchPanel.tsx` - Research panel enhancements (126 additions, 42 deletions)
-- `src/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager.ts` - Research manager updates (75 additions, 40 deletions)
-- `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` - Research work calculator tuning (53 additions, 46 deletions)
+### Summary
+- Introduced a full bulk-buy market pipeline (offers, modal flow, supplier relationships, and persistence) to complement existing grape selling mechanics.
+- Added weather gameplay/UI progression from alpha to integrated pages and finalized balancing passes through 0.251J.
+- Expanded admin test tooling and data scaffolding in parallel to validate market behavior and edge cases.
 
-### 🍇 **Bulk Grape Sales & Market Layer**
-- **NEW FILE:** `src/components/pages/Research.tsx` (77 lines) - Research page
-- **NEW FILE:** `src/components/pages/winepedia/GrapeBuyersTab.tsx` (173 lines) - Grape buyers tab UI
-- **NEW FILE:** `src/lib/database/sales/grapeBuyerLoyaltyDB.ts` (48 lines) - Grape buyer loyalty persistence
-- **NEW FILE:** `src/lib/database/sales/grapeBuyerMarketDB.ts` (82 lines) - Grape buyer market persistence
-- `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` - Major bulk grape sales modal expansion (283 additions, 60 deletions)
+### Changes
+- **NEW FILE:** `src/lib/services/sales/buyGrapeMarketService.ts` (574 lines) - implements bulk grape buy flow, pricing, and market transaction orchestration.
+- **NEW FILE:** `src/components/ui/modals/activitymodals/BuyFromMarketModal.tsx` (668 lines) - primary UI for browsing and executing bulk market purchases; later refined heavily in `d2174dd`, `fe4874f`, and `515c37a`.
+- **NEW FILE:** `src/lib/services/finance/weatherService.ts` (305 lines) - weather simulation/service layer that feeds forecast volatility features.
+- **NEW FILE:** `src/components/pages/winepedia/WeatherTab.tsx` (128 lines) - weather-facing UI for player-visible forecast information.
+- `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (+525/-434 across sampled commits) - harmonized sell-side UX and logic with new buy-side mechanics.
+- `src/components/pages/Vineyard.tsx` (+216/-143 in `fe4874f`) - integrated weather and market-facing updates into vineyard-facing gameplay UI.
+- **NEW FILE:** `src/lib/services/sales/grapeSupplierLoyaltyService.ts` (384 lines) - adds supplier relationship progression tied to market buying.
+- **NEW FILE:** `src/lib/services/sales/grapeSupplierMarketService.ts` (371 lines) - supplier-side market listing and offer handling.
+- **NEW FILE:** `src/lib/database/sales/grapeSupplierMarketDB.ts` (82 lines) and **NEW FILE:** `migrations/20260524120000_add_grape_market_suppliers.sql` (39 lines) - persistence and schema for supplier market data.
+- **NEW FILE:** `migrations/20260523090000_add_grape_market_buy_offers.sql` (51 lines) and **NEW FILE:** `migrations/20260523160000_add_grape_supplier_loyalty.sql` (35 lines) - schema support for buy offers and loyalty tracking.
+- **NEW FILE:** `docs/superpowers/plans/2026-05-23-bulk-grape-buy-market-execution.md` (350 lines), **NEW FILE:** `docs/superpowers/specs/2026-05-23-bulk-grape-buy-market-design.md` (310 lines), and **NEW FILE:** `docs/superpowers/specs/2026-05-23-weather-forecast-volatility-design.md` (114 lines) - implementation and design docs for rollout decisions.
 
-### 📚 **Documentation & Context**
-- `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` - Follow-up docs refinement (48 additions, 34 deletions)
-- `CONTEXT.md` - Updated repository context notes (19 additions)
-- `docs/PROJECT_INFO.md` - Project info updates (17 additions, 1 deletion)
-- `readme.md` - README updates for new systems (11 additions, 2 deletions)
-
----
-
-## Version 0.23 - Test Lab & Test Infrastructure Update
-**Date:** 2026-05-21 | **Commit:** 9f2ad27 | **Stats:** 1,984 additions, 264 deletions
-
-### 🧪 **Admin Test Lab Framework**
-- **NEW FILE:** `src/components/pages/admin/TestLabPage.tsx` (443 lines) - Admin test lab UI page
-- **NEW FILE:** `src/lib/services/admin/testLab/testLabRunner.ts` (286 lines) - Test lab execution service
-- **NEW FILE:** `src/lib/services/admin/testLab/testLabFixtureService.ts` (245 lines) - Test fixture orchestration
-- **NEW FILE:** `src/lib/services/admin/testLab/testLabScenarios.ts` (168 lines) - Scenario definitions
-- **NEW FILE:** `src/lib/services/admin/testLab/testLabCleanupService.ts` (137 lines) - Cleanup service
-- **NEW FILE:** `src/lib/services/admin/testLab/types.ts` (107 lines) - Test lab type contracts
-
-### 🛠️ **Server/Test Runner Additions**
-- **NEW FILE:** `server/test-runner-parser.ts` (212 lines) - Test output parser
-- **NEW FILE:** `server/test-runner.ts` (51 lines) - Test runner entry
-- **NEW FILE:** `server/devAdminGate.ts` (30 lines) - Dev admin access gate
-- `server/test-api.ts` - Test API refactor (42 additions, 138 deletions)
-
-### ✅ **Tests & Docs**
-- **NEW FILE:** `tests/admin/testRunnerParser.test.ts` (82 lines)
-- **NEW FILE:** `tests/admin/testLabRunId.test.ts` (18 lines)
-- `tests/README.md` and `test-viewer/README.md` - Test documentation refresh
+### Notes
+- This entry is a multi-commit feature train where mechanics were shipped iteratively; later commits mostly tune behavior and resolve UX/logic mismatches between buy and sell paths.
+- Behavior spans economy, sales, vineyard, and admin test surfaces; regression checks should prioritize modal flows and market-state persistence.
 
 ---
 
-## Version 0.22-0.22d - Documentation Cleanup, Reorganization & Winemaker Skill (Combined)
-**Date:** 2026-05-21 | **Commits:** 1f39710 (0.22), b0d08c4 (0.22a), 6c9026f (0.22b), b72e3e3 (0.22c), 31c91d6 (0.22d) | **Stats:** Combined 1,558 additions, 845 deletions
+## Version 0.24b-0.241e - Research/Migration Cleanup and Earlygamebalance Merge
+**Date:** 2026-05-22 to 2026-05-23 | **Commit(s):** e736234, 38ba758, ab826a2, 4cde587, 21fc2e0, 29a7d9a, 9f99ec0, 07445a6, d4bfe01, 8d60235, 71014b5 | **Stats:** 3,975 insertions(+), 1,179 deletions(-)
 
-### 📚 **Documentation Cleanup Pass**
-- `docs/TasteSystem_WineFolly_Research.md` - Major cleanup/rewrite (315 additions, 254 deletions across 0.22/0.22a)
-- `docs/PROJECT_INFO.md` - Project doc updates (32 additions, 28 deletions)
-- `readme.md` - Large documentation cleanup (84 additions, 303 deletions)
-- **NEW FILE:** `docs/superpowers/plans/2026-05-21-admin-test-lab.md` (230 lines)
+### Summary
+- Converted accumulated schema work into timestamped migration files and shipped a dedicated Research tab surface.
+- Merged `earlygamebalance` into `main` and resolved gameplay/UI conflicts, especially around research constants and sell-grapes modal behavior.
+- Followed with cleanup commits focused on modal consistency and post-merge stabilization.
 
-### 🗂️ **Docs Reorganization (0.22c)**
-- **RENAMED:** `docs/AIDescriptions_coregame.md` → `docs/AIdocs/AIDescriptions_coregame.md`
-- **RENAMED:** `docs/AIpromt_codecleaning.md` → `docs/AIdocs/AIpromt_codecleaning.md`
-- **RENAMED:** `docs/AIpromt_docs.md` → `docs/AIdocs/AIpromt_docs.md`
-- **RENAMED:** `docs/AIpromt_newpromt.md` → `docs/AIdocs/AIpromt_newpromt.md`
-- **RENAMED:** `docs/PublicCompanyImplementation.md` → `docs/superpowers/plans/PublicCompanyImplementation.md`
-- **RENAMED:** `docs/PublicCompanyPlan.md` → `docs/superpowers/plans/PublicCompanyPlan.md`
-- **RENAMED:** `docs/TasteSystem_WineFolly_Research.md` → `docs/superpowers/plans/TasteSystem_WineFolly_Research.md`
+### Changes
+- **NEW FILE:** `src/components/pages/winepedia/ResearchTab.tsx` (489 lines) - adds a dedicated Winepedia research surface and removes pressure from overloaded pages.
+- **NEW FILE:** `migrations/2026-05-20_taste_quality_index_supabase.sql` (339 lines) plus additional timestamped migrations (`20260328120000`, `20260328140000`, `20260520130000`, `20260521000000`, `20260521120000`, `20260521130000`, `20260521140000`, `20260521230000`, `20260522000000`, `20260522010000`, `20260522020000`, `20260522030000`, `20260522040000`) - formalizes schema history and replaces monolithic ad-hoc migration drift.
+- `src/lib/constants/researchConstants.ts` (+469/-567 in merge commit) - major conflict-resolution and rebalance pass during `07445a6`.
+- `src/components/finance/ResearchPanel.tsx` (+111/-1 in merge commit) - merged branch enhancements into mainline research UI.
+- `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (+155/-37 in merge commit; +55/-57 in `d4bfe01`) - conflict resolution followed by targeted modal fixes.
+- **NEW FILE:** `src/lib/services/vineyard/vineyardCapacityService.ts` (142 lines) - introduces research-dependent vineyard capacity behavior from branch merge.
+- **NEW FILE:** `tests/user/researchPanelVisibility.test.ts` (64 lines), **NEW FILE:** `tests/user/vineyardCapacityResearchHint.test.ts` (34 lines), **NEW FILE:** `tests/vineyard/landSearchAsymmetry.test.ts` (74 lines) - regression tests for merged earlygamebalance mechanics.
+- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` (+148/-42) and `src/components/ui/modals/activitymodals/LandSearchResultsModal.tsx` (+75/-50) - merged and tuned land-search constraints and presentation.
 
-### 🧠 **Winemaker Skill Package**
-- **NEW FILE:** `.github/skills/winemaker-game/SKILL.md` (146 lines)
-- **NEW FILE:** `skills/winemaker-game/SKILL.md` (146 lines)
-- **NEW FILE:** `docs/AIdocs/copilot-instructions.md` (165 lines)
-- **NEW FILE:** `docs/AIdocs/WinemakerGameSkill_DRAFT.md` (146 lines)
-- **NEW FILE:** `docs/AIdocs/airules.mdc` (61 lines)
+### Notes
+- Merge commit `07445a6` explicitly resolved conflicts in `ResearchPanel` and `SellGrapesModal`; later 0.241c/0.241d/0.241e commits should be treated as merge-hardening follow-ups.
+- This series materially changes migration discipline by moving to timestamped SQL files.
 
 ---
 
-## Version Main-Merge-2026-05-20 - Merge taste into main
-**Date:** 2026-05-20 | **Commit:** d0e3a95 | **Stats:** 29,988 additions, 2,485 deletions
+## Version 0.23a-0.23d - Test Suite Scale-Up and Admin Test Hardening
+**Date:** 2026-05-22 to 2026-05-23 | **Commit(s):** f27ef96, 9dd3149, 32030b6, a7abf74 | **Stats:** 2,998 insertions(+), 47 deletions(-)
 
-### 🔀 **Branch Integration Milestone**
-- Merged the full `taste` branch history into `main`, including taste system work, skills library, and design docs.
-- **NEW FILE:** `CONTEXT.md` (159 lines)
-- **NEW FILE:** `docs/WineSystem_VariableRelationshipMap.md` (263 lines at merge point)
-- **NEW FILE:** `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` (359 lines)
-- `migrations/sync_vercel_schema.sql` - Removed during merge resolution (1,320 deletions)
+### Summary
+- Expanded automated coverage across core gameplay domains with a large, scenario-based test pass.
+- Strengthened admin test-lab services and behavior assertions to support larger feature trains.
+- Added documentation follow-up after test expansion.
 
-### 📦 **Bulk Import Included In Merge**
-- Imported large `skills/` tree and associated prompt/tooling files from `taste`.
-- Integrated taste-related docs and planning files under `docs/superpowers/`.
+### Changes
+- **NEW FILE:** `tests/activity/activityLifecycle.test.ts` (239 lines) - validates activity lifecycle transitions and regression scenarios.
+- **NEW FILE:** `tests/core/gameTick.test.ts` (231 lines) - broadens simulation tick coverage for core loop stability.
+- **NEW FILE:** `tests/sales/contractLifecycle.test.ts` (224 lines) and **NEW FILE:** `tests/sales/salesOrderLifecycle.test.ts` (178 lines) - increases confidence in sales lifecycle behavior.
+- **NEW FILE:** `tests/sales/grapeBuyerMarket.test.ts` (190 lines) - introduces direct coverage for grape buyer market logic.
+- **NEW FILE:** `tests/vineyard/vineyardLifecycle.test.ts` (210 lines) - validates end-to-end vineyard state transitions.
+- **NEW FILE:** `tests/wine/wineryLifecycle.test.ts` (266 lines) and **NEW FILE:** `tests/wine/agingAndPricing.test.ts` (117 lines) - strengthens wine pipeline and pricing lifecycle checks.
+- `src/lib/services/admin/testLab/testLabRunner.ts` (+218) and `src/lib/services/admin/testLab/testLabScenarios.ts` (+110) in `32030b6` - expanded admin test execution and scenario depth.
+- `tests/admin/testLabBehavior.test.ts` (+124/-1 in `32030b6`) - updated assertions for the expanded test-lab behavior model.
 
----
-
-## Version 0.21-0.211 - Early Game Balance Plan & Sell Grapes Feature (Combined)
-**Date:** 2026-05-20 | **Commits:** f2289b5 (0.21), ce034d4 (0.211) | **Stats:** Combined 1,436 additions, 1,359 deletions
-
-### 📈 **Design & Balance Planning**
-- **NEW FILE:** `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` (227 lines) - Early-game balance design plan
-- `migrations/sync_vercel_schema.sql` - Removed in this phase (1,327 deletions)
-
-### 🍇 **Sell Grapes Feature**
-- **NEW FILE:** `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (268 lines) - Sell grapes modal
-- **NEW FILE:** `src/lib/services/sales/cooperativeService.ts` (190 lines) - Cooperative pricing/service logic
-- **NEW FILE:** `src/lib/services/sales/sellGrapesService.ts` (185 lines) - Sell grapes domain service
-- `src/lib/services/activity/activitymanagers/activityManager.ts` - Sell grapes activity integration (67 additions, 11 deletions)
-- `src/components/layout/ActivityPanel.tsx` and `src/components/ui/activities/ActivityCard.tsx` - Activity UI wiring
+### Notes
+- This series is primarily quality and safety work; gameplay-facing changes are minimal, but confidence and regression detection improved significantly.
 
 ---
 
-## Version 0.X - Skills Library Import
-**Date:** 2026-05-20 | **Commit:** f220568 | **Stats:** 23,620 additions, 0 deletions
+## Version 0.24-0.24a - Research System Upgrade and Grape Buyer Foundations
+**Date:** 2026-05-21 to 2026-05-22 | **Commit(s):** ca1d46b, 0d106ff, b9d2e27 | **Stats:** 4,351 insertions(+), 466 deletions(-)
 
-### 🧠 **Mass Skill Pack Integration**
-- Added a full `skills/` library with agent workflows, prompts, and helpers (100+ new files; all additions)
-- **NEW FILE:** `skills/react-best-practices/AGENTS.md` (3,373 lines) - Large React/Next optimization ruleset and guidance corpus
-- **NEW FILE:** `skills/brainstorming/scripts/server.cjs` (354 lines) - Local brainstorming support server script
-- **NEW FILE:** `skills/brainstorming/scripts/frame-template.html` (214 lines) - Visual brainstorming frame template
-- **NEW FILE:** `skills/frontend-app-builder/SKILL.md` (185 lines) - Frontend builder workflow instructions
-- **NEW FILE:** `skills/dispatching-parallel-agents/SKILL.md` (182 lines) - Parallel subagent execution guidance
-- **NEW FILE:** `skills/find-skills/SKILL.md` (142 lines) - Skill discovery workflow
-- **NEW FILE:** `skills/javascript-typescript/SKILL.md` (142 lines) - JavaScript/TypeScript coding conventions skill
+### Summary
+- Expanded research mechanics and surfaced them in both finance/admin UI and gameplay gating paths.
+- Introduced first-class grape buyer data models and UI tabs to support later bulk market features.
+- Updated docs/context to align implementation with research + market direction.
 
-### 🎮 **Game/Productivity Skill Additions**
-- **NEW FILE:** `skills/game-ui-frontend/SKILL.md` (112 lines) - Browser game UI/HUD design guidance
-- **NEW FILE:** `skills/game-studio/SKILL.md` (94 lines) - Early game architecture planning guidance
-- **NEW FILE:** `skills/game-playtest/SKILL.md` (76 lines) - Browser playtest and QA routines
-- **NEW FILE:** `skills/prototype/UI.md` (112 lines) - UI prototyping strategy
-- **NEW FILE:** `skills/prototype/LOGIC.md` (79 lines) - Logic prototyping strategy
+### Changes
+- **NEW FILE:** `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` (269 lines) - formal design basis for the research overhaul.
+- `src/lib/constants/researchConstants.ts` (+931/-87 across commits) - substantial rebalance and expansion of research definitions and effects.
+- `src/components/finance/ResearchPanel.tsx` (+126/-42 across commits) - upgraded research UX and status visibility.
+- `src/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager.ts` (+75/-40) - manager logic updated to follow new research rules.
+- `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` (+53/-46) - work pacing recalibration for research progression.
+- **NEW FILE:** `src/components/pages/Research.tsx` (77 lines) - dedicated research page surface.
+- **NEW FILE:** `src/components/pages/winepedia/GrapeBuyersTab.tsx` (173 lines) - buyer-facing Winepedia tab.
+- **NEW FILE:** `src/lib/database/sales/grapeBuyerLoyaltyDB.ts` (48 lines) and **NEW FILE:** `src/lib/database/sales/grapeBuyerMarketDB.ts` (82 lines) - persistence for buyer loyalty and market listings.
+- `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (+283/-60 in `0d106ff`) - expanded selling workflow ahead of bulk market phase.
 
-### ⚙️ **Agent Metadata & Wiring**
-- Added multiple `agents/openai.yaml` files across skill folders for model routing metadata
-- Added helper templates and docs for diagnose, grill-with-docs, handoff, and architecture-improvement workflows
-
----
-
-## Version 0.205-0.205b - Taste Quality Index & Naming Cleanup (Combined)
-**Date:** 2026-05-20 | **Commits:** b7c0756 (0.205), 4d6d0fc (0.205a), 83302f7 (0.205b) | **Stats:** Combined 2,818 additions, 703 deletions
-
-### 🍷 **Taste Quality Index in Wine Score**
-- **NEW FILE:** `src/components/ui/components/WineTasteQualityBreakdown.tsx` (160 lines) - Taste quality breakdown display component
-- `src/components/pages/sales/ContractsTab.tsx` - Contract tab taste quality integration (16 additions, 12 deletions)
-- `src/lib/constants/contractConstants.ts` - Contract taste requirements (16 additions, 5 deletions)
-- `src/lib/database/activities/inventoryDB.ts` - Inventory DB taste quality persistence (9 additions, 9 deletions)
-- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal taste quality display (7 additions, 7 deletions)
-
-### 📚 **Documentation**
-- **NEW FILE:** `docs/superpowers/plans/2026-05-20-taste-quality-index.md` (78 lines) - Taste quality index plan
-- **NEW FILE:** `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` (92 lines) - Contract taste/site UI plan
-- **NEW FILE:** `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` (61 lines) - Taste quality index design spec
-- **NEW FILE:** `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` (359 lines) - Admin test lab design spec
-- **NEW FILE:** `CONTEXT.md` (159 lines) - Project context documentation
-- `docs/WineSystem_VariableRelationshipMap.md` - Major update to wine system relationship map (437 additions, 276 deletions net)
-
-### 🧪 **Tests & Naming Fixes**
-- **NEW FILE:** `tests/user/wineLogService.test.ts` - Wine log service tests
-- **NEW FILE:** `tests/wine/wineAnchorService.test.ts` - Anchor service tests
-- `tests/user/achievementScoreUtils.test.ts` - Achievement score test additions (28 additions)
-- Full rename pass: `grapeQuality` → `priceModifier` and `balance` → `structure` terminology propagated across hooks, services, DB, and UI components (34 files, 930 additions, 382 deletions)
-
-### 🗄️ **Database Schema**
-- `migrations/sync_vercel_schema.sql` - Schema updates for taste quality index
+### Notes
+- This entry is foundational for the later 0.25-0.251J market feature train.
+- Research constants and work calculators changed together; balance verification should treat them as one system.
 
 ---
 
-## Version 0.204-0.204a - Taste Profile Services & UI (Combined)
-**Date:** 2026-04-13 to 2026-05-20 | **Commits:** b5f99df (0.204), 42df385 (0.204a) | **Stats:** Combined 2,197 additions, 1,492 deletions
+## Version 0.23 - Admin Test Lab Framework Introduction
+**Date:** 2026-05-21 | **Commit(s):** 9f2ad27 | **Stats:** 1,984 insertions(+), 264 deletions(-)
 
-### 🍷 **Taste Profile System**
-- **NEW FILE:** `src/components/ui/components/WineTasteProfilePanel.tsx` (199 lines) - Wine taste profile display panel
-- **NEW FILE:** `src/components/ui/components/WineTasteWheel.tsx` (111 lines) - SVG taste wheel visualization
-- **NEW FILE:** `src/lib/services/wine/taste/wineTasteProfileService.ts` (273 lines) - Taste profile calculation service
-- **NEW FILE:** `src/lib/services/wine/taste/tasteCrossDomain.ts` (19 lines) - Cross-domain taste utilities
-- **NEW FILE:** `src/lib/services/wine/taste/tasteNormalization.ts` (15 lines) - Taste value normalization
-- **NEW FILE:** `src/lib/constants/taste/flavorFamilyLabels.ts` (78 lines) - Flavor family label constants
-- **NEW FILE:** `src/lib/constants/taste/tasteCompatibilityMatrix.ts` (63 lines) - Taste compatibility matrix
-- **NEW FILE:** `docs/WineSystem_VariableRelationshipMap.md` (209 lines) - Wine system variable relationship map
+### Summary
+- Introduced an Admin Test Lab page and service layer for repeatable scenario execution.
+- Added server-side test runner/parser support and updated test API flow.
+- Added baseline test coverage for runner parsing and run-id behavior.
 
-### 🎨 **UI Updates**
-- `src/components/ui/components/StructureIndexBreakdown.tsx` - Structure index breakdown updates (20 additions, 10 deletions)
-- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal taste profile integration (86 additions, 40 deletions)
-- `src/hooks/useWineStructureIndex.ts` - Structure index hook updates (7 additions, 1 deletion)
+### Changes
+- **NEW FILE:** `src/components/pages/admin/TestLabPage.tsx` (443 lines) - admin-facing control plane for test-lab runs.
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabRunner.ts` (286 lines) - executes test-lab scenarios in app context.
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabFixtureService.ts` (245 lines) - manages fixture setup and reset.
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabScenarios.ts` (168 lines) and **NEW FILE:** `src/lib/services/admin/testLab/types.ts` (107 lines) - scenario catalog and contracts.
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabCleanupService.ts` (137 lines) - cleanup/reset path after scenario runs.
+- **NEW FILE:** `server/test-runner-parser.ts` (212 lines), **NEW FILE:** `server/test-runner.ts` (51 lines), **NEW FILE:** `server/devAdminGate.ts` (30 lines) - server plumbing for controlled test execution and output parsing.
+- `server/test-api.ts` (+42/-138) - refactored API surface to align with runner/parser architecture.
+- **NEW FILE:** `tests/admin/testRunnerParser.test.ts` (82 lines) and **NEW FILE:** `tests/admin/testLabRunId.test.ts` (18 lines) - initial verification of parser and run id utilities.
 
-### 🗄️ **Database Schema**
-- `migrations/sync_vercel_schema.sql` - Schema updates for taste profile fields (14 additions, 7 deletions)
-
----
-
-## Version 0.203-0.203a - Wine Anchor System Phase 1 (Combined)
-**Date:** 2026-03-28 to 2026-03-30 | **Commits:** 212fe16 (0.203), 9c347f1 (0.203a) | **Stats:** Combined 1,023 additions, 142 deletions
-
-### ⚓ **Wine Anchor System**
-- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorService.ts` (455+11 lines) - Core wine anchor calculation service
-- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorProcess.ts` (156 lines) - Anchor processing pipeline
-- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorCharacteristicBridge.ts` (87+141 lines) - Bridge between anchors and wine characteristics
-- `src/lib/types/types.ts` - Wine anchor type definitions (65 additions)
-- `src/lib/services/wine/features/featureService.ts` - Anchor integration in feature service (37 additions, 17 deletions)
-- `src/lib/services/wine/winery/fermentationManager.ts` - Anchor application during fermentation
-- `src/lib/services/wine/winery/inventoryService.ts` - Anchor data persistence
-
-### 🍷 **Characteristics Integration**
-- `src/lib/services/wine/characteristics/crushingCharacteristics.ts` - Anchor effect on crushing characteristics (11 additions, 4 deletions)
-- `src/lib/services/wine/characteristics/fermentationCharacteristics.ts` - Anchor effect on fermentation characteristics (12 additions, 5 deletions)
-- `src/lib/services/wine/characteristics/harvestCharacteristics.ts` - Anchor effect on harvest characteristics (11 additions, 4 deletions)
-
-### 📚 **Documentation**
-- `docs/TasteSystem_WineFolly_Research.md` - Anchor system documentation updates
+### Notes
+- This commit establishes infrastructure that later 0.23x and 0.25x commits build on for broader scenario coverage.
 
 ---
 
-## Version 0.201-0.202a - Structure Rename & Bug Fixes (Combined)
-**Date:** 2026-03-28 | **Commits:** 764fef9 (0.201), 7d65b8f (0.202), d143cc7 (0.202a) | **Stats:** Combined 501 additions, 501 deletions
+## Version 0.22-0.22d - Documentation Restructure and Winemaker Skill Packaging
+**Date:** 2026-05-21 | **Commit(s):** 1f39710, b0d08c4, 6c9026f, b72e3e3, 31c91d6 | **Stats:** 1,558 insertions(+), 845 deletions(-)
 
-### 🏷️ **Terminology Rename: Balance → Structure Index**
-- **RENAMED:** `src/hooks/useWineBalance.ts` → `src/hooks/useWineStructureIndex.ts` (45 lines new, 53 removed)
-- **RENAMED:** `src/components/ui/components/StructureIndexBreakdown.tsx` (from WineBalanceBreakdown)
-- **RENAMED:** `src/components/ui/modals/UImodals/StructureIndexBreakdownModal.tsx` (from WineBalanceBreakdownModal)
-- Full rename propagation across 30+ files: components, hooks, services, DB, constants, contract system
+### Summary
+- Performed a broad documentation cleanup, then reorganized docs into more explicit AIdocs and superpowers plan locations.
+- Added a dedicated winemaker skill package in both repository-local and GitHub skills locations.
+- Included minor code/doc alignment fixes uncovered during doc refactor review.
 
-### 🐛 **Bug Fixes**
-- `src/hooks/useWineFeatureDetails.ts` - Fixed wine feature price calculations (10 additions, 6 deletions)
-- `src/components/pages/sales/WineCellarTab.tsx` - Wine cellar display fixes (7 additions, 5 deletions)
-- `src/lib/utils/icons.tsx` - Icon path fixes and updates (30 additions, 17 deletions)
+### Changes
+- `readme.md` (+84/-303 across 0.22 and 0.22a) - major simplification and restructuring of top-level project onboarding text.
+- `docs/TasteSystem_WineFolly_Research.md` (+315/-254 across 0.22 and 0.22a) - cleaned and reframed taste system research narrative.
+- **NEW FILE:** `docs/superpowers/plans/2026-05-21-admin-test-lab.md` (230 lines) - planning document for admin test lab work.
+- **RENAMED:** `docs/AIDescriptions_coregame.md` → `docs/AIdocs/AIDescriptions_coregame.md` - moved AI guidance into consolidated docs namespace.
+- **RENAMED:** `docs/AIpromt_codecleaning.md` → `docs/AIdocs/AIpromt_codecleaning.md` and **RENAMED:** `docs/AIpromt_docs.md` → `docs/AIdocs/AIpromt_docs.md` - centralizes agent prompt docs.
+- **RENAMED:** `docs/AIpromt_newpromt.md` → `docs/AIdocs/AIpromt_newpromt.md` - keeps prompt instructions adjacent to related AI docs.
+- **RENAMED:** `docs/PublicCompanyImplementation.md` → `docs/superpowers/plans/PublicCompanyImplementation.md` and **RENAMED:** `docs/PublicCompanyPlan.md` → `docs/superpowers/plans/PublicCompanyPlan.md` - moves planning content under superpowers plans.
+- **NEW FILE:** `.github/skills/winemaker-game/SKILL.md` (146 lines) and **NEW FILE:** `skills/winemaker-game/SKILL.md` (146 lines) - adds explicit project skill package for agent workflows.
+- **NEW FILE:** `docs/AIdocs/copilot-instructions.md` (165 lines), **NEW FILE:** `docs/AIdocs/WinemakerGameSkill_DRAFT.md` (146 lines), **NEW FILE:** `docs/AIdocs/airules.mdc` (61 lines) - initial instruction and draft skill materials.
 
----
-
-## Version 0.2003 - Grape Quality Renamed to Price Modifier
-**Date:** 2026-03-26 to 2026-03-28 | **Commits:** a046da4 (0.2003), 155e95d (0.2003a) | **Stats:** Combined 2,081 additions, 1,694 deletions
-
-### 🏷️ **Grape Quality → Price Modifier Rename**
-- `src/components/pages/sales/WineCellarTab.tsx` - Major WineCellar tab rework with new price modifier display (1,157 additions, 1,098 deletions)
-- **RENAMED:** `src/components/ui/components/landValueModifierBar.tsx` (from grapeQualityBar)
-- **RENAMED:** `src/components/ui/components/landValueModifierBreakdown.tsx` (from grapeQualityBreakdown)
-- **RENAMED:** `src/components/ui/modals/UImodals/landValueModifierBreakdownModal.tsx`
-- `src/components/pages/sales/OrdersTab.tsx` - Orders tab with price modifier data (57 additions, 15 deletions)
-- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal price modifier display (127 additions, 38 deletions)
-- `src/lib/constants/constants.ts` - Constant name updates (8 additions, 12 deletions)
-- `src/lib/constants/achievementConstants.ts` - Achievement constant updates (8 additions, 6 deletions)
-
-### 🗄️ **Database Schema**
-- `migrations/sync_vercel_schema.sql` - Minor schema updates
-
-### 📚 **Documentation**
-- `docs/TasteSystem_WineFolly_Research.md` - Research documentation updates
+### Notes
+- 0.22c is primarily a file-organization commit (rename/move heavy), while 0.22/0.22a carry most content edits.
+- This set improves discoverability for future agents by converging docs into structured locations.
 
 ---
 
-## Version 0.2001-0.2001a1 - Feature Seam Architecture Refactor (Combined)
-**Date:** 2026-03-06 to 2026-03-09 | **Commits:** a0dc562 (board/share seam), 3031a8f (0.2001), ecfb3be (0.2001a), 4cce0f7 (0.2001a1) | **Stats:** Combined 4,334 additions, 3,961 deletions
+## Version Main-Merge-2026-05-20 - Merge Taste Branch Into Mainline
+**Date:** 2026-05-20 | **Commit(s):** d0e3a95 | **Stats:** 29,988 insertions(+), 2,485 deletions(-)
 
-### 🏗️ **Board/Share Feature Seam**
-- `src/lib/features/boardShare/` - Board/share gameplay modules isolated behind no-op feature seam
-- All board/share UI and services routed through feature seam contracts; noop implementation stubs added for builds without the feature
+### Summary
+- Merged the full taste branch into main, carrying over gameplay, docs, and agent-skill infrastructure in one integration point.
+- Resolved conflicts in migration state and aligned documentation baselines during merge.
+- Established the foundation for subsequent 0.22-0.25 iteration work directly on main.
 
-### 🔬 **Research/Upgrade Feature Isolation**
-- **NEW FILE:** `src/lib/features/researchUpgrade/active.tsx` (241 lines) - Active research/upgrade feature implementation
-- **NEW FILE:** `src/lib/features/researchUpgrade/featureTypes.ts` (71 lines) - Research/upgrade feature type contracts
-- **NEW FILE:** `src/lib/features/researchUpgrade/index.ts` (12 lines) - Feature entry point
-- **NEW FILE:** `src/lib/features/researchUpgrade/noop.ts` (55 lines) - No-op stub implementation
-- **NEW FILE:** `src/lib/features/researchUpgrade/services/research/researchEnforcer.ts` (59 lines) - Research enforcer moved into feature
-- **REMOVED:** `src/lib/services/research/researchEnforcer.ts` (127 lines) - Consolidated into feature module
+### Changes
+- **NEW FILE:** `CONTEXT.md` (159 lines) - introduced a repo context reference document.
+- **NEW FILE:** `docs/WineSystem_VariableRelationshipMap.md` (263 lines at merge point) - captured system variable relationships for wine mechanics.
+- **NEW FILE:** `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` (359 lines) - design spec for test lab direction.
+- `migrations/sync_vercel_schema.sql` - removed during merge resolution (+0/-1320) in favor of newer migration strategy adopted later.
+- `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` and related plan/spec docs - integrated planning artifacts from taste branch.
+- `skills/` tree import (multi-file) - brought in broad agent skill definitions and support assets from taste branch.
 
-### 💳 **Loan/Lender Feature Isolation**
-- **NEW FILE:** `src/lib/features/loanLender/active.tsx` (135 lines) - Active loan/lender feature implementation
-- **NEW FILE:** `src/lib/features/loanLender/featureTypes.ts` (55 lines) - Loan/lender feature type contracts
-- **NEW FILE:** `src/lib/features/loanLender/index.ts` (12 lines) - Feature entry point
-- **NEW FILE:** `src/lib/features/loanLender/noop.ts` (33 lines) - No-op stub implementation
-- **NEW FILE:** `src/lib/features/loanLender/services/finance/creditRatingService.ts` (512 lines) - Credit rating service moved into feature
-- **NEW FILE:** `src/lib/features/loanLender/services/finance/lenderService.ts` (212 lines) - Lender service moved into feature
-- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanService.ts` (2,514 lines) - Loan service moved into feature
-- **NEW FILE:** `src/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager.ts` (222 lines)
-- **NEW FILE:** `src/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager.ts` (78 lines)
-- **RENAMED:** Loan/lender UI components moved into `src/lib/features/loanLender/ui/`
-- **REMOVED:** Stub files from `src/lib/services/finance/` (creditRatingService, lenderService, loanService) after consolidation
-
-### 🔧 **Integration Updates**
-- `src/lib/services/activity/activitymanagers/activityManager.ts` - Updated to use feature seam for research/lender activities
-- `src/lib/services/core/startingConditionsService.ts` - Updated feature seam initialization
-- `src/lib/services/admin/adminService.ts` - Admin service cleanup (3 additions, 104 deletions)
-- `src/main.tsx` - Feature initialization in app bootstrap
+### Notes
+- This is a high-volume merge entry; behavior details are distributed across imported commits and clarified in subsequent focused release entries.
+- Merge conflict markers were resolved in follow-up commits; see 0.24b-0.241e for stabilization details.
 
 ---
 
-## Version 0.2002-0.2002a - Bug Fixes (Combined)
-**Date:** 2026-03-24 | **Commits:** 23ab720 (0.2002), 62d9571 (0.2002a) | **Stats:** Combined 104 additions, 15 deletions
+## Version 0.21-0.211 - Early Economy Plan and Sell Grapes Gameplay Introduction
+**Date:** 2026-05-20 | **Commit(s):** f2289b5, ce034d4 | **Stats:** 1,436 insertions(+), 1,359 deletions(-)
 
-### 🐛 **Bug Fixes**
-- `src/lib/services/vineyard/vineyardManager.ts` - Fixed starting condition vineyard yield calculations (21 additions)
-- `src/lib/services/core/startingConditionsService.ts` - Fixed starting vineyard initialization (3 additions, 1 deletion)
-- `tests/vineyard/yieldCalculator.test.ts` - Added yield calculator test coverage (16 additions, 1 deletion)
-- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Fixed runtime error in prestige modal (26 additions, 6 deletions)
-- `src/lib/services/activity/activitymanagers/activityManager.ts` - Activity manager stability fix (25 additions, 3 deletions)
-- `src/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager.ts` - Research manager fix (12 additions, 4 deletions)
+### Summary
+- Added early-game economy/balance planning artifacts and introduced the first complete sell-grapes gameplay path.
+- Implemented sell-grapes UI, service logic, and activity integration with cooperative market behavior.
+- Removed legacy sync schema file in preparation for migration model cleanup.
 
----
+### Changes
+- **NEW FILE:** `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` (227 lines) - design plan for founder economy pacing.
+- **NEW FILE:** `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (268 lines) - initial sell-grapes interaction modal.
+- **NEW FILE:** `src/lib/services/sales/cooperativeService.ts` (190 lines) - cooperative-side sale pricing and behavior logic.
+- **NEW FILE:** `src/lib/services/sales/sellGrapesService.ts` (185 lines) - core sale execution and transaction logic.
+- `src/lib/services/activity/activitymanagers/activityManager.ts` (+67/-11) - added sell-grapes workflow into activity orchestration.
+- `src/components/layout/ActivityPanel.tsx` (+27/-1) and `src/components/ui/activities/ActivityCard.tsx` (+50/-3) - surfaced new activity in player-facing UI.
+- **REMOVED:** `migrations/sync_vercel_schema.sql` - removed large legacy schema sync file (+0/-1327).
 
-## Version 0.115-0.115c - Board Grace Period & Mechanics Fixes (Combined)
-**Date:** 2025-12-07 to 2026-02-05 | **Commits:** 57c55ce (0.115), 1575a15 (0.115a), f751b20 (0.115b), cf4b378 (0.115c) | **Stats:** Combined 301 additions, 207 deletions
-
-### 🏛️ **Board Grace Period**
-- `src/components/finance/BoardRoomPanel.tsx` - Grace period UI display and enforcement feedback (138 additions, 136 deletions)
-- `src/lib/services/board/boardSatisfactionService.ts` - Grace period logic implementation (46 additions, 32 deletions)
-
-### 🐛 **Bug Fixes**
-- `src/lib/services/board/boardEnforcer.ts` - Fixed board enforcer to limit rather than block vineyard operations (27 additions, 9 deletions)
-- `src/lib/services/core/startingConditionsService.ts` - Fixed starting vineyards not growing in first season (5 additions, 2 deletions)
-- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service starting season fix (16 additions, 5 deletions)
-- `src/lib/services/wine/features/featureService.ts` - Wine feature service fixes (15 additions, 1 deletion)
-- `src/lib/services/core/gameTick.ts` - Time issue in grape quality calculation fix (13 additions, 11 deletions)
-- `src/lib/services/vineyard/vineyardManager.ts` - Severe imbalance in vineyard degradation fix (5 additions, 3 deletions)
-- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal display fixes (20 additions, 3 deletions)
-- `tailwind.config.js` - Tailwind config updates (3 additions, 1 deletion)
+### Notes
+- This entry is a precursor to later bulk buy/sell market mechanics; initial functionality focuses on sell-side flow and cooperative interactions.
 
 ---
 
-## Version 0.113-0.114a - Board Room Integration & Constraint System (Combined)
-**Date:** 2025-11-30 to 2025-12-07 | **Commits:** 21f630c (0.113), cb34848 (0.114), 303f15e (0.114a) | **Stats:** Combined 3,532 additions, 915 deletions
+## Version 0.X - Repository-Wide Agent Skills Import
+**Date:** 2026-05-20 | **Commit(s):** f220568 | **Stats:** 23,620 insertions(+), 0 deletions(-)
 
-### 🏛️ **Board Room & Share Operations Integration**
-- `src/components/finance/BoardRoomPanel.tsx` - Major boardroom UI integration and refinements (594 additions, 325 deletions across commits)
-- `src/components/finance/ShareManagementPanel.tsx` - Share management panel with investor breakdown and board controls (330 additions, 166 deletions)
-- `src/lib/services/finance/shares/shareOperationsService.ts` - Major share operations expansion: IPO workflow, investor tiers, dilution (1,290 additions, 137 deletions)
+### Summary
+- Imported a large reusable skills library to standardize agent workflows across coding, planning, debugging, and frontend/game tasks.
+- Added both skill markdown definitions and supporting scripts/templates for specialized flows.
+- Established model/agent metadata files to route tasks through specific skill contexts.
 
-### 🔒 **Board Constraint System**
-- **NEW FILE:** `src/components/ui/constraints/ConstraintDisplay.tsx` (223 lines) - Reusable board constraint display component
-- **NEW FILE:** `src/lib/types/constraintTypes.ts` (64 lines) - Constraint type definitions
-- `src/lib/services/board/boardEnforcer.ts` - Full board enforcement rules for vineyard, research, land search (291 additions, 43 deletions)
-- `src/lib/constants/boardConstants.ts` - Comprehensive board constraint constants (242 additions, 6 deletions)
-- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` - Constraint enforcement in land search (96 additions, 10 deletions)
+### Changes
+- **NEW FILE:** `skills/react-best-practices/AGENTS.md` (3,373 lines) - extensive React/Next performance and architecture guidance corpus.
+- **NEW FILE:** `skills/brainstorming/scripts/server.cjs` (354 lines) and **NEW FILE:** `skills/brainstorming/scripts/frame-template.html` (214 lines) - local brainstorming support runtime and templates.
+- **NEW FILE:** `skills/frontend-app-builder/SKILL.md` (185 lines), **NEW FILE:** `skills/dispatching-parallel-agents/SKILL.md` (182 lines), **NEW FILE:** `skills/find-skills/SKILL.md` (142 lines), **NEW FILE:** `skills/javascript-typescript/SKILL.md` (142 lines) - core workflow skills for implementation and orchestration.
+- **NEW FILE:** `skills/game-ui-frontend/SKILL.md` (112 lines), **NEW FILE:** `skills/game-studio/SKILL.md` (94 lines), **NEW FILE:** `skills/game-playtest/SKILL.md` (76 lines) - game-specific design and playtest workflows.
+- **NEW FILE:** multiple `skills/*/agents/openai.yaml` files - model-routing metadata for skill execution.
 
-### 🗄️ **Database & Services**
-- `src/lib/database/core/companySharesDB.ts` - Share ownership queries (121 additions, 1 deletion)
-- `src/lib/services/finance/creditRatingService.ts` - Credit rating refactoring (14 additions, 86 deletions)
-- `src/lib/services/board/boardSatisfactionService.ts` - Board satisfaction service cleanup (18 additions, 59 deletions)
-- `src/lib/services/core/startingConditionsService.ts` - Starting conditions board integration (12 additions, 1 deletion)
-- `src/lib/services/vineyard/landSearchService.ts` - Land search constraint integration (15 additions, 4 deletions)
-- `migrations/sync_vercel_schema.sql` - Schema updates (12 additions)
+### Notes
+- This commit is infrastructure/documentation heavy; runtime gameplay behavior is unchanged directly, but future agent output quality is affected by these skill definitions.
 
 ---
-## Version 0.112a-0.112d - Boardroom System Enhancements & Cleanup (Combined)
-**Date:** 2025-11-30 | **Commits:** 6d14d87 (0.0112), e86f2f8 (0.112a), 60f2ac1 (0.112b), ffad57d (0.112c), 23f3d7d (0.112d) | **Stats:** Combined 2,062 additions, 1,583 deletions
 
-### 🎨 **Boardroom UI Improvements**
-- `src/components/finance/BoardRoomPanel.tsx` - Major UI enhancements and refinements (1,113 additions, 622 deletions across commits)
-- `src/components/finance/LoansView.tsx` - Loan view updates (26 additions, 22 deletions)
-- `src/components/finance/ShareManagementPanel.tsx` - Share management panel updates (18 additions, 18 deletions)
+## Version 0.205-0.205b - Taste Quality Index Integration and Terminology Alignment
+**Date:** 2026-05-20 | **Commit(s):** b7c0756, 4d6d0fc, 83302f7 | **Stats:** 2,818 insertions(+), 703 deletions(-)
 
-### 💳 **Credit Rating System Overhaul**
-- **NEW FILE:** `src/lib/constants/creditRatingConstants.ts` (60 lines) - Credit rating constants and configuration
-- `src/lib/services/finance/creditRatingService.ts` - Complete credit rating calculation rewrite (280 additions, 160 deletions)
-- `src/lib/database/core/companyMetricsHistoryDB.ts` - Enhanced metrics history tracking (61 additions, 4 deletions)
+### Summary
+- Implemented taste quality score visibility in wine scoring and commercial-facing UI paths.
+- Added tests around anchor and wine-log related behavior while iterating on score naming consistency.
+- Performed broad terminology cleanup to align model and UI language.
 
-### 🗄️ **Database & System Updates**
-- `migrations/sync_vercel_schema.sql` - Database schema updates for boardroom system (54 additions across commits)
-- `src/lib/database/core/boardSatisfactionHistoryDB.ts` - Board satisfaction history database improvements (61 additions, 21 deletions)
-- `src/lib/services/board/boardEnforcer.ts` - Board enforcer service updates (36 additions, 20 deletions)
-- `src/lib/services/board/boardSatisfactionService.ts` - Board satisfaction service improvements (67 additions, 36 deletions)
-- `src/lib/services/core/gameTick.ts` - Game tick integration updates (25 additions, 9 deletions)
+### Changes
+- **NEW FILE:** `src/components/ui/components/WineTasteQualityBreakdown.tsx` (160 lines) - dedicated UI breakdown component for taste quality score explanation.
+- `src/components/pages/sales/ContractsTab.tsx` (+16/-12) and `src/lib/constants/contractConstants.ts` (+16/-5) - contract generation/display now incorporates taste quality constraints.
+- `src/components/ui/modals/UImodals/wineModal.tsx` (changes across 0.205a and 0.205b) - presents updated score terminology and quality details in wine detail modal.
+- `src/lib/database/activities/inventoryDB.ts` (+9/-9) - updated inventory mapping to persist and surface renamed score fields.
+- **NEW FILE:** `tests/user/wineLogService.test.ts` (111 lines in 0.205a) and **NEW FILE:** `tests/wine/wineAnchorService.test.ts` (61 lines in 0.205a) - added targeted regression coverage around scoring-related services.
+- `tests/user/achievementScoreUtils.test.ts` (+28) - expanded score utility validation during rename pass.
+- `docs/WineSystem_VariableRelationshipMap.md` and related plan/spec docs - documented updated score model and naming conventions.
 
-### 🧹 **Code Cleanup & Refactoring**
-- `src/lib/services/finance/shares/sharePriceService.ts` - Share price service cleanup (34 additions, 92 deletions)
-- `src/lib/services/finance/shares/shareOperationsService.ts` - Share operations service refactoring (20 additions, 65 deletions)
-- `src/lib/services/finance/shares/shareMetricsService.ts` - Share metrics service cleanup (12 additions, 66 deletions)
-- `src/lib/services/finance/shares/growthTrendService.ts` - Growth trend service updates (4 additions, 11 deletions)
-- `src/lib/constants/boardConstants.ts` - Board constants updates (15 additions, 14 deletions)
-
-### 📚 **Documentation**
-- `docs/PublicCompanyImplementation.md` - Documentation updates (39 additions)
-- **REMOVED:** `docs/board-satisfaction-and-constraints-system.plan.md` (363 lines) - Consolidated into main docs
-
-## Version 0.111 - Boardroom System Alpha
-**Date:** 2025-11-30 | **Commit:** be5baea | **Stats:** 2,004 additions, 1,622 deletions
-
-### 🏛️ **Boardroom System Implementation**
-- **NEW FILE:** `src/components/finance/BoardRoomPanel.tsx` (435 lines) - Complete boardroom management interface
-- **NEW FILE:** `src/lib/services/board/boardSatisfactionService.ts` (392 lines) - Board satisfaction calculation and tracking
-- **NEW FILE:** `src/lib/services/board/boardEnforcer.ts` (182 lines) - Board constraint enforcement system
-- **NEW FILE:** `src/lib/constants/boardConstants.ts` (109 lines) - Board system constants and configuration
-- **NEW FILE:** `src/lib/database/core/boardSatisfactionHistoryDB.ts` (304 lines) - Board satisfaction history database operations
-- **NEW FILE:** `src/lib/utils/consistencyUtils.ts` (75 lines) - Consistency utility functions
-
-### 🗄️ **Database Schema Updates**
-- `migrations/sync_vercel_schema.sql` - Database schema updates for boardroom system (27 additions)
-
-### 🔗 **System Integration**
-- `src/components/finance/FinanceView.tsx` - Added boardroom panel integration (10 additions, 1 deletion)
-- `src/lib/services/core/gameTick.ts` - Boardroom system integration (12 additions)
-- `src/lib/services/finance/creditRatingService.ts` - Credit rating service updates (19 additions, 6 deletions)
-- `src/lib/services/finance/shares/shareOperationsService.ts` - Share operations integration (19 additions)
-- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service updates (30 additions)
-- `src/lib/services/activity/activitymanagers/staffSearchManager.ts` - Staff search manager updates (14 additions)
-
-### 📚 **Documentation**
-- **NEW FILE:** `docs/board-satisfaction-and-constraints-system.plan.md` (363 lines) - Boardroom system planning documentation
-- **REMOVED:** `docs/Agents_feedback/testscripts` (1,615 lines) - Consolidated documentation
-
-## Version 0.101 - Research Enforcer System
-**Date:** 2025-11-29 | **Commit:** 1b5486b | **Stats:** 159 additions, 59 deletions
-
-### 🔬 **Research Enforcement System**
-- **NEW FILE:** `src/lib/services/research/researchEnforcer.ts` (133 lines) - Research unlock enforcement service
-- `src/components/pages/winepedia/GrapeVarietiesTab.tsx` - Research enforcement integration (8 additions, 7 deletions)
-- `src/components/ui/modals/activitymodals/PlantingOptionsModal.tsx` - Planting options with research enforcement (11 additions, 6 deletions)
-- `src/lib/services/core/startingConditionsService.ts` - Starting conditions service updates (4 additions, 4 deletions)
-- **REMOVED:** `src/lib/utils/researchUtils.ts` (39 lines) - Consolidated into researchEnforcer service
-
-## Version 0.096a-0.096b - Build Fixes & Database Updates (Combined)
-**Date:** 2025-11-29 | **Commits:** 33bd9d1 (0.096a), 431dd10 (0.096b) | **Stats:** Combined 448 additions, 53 deletions
-
-### 🔧 **Build Fixes & Documentation**
-- `docs/versionlog.md` - Version log updates (106 additions)
-- `docs/share_price.md` - Share price documentation updates (76 additions, 23 deletions)
-- `docs/PROJECT_INFO.md` - Project info updates (14 additions, 6 deletions)
-- `docs/plan.plan.md` - Planning documentation updates (33 additions, 12 deletions)
-- `tests/finance/shareValuation.test.ts` - Test suite enhancements (196 additions, 2 deletions)
-
-### 🗄️ **Database Fixes**
-- `src/lib/database/core/companySharesDB.ts` - Database operation fixes (20 additions, 7 deletions)
-- `src/lib/services/user/companyService.ts` - Company service updates (3 additions, 2 deletions)
-
-## Version 0.096 - Share System Architecture Refactor
-**Date:** 2025-11-29 | **Commit:** d711f55 | **Stats:** 2,939 additions, 2,318 deletions
-
-### 🏗️ **Major Service Architecture Refactor**
-- **REMOVED:** `src/lib/services/finance/shareManagementService.ts` (1,018 lines) - Consolidated into new structure
-- **REMOVED:** `src/lib/services/finance/sharePriceIncrementService.ts` (696 lines) - Replaced by modular services
-- **REMOVED:** `src/lib/services/finance/shareValuationService.ts` (247 lines) - Replaced by modular services
-- **REMOVED:** `src/lib/services/finance/growthTrendService.ts` (136 lines) - Moved to shares subdirectory
-
-### 📦 **New Modular Share Services**
-- **NEW FILE:** `src/lib/services/finance/shares/sharePriceService.ts` (657 lines) - Core share price calculation service
-- **NEW FILE:** `src/lib/services/finance/shares/shareOperationsService.ts` (544 lines) - Share issuance, buyback, and ownership operations
-- **NEW FILE:** `src/lib/services/finance/shares/shareMetricsService.ts` (446 lines) - Financial metrics calculation and tracking
-- **NEW FILE:** `src/lib/services/finance/shares/growthTrendService.ts` (232 lines) - Growth trend analysis
-- **NEW FILE:** `src/lib/services/finance/shares/sharePriceAdjustmentHelpers.ts` (127 lines) - Price adjustment utility functions
-- **NEW FILE:** `src/lib/services/finance/shares/sharePriceBreakdownHelpers.ts` (149 lines) - Price breakdown calculation helpers
-- **NEW FILE:** `src/lib/services/finance/shares/shareCalculations.ts` (124 lines) - Core share calculation utilities
-
-### 🗄️ **Database Layer Improvements**
-- **NEW FILE:** `src/lib/database/core/companySharesDB.ts` (208 lines) - Dedicated share ownership database operations
-- `src/lib/database/core/companiesDB.ts` - Streamlined company database operations (14 additions, 87 deletions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (67 additions)
-
-### 🎨 **UI & Type System Updates**
-- `src/components/finance/ShareManagementPanel.tsx` - Updated to use new service architecture (53 additions, 30 deletions)
-- `src/lib/types/types.ts` - Enhanced type definitions for new share system (150 additions)
-- `src/lib/types/index.ts` - Added type exports (9 additions)
-- `src/lib/services/index.ts` - Updated service exports (52 additions, 2 deletions)
-- `src/lib/services/user/companyService.ts` - Company service updates (68 additions, 80 deletions)
-- `docs/share_price.md` - Documentation updates (12 additions, 9 deletions)
-
-## Version 0.095-0.095c - Share Price Expectation System & Fixes (Combined)
-**Date:** 2025-11-28 | **Commits:** 2351863 (0.095), 42aedfa (0.095a), fdd7cc7 (0.095b), 09e3789 (0.095c) | **Stats:** Combined 719 additions, 502 deletions
-
-### 📊 **Share Price Expectation System**
-- `src/lib/services/finance/sharePriceIncrementService.ts` - Enhanced expectation system based on past year performance and company size (54 additions, 20 deletions)
-- `src/lib/constants/shareValuationConstants.ts` - Updated expectation constants (31 additions, 9 deletions)
-- `src/components/finance/ShareManagementPanel.tsx` - Enhanced UI for expectation display (57 additions, 30 deletions)
-
-### 🐛 **Bug Fixes & Improvements**
-- `src/lib/services/finance/sharePriceIncrementService.ts` - Share price calculation fixes (52 additions, 47 deletions)
-- `src/lib/services/finance/shareManagementService.ts` - Share management fixes (1 addition, 16 deletions)
-- `docs/share_price.md` - Documentation corrections (4 additions, 1 deletion)
-- `src/lib/services/finance/economyService.ts` - Build fix (1 deletion)
-
-## Version 0.094 - Unified 48-Week Expectation System
-**Date:** 2025-11-28 | **Commit:** 29d08ec | **Stats:** 742 additions, 323 deletions
-
-### 📈 **48-Week Historical Tracking System**
-- `src/lib/services/finance/sharePriceIncrementService.ts` - Unified 48-week expectation system implementation (230 additions, 160 deletions)
-- `src/components/finance/ShareManagementPanel.tsx` - Enhanced UI for 48-week historical display (322 additions, 158 deletions)
-- `src/lib/constants/shareValuationConstants.ts` - Added 48-week expectation constants (39 additions)
-- `src/lib/services/finance/shareManagementService.ts` - Share management updates (73 additions, 3 deletions)
-- `src/lib/services/prestige/prestigeService.ts` - Prestige service integration (65 additions, 1 deletion)
-- `src/lib/database/core/companyMetricsHistoryDB.ts` - Database operations updates (13 additions, 1 deletion)
-
-## Version 0.093a - Database Layer Improvements
-**Date:** 2025-11-28 | **Commit:** a6b6525 | **Stats:** 161 additions, 139 deletions
-
-### 🗄️ **Database Refactoring**
-- **NEW FILE:** `src/lib/database/dbMapperUtils.ts` (50 lines) - Centralized database mapper utilities
-- `src/lib/database/core/companiesDB.ts` - Improved company database operations (43 additions, 30 deletions)
-- `src/lib/database/core/companyMetricsHistoryDB.ts` - Metrics history database improvements (13 additions, 25 deletions)
-- `src/lib/database/core/loansDB.ts` - Loan database cleanup (7 additions, 30 deletions)
-- Database operation improvements across: `achievementsDB.ts`, `inventoryDB.ts`, `researchUnlocksDB.ts`, `staffDB.ts`, `transactionsDB.ts`, `usersDB.ts`, `wineLogDB.ts`, `salesDB.ts`, `contractDB.ts`
-
-## Version 0.093 - Share Price System & Metrics History
-**Date:** 2025-11-28 | **Commit:** 0e51073 | **Stats:** 4,026 additions, 573 deletions
-
-### 💹 **Share Price & Valuation System**
-- **NEW FILE:** `src/lib/services/finance/sharePriceIncrementService.ts` (587 lines) - Incremental share price adjustment system
-- **NEW FILE:** `src/lib/services/finance/shareValuationService.ts` (248 lines) - Share valuation calculations
-- **NEW FILE:** `src/lib/services/finance/growthTrendService.ts` (136 lines) - Growth trend analysis service
-- **NEW FILE:** `src/lib/constants/shareValuationConstants.ts` (62 lines) - Share valuation constants
-- **REMOVED:** `src/lib/services/finance/shareValueService.ts` (189 lines) - Replaced by shareValuationService
-
-### 📊 **Company Metrics History System**
-- **NEW FILE:** `src/lib/database/core/companyMetricsHistoryDB.ts` (319 lines) - Weekly metrics snapshot database operations
-- `src/lib/services/finance/financeService.ts` - Enhanced finance service with metrics tracking (262 additions, 1 deletion)
-- `src/lib/services/core/gameTick.ts` - Weekly metrics snapshot integration (35 additions, 3 deletions)
-
-### 🎨 **UI Components**
-- `src/components/finance/ShareManagementPanel.tsx` - Major share management UI overhaul (722 additions, 270 deletions)
-- **NEW FILE:** `src/components/pages/winepedia/ShareMarketTab.tsx` (215 lines) - Share market information tab
-- `src/components/pages/Winepedia.tsx` - Added Share Market tab (3 additions, 2 deletions)
-- `src/components/pages/AdminDashboard.tsx` - Admin tools updates (81 additions)
-
-### 📚 **Documentation**
-- **NEW FILE:** `docs/share_price.md` (298 lines) - Comprehensive share price system documentation
-- **NEW FILE:** `docs/plan.plan.md` (279 lines) - Planning documentation
-- `docs/PROJECT_INFO.md` - Project info updates (38 additions, 27 deletions)
-
-### 🧪 **Testing**
-- **NEW FILE:** `tests/finance/shareValuation.test.ts` (329 lines) - Share valuation test suite
-
-### 🗄️ **Database Schema**
-- `migrations/sync_vercel_schema.sql` - Database schema updates for metrics history (53 additions)
-- `src/lib/database/core/companiesDB.ts` - Company database updates (37 additions, 1 deletion)
-
-## Version 0.092a - Build Fix
-**Date:** 2025-11-26 | **Commit:** efcb0f8 | **Stats:** 8 additions, 1 deletion
-
-### 🔧 **Build Fixes**
-- `src/components/finance/IncomeBalanceView.tsx` - Build error fixes (6 additions)
-- `tests/activity/workCalculator.test.ts` - Test updates (2 additions, 1 deletion)
-
-## Version 0.092 - Finance & Share Management Tuning
-**Date:** 2025-11-26 | **Commit:** f8bda77 | **Stats:** 612 additions, 134 deletions
-
-### 💹 Share & Treasury Updates
-- `src/components/finance/ShareManagementPanel.tsx` — Added detailed shareholder breakdowns, IPO readiness cues, and board controls (258 additions, 65 deletions).
-- `src/lib/services/finance/shareManagementService.ts` — Expanded equity math for dilution, investor classes, and dividend scheduling (201 additions, 1 deletion).
-- `src/components/finance/CashFlowView.tsx` — Reworked inflow/outflow grouping plus rolling net balance graph (81 additions, 42 deletions).
-- `src/lib/services/finance/financeService.ts` — Updated to expose new equity metrics to the UI (30 additions, 24 deletions).
-
-### 🛠️ Supporting Fixes
-- `src/lib/constants/financeConstants.ts` — Added share-category descriptors (36 additions).
-- `src/lib/services/core/startingConditionsService.ts` / `user/companyService.ts` — Seed companies with the new share fields (6 additions, 2 deletions combined).
-
-## Version 0.09-0.091B - Public Companies & Equity Framework (Combined)
-**Date:** 2025-11-23 to 2025-11-25 | **Commits:** d108f94 (0.09), 10709b7 (0.091), e1435d4 (0.091a), ef4e4b8 (0.091B) | **Stats:** Combined 4,452 additions, 1,472 deletions
-
-### 🏛️ Public Company Infrastructure
-- **NEW FILE:** `src/components/finance/ShareManagementPanel.tsx` (445 lines) — Investor ledger with issuance controls and market cap summary.
-- **NEW FILES:** `src/lib/services/finance/shareManagementService.ts` (514 lines) & `shareValueService.ts` (189 lines) — Core business logic for IPO states, share pricing, dilution, and dividend forecasting.
-- `src/components/pages/AdminDashboard.tsx` / `Profile.tsx` / `Login.tsx` — Added IPO toggles, ownership visibility, and balance sheets (481 additions, 5 deletions across files).
-- `src/lib/database/core/companiesDB.ts` & `usersDB.ts` — Persist float, listing status, and user cash balance (43 additions, 3 deletions).
-
-### 👥 Staff & Activity Enhancements
-- `src/components/pages/Staff.tsx`, `StaffModal.tsx`, `StaffWageSummary.tsx`, `StaffSkillBar.tsx`, and `activity/workCalculator.ts` — Introduced experience tracking, contribution scoring, and revised wage multipliers (409 additions, 113 deletions).
-- `src/lib/services/activity/activitymanagers/activityManager.ts` & `workcalculators/workCalculator.ts` — Support staff-derived research/finance work (112 additions, 24 deletions).
-
-### 🧮 Finance & Models
-- `src/components/finance/IncomeBalanceView.tsx` / `economyConstants.ts` / `loanService.ts` — Connected dividends, credit rating, and lender behaviour to equity state (200+ additions).
-- `src/components/pages/winepedia/MathematicalModelsTab.tsx` — Documented new share valuation and contribution curves (517 additions, 456 deletions).
-- `src/lib/utils/calculator.ts` — Added helper functions for contribution caps and equity weighting (76 additions, 28 deletions).
-
-### 🔧 IPO Phase Fixes
-- **NEW FILE:** `src/lib/services/user/userBalanceService.ts` (123 lines) — Centralises user cash/dividend payouts.
-- `src/lib/services/core/startingConditionsService.ts`, `StartingConditionsModal.tsx`, `AdminDashboard.tsx` — Ensure IPO-ready companies spawn with voters, treasury stock, and user cash balances (330+ additions, 59 deletions).
-
-## Documentation Update - Versionlog Split
-**Date:** 2025-11-23 | **Commit:** 1e5bfc4 | **Stats:** 1,197 additions, 1,195 deletions
-
-### 📝 Docs
-- **NEW FILE:** `docs/versionlog_legacy.md` (1,196 lines) — Archived historical entries (≤0.06).
-- `docs/versionlog.md` — Trimmed to active releases while keeping contributor guidelines (1 deletion of legacy content, 1 addition referencing the archive).
-
-## Version 0.082 - Research Grapes & Unlocks
-**Date:** 2025-11-23 | **Commit:** e0c1b16 | **Stats:** 856 additions, 129 deletions
-
-### 🔬 Research Unlock System
-- **NEW FILE:** `src/lib/database/core/researchUnlocksDB.ts` (154 lines) and **NEW FILE:** `src/lib/utils/researchUtils.ts` (39 lines) — Track unlocked grape families and expose helper utilities.
-- `src/lib/constants/researchConstants.ts` — Added grape-focused research tracks (150 additions, 18 deletions).
-- `src/components/finance/ResearchPanel.tsx` — Display unlock progress and next-tier requirements (117 additions, 33 deletions).
-- `src/lib/services/activity/activitymanagers/researchManager.ts` & `researchWorkCalculator.ts` — Reward unlocked varietals and adjust workload (131 additions, 17 deletions).
-
-### 🍇 Gameplay Integration
-- `src/components/pages/winepedia/GrapeVarietiesTab.tsx`, `PlantingOptionsModal.tsx`, and `StartingConditionsModal.tsx` — Gate planting lists and starting perks behind research progress (131 additions, 8 deletions).
-- `src/lib/constants/startingConditions.ts` / `startingConditionsService.ts` — Seed research with founders’ expertise (71 additions, 16 deletions).
-- `tests/user/startingConditions.test.ts` — Coverage for grape unlock flows (30 additions).
-
-## Version 0.076b-0.076C - Test & Economy Fixes (Combined)
-**Date:** 2025-11-23 | **Commits:** dd4b2f3 (0.076b), 2ada3b9 (0.76C bug), 545fea1 (0.076C) | **Stats:** Combined 1,289 additions, 1,193 deletions
-
-### 🧪 Test Improvements
-- `tests/user/hireStaffWorkflow.test.ts`, `researchWorkflow.test.ts` (NEW FILE, 213 lines), and `startingConditions.test.ts` — Expanded hiring, research, and founder scenario coverage (405 additions, 963 deletions net due to refactors).
-- `server/test-api.ts` & `test-viewer/TestViewer.tsx` — Added mock endpoints plus viewer UX refinements for running targeted suites (113 additions, 24 deletions).
-
-### ⚙️ Gameplay Fixes
-- `src/lib/services/core/gameState.ts` — Patched economy-phase persistence regression (17 additions).
-- `src/lib/services/finance/loanService.ts` — Addressed lender seizure math after IPO changes (144 additions, 23 deletions).
-- `src/lib/services/activity/activitymanagers/researchManager.ts` and `researchConstants.ts` — Synced research targets with new data set (58 additions, 57 deletions).
-- Renamed grape icon assets to snake_case for test harness consistency.
+### Notes
+- 0.205a and 0.205b are mostly refinement and naming hardening over the initial 0.205 implementation.
+- Terminology changes are cross-cutting; downstream docs/tests were updated in parallel to reduce drift.
 
 ---
-## Version 0.081 - Research System Enhancements
-**Date:** 2025-11-21 | **Commit:** 567a7a8 | **Stats:** 1,639 additions, 1,048 deletions
 
-### 🔬 **Research System Improvements**
-- `src/lib/constants/researchConstants.ts` - Enhanced research constants (145 lines)
-- `src/components/finance/ResearchPanel.tsx` - Major research panel enhancements (195 additions, 28 deletions)
-- `src/lib/services/activity/activitymanagers/researchManager.ts` - Enhanced research manager (120 additions, 18 deletions)
-- `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` - Enhanced research work calculations (139 additions, 19 deletions)
-- `src/lib/services/prestige/prestigeService.ts` - Research prestige integration (123 additions, 93 deletions)
+## Version 0.204-0.204a - Taste Profile UI Stack and Service Layer
+**Date:** 2026-04-13 to 2026-05-20 | **Commit(s):** b5f99df, 42df385 | **Stats:** 2,197 insertions(+), 1,492 deletions(-)
 
-### 🎨 **UI Updates**
-- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Prestige modal updates (473 additions, 481 deletions)
-- `src/components/finance/LoansView.tsx` - Loan view improvements (85 additions, 87 deletions)
+### Summary
+- Introduced a dedicated taste-profile visualization stack (panel + wheel + breakdown logic) for wine-level analysis.
+- Added taste-domain services/constants to move flavor compatibility and normalization out of ad-hoc UI logic.
+- Follow-up commit refined modal integration and reduced/removed interim UI pieces.
 
-### 🛠️ **System Updates**
-- `src/lib/services/user/teamService.ts` - Team service updates (55 additions, 55 deletions)
-- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service updates (32 additions, 32 deletions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (43 additions, 1 deletion)
+### Changes
+- **NEW FILE:** `src/components/ui/components/WineTasteProfilePanel.tsx` (199 lines) - main taste profile presentation component.
+- **NEW FILE:** `src/components/ui/components/WineTasteWheel.tsx` (111 lines) - radial flavor visualization.
+- **NEW FILE:** `src/lib/services/wine/taste/wineTasteProfileService.ts` (273 lines) - computes profile outputs used by UI.
+- **NEW FILE:** `src/lib/services/wine/taste/tasteCrossDomain.ts` (19 lines) and **NEW FILE:** `src/lib/services/wine/taste/tasteNormalization.ts` (15 lines) - cross-feature taste mapping and normalization helpers.
+- **NEW FILE:** `src/lib/constants/taste/flavorFamilyLabels.ts` (78 lines) and **NEW FILE:** `src/lib/constants/taste/tasteCompatibilityMatrix.ts` (63 lines) - canonical labels/compatibility mapping.
+- `src/components/ui/modals/UImodals/wineModal.tsx` (+86/-40 in 0.204; additional reduction in 0.204a) - integrated and then tightened taste-profile rendering.
+- `src/components/ui/components/StructureIndexBreakdown.tsx` (+20/-10) and `src/hooks/useWineStructureIndex.ts` (+7/-1) - aligned structure-index display with new taste outputs.
 
-## Version 0.08 - Research System Implementation
-**Date:** 2025-11-21 | **Commit:** d44000c | **Stats:** 2,051 additions, 363 deletions
-
-### 🔬 **Research System Framework**
-- **NEW FILE:** `src/lib/services/activity/activitymanagers/researchManager.ts` (26 lines) - Research activity manager
-- **NEW FILE:** `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` (32 lines) - Research work calculator
-- **NEW FILE:** `src/components/finance/ResearchPanel.tsx` (42 lines) - Research panel component
-- **REMOVED:** `src/components/finance/UpgradesPlaceholder.tsx` (27 lines) - Replaced by ResearchPanel
-- `src/lib/constants/activityConstants.ts` - Added research activity constants (20 additions, 20 deletions)
-- `src/lib/services/activity/activitymanagers/activityManager.ts` - Research activity integration (50 additions, 47 deletions)
-- `src/lib/services/activity/workcalculators/workCalculator.ts` - Research work calculation support (26 additions, 26 deletions)
-
-### 🧪 **Test System Integration**
-- `test-viewer/TestViewer.tsx` - Enhanced test viewer (266 additions, 6 deletions)
-- **NEW FILE:** `tests/user/companyCreation.test.ts` (395 lines) - Company creation tests
-- **NEW FILE:** `tests/user/hireStaffWorkflow.test.ts` (674 lines) - Staff hiring workflow tests
-- **NEW FILE:** `tests/user/startingConditions.test.ts` (293 lines) - Starting conditions tests
-
-### 🛠️ **System Updates**
-- `src/lib/types/types.ts` - Research type definitions (58 additions, 56 deletions)
-- `src/lib/services/finance/wageService.ts` - Wage service updates (21 additions, 21 deletions)
-- `src/lib/services/user/staffService.ts` - Staff service updates (13 additions, 13 deletions)
-- `src/lib/utils/colorMapping.ts` - Color mapping updates (23 additions, 35 deletions)
-- `src/lib/utils/icons.tsx` - Icon utility updates (18 additions, 18 deletions)
-
-## Version 0.076a - Test Suite Enhancements
-**Date:** 2025-11-21 | **Commit:** edc8b60 | **Stats:** 1,270 additions, 501 deletions
-
-### 🧪 **Test System Improvements**
-- `test-viewer/TestViewer.tsx` - Major test viewer enhancements (1,105 additions, 488 deletions)
-- **NEW FILE:** `tests/vineyard/vineyardCreation.test.ts` (154 lines) - Vineyard creation tests
-- `tests/vineyard/grapeSuitability.test.ts` - Grape suitability test updates (1 addition, 1 deletion)
-- `tests/vineyard/yieldCalculator.test.ts` - Yield calculator test updates (9 additions, 11 deletions)
-
-## Version 0.076 - Lender Creation Bug Fix
-**Date:** 2025-11-21 | **Commit:** 99981d9 | **Stats:** 196 additions, 167 deletions
-
-### 💰 **Loan System Fixes**
-- `src/lib/services/finance/lenderService.ts` - Fixed lender creation to ensure 3 of each type (77 additions, 60 deletions)
-- `src/lib/services/finance/loanService.ts` - Fixed vineyard value seizure to max 50% (119 additions, 107 deletions)
-
-## Version 0.075 - Automated Testing Framework & pnpm Migration
-**Date:** 2025-11-21 | **Commit:** c7d5c9a | **Stats:** 9,517 additions, 6,308 deletions
-
-### 🧪 **Testing Framework Implementation**
-- **NEW FILE:** `tests/README.md` (96 lines) - Test documentation
-- **NEW FILE:** `tests/activity/workCalculator.test.ts` (166 lines) - Work calculator tests
-- **NEW FILE:** `tests/finance/loanService.test.ts` (165 lines) - Loan service tests
-- **NEW FILE:** `tests/finance/wageService.test.ts` (150 lines) - Wage service tests
-- **NEW FILE:** `tests/vineyard/grapeSuitability.test.ts` (277 lines) - Grape suitability tests
-- **NEW FILE:** `tests/vineyard/yieldCalculator.test.ts` (281 lines) - Yield calculator tests
-- **NEW FILE:** `tests/wine/fermentationCharacteristics.test.ts` (214 lines) - Fermentation characteristics tests
-
-### 🛠️ **Test Infrastructure**
-- **NEW FILE:** `test-viewer/TestViewer.tsx` (822 lines) - Test viewer component
-- **NEW FILE:** `test-viewer/TestViewerPage.tsx` (13 lines) - Test viewer page
-- **NEW FILE:** `test-viewer/index.html` (432 lines) - Test viewer HTML
-- **NEW FILE:** `test-viewer/viewer.js` (161 lines) - Test viewer JavaScript
-- **NEW FILE:** `test-viewer/README.md` (56 lines) - Test viewer documentation
-- **NEW FILE:** `server/test-api.ts` (132 lines) - Test API server
-- **NEW FILE:** `docs/Agents_feedback/testscripts` (1,615 lines) - Test script documentation
-
-### 📦 **Package Manager Migration**
-- **REMOVED:** `package-lock.json` (6,302 lines) - Removed npm lock file
-- **NEW FILE:** `pnpm-lock.yaml` (4,897 lines) - pnpm lock file
-- **NEW FILE:** `pnpm-workspace.yaml` (2 lines) - pnpm workspace configuration
-- `package.json` - Updated for pnpm and test dependencies (7 additions, 2 deletions)
-- Added test scripts: `test` and `test:watch` using Vitest
-
-### ⚙️ **Configuration Updates**
-- `vite.config.ts` - Vitest configuration (8 additions, 1 deletion)
-- `tsconfig.json` - TypeScript configuration for tests (3 additions, 2 deletions)
-- `src/components/pages/AdminDashboard.tsx` - Admin dashboard updates (8 additions, 1 deletion)
-
-## Version 0.074a - Supabase Fix & Vineyard Value Calculations
-**Date:** 2025-11-21 | **Commit:** cbe577c | **Stats:** 70 additions, 54 deletions
-
-### 🗄️ **Database & Service Updates**
-- `migrations/sync_vercel_schema.sql` - Supabase schema fixes (44 additions, 44 deletions)
-- `src/lib/services/core/startingConditionsService.ts` - Vineyard value calculations in starting conditions (14 additions, 3 deletions)
-- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard value calculation improvements (10 additions, 5 deletions)
-- `src/lib/services/sales/salesService.ts` - Sales service updates (2 additions, 2 deletions)
-
-## Version 0.074 - Database Schema Updates
-**Date:** 2025-11-14 | **Commit:** b813805 | **Stats:** 74 additions, 10 deletions
-
-### 🗄️ **Database Updates**
-- `migrations/sync_vercel_schema.sql` - Database schema updates (71 additions, 8 deletions)
-- `src/components/layout/ActivityPanel.tsx` - Activity panel updates (2 additions, 2 deletions)
-
-## Version 0.073-0.073DB - Bug Fixes & System Improvements (Combined)
-**Date:** 2025-11-13 to 2025-11-14 | **Commits:** d2067c8 (0.073), c0bb9b5 (0.073a), e0f4656 (0.073b), 9dca737 (0.073C), 7ddc08d (0.073D), 8a896e5 (0.073DA), c1ae140 (0.073DB) | **Stats:** Combined 1,801 additions, 654 deletions
-
-### 🐛 **Bug Fixes & Improvements**
-- `src/lib/services/prestige/prestigeService.ts` - Vineyard prestige bug fixes (17 additions, 4 deletions)
-- `src/lib/services/user/achievementService.ts` - Achievement service improvements (54 additions, 27 deletions)
-- `src/lib/services/finance/loanService.ts` - Loan service bug fixes (147 additions, 119 deletions across commits)
-- `src/lib/services/sales/contractGenerationService.ts` - Contract generation improvements (337 additions, 161 deletions)
-- `src/lib/services/sales/contractService.ts` - Contract service updates (134 additions, 28 deletions)
-- **NEW FILE:** `src/lib/constants/contractConstants.ts` (209 lines) - Contract constants
-- **NEW FILE:** `src/lib/services/sales/expirationService.ts` (104 lines) - Contract expiration service
-- **NEW FILE:** `src/hooks/useWinePriceCalculator.ts` (63 lines) - Wine price calculator hook
-- **REMOVED:** `src/hooks/useEstimatedPrice.ts` (46 lines) - Replaced by useWinePriceCalculator
-
-### 🎨 **UI Component Updates**
-- `src/components/pages/sales/ContractsTab.tsx` - Contract tab improvements (179 additions, 60 deletions)
-- `src/components/pages/sales/AssignWineModal.tsx` - Wine assignment modal updates (50 additions, 7 deletions)
-- `src/components/ui/components/grapeQualityBreakdown.tsx` - Quality breakdown updates (48 additions, 72 deletions)
-- `src/components/finance/LoansView.tsx` - Loan view updates (28 additions, 9 deletions)
-
-### 🗄️ **Database Updates**
-- `migrations/sync_vercel_schema.sql` - Database schema updates (303 additions, 59 deletions)
-- `src/lib/database/activities/inventoryDB.ts` - Inventory database updates (6 additions, 2 deletions)
-
-## Version 0.072 - Bug Fixes: Features, Sales, Orders, Contracts & Loans
-**Date:** 2025-11-13 | **Commit:** e46d1c6 | **Stats:** 688 additions, 153 deletions
-
-### 🐛 **System Bug Fixes**
-- `src/lib/services/wine/features/featureService.ts` - Feature service bug fixes (108 additions, 52 deletions)
-- `src/lib/services/finance/loanService.ts` - Loan service bug fixes (106 additions, 8 deletions)
-- `src/lib/services/sales/salesOrderService.ts` - Sales order service fixes (62 additions, 1 deletion)
-- `src/lib/services/sales/generateOrder.ts` - Order generation fixes (25 additions, 5 deletions)
-- **NEW FILE:** `src/lib/services/sales/expirationService.ts` (104 lines) - Contract expiration service
-- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard manager fixes (42 additions, 5 deletions)
-- `src/lib/services/core/gameTick.ts` - Game tick fixes (15 additions, 2 deletions)
-
-### 🎨 **UI Component Updates**
-- `src/components/ui/modals/activitymodals/LenderSearchOptionsModal.tsx` - Lender search modal improvements (128 additions, 32 deletions)
-- `src/components/pages/sales/OrdersTab.tsx` - Orders tab updates (26 additions, 4 deletions)
-
-### 🗄️ **Database Updates**
-- `migrations/sync_vercel_schema.sql` - Database schema updates (4 additions)
-- `src/lib/database/core/supabase.ts` - Supabase client updates (12 additions, 1 deletion)
-- `src/lib/database/customers/salesDB.ts` - Sales database updates (9 additions, 1 deletion)
+### Notes
+- This entry sets up taste profile primitives used by later score/market quality work.
+- 0.204a is primarily refinement and cleanup over the initial 0.204 rollout.
 
 ---
-## Version 0.071a - Build Fix
-**Date:** 2025-11-13 | **Commit:** d8a0e97 | **Stats:** 10 additions
 
-### 🔧 **Build Fixes**
-- `src/lib/types/types.ts` - Type definition fixes (10 additions)
+## Version 0.203-0.203a - Wine Anchor System Phase 1
+**Date:** 2026-03-28 to 2026-03-30 | **Commit(s):** 212fe16, 9c347f1 | **Stats:** 1,023 insertions(+), 142 deletions(-)
 
-## Version 0.07 - Sales Contracts, Grey Rot/Noble Rot, Starting Conditions & Sangiovese
-**Date:** 2025-11-13 | **Commit:** deaafe0 | **Stats:** 4,601 additions, 561 deletions
+### Summary
+- Implemented a first-pass anchor system to influence wine characteristics through processing stages.
+- Added bridge logic from anchor outputs into crush/fermentation/harvest characteristic calculators.
+- Expanded feature and inventory flows so anchor effects persist through production.
 
-### 📋 **Sales Contracts System**
-- **NEW FILE:** `src/components/pages/sales/ContractsTab.tsx` (441 lines) - Complete sales contracts management interface
-- **NEW FILE:** `src/components/pages/sales/AssignWineModal.tsx` (284 lines) - Wine assignment modal for contracts
-- `src/components/pages/Sales.tsx` - Added Contracts tab integration (30 additions, 2 deletions)
-- `src/components/pages/sales/OrdersTab.tsx` - Enhanced order management with contract support (88 additions, 25 deletions)
+### Changes
+- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorService.ts` (455 lines initially; expanded in 0.203a) - core anchor scoring and selection logic.
+- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorProcess.ts` (156 lines) - processing pipeline for anchor application.
+- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorCharacteristicBridge.ts` (87 lines initial, +141 in 0.203a) - translates anchors into characteristic adjustments.
+- `src/lib/services/wine/characteristics/crushingCharacteristics.ts` (+11/-4), `src/lib/services/wine/characteristics/fermentationCharacteristics.ts` (+12/-5), `src/lib/services/wine/characteristics/harvestCharacteristics.ts` (+11/-4) - characteristic calculators now consume anchor effects.
+- `src/lib/services/wine/features/featureService.ts` (+37/-17 across two commits) - integrated anchor outputs into broader feature scoring.
+- `src/lib/services/wine/winery/fermentationManager.ts` and `src/lib/services/wine/winery/inventoryService.ts` - anchor flow persisted through winery lifecycle.
+- `src/lib/types/types.ts` (+65) - added anchor-related type contracts.
 
-### 🍷 **Wine Features: Grey Rot & Noble Rot**
-- **NEW FILE:** `src/lib/constants/wineFeatures/greyRot.ts` (171 lines) - Grey rot feature configuration
-- **NEW FILE:** `src/lib/constants/wineFeatures/nobleRot.ts` (254 lines) - Noble rot (Botrytis) feature configuration
-- `src/lib/constants/wineFeatures/lateHarvest.ts` - Enhanced late harvest features (95 additions, 40 deletions)
-- `src/lib/constants/wineFeatures/commonFeaturesUtil.ts` - Updated common feature utilities (16 additions, 6 deletions)
-- `src/components/ui/components/FeatureDisplay.tsx` - Enhanced feature display for rot features (103 additions, 23 deletions)
+### Notes
+- This is explicitly phase 1; architecture leaves room for future tuning of bridge weights and anchor interactions.
 
-### 🍇 **New Grape Variety: Sangiovese**
-- `src/lib/constants/grapeConstants.ts` - Added Sangiovese grape variety (54 additions, 25 deletions)
-- **NEW FILE:** `public/assets/icons/grape/icon_sangiovese.png` - Sangiovese grape icon
+---
 
-### 🎮 **Starting Conditions System**
-- `src/lib/constants/startingConditions.ts` - Enhanced starting conditions configuration (105 additions, 26 deletions)
-- `src/components/ui/modals/UImodals/StartingConditionsModal.tsx` - Renamed and enhanced starting conditions modal (43 additions, 5 deletions)
-- `src/components/pages/Login.tsx` - Starting conditions integration (16 additions, 12 deletions)
-- `src/components/pages/AdminDashboard.tsx` - Admin tools for starting conditions (21 additions, 3 deletions)
-- `src/components/pages/Staff.tsx` - Staff starting conditions display (30 additions, 4 deletions)
+## Version 0.201-0.202a - Structure Terminology Migration and Follow-up Fixes
+**Date:** 2026-03-28 | **Commit(s):** 764fef9, 7d65b8f, d143cc7 | **Stats:** 501 insertions(+), 501 deletions(-)
 
-### 🛠️ **System Updates**
-- `src/hooks/useEstimatedPrice.ts` - Enhanced estimated price calculations (39 additions, 6 deletions)
-- `src/lib/constants/loanConstants.ts` - Updated loan constants (6 additions, 4 deletions)
-- `src/lib/constants/achievementConstants.ts` - Achievement system updates (15 additions, 2 deletions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (3 additions, 1 deletion)
+### Summary
+- Renamed wine “balance” terminology to “structure index” across UI, hooks, services, and data mappings.
+- Fixed feature price-calculation and display regressions discovered during rename propagation.
+- Updated icon handling and modal labels to keep naming/UI consistency.
+
+### Changes
+- **RENAMED:** `src/hooks/useWineBalance.ts` → `src/hooks/useWineStructureIndex.ts` (45 new / 53 removed) - hook API aligned with new domain language.
+- **RENAMED:** `src/components/ui/components/StructureIndexBreakdown.tsx` and **RENAMED:** `src/components/ui/modals/UImodals/StructureIndexBreakdownModal.tsx` - UI nomenclature updated to structure index.
+- `src/hooks/useWineFeatureDetails.ts` (+10/-6) - corrected wine feature price calculations after terminology update.
+- `src/components/pages/sales/WineCellarTab.tsx` (+7/-5) - fixed cellar display fields tied to renamed metrics.
+- `src/lib/utils/icons.tsx` (+30/-17) and related modal/icon callsites - icon path and mapping cleanup.
+
+### Notes
+- This entry is largely a semantic/domain migration; behavior changes are minor except for bug-fix corrections noted above.
+
+---
+
+## Version 0.2003-0.2003a - Grape Quality to Price Modifier Migration
+**Date:** 2026-03-26 to 2026-03-28 | **Commit(s):** a046da4, 155e95d | **Stats:** 2,081 insertions(+), 1,694 deletions(-)
+
+### Summary
+- Migrated “grape quality” terminology to “price modifier” in score-related UI and model surfaces.
+- Reworked wine-cellar and order/wine modal flows to present the new modifier language and calculations.
+- Applied follow-up fixes for corrupted/misaligned constants and utility mappings.
+
+### Changes
+- `src/components/pages/sales/WineCellarTab.tsx` (+1157/-1098) - major table and detail rendering rewrite around price-modifier semantics.
+- **RENAMED:** `src/components/ui/components/landValueModifierBar.tsx`, **RENAMED:** `src/components/ui/components/landValueModifierBreakdown.tsx`, **RENAMED:** `src/components/ui/modals/UImodals/landValueModifierBreakdownModal.tsx` - UI components renamed to reflect modifier domain language.
+- `src/components/pages/sales/OrdersTab.tsx` (+57/-15) - orders now surface modifier-linked values.
+- `src/components/ui/modals/UImodals/wineModal.tsx` (+127/-38) - wine detail modal updated with modifier-driven fields.
+- `src/lib/constants/constants.ts` (+8/-12) and `src/lib/constants/achievementConstants.ts` (+8/-6) - constants aligned with renamed field semantics.
+- `src/lib/utils/utils.ts` (+16/-16 in 0.2003a) - follow-up utility cleanup after rename fallout.
+
+### Notes
+- Mostly a terminology and presentation migration with broad file impact; business logic intent stays aligned but field naming changes are extensive.
+
+---
+
+## Version 0.2001-0.2001a1 - Feature Seam Architecture Refactor
+**Date:** 2026-03-06 to 2026-03-09 | **Commit(s):** a0dc562, 3031a8f, ecfb3be, 4cce0f7 | **Stats:** 4,334 insertions(+), 3,961 deletions(-)
+
+### Summary
+- Introduced feature seams to isolate major gameplay domains behind active/noop adapters.
+- Moved research/upgrade and loan/lender services into feature-scoped modules with explicit contracts.
+- Removed legacy direct service paths and wired app bootstrap/activity flows through feature entry points.
+
+### Changes
+- `src/lib/features/boardShare/` - board/share modules routed behind seam contracts and noop adapters.
+- **NEW FILE:** `src/lib/features/researchUpgrade/active.tsx` (241 lines), **NEW FILE:** `src/lib/features/researchUpgrade/featureTypes.ts` (71 lines), **NEW FILE:** `src/lib/features/researchUpgrade/index.ts` (12 lines), **NEW FILE:** `src/lib/features/researchUpgrade/noop.ts` (55 lines) - research feature encapsulation.
+- **NEW FILE:** `src/lib/features/researchUpgrade/services/research/researchEnforcer.ts` (59 lines) and **REMOVED:** `src/lib/services/research/researchEnforcer.ts` - moved enforcer into feature boundary.
+- **NEW FILE:** `src/lib/features/loanLender/active.tsx` (135 lines), **NEW FILE:** `src/lib/features/loanLender/featureTypes.ts` (55 lines), **NEW FILE:** `src/lib/features/loanLender/index.ts` (12 lines), **NEW FILE:** `src/lib/features/loanLender/noop.ts` (33 lines) - loan/lender feature encapsulation.
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanService.ts` (2,514 lines), **NEW FILE:** `.../creditRatingService.ts` (512 lines), **NEW FILE:** `.../lenderService.ts` (212 lines) - core finance services relocated under feature scope.
+- **REMOVED:** legacy stubs in `src/lib/services/finance/creditRatingService.ts`, `src/lib/services/finance/lenderService.ts`, and `src/lib/services/finance/loanService.ts` after migration completion.
+- `src/lib/services/activity/activitymanagers/activityManager.ts`, `src/lib/services/core/startingConditionsService.ts`, and `src/main.tsx` - integration points updated to consume feature seams.
+
+### Notes
+- This is an architecture-heavy refactor intended to enable selective feature activation and cleaner module boundaries.
+- `4cce0f7` is a short cleanup/fix-up commit after major relocation.
+
+---
+
+## Version 0.2002-0.2002a - Targeted Stability Fixes
+**Date:** 2026-03-24 | **Commit(s):** 23ab720, 62d9571 | **Stats:** 104 insertions(+), 15 deletions(-)
+
+### Summary
+- Fixed startup-season vineyard yield initialization and related lifecycle edge cases.
+- Resolved a runtime error path in prestige modal rendering.
+- Added/updated tests to lock in yield behavior.
+
+### Changes
+- `src/lib/services/vineyard/vineyardManager.ts` (+21) - corrected starting-condition vineyard yield calculations.
+- `src/lib/services/core/startingConditionsService.ts` (+3/-1) - fixed initial vineyard state wiring.
+- `tests/vineyard/yieldCalculator.test.ts` (+16/-1) - expanded regression coverage for corrected yield behavior.
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` (+26/-6) - fixed runtime error branch in prestige UI.
+- `src/lib/services/activity/activitymanagers/activityManager.ts` (+25/-3) and `src/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager.ts` (+12/-4) - stability follow-ups for activity/research manager flows.
+
+### Notes
+- This is a focused bugfix release with low architectural churn and high gameplay-stability impact.
+
+---
+
+## Version 0.115-0.115c - Board Grace Period and Vineyard/Timing Corrections
+**Date:** 2025-12-07 to 2026-02-05 | **Commit(s):** 57c55ce, 1575a15, f751b20, cf4b378 | **Stats:** 301 insertions(+), 207 deletions(-)
+
+### Summary
+- Added board satisfaction grace-period behavior and corresponding boardroom UI feedback.
+- Corrected board enforcement behavior so vineyard actions are constrained rather than hard-blocked.
+- Fixed several timing and vineyard progression regressions that affected early-season balance.
+
+### Changes
+- `src/components/finance/BoardRoomPanel.tsx` (+138/-136) - board grace-period and enforcement-state UI updates.
+- `src/lib/services/board/boardSatisfactionService.ts` (+46/-32) - grace-period logic and board state handling.
+- `src/lib/services/board/boardEnforcer.ts` (+27/-9) - changed enforcement semantics from blocking to limiting in affected paths.
+- `src/lib/services/core/startingConditionsService.ts` (+5/-2) and `src/lib/services/vineyard/vineyardService.ts` (+16/-5) - fixed first-season vineyard growth/start-state behavior.
+- `src/lib/services/core/gameTick.ts` (+13/-11), `src/lib/services/wine/features/featureService.ts` (+15/-1), `src/lib/services/vineyard/vineyardManager.ts` (+5/-3) - corrected timing/degradation balance issues.
+- `src/components/ui/modals/UImodals/wineModal.tsx` (+20/-3) - modal-level display alignment with corrected mechanics.
+
+### Notes
+- This sequence is mostly corrective; it stabilizes mechanics introduced during prior board/share expansions.
+
+---
+
+## Version 0.113-0.114a - Boardroom Integration and Constraint Enforcement Layer
+**Date:** 2025-11-30 to 2025-12-07 | **Commit(s):** 21f630c, cb34848, 303f15e | **Stats:** 3,532 insertions(+), 915 deletions(-)
+
+### Summary
+- Integrated boardroom controls directly into finance/share workflows.
+- Introduced a formal constraint system with explicit types, constants, and reusable UI display components.
+- Expanded share operations and company-share persistence to support stronger public-company mechanics.
+
+### Changes
+- `src/components/finance/BoardRoomPanel.tsx` (+594/-325 across commits) - major boardroom UI and interaction integration.
+- `src/components/finance/ShareManagementPanel.tsx` (+330/-166) - added investor/board-aware share management UX.
+- `src/lib/services/finance/shares/shareOperationsService.ts` (+1290/-137) - expanded IPO/dilution/investor operation behavior.
+- **NEW FILE:** `src/components/ui/constraints/ConstraintDisplay.tsx` (223 lines) - reusable constraints UI.
+- **NEW FILE:** `src/lib/types/constraintTypes.ts` (64 lines) - typed contract for board constraints.
+- `src/lib/services/board/boardEnforcer.ts` (+291/-43) and `src/lib/constants/boardConstants.ts` (+242/-6) - core rule engine and tuning constants.
+- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` (+96/-10) and `src/lib/services/vineyard/landSearchService.ts` (+15/-4) - integrated board constraints into land search flows.
+- `src/lib/database/core/companySharesDB.ts` (+121/-1) and `migrations/sync_vercel_schema.sql` (+12) - share persistence/schema support.
+
+### Notes
+- This release established the main board constraint architecture that later commits refine rather than replace.
+
+---
+## Version 0.112a-0.112d - Boardroom Enhancements and Credit-Rating Rewrite
+**Date:** 2025-11-30 | **Commit(s):** 6d14d87, e86f2f8, 60f2ac1, ffad57d, 23f3d7d | **Stats:** 2,062 insertions(+), 1,583 deletions(-)
+
+### Summary
+- Iterated rapidly on boardroom UX and integrated board/finance signals into broader gameplay loops.
+- Rewrote the credit-rating subsystem with explicit constants and stronger metrics-history support.
+- Performed service-layer cleanup in share price/operations modules after boardroom integration.
+
+### Changes
+- `src/components/finance/BoardRoomPanel.tsx` (+1113/-622 across commits) - major boardroom UX evolution.
+- `src/components/finance/LoansView.tsx` (+26/-22) and `src/components/finance/ShareManagementPanel.tsx` (+18/-18) - finance surfaces aligned to boardroom updates.
+- **NEW FILE:** `src/lib/constants/creditRatingConstants.ts` (60 lines) - centralized credit-rating tuning constants.
+- `src/lib/services/finance/creditRatingService.ts` (+280/-160) - substantial rating logic rewrite.
+- `src/lib/database/core/companyMetricsHistoryDB.ts` (+61/-4) - increased metric tracking support for rating/board calculations.
+- `src/lib/database/core/boardSatisfactionHistoryDB.ts` (+61/-21), `src/lib/services/board/boardEnforcer.ts` (+36/-20), `src/lib/services/board/boardSatisfactionService.ts` (+67/-36), `src/lib/services/core/gameTick.ts` (+25/-9) - board history and runtime integration updates.
+- `src/lib/services/finance/shares/sharePriceService.ts` (+34/-92), `shareOperationsService.ts` (+20/-65), `shareMetricsService.ts` (+12/-66), `growthTrendService.ts` (+4/-11) - post-integration cleanup/refactor.
+- **REMOVED:** `docs/board-satisfaction-and-constraints-system.plan.md` (363 lines) - consolidated into updated implementation docs.
+
+### Notes
+- This release is transitional: large functional updates plus heavy cleanup immediately after integration.
+
+## Version 0.111 - Boardroom System Alpha Foundation
+**Date:** 2025-11-30 | **Commit(s):** be5baea | **Stats:** 2,004 insertions(+), 1,622 deletions(-)
+
+### Summary
+- Introduced the first complete boardroom subsystem with satisfaction tracking, enforcement, and history persistence.
+- Integrated boardroom signals into finance, game tick, share operations, and vineyard/service flows.
+- Added planning documentation for board satisfaction/constraint mechanics.
+
+### Changes
+- **NEW FILE:** `src/components/finance/BoardRoomPanel.tsx` (435 lines) - first full boardroom management UI.
+- **NEW FILE:** `src/lib/services/board/boardSatisfactionService.ts` (392 lines) - board satisfaction computation/tracking service.
+- **NEW FILE:** `src/lib/services/board/boardEnforcer.ts` (182 lines) - board rule enforcement engine.
+- **NEW FILE:** `src/lib/constants/boardConstants.ts` (109 lines) and **NEW FILE:** `src/lib/database/core/boardSatisfactionHistoryDB.ts` (304 lines) - constants + historical persistence.
+- **NEW FILE:** `src/lib/utils/consistencyUtils.ts` (75 lines) - shared consistency helpers introduced alongside boardroom rollout.
+- `src/components/finance/FinanceView.tsx` (+10/-1), `src/lib/services/core/gameTick.ts` (+12), `src/lib/services/finance/creditRatingService.ts` (+19/-6), `src/lib/services/finance/shares/shareOperationsService.ts` (+19) - integration touchpoints for board state.
+- `migrations/sync_vercel_schema.sql` (+27) - schema changes supporting boardroom alpha data model.
+
+### Notes
+- This alpha release establishes core boardroom architecture; following 0.112x/0.113+ entries iterate and harden this base.
+
+## Version 0.101 - Research Enforcer Introduction
+**Date:** 2025-11-29 | **Commit(s):** 1b5486b | **Stats:** 159 insertions(+), 59 deletions(-)
+
+### Summary
+- Added a dedicated research-enforcement service to centralize unlock gating logic.
+- Wired research gating into grape variety and planting option UI paths.
+- Removed legacy research utility helper in favor of service-based enforcement.
+
+### Changes
+- **NEW FILE:** `src/lib/services/research/researchEnforcer.ts` (133 lines) - canonical research unlock enforcement logic.
+- `src/components/pages/winepedia/GrapeVarietiesTab.tsx` (+8/-7) - applies enforcement checks in grape listing UI.
+- `src/components/ui/modals/activitymodals/PlantingOptionsModal.tsx` (+11/-6) - blocks/filters planting options based on unlock state.
+- `src/lib/services/core/startingConditionsService.ts` (+4/-4) - aligns startup research state with new enforcer.
+- **REMOVED:** `src/lib/utils/researchUtils.ts` (39 lines) - replaced by service-layer implementation.
+
+### Notes
+- This commit starts the transition from utility-function checks to service-layer enforcement for research eligibility.
+
+## Version 0.096a-0.096b - Build/DB Patch and Documentation Sync
+**Date:** 2025-11-29 | **Commit(s):** 33bd9d1, 431dd10 | **Stats:** 448 insertions(+), 53 deletions(-)
+
+### Summary
+- Delivered fast follow-up fixes after the 0.096 refactor to stabilize build and DB paths.
+- Expanded valuation test coverage and aligned docs with the new share architecture.
+- Patched share-related DB operation details and company-service integration points.
+
+### Changes
+- `tests/finance/shareValuation.test.ts` (+196/-2) - significantly increased coverage around valuation behavior.
+- `src/lib/database/core/companySharesDB.ts` (+20/-7) - corrected share ownership DB operations.
+- `src/lib/services/user/companyService.ts` (+3/-2) - aligned company-level flows to DB fixes.
+- `docs/share_price.md` (+76/-23), `docs/versionlog.md` (+106), `docs/PROJECT_INFO.md` (+14/-6), `docs/plan.plan.md` (+33/-12) - documentation update set reflecting post-refactor state.
+
+### Notes
+- This is a stabilization/documentation pass that depends on architectural changes introduced in 0.096.
+
+## Version 0.096 - Share System Modular Architecture Refactor
+**Date:** 2025-11-29 | **Commit(s):** d711f55 | **Stats:** 2,939 insertions(+), 2,318 deletions(-)
+
+### Summary
+- Replaced monolithic share-management services with a modular `finance/shares` service architecture.
+- Added dedicated share ownership DB operations and aligned UI/types/service exports with the new layout.
+- Preserved functional coverage while splitting pricing, operations, metrics, and helper responsibilities.
+
+### Changes
+- **REMOVED:** `src/lib/services/finance/shareManagementService.ts` (1,018 lines), **REMOVED:** `sharePriceIncrementService.ts` (696 lines), **REMOVED:** `shareValuationService.ts` (247 lines), **REMOVED:** `growthTrendService.ts` (136 lines) - monolith decomposition.
+- **NEW FILE:** `src/lib/services/finance/shares/sharePriceService.ts` (657 lines), **NEW FILE:** `shareOperationsService.ts` (544 lines), **NEW FILE:** `shareMetricsService.ts` (446 lines), **NEW FILE:** `growthTrendService.ts` (232 lines) - core modular services.
+- **NEW FILE:** `sharePriceAdjustmentHelpers.ts` (127 lines), **NEW FILE:** `sharePriceBreakdownHelpers.ts` (149 lines), **NEW FILE:** `shareCalculations.ts` (124 lines) - extracted utility/helper logic.
+- **NEW FILE:** `src/lib/database/core/companySharesDB.ts` (208 lines) - share ownership persistence layer.
+- `src/components/finance/ShareManagementPanel.tsx` (+53/-30) - UI updated to consume modular service API.
+- `src/lib/types/types.ts` (+150), `src/lib/types/index.ts` (+9), `src/lib/services/index.ts` (+52/-2), `src/lib/services/user/companyService.ts` (+68/-80) - type/export integration updates.
+
+### Notes
+- 0.096a/0.096b immediately follow this with bugfixes and test/doc hardening.
+
+## Version 0.095-0.095c - Share Price Expectation Model and Fix Iterations
+**Date:** 2025-11-28 | **Commit(s):** 2351863, 42aedfa, fdd7cc7, 09e3789 | **Stats:** 719 insertions(+), 502 deletions(-)
+
+### Summary
+- Added expectation-based share pricing inputs tied to historical performance and company size.
+- Updated panel/UI and constants to expose the expectation model to players.
+- Applied rapid fix iterations for calculation, management-flow, and build correctness.
+
+### Changes
+- `src/lib/services/finance/sharePriceIncrementService.ts` (+54/-20, then +52/-47) - introduced and then corrected expectation-driven increment logic.
+- `src/lib/constants/shareValuationConstants.ts` (+31/-9) - expanded tuning constants for expectation behavior.
+- `src/components/finance/ShareManagementPanel.tsx` (+57/-30) - added expectation-focused display updates.
+- `src/lib/services/finance/shareManagementService.ts` (+1/-16) - follow-up fixes in share management path.
+- `docs/share_price.md` (+4/-1) - corrected documentation after implementation changes.
+- `src/lib/services/finance/economyService.ts` (-1) - build-oriented cleanup fix.
+
+### Notes
+- This is a fast iteration sequence where 0.095a/b/c mostly harden the initial 0.095 release.
+
+## Version 0.094 - Unified 48-Week Expectation Baseline
+**Date:** 2025-11-28 | **Commit(s):** 29d08ec | **Stats:** 742 insertions(+), 323 deletions(-)
+
+### Summary
+- Introduced a unified 48-week expectation baseline for share-price behavior.
+- Added UI and constants support to visualize and tune long-horizon expectation signals.
+- Connected prestige and metrics-history systems to expectation-driven finance updates.
+
+### Changes
+- `src/lib/services/finance/sharePriceIncrementService.ts` (+230/-160) - implemented 48-week expectation model.
+- `src/components/finance/ShareManagementPanel.tsx` (+322/-158) - added historical expectation display and supporting UI states.
+- `src/lib/constants/shareValuationConstants.ts` (+39) - constants for 48-week expectation tuning.
+- `src/lib/services/finance/shareManagementService.ts` (+73/-3) - integration updates for expectation-aware operations.
+- `src/lib/services/prestige/prestigeService.ts` (+65/-1) - prestige hooks aligned with expanded valuation signals.
+- `src/lib/database/core/companyMetricsHistoryDB.ts` (+13/-1) - metrics storage support for historical expectation calculations.
+
+### Notes
+- 0.094 is foundational for 0.095-0.095c expectation refinements.
+
+## Version 0.093a - Database Mapper Consolidation
+**Date:** 2025-11-28 | **Commit(s):** a6b6525 | **Stats:** 161 insertions(+), 139 deletions(-)
+
+### Summary
+- Centralized DB mapping utilities to reduce duplicate mapper logic across core tables.
+- Refined company, metrics-history, and loan DB modules around the new mapper pattern.
+- Applied mapper cleanup broadly across activity/core/customer DB files.
+
+### Changes
+- **NEW FILE:** `src/lib/database/dbMapperUtils.ts` (50 lines) - shared mapper/helper utilities for DB layer.
+- `src/lib/database/core/companiesDB.ts` (+43/-30), `companyMetricsHistoryDB.ts` (+13/-25), `loansDB.ts` (+7/-30) - migrated toward shared mapper patterns.
+- Additional mapper cleanup across `achievementsDB.ts`, `inventoryDB.ts`, `researchUnlocksDB.ts`, `staffDB.ts`, `transactionsDB.ts`, `usersDB.ts`, `wineLogDB.ts`, `salesDB.ts`, and `contractDB.ts`.
+
+### Notes
+- This commit is technical-debt reduction in the DB layer and sets up cleaner follow-up finance/share work.
+
+## Version 0.093 - Share Price/Valuation System and Metrics History Foundation
+**Date:** 2025-11-28 | **Commit(s):** 0e51073 | **Stats:** 4,026 insertions(+), 573 deletions(-)
+
+### Summary
+- Introduced the first full share valuation stack with incremental pricing, valuation, and growth-trend services.
+- Added weekly company metrics history persistence and connected it to finance/tick loops.
+- Delivered major ShareManagement UI and Winepedia surfaces for market transparency.
+
+### Changes
+- **NEW FILE:** `src/lib/services/finance/sharePriceIncrementService.ts` (587 lines), **NEW FILE:** `shareValuationService.ts` (248 lines), **NEW FILE:** `growthTrendService.ts` (136 lines), **NEW FILE:** `src/lib/constants/shareValuationConstants.ts` (62 lines) - core valuation subsystem.
+- **REMOVED:** `src/lib/services/finance/shareValueService.ts` (189 lines) - replaced by modular valuation service.
+- **NEW FILE:** `src/lib/database/core/companyMetricsHistoryDB.ts` (319 lines) - weekly snapshot storage for key financial metrics.
+- `src/lib/services/finance/financeService.ts` (+262/-1) and `src/lib/services/core/gameTick.ts` (+35/-3) - integrated metrics snapshot updates into runtime loop.
+- `src/components/finance/ShareManagementPanel.tsx` (+722/-270) - major UI overhaul for share data visibility and controls.
+- **NEW FILE:** `src/components/pages/winepedia/ShareMarketTab.tsx` (215 lines) and `src/components/pages/Winepedia.tsx` (+3/-2) - added market information surface.
+- **NEW FILE:** `tests/finance/shareValuation.test.ts` (329 lines) - baseline valuation test suite.
+- **NEW FILE:** `docs/share_price.md` (298 lines), **NEW FILE:** `docs/plan.plan.md` (279 lines) - implementation and planning docs.
+
+### Notes
+- This commit is a foundational finance milestone; subsequent 0.094-0.096 entries iterate on this architecture.
+
+## Version 0.092a - Build Fix Follow-up
+**Date:** 2025-11-26 | **Commit(s):** efcb0f8 | **Stats:** 8 insertions(+), 1 deletion(-)
+
+### Summary
+- Applied a narrow build fix immediately after 0.092.
+
+### Changes
+- `src/components/finance/IncomeBalanceView.tsx` (+6) - corrected build-breaking finance view issue.
+- `tests/activity/workCalculator.test.ts` (+2/-1) - adjusted test expectation/usage to match the fix.
+
+### Notes
+- Micro-fix commit with no major mechanic changes.
+
+## Version 0.092 - Finance and Share Management Tuning Pass
+**Date:** 2025-11-26 | **Commit(s):** f8bda77 | **Stats:** 612 insertions(+), 134 deletions(-)
+
+### Summary
+- Expanded share-management presentation and equity math to support richer IPO/public-company behavior.
+- Reworked cashflow visualization and exposed new equity metrics from finance services.
+- Added supporting constants/start-state fields needed by updated share model.
+
+### Changes
+- `src/components/finance/ShareManagementPanel.tsx` (+258/-65) - enhanced shareholder breakdowns, IPO readiness, and board control indicators.
+- `src/lib/services/finance/shareManagementService.ts` (+201/-1) - extended dilution/investor/dividend calculations.
+- `src/components/finance/CashFlowView.tsx` (+81/-42) - improved grouping and rolling net balance view.
+- `src/lib/services/finance/financeService.ts` (+30/-24) - exposes additional equity metrics to UI.
+- `src/lib/constants/financeConstants.ts` (+36) - added category descriptors/constants used by share UI and services.
+- `src/lib/services/core/startingConditionsService.ts` and `src/lib/services/user/companyService.ts` (+6/-2 combined) - seed initialization for new share fields.
+
+### Notes
+- This is a tuning and UX-depth release, not a full architecture rewrite.
+
+## Version 0.09-0.091B - Public Company and Equity Framework Rollout
+**Date:** 2025-11-23 to 2025-11-25 | **Commit(s):** d108f94, 10709b7, e1435d4, ef4e4b8 | **Stats:** 4,452 insertions(+), 1,472 deletions(-)
+
+### Summary
+- Introduced public-company mechanics with issuance, ownership, valuation, and dividend scaffolding.
+- Connected IPO/equity state to finance screens, login/profile/admin views, and core company persistence.
+- Added staff contribution and wage-model updates to support expanded economy and valuation loops.
+
+### Changes
+- **NEW FILE:** `src/components/finance/ShareManagementPanel.tsx` (445 lines) - investor ledger and share control UI.
+- **NEW FILE:** `src/lib/services/finance/shareManagementService.ts` (514 lines) and **NEW FILE:** `src/lib/services/finance/shareValueService.ts` (189 lines) - IPO/share pricing/dividend core logic.
+- `src/components/pages/AdminDashboard.tsx`, `src/components/pages/Profile.tsx`, `src/components/pages/Login.tsx` (+481/-5 combined) - IPO toggles, ownership views, and balance surfaces.
+- `src/lib/database/core/companiesDB.ts` and `src/lib/database/core/usersDB.ts` (+43/-3 combined) - persisted listing/float and user cash balance fields.
+- Staff pipeline updates across `src/components/pages/Staff.tsx`, `StaffModal.tsx`, `StaffWageSummary.tsx`, `StaffSkillBar.tsx`, and activity work calculators - experience/contribution-driven compensation behavior.
+- `src/components/pages/winepedia/MathematicalModelsTab.tsx` (+517/-456) and `src/lib/utils/calculator.ts` (+76/-28) - valuation/contribution model documentation and helper math.
+- **NEW FILE:** `src/lib/services/user/userBalanceService.ts` (123 lines) - centralized cash/dividend payout handling.
+
+### Notes
+- This is the initial large-scale equity/public-company release; later 0.092+ entries tune and stabilize these mechanics.
+
+## Version Docs-2025-11-23 - Versionlog Split and Archival
+**Date:** 2025-11-23 | **Commit(s):** 1e5bfc4 | **Stats:** 1,197 insertions(+), 1,195 deletions(-)
+
+### Summary
+- Split version log history into active vs legacy documents to improve maintainability.
+- Kept current log focused on recent releases while preserving full historical data.
+
+### Changes
+- **NEW FILE:** `docs/versionlog_legacy.md` (1,196 lines) - archived older entries (<=0.06).
+- `docs/versionlog.md` - reduced active log footprint and added reference to the archive file.
+
+### Notes
+- Structural documentation change only; no gameplay or runtime code impact.
+
+## Version 0.082 - Grape Research Unlock Framework
+**Date:** 2025-11-23 | **Commit(s):** e0c1b16 | **Stats:** 856 insertions(+), 129 deletions(-)
+
+### Summary
+- Added persistent research unlock tracking for grape families.
+- Integrated unlock gating into planting, grape encyclopedia, and starting-condition flows.
+- Updated research work/reward loops and UI to surface unlock progression.
+
+### Changes
+- **NEW FILE:** `src/lib/database/core/researchUnlocksDB.ts` (154 lines) - persistence layer for unlocked grape tracks.
+- **NEW FILE:** `src/lib/utils/researchUtils.ts` (39 lines) - helper utilities for unlock checks.
+- `src/lib/constants/researchConstants.ts` (+150/-18) - expanded grape-focused research track definitions.
+- `src/components/finance/ResearchPanel.tsx` (+117/-33) - unlock progression display and requirement feedback.
+- `src/lib/services/activity/activitymanagers/researchManager.ts` and `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` (+131/-17 combined) - reward/workload updates tied to unlock states.
+- `src/components/pages/winepedia/GrapeVarietiesTab.tsx`, `src/components/ui/modals/activitymodals/PlantingOptionsModal.tsx`, `src/components/ui/modals/UImodals/StartingConditionsModal.tsx` (+131/-8 combined) - gameplay gating by research progress.
+
+### Notes
+- This establishes core unlock mechanics later refined by research enforcer and subsequent research updates.
+
+## Version 0.076b-0.076C - Test Coverage Expansion and Economy Regression Fixes
+**Date:** 2025-11-23 | **Commit(s):** dd4b2f3, 2ada3b9, 545fea1 | **Stats:** 1,289 insertions(+), 1,193 deletions(-)
+
+### Summary
+- Expanded user workflow test coverage for hiring, research, and starting/founder scenarios.
+- Fixed economy-phase persistence and lender seizure behavior regressions.
+- Improved test tooling (viewer/API) and normalized asset naming for harness consistency.
+
+### Changes
+- **NEW FILE:** `tests/user/researchWorkflow.test.ts` (213 lines) and major updates to `tests/user/hireStaffWorkflow.test.ts` / `tests/user/startingConditions.test.ts` - broader end-to-end user workflow coverage.
+- `server/test-api.ts` and `test-viewer/TestViewer.tsx` (+113/-24 combined) - improved test runner UX and mock endpoint support.
+- `src/lib/services/core/gameState.ts` (+17) - fixed economy-phase persistence issue.
+- `src/lib/services/finance/loanService.ts` (+144/-23) - corrected lender seizure calculation behavior.
+- `src/lib/services/activity/activitymanagers/researchManager.ts` and `src/lib/constants/researchConstants.ts` (+58/-57 combined) - synced research targets and behavior.
+- Grape icon assets renamed to snake_case for stable test references.
+
+### Notes
+- Heavy deletions are primarily test refactors/rewrites rather than feature removals.
+
+---
+## Version 0.081 - Research System Expansion Pass
+**Date:** 2025-11-21 | **Commit(s):** 567a7a8 | **Stats:** 1,639 insertions(+), 1,048 deletions(-)
+
+### Summary
+- Expanded research constants, manager logic, and work calculations for deeper progression behavior.
+- Linked research outcomes into prestige calculations and related UI.
+- Performed broad UI/service cleanup while introducing new research-facing behaviors.
+
+### Changes
+- `src/lib/constants/researchConstants.ts` (large update) - expanded research track parameters and progression rules.
+- `src/components/finance/ResearchPanel.tsx` (+195/-28) - improved panel UX and progression visibility.
+- `src/lib/services/activity/activitymanagers/researchManager.ts` (+120/-18) and `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` (+139/-19) - expanded research runtime logic.
+- `src/lib/services/prestige/prestigeService.ts` (+123/-93) - integrated research effects into prestige computation.
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` (+473/-481) - major modal rewrite aligned with updated prestige/research outputs.
+- `migrations/sync_vercel_schema.sql` (+43/-1) - schema support changes for related system updates.
+
+### Notes
+- High churn reflects coordinated logic+UI refactor, not isolated bugfixing.
+
+## Version 0.08 - Initial Research System Rollout
+**Date:** 2025-11-21 | **Commit(s):** d44000c | **Stats:** 2,051 insertions(+), 363 deletions(-)
+
+### Summary
+- Introduced the first research activity framework (manager, work calculator, and finance panel).
+- Integrated research into activity/work pipelines and replaced the old upgrades placeholder path.
+- Added significant user-flow test scaffolding around company creation, hiring, and starting conditions.
+
+### Changes
+- **NEW FILE:** `src/lib/services/activity/activitymanagers/researchManager.ts` (26 lines), **NEW FILE:** `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` (32 lines), **NEW FILE:** `src/components/finance/ResearchPanel.tsx` (42 lines) - first research feature skeleton.
+- **REMOVED:** `src/components/finance/UpgradesPlaceholder.tsx` (27 lines) - replaced by active research UI.
+- `src/lib/constants/activityConstants.ts` (+20/-20), `src/lib/services/activity/activitymanagers/activityManager.ts` (+50/-47), `src/lib/services/activity/workcalculators/workCalculator.ts` (+26/-26) - integrated research activity/work into core loops.
+- **NEW FILE:** `tests/user/companyCreation.test.ts` (395 lines), **NEW FILE:** `tests/user/hireStaffWorkflow.test.ts` (674 lines), **NEW FILE:** `tests/user/startingConditions.test.ts` (293 lines) - baseline integration coverage.
+- `test-viewer/TestViewer.tsx` (+266/-6) - improved test viewer support for new test suite growth.
+
+### Notes
+- This is the initial research launch; later commits (0.081, 0.082, 0.101) progressively deepen and enforce it.
+
+## Version 0.076a - Test Suite and Viewer Enhancements
+**Date:** 2025-11-21 | **Commit(s):** edc8b60 | **Stats:** 1,270 insertions(+), 501 deletions(-)
+
+### Summary
+- Expanded vineyard test coverage and significantly upgraded the test viewer UX.
+- Added dedicated vineyard-creation tests and refreshed suitability/yield assertions.
+
+### Changes
+- `test-viewer/TestViewer.tsx` (+1105/-488) - major test viewer enhancement pass.
+- **NEW FILE:** `tests/vineyard/vineyardCreation.test.ts` (154 lines) - baseline vineyard creation coverage.
+- `tests/vineyard/grapeSuitability.test.ts` (+1/-1) and `tests/vineyard/yieldCalculator.test.ts` (+9/-11) - updated expectation cases.
+
+### Notes
+- This commit focuses on QA tooling and vineyard test confidence.
+
+## Version 0.076 - Loan/Lender Correctness Fixes
+**Date:** 2025-11-21 | **Commit(s):** 99981d9 | **Stats:** 196 insertions(+), 167 deletions(-)
+
+### Summary
+- Fixed lender generation balancing and corrected seizure limits in loan enforcement logic.
+
+### Changes
+- `src/lib/services/finance/lenderService.ts` (+77/-60) - ensures lender creation yields required type counts.
+- `src/lib/services/finance/loanService.ts` (+119/-107) - caps vineyard-value seizure behavior at intended max thresholds.
+
+### Notes
+- Targeted mechanics fix release with limited surface area.
+
+## Version 0.075 - Automated Testing Framework and pnpm Migration
+**Date:** 2025-11-21 | **Commit(s):** c7d5c9a | **Stats:** 9,517 insertions(+), 6,308 deletions(-)
+
+### Summary
+- Introduced a broad automated test baseline across activity, finance, vineyard, and wine domains.
+- Added a dedicated in-repo test viewer and API bridge for running/inspecting tests.
+- Migrated package management from npm lockfile to pnpm workspace tooling.
+
+### Changes
+- **NEW FILE:** `tests/activity/workCalculator.test.ts` (166 lines), **NEW FILE:** `tests/finance/loanService.test.ts` (165 lines), **NEW FILE:** `tests/finance/wageService.test.ts` (150 lines), **NEW FILE:** `tests/vineyard/grapeSuitability.test.ts` (277 lines), **NEW FILE:** `tests/vineyard/yieldCalculator.test.ts` (281 lines), **NEW FILE:** `tests/wine/fermentationCharacteristics.test.ts` (214 lines) - first broad automated test set.
+- **NEW FILE:** `test-viewer/TestViewer.tsx` (822 lines), **NEW FILE:** `test-viewer/TestViewerPage.tsx` (13 lines), **NEW FILE:** `test-viewer/index.html` (432 lines), **NEW FILE:** `test-viewer/viewer.js` (161 lines), **NEW FILE:** `server/test-api.ts` (132 lines) - test execution and visualization infrastructure.
+- **REMOVED:** `package-lock.json` (6,302 lines), **NEW FILE:** `pnpm-lock.yaml` (4,897 lines), **NEW FILE:** `pnpm-workspace.yaml` (2 lines) - package manager migration to pnpm.
+- `package.json`, `vite.config.ts`, `tsconfig.json` - configured vitest scripts and TypeScript/test integration.
+
+### Notes
+- This is a foundational tooling release; later entries build on this testing baseline and infrastructure.
+
+## Version 0.074a - Supabase Schema and Vineyard Value Fixes
+**Date:** 2025-11-21 | **Commit(s):** cbe577c | **Stats:** 70 insertions(+), 54 deletions(-)
+
+### Summary
+- Fixed schema/state mismatches in Supabase sync SQL.
+- Corrected vineyard-value calculations in startup and manager paths.
+
+### Changes
+- `migrations/sync_vercel_schema.sql` (+44/-44) - schema fix pass.
+- `src/lib/services/core/startingConditionsService.ts` (+14/-3) - corrected startup vineyard value calculations.
+- `src/lib/services/vineyard/vineyardManager.ts` (+10/-5) - aligned vineyard manager value logic.
+- `src/lib/services/sales/salesService.ts` (+2/-2) - minor consistency update.
+
+### Notes
+- Narrow correctness patch ahead of larger testing/research work.
+
+## Version 0.074 - Schema Update Baseline
+**Date:** 2025-11-14 | **Commit(s):** b813805 | **Stats:** 74 insertions(+), 10 deletions(-)
+
+### Summary
+- Applied a schema update baseline and minor activity panel alignment.
+
+### Changes
+- `migrations/sync_vercel_schema.sql` (+71/-8) - core schema update set.
+- `src/components/layout/ActivityPanel.tsx` (+2/-2) - small UI alignment with schema/data changes.
+
+### Notes
+- Mostly schema-centric commit with minimal UI impact.
+
+## Version 0.073-0.073DB - Multi-Commit Bugfix and Contract System Hardening
+**Date:** 2025-11-13 to 2025-11-14 | **Commit(s):** d2067c8, c0bb9b5, e0f4656, 9dca737, 7ddc08d, 8a896e5, c1ae140 | **Stats:** 1,801 insertions(+), 654 deletions(-)
+
+### Summary
+- Stabilized prestige, achievements, loans, and sales contracts through a fast bugfix sequence.
+- Introduced dedicated contract constants/expiration handling and replaced the estimated-price hook path.
+- Updated sales/loan UI and schema to support revised contract and pricing behavior.
+
+### Changes
+- `src/lib/services/prestige/prestigeService.ts` (+17/-4), `src/lib/services/user/achievementService.ts` (+54/-27), `src/lib/services/finance/loanService.ts` (+147/-119) - targeted correctness fixes.
+- `src/lib/services/sales/contractGenerationService.ts` (+337/-161) and `src/lib/services/sales/contractService.ts` (+134/-28) - major contract behavior improvements.
+- **NEW FILE:** `src/lib/constants/contractConstants.ts` (209 lines) - centralized contract configuration.
+- **NEW FILE:** `src/lib/services/sales/expirationService.ts` (104 lines) - contract expiration logic.
+- **NEW FILE:** `src/hooks/useWinePriceCalculator.ts` (63 lines) and **REMOVED:** `src/hooks/useEstimatedPrice.ts` (46 lines) - migrated to updated pricing hook.
+- UI updates: `src/components/pages/sales/ContractsTab.tsx` (+179/-60), `AssignWineModal.tsx` (+50/-7), `src/components/ui/components/grapeQualityBreakdown.tsx` (+48/-72), `src/components/finance/LoansView.tsx` (+28/-9).
+- `migrations/sync_vercel_schema.sql` (+303/-59) - schema support for updated contracts/pricing flow.
+
+### Notes
+- Represents multiple quick iterations grouped into one stabilization window.
+
+## Version 0.072 - Cross-System Bugfix Pass (Features/Sales/Loans)
+**Date:** 2025-11-13 | **Commit(s):** e46d1c6 | **Stats:** 688 insertions(+), 153 deletions(-)
+
+### Summary
+- Fixed feature, sales-order, contract-expiration, and loan behavior in one cross-domain patch.
+- Updated lender-search and orders UI to reflect corrected backend logic.
+- Applied small schema/client/database updates to align persistence paths.
+
+### Changes
+- `src/lib/services/wine/features/featureService.ts` (+108/-52), `src/lib/services/finance/loanService.ts` (+106/-8), `src/lib/services/sales/salesOrderService.ts` (+62/-1), `src/lib/services/sales/generateOrder.ts` (+25/-5), `src/lib/services/vineyard/vineyardManager.ts` (+42/-5), `src/lib/services/core/gameTick.ts` (+15/-2) - coordinated system bugfix set.
+- **NEW FILE:** `src/lib/services/sales/expirationService.ts` (104 lines) - expiration handling integrated into sales flow.
+- `src/components/ui/modals/activitymodals/LenderSearchOptionsModal.tsx` (+128/-32) and `src/components/pages/sales/OrdersTab.tsx` (+26/-4) - UI support for corrected logic.
+- `migrations/sync_vercel_schema.sql` (+4), `src/lib/database/core/supabase.ts` (+12/-1), `src/lib/database/customers/salesDB.ts` (+9/-1) - persistence-layer adjustments.
+
+### Notes
+- Primarily a correctness release focused on systemic bug reduction.
+
+---
+## Version 0.071a - Type Build Fix
+**Date:** 2025-11-13 | **Commit(s):** d8a0e97 | **Stats:** 10 insertions(+), 0 deletions(-)
+
+### Summary
+- Fixed a compile/build issue through targeted type adjustments.
+
+### Changes
+- `src/lib/types/types.ts` (+10) - type definition fixes to restore build stability.
+
+### Notes
+- Micro-fix commit with no feature-level changes.
+
+## Version 0.07 - Contracts Launch, Rot Features, Starting Conditions Expansion
+**Date:** 2025-11-13 | **Commit(s):** deaafe0 | **Stats:** 4,601 insertions(+), 561 deletions(-)
+
+### Summary
+- Launched initial contracts UX and supporting sales workflows.
+- Added grey-rot and noble-rot wine feature definitions plus display support.
+- Expanded starting-conditions flow and introduced Sangiovese content.
+
+### Changes
+- **NEW FILE:** `src/components/pages/sales/ContractsTab.tsx` (441 lines) and **NEW FILE:** `src/components/pages/sales/AssignWineModal.tsx` (284 lines) - contracts management UI.
+- `src/components/pages/Sales.tsx` (+30/-2) and `src/components/pages/sales/OrdersTab.tsx` (+88/-25) - contracts integrated into sales pipeline.
+- **NEW FILE:** `src/lib/constants/wineFeatures/greyRot.ts` (171 lines), **NEW FILE:** `src/lib/constants/wineFeatures/nobleRot.ts` (254 lines), `lateHarvest.ts` (+95/-40), `commonFeaturesUtil.ts` (+16/-6), and `src/components/ui/components/FeatureDisplay.tsx` (+103/-23) - rot-feature framework.
+- `src/lib/constants/grapeConstants.ts` (+54/-25) and **NEW FILE:** `public/assets/icons/grape/icon_sangiovese.png` - Sangiovese grape integration.
+- `src/lib/constants/startingConditions.ts` (+105/-26), `src/components/ui/modals/UImodals/StartingConditionsModal.tsx` (+43/-5), `src/components/pages/Login.tsx` (+16/-12), `src/components/pages/AdminDashboard.tsx` (+21/-3), `src/components/pages/Staff.tsx` (+30/-4) - expanded starting-condition surfaces.
+- `src/hooks/useEstimatedPrice.ts` (+39/-6), `src/lib/constants/loanConstants.ts` (+6/-4), `src/lib/constants/achievementConstants.ts` (+15/-2), and `migrations/sync_vercel_schema.sql` (+3/-1) - supporting systems updates.
+
+### Notes
+- Major feature release with broad content and system surface area.
 
 ## Version 0.068 - Starting Conditions System Implementation
-**Date:** 2025-11-11 | **Commit:** 65294cb | **Stats:** 1,977 additions, 179 deletions
+**Date:** 2025-11-11 | **Commit(s):** 65294cb | **Stats:** 1,977 insertions(+), 179 deletions(-)
 
-### 🎮 **Starting Conditions Framework**
-- **NEW FILE:** `src/lib/constants/startingConditions.ts` (225 lines) - Comprehensive starting conditions configuration
-- **NEW FILE:** `src/lib/services/core/startingConditionsService.ts` (172 lines) - Starting conditions service
-- **NEW FILE:** `src/components/ui/modals/StartingConditionsModal.tsx` (278 lines) - Starting conditions selection modal
-- `src/components/pages/Login.tsx` - Starting conditions integration in login flow (51 additions, 6 deletions)
-- `src/components/pages/AdminDashboard.tsx` - Admin tools for starting conditions (94 additions, 2 deletions)
-- `src/components/pages/CompanyOverview.tsx` - Starting conditions display (69 additions, 2 deletions)
+### Summary
+- Introduced the first full starting-conditions framework with config, service, and modal UI.
+- Expanded loan-service behavior and UI/state support while adding story media assets.
+- Updated admin/login/company-overview flows to surface starting-condition selection and effects.
 
-### 🖼️ **Story Images**
-- Added 10 story character images: `bianca.webp`, `camille.webp`, `johann.webp`, `lukas.webp`, `pierre.webp`, `pierre_bg.webp`, `pierrecamille.webp`, `roberto.webp`, `robertobianca.webp`, `weissburg.webp`
+### Changes
+- **NEW FILE:** `src/lib/constants/startingConditions.ts` (225 lines), **NEW FILE:** `src/lib/services/core/startingConditionsService.ts` (172 lines), **NEW FILE:** `src/components/ui/modals/StartingConditionsModal.tsx` (278 lines) - core starting-condition architecture.
+- `src/components/pages/Login.tsx` (+51/-6), `src/components/pages/AdminDashboard.tsx` (+94/-2), `src/components/pages/CompanyOverview.tsx` (+69/-2) - integrated starting-condition flow into key pages.
+- Added story character images: `bianca.webp`, `camille.webp`, `johann.webp`, `lukas.webp`, `pierre.webp`, `pierre_bg.webp`, `pierrecamille.webp`, `roberto.webp`, `robertobianca.webp`, `weissburg.webp`.
+- `src/lib/services/finance/loanService.ts` (+798/-69), `src/components/finance/LoansView.tsx` (+42/-15), `src/lib/database/core/loansDB.ts` (+12/-3), `src/lib/constants/loanConstants.ts` (+3) - loan system expansion.
+- `src/lib/services/admin/adminService.ts` (+30/-1), `src/lib/services/core/gameTick.ts` (+8/-3), `src/lib/services/user/staffService.ts` (-57), `migrations/sync_vercel_schema.sql` (+6/-1) - supporting system updates.
 
-### 💰 **Loan System Enhancements**
-- `src/lib/services/finance/loanService.ts` - Major loan service enhancements (798 additions, 69 deletions)
-- `src/components/finance/LoansView.tsx` - Enhanced loan management UI (42 additions, 15 deletions)
-- `src/lib/database/core/loansDB.ts` - Database operations updates (12 additions, 3 deletions)
-- `src/lib/constants/loanConstants.ts` - Loan constants updates (3 additions)
+### Notes
+- Foundational systems release that later versions (0.07+) expand with additional starting-condition content.
 
-### 🛠️ **System Updates**
-- `src/lib/services/admin/adminService.ts` - Admin service enhancements (30 additions, 1 deletion)
-- `src/lib/services/core/gameTick.ts` - Game tick updates (8 additions, 3 deletions)
-- `src/lib/services/user/staffService.ts` - Staff service cleanup (57 deletions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (6 additions, 1 deletion)
+## Version 0.067-0.067a - Icon System Standardization and UI Alignment
+**Date:** 2025-11-10 | **Commit(s):** 7658b7d, bded709 | **Stats:** 571 insertions(+), 142 deletions(-)
 
-## Version 0.067-0.067a - Icon System Updates (Combined)
-**Date:** 2025-11-10 | **Commits:** 7658b7d (0.067), bded709 (0.067a) | **Stats:** Combined 571 additions, 142 deletions
+### Summary
+- Standardized characteristic icon assets and replaced legacy naming conventions.
+- Updated multiple UI surfaces to consume the new icon set.
+- Performed supporting inventory/customer/order service and type utility updates.
 
-### 🎨 **Icon System Improvements**
-- **NEW FILES:** 6 characteristic icons: `icon_acidity.png`, `icon_aroma.png`, `icon_body.png`, `icon_spice.png`, `icon_sweetness.png`, `icon_tannins.png`
-- **REMOVED:** Legacy characteristic icons (acidity.png, aroma.png, body.png, spice.png, sweetness.png, tannins.png)
-- `src/lib/utils/icons.tsx` - Icon utility updates (4 additions, 4 deletions)
-- `src/lib/constants/constants.ts` - Icon constant updates (61 additions, 27 deletions)
+### Changes
+- **NEW FILES:** characteristic icons `icon_acidity.png`, `icon_aroma.png`, `icon_body.png`, `icon_spice.png`, `icon_sweetness.png`, `icon_tannins.png`; removed legacy non-prefixed equivalents.
+- `src/lib/utils/icons.tsx` (+4/-4) and `src/lib/constants/constants.ts` (+61/-27) - icon reference and constants updates.
+- UI updates: `src/components/ui/modals/UImodals/StaffModal.tsx` (+133/-4), `src/components/pages/sales/OrdersTab.tsx` (+47/-12), `src/components/pages/sales/WineCellarTab.tsx` (+26/-5), `src/components/pages/Winery.tsx` (+10/-8).
+- Service/data updates: `src/lib/services/sales/generateOrder.ts` (+79/-11), `src/lib/database/activities/inventoryDB.ts` (+59/-1), `src/lib/database/customers/customerDB.ts` (+34/-25), `src/lib/services/wine/winery/inventoryService.ts` (+21/-2), `src/lib/types/types.ts` (+17), `src/lib/utils/utils.ts` (+27).
 
-### 🎨 **UI Component Updates**
-- `src/components/ui/modals/UImodals/StaffModal.tsx` - Enhanced staff modal with new icons (133 additions, 4 deletions)
-- `src/components/pages/sales/OrdersTab.tsx` - Order display improvements (47 additions, 12 deletions)
-- `src/components/pages/sales/WineCellarTab.tsx` - Wine cellar UI updates (26 additions, 5 deletions)
-- `src/components/pages/Winery.tsx` - Winery page updates (10 additions, 8 deletions)
+### Notes
+- Primarily a consistency and presentation pass with modest service-side support changes.
 
-### 🛠️ **Service Updates**
-- `src/lib/services/sales/generateOrder.ts` - Order generation improvements (79 additions, 11 deletions)
-- `src/lib/database/activities/inventoryDB.ts` - Inventory database updates (59 additions, 1 deletion)
-- `src/lib/database/customers/customerDB.ts` - Customer database improvements (34 additions, 25 deletions)
-- `src/lib/services/wine/winery/inventoryService.ts` - Inventory service updates (21 additions, 2 deletions)
-- `src/lib/types/types.ts` - Type system updates (17 additions)
-- `src/lib/utils/utils.ts` - Utility function additions (27 additions)
+## Version 0.066 - Loan Extension and Forced-Loan Mechanics
+**Date:** 2025-11-10 | **Commit(s):** b9073ef | **Stats:** 1,094 insertions(+), 99 deletions(-)
 
-## Version 0.066 - Loan Extension & Forced Loans System
-**Date:** 2025-11-10 | **Commit:** b9073ef | **Stats:** 1,094 additions, 99 deletions
+### Summary
+- Added loan-extension and forced-loan behavior to finance mechanics.
+- Updated loan UI/DB/constants to support expanded lender interactions.
+- Refreshed grape assets and related winepedia/suitability surfaces.
 
-### 💰 **Loan Extension & Forced Loans**
-- `src/lib/services/finance/loanService.ts` - Major loan service enhancements with extension and forced loan functionality (562 additions, 6 deletions)
-- `src/lib/constants/loanConstants.ts` - Enhanced loan constants (36 additions)
-- `src/components/finance/LoansView.tsx` - Enhanced loan management UI (58 additions, 12 deletions)
-- `src/lib/database/core/loansDB.ts` - Database operations for loan extensions (9 additions, 3 deletions)
+### Changes
+- `src/lib/services/finance/loanService.ts` (+562/-6), `src/lib/constants/loanConstants.ts` (+36), `src/components/finance/LoansView.tsx` (+58/-12), `src/lib/database/core/loansDB.ts` (+9/-3) - extension/forced-loan architecture and UI support.
+- Grape icon asset updates converted several varieties from `.webp` to `.png`; **NEW FILE:** `icon_temperanillo.png` added.
+- `src/components/ui/modals/UImodals/winepediaGrapeInfoModal.tsx` (+103/-18), `src/components/ui/components/grapeQualityBar.tsx` (+9/-2), `src/components/pages/winepedia/YieldProjectionTab.tsx` (+4/-2) - UI alignment for updated grape/loan context.
+- `src/lib/services/vineyard/vineyardValueCalc.ts` (+120/-15), `src/lib/services/core/gameTick.ts` (+10/-6), `src/lib/services/prestige/prestigeService.ts` (+3/-2), `migrations/sync_vercel_schema.sql` (+1) - supporting calculations/schema updates.
 
-### 🍇 **Grape Icon Updates**
-- Converted grape icons from .webp to .png format: Barbera, Chardonnay, Pinot Noir, Primitivo, Sauvignon Blanc
-- **NEW FILE:** `icon_temperanillo.png` - Tempranillo grape icon
+### Notes
+- This release deepens debt mechanics and ties them more directly to game pressure and progression.
 
-### 🎨 **UI Component Updates**
-- `src/components/ui/modals/UImodals/winepediaGrapeInfoModal.tsx` - Enhanced grape info modal (103 additions, 18 deletions)
-- `src/components/ui/components/grapeQualityBar.tsx` - Quality bar updates (9 additions, 2 deletions)
-- `src/components/pages/winepedia/YieldProjectionTab.tsx` - Yield projection updates (4 additions, 2 deletions)
+## Version 0.065 - Grape Suitability UX Overhaul
+**Date:** 2025-11-10 | **Commit(s):** e6a60e1 | **Stats:** 985 insertions(+), 294 deletions(-)
 
-### 🛠️ **System Updates**
-- `src/lib/services/vineyard/vineyardValueCalc.ts` - Vineyard value calculation improvements (120 additions, 15 deletions)
-- `src/lib/services/core/gameTick.ts` - Game tick updates (10 additions, 6 deletions)
-- `src/lib/services/prestige/prestigeService.ts` - Prestige service updates (3 additions, 2 deletions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (1 addition)
+### Summary
+- Replaced legacy grape info view with a comprehensive modal-based suitability experience.
+- Expanded difficulty/suitability calculation logic and grape constants.
+- Updated grape varieties UI and utility helpers for new presentation model.
 
-## Version 0.065 - Grape Suitability UI Enhancement
-**Date:** 2025-11-10 | **Commit:** e6a60e1 | **Stats:** 985 additions, 294 deletions
+### Changes
+- **NEW FILE:** `src/components/ui/modals/UImodals/winepediaGrapeInfoModal.tsx` (591 lines) - detailed grape info/suitability modal.
+- **REMOVED:** `src/components/pages/winepedia/GrapeInfoView.tsx` (189 lines) - legacy page replaced by modal flow.
+- `src/lib/services/wine/features/grapeDifficulty.ts` (+240/-27) and `src/lib/constants/grapeConstants.ts` (+60/-35) - enhanced suitability data and logic.
+- `src/components/pages/winepedia/GrapeVarietiesTab.tsx` (+24/-6) and `src/lib/utils/utils.ts` (+24) - UI/helper support.
 
-### 🍇 **Grape Suitability System**
-- **NEW FILE:** `src/components/ui/modals/UImodals/winepediaGrapeInfoModal.tsx` (591 lines) - Comprehensive grape information modal
-- **REMOVED:** `src/components/pages/winepedia/GrapeInfoView.tsx` (189 lines) - Replaced by modal
-- `src/lib/services/wine/features/grapeDifficulty.ts` - Enhanced grape difficulty calculations (240 additions, 27 deletions)
-- `src/lib/constants/grapeConstants.ts` - Enhanced grape constants (60 additions, 35 deletions)
+### Notes
+- This change shifts grape detail UX toward context modal interactions rather than full-page panels.
 
-### 🎨 **UI Component Updates**
-- `src/components/pages/winepedia/GrapeVarietiesTab.tsx` - Enhanced grape varieties display (24 additions, 6 deletions)
-- `src/lib/utils/utils.ts` - Added grape suitability utility functions (24 additions)
+## Version 0.064 - Feature Accumulation and Economy Impact Visibility
+**Date:** 2025-11-09 | **Commit(s):** 584ad8f | **Stats:** 132 insertions(+), 37 deletions(-)
 
-## Version 0.064 - Feature Accumulation & Economy Phase Display
-**Date:** 2025-11-09 | **Commit:** 584ad8f | **Stats:** 132 additions, 37 deletions
+### Summary
+- Improved wine-feature accumulation behavior and display consistency.
+- Surfaced economy-phase impact more clearly in sales and winepedia UI.
+- Applied small customer/order-generation adjustments supporting updated displays.
 
-### 🍷 **Wine Feature Accumulation**
-- `src/lib/services/wine/features/featureService.ts` - Enhanced feature accumulation system (43 additions, 25 deletions)
-- `src/components/ui/components/FeatureDisplay.tsx` - Improved feature display (2 additions, 2 deletions)
+### Changes
+- `src/lib/services/wine/features/featureService.ts` (+43/-25) and `src/components/ui/components/FeatureDisplay.tsx` (+2/-2) - feature accumulation/display updates.
+- `src/components/pages/sales/OrdersTab.tsx` (+17/-3), `src/components/pages/winepedia/EconomyTab.tsx` (+4), `src/components/ui/components/grapeQualityBar.tsx` (+42/-1) - improved economy impact visibility.
+- `src/lib/services/sales/generateCustomer.ts` (+14/-3), `src/lib/services/sales/generateOrder.ts` (+2), `src/lib/services/sales/salesOrderService.ts` (+3/-1) - supporting generation/service updates.
 
-### 💰 **Economy Phase Impact Display**
-- `src/components/pages/sales/OrdersTab.tsx` - Enhanced economy phase impact display (17 additions, 3 deletions)
-- `src/components/pages/winepedia/EconomyTab.tsx` - Economy tab updates (4 additions)
-- `src/components/ui/components/grapeQualityBar.tsx` - Quality bar enhancements (42 additions, 1 deletion)
-- `src/lib/services/sales/generateCustomer.ts` - Customer generation updates (14 additions, 3 deletions)
-- `src/lib/services/sales/generateOrder.ts` - Order generation updates (2 additions)
-- `src/lib/services/sales/salesOrderService.ts` - Sales order service updates (3 additions, 1 deletion)
+### Notes
+- Focused UI-readability release with lightweight service-side changes.
 
-## Version 0.063-0.0632 - Grape Suitability System (Combined)
-**Date:** 2025-11-08 to 2025-11-09 | **Commits:** 11bc48d (0.063), 89d9976 (0.0631), 5c4cd6b (0.0632) | **Stats:** Combined 829 additions, 135 deletions
+## Version 0.063-0.0632 - Grape Suitability Framework Introduction
+**Date:** 2025-11-08 to 2025-11-09 | **Commit(s):** 11bc48d, 89d9976, 5c4cd6b | **Stats:** 829 insertions(+), 135 deletions(-)
 
-### 🍇 **Grape Difficulty & Suitability Framework**
-- **NEW FILE:** `src/lib/services/wine/features/grapeDifficulty.ts` (152 lines) - Grape difficulty calculation service
-- `src/lib/constants/grapeConstants.ts` - Enhanced grape constants with difficulty and suitability data (172 additions across commits)
-- `src/lib/constants/vineyardConstants.ts` - Vineyard constants updates (54 additions, 44 deletions)
+### Summary
+- Introduced the first grape-difficulty/suitability framework across constants and services.
+- Added sun/altitude suitability effects into vineyard value and planting workflows.
+- Updated vineyard, quality, prestige, and schema layers to support new suitability model.
 
-### 🌞 **Sun & Altitude Suitability**
-- `src/lib/services/vineyard/vineyardValueCalc.ts` - Enhanced vineyard value calculations with sun and altitude suitability (219 additions, 30 deletions)
-- `src/components/ui/modals/UImodals/vineyardModal.tsx` - Enhanced vineyard modal with suitability display (71 additions, 11 deletions)
-- `src/components/ui/modals/activitymodals/PlantingOptionsModal.tsx` - Planting options with suitability info (27 additions, 5 deletions)
-- `src/components/pages/winepedia/YieldProjectionTab.tsx` - Yield projection with suitability (54 additions, 16 deletions)
+### Changes
+- **NEW FILE:** `src/lib/services/wine/features/grapeDifficulty.ts` (152 lines) - core difficulty/suitability calculation service.
+- `src/lib/constants/grapeConstants.ts` (+172 across commits) and `src/lib/constants/vineyardConstants.ts` (+54/-44) - suitability-related configuration updates.
+- `src/lib/services/vineyard/vineyardValueCalc.ts` (+219/-30) - integrated sun/altitude suitability into value calculations.
+- UI support: `src/components/ui/modals/UImodals/vineyardModal.tsx` (+71/-11), `src/components/ui/modals/activitymodals/PlantingOptionsModal.tsx` (+27/-5), `src/components/pages/winepedia/YieldProjectionTab.tsx` (+54/-16).
+- Supporting updates: `src/lib/services/vineyard/vineyardManager.ts` (+8/-2), `src/lib/services/vineyard/vineyardService.ts` (+16/-3), `src/lib/services/wine/winescore/grapeQualityCalculation.ts` (+20/-4), `src/lib/services/prestige/prestigeService.ts` (+9/-6), `migrations/sync_vercel_schema.sql` (+5/-2).
 
-### 🛠️ **System Updates**
-- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard management updates (8 additions, 2 deletions)
-- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service updates (16 additions, 3 deletions)
-- `src/lib/services/wine/winescore/grapeQualityCalculation.ts` - Quality calculation updates (20 additions, 4 deletions)
-- `src/lib/services/prestige/prestigeService.ts` - Prestige service updates (9 additions, 6 deletions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (5 additions, 2 deletions)
+### Notes
+- Foundational grape suitability release; 0.064-0.066 continue UI/logic maturation on top of this base.
 
-## Version 0.062 - Finance Time Filters & Centralized Time Constants
-**Date:** 2025-11-08 | **Commit:** 8842b24 | **Stats:** 343 additions, 96 deletions
+## Version 0.062 - Finance Time Filters and Time Constants Centralization
+**Date:** 2025-11-08 | **Commit(s):** 8842b24 | **Stats:** 343 insertions(+), 96 deletions(-)
 
-### ⏰ **Time Constants System**
-- **NEW FILE:** `src/lib/constants/timeConstants.ts` (14 lines) - Centralized time period constants
-- `src/lib/constants/index.ts` - Added time constants export (1 addition)
+### Summary
+- Added centralized time-period constants and propagated them through finance filters.
+- Improved finance and income/balance views for time-based analysis.
+- Updated loan/activity/tick utilities to align with shared time semantics.
 
-### 💰 **Finance Time Filters**
-- `src/components/finance/FinanceView.tsx` - Enhanced time filter system (209 additions, 6 deletions)
-- `src/components/finance/IncomeBalanceView.tsx` - Improved income/balance time filtering (35 additions, 20 deletions)
-- `src/lib/services/finance/financeService.ts` - Finance service time filter updates (26 additions, 17 deletions)
+### Changes
+- **NEW FILE:** `src/lib/constants/timeConstants.ts` (14 lines) and `src/lib/constants/index.ts` (+1) - centralized time constants export.
+- `src/components/finance/FinanceView.tsx` (+209/-6), `src/components/finance/IncomeBalanceView.tsx` (+35/-20), `src/lib/services/finance/financeService.ts` (+26/-17) - finance time-filter updates.
+- `src/lib/services/finance/loanService.ts` (+11/-19), `src/lib/services/activity/workcalculators/bookkeepingWorkCalculator.ts` (+9/-7), `src/lib/services/core/gameTick.ts` (+6/-6), `src/lib/utils/utils.ts` (+17/-10), `src/components/layout/NotificationCenter.tsx` (+5/-6) - shared time behavior alignment.
 
-### 🛠️ **System Updates**
-- `src/lib/services/finance/loanService.ts` - Loan service time filter updates (11 additions, 19 deletions)
-- `src/lib/services/activity/workcalculators/bookkeepingWorkCalculator.ts` - Bookkeeping time calculations (9 additions, 7 deletions)
-- `src/lib/services/core/gameTick.ts` - Game tick time updates (6 additions, 6 deletions)
-- `src/lib/utils/utils.ts` - Time utility functions (17 additions, 10 deletions)
-- `src/components/layout/NotificationCenter.tsx` - Notification center updates (5 additions, 6 deletions)
+### Notes
+- Introduces a common time-language layer used by later finance and dashboard updates.
 
-## Version 0.061 - Quick Loan System
-**Date:** 2025-11-08 | **Commit:** 8a0b957 | **Stats:** 231 additions, 83 deletions
+## Version 0.061 - Quick Loan Workflow Introduction
+**Date:** 2025-11-08 | **Commit(s):** 8a0b957 | **Stats:** 231 insertions(+), 83 deletions(-)
 
-### 💰 **Quick Loan Feature**
-- `src/lib/services/activity/activitymanagers/lenderSearchManager.ts` - Quick loan integration (17 additions, 16 deletions)
-- `src/lib/services/activity/workcalculators/lenderSearchWorkCalculator.ts` - Quick loan work calculations (46 additions, 10 deletions)
-- `src/lib/services/activity/workcalculators/takeLoanWorkCalculator.ts` - Take loan work calculator updates (18 additions, 3 deletions)
-- `src/lib/constants/loanConstants.ts` - Quick loan constants (36 additions, 12 deletions)
-- `src/components/finance/LoansView.tsx` - Quick loan UI (58 additions, 3 deletions)
-- `src/components/ui/modals/activitymodals/LenderSearchOptionsModal.tsx` - Quick loan options (4 additions, 4 deletions)
+### Summary
+- Added a quick-loan flow across lender search, work calculators, and loan UI.
+- Updated loan/economy constants and lender services to support fast-loan options.
+- Applied minor schema/name-constant updates for consistency.
 
-### 🛠️ **System Updates**
-- `src/lib/services/finance/lenderService.ts` - Lender service updates (14 additions, 6 deletions)
-- `src/lib/services/finance/economyService.ts` - Economy service updates (4 additions, 4 deletions)
-- `src/lib/constants/economyConstants.ts` - Economy constants updates (3 additions, 3 deletions)
-- `src/lib/constants/namesConstants.ts` - Name constants updates (9 additions)
-- `migrations/sync_vercel_schema.sql` - Database schema updates (1 addition, 1 deletion)
+### Changes
+- `src/lib/services/activity/activitymanagers/lenderSearchManager.ts` (+17/-16), `src/lib/services/activity/workcalculators/lenderSearchWorkCalculator.ts` (+46/-10), `src/lib/services/activity/workcalculators/takeLoanWorkCalculator.ts` (+18/-3) - quick-loan activity integration.
+- `src/lib/constants/loanConstants.ts` (+36/-12), `src/components/finance/LoansView.tsx` (+58/-3), `src/components/ui/modals/activitymodals/LenderSearchOptionsModal.tsx` (+4/-4) - quick-loan configuration and UI support.
+- `src/lib/services/finance/lenderService.ts` (+14/-6), `src/lib/services/finance/economyService.ts` (+4/-4), `src/lib/constants/economyConstants.ts` (+3/-3), `src/lib/constants/namesConstants.ts` (+9), `migrations/sync_vercel_schema.sql` (+1/-1) - supporting updates.
 
-## Version 0.055 - Customer System Fixes
-**Date:** 2025-11-08 | **Commit:** d1dc606 | **Stats:** 233 additions, 131 deletions
+### Notes
+- This release establishes fast-access debt tooling prior to later loan extensions/forced-loan mechanics.
 
-### 👥 **Customer Generation Improvements**
-- `src/lib/services/sales/createCustomer.ts` - Enhanced customer generation logic (118 additions, 109 deletions)
-- `src/hooks/useCustomerData.ts` - Improved customer data hook (13 additions, 3 deletions)
-- `src/components/pages/winepedia/CustomersTab.tsx` - Customer display improvements (18 additions, 8 deletions)
-- `src/lib/constants/constants.ts` - Customer constants updates (11 additions)
+## Version 0.055 - Customer Generation Stabilization
+**Date:** 2025-11-08 | **Commit(s):** d1dc606 | **Stats:** 233 insertions(+), 131 deletions(-)
+
+### Summary
+- Refined customer generation behavior and improved customer-data presentation.
+- Updated related hooks/constants to support more stable customer outputs.
+
+### Changes
+- `src/lib/services/sales/createCustomer.ts` (+118/-109) - substantial customer generation logic rework.
+- `src/hooks/useCustomerData.ts` (+13/-3) and `src/components/pages/winepedia/CustomersTab.tsx` (+18/-8) - improved customer data access and display.
+- `src/lib/constants/constants.ts` (+11) - customer-related constant updates.
+
+### Notes
+- Focused customer-system correctness pass with moderate service churn.
 
 ---
-## Version 0.06 - Storyline Documentation & Sidebar Tweaks
-**Date:** 2025-11-08 | **Commit:** 77eaf92f | **Stats:** 2,191 additions, 9 deletions
+## Version 0.06 - Storyline Documentation Expansion
+**Date:** 2025-11-08 | **Commit(s):** 77eaf92f | **Stats:** 2,191 insertions(+), 9 deletions(-)
 
-### 📚 Storyline Expansion
-- **NEW FILE:** `docs/Story/STORY-BACKGROUND.md` (235 lines) — overarching narrative framework
-- **NEW FILE:** `docs/Story/The_De_Luca_Family_Italy.md` (368 lines) — Italian family storyline
-- **NEW FILE:** `docs/Story/The_Latosha_Family_France.md` (546 lines) — French family storyline
-- **NEW FILE:** `docs/Story/The_Mondavi_Family_US.md` (289 lines) — U.S. family storyline
-- **NEW FILE:** `docs/Story/The_Torres_Family_Spain.md` (293 lines) — Spanish family storyline
-- **NEW FILE:** `docs/Story/The_Weissburg_Family_Germany.md` (426 lines) — German family storyline
-- Added reference screenshots under `docs/screenshots/` (`Companyview.png`, `Loginpage.png`, `staff.png`, `vineyards.png`, `winebalance.png`)
+### Summary
+- Added a large narrative documentation pack defining story background and family arcs.
+- Included reference screenshots and minor UI adjustments supporting documentation visibility.
 
-### 🧭 UI Adjustment
-- `src/components/ui/shadCN/sidebar.tsx` — Layout fix to support new documentation entries (33 additions, 8 deletions)
-- `src/components/ui/shadCN/tooltip.tsx` — Follow-up tweak (1 addition, 1 deletion)
+### Changes
+- **NEW FILE:** `docs/Story/STORY-BACKGROUND.md` (235 lines), **NEW FILE:** `docs/Story/The_De_Luca_Family_Italy.md` (368 lines), **NEW FILE:** `docs/Story/The_Latosha_Family_France.md` (546 lines), **NEW FILE:** `docs/Story/The_Mondavi_Family_US.md` (289 lines), **NEW FILE:** `docs/Story/The_Torres_Family_Spain.md` (293 lines), **NEW FILE:** `docs/Story/The_Weissburg_Family_Germany.md` (426 lines) - storyline corpus.
+- Added screenshots under `docs/screenshots/` including `Companyview.png`, `Loginpage.png`, `staff.png`, `vineyards.png`, and `winebalance.png`.
+- `src/components/ui/shadCN/sidebar.tsx` (+33/-8) and `src/components/ui/shadCN/tooltip.tsx` (+1/-1) - UI tweaks to support updated docs/navigation context.
 
-For older version see versionlog_lecacy.md
+### Notes
+- Documentation-centric milestone with minimal gameplay code impact.
+
+For older versions see `docs/versionlog_legacy.md`.
