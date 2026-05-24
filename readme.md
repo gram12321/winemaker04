@@ -51,6 +51,7 @@ npm run build
 | Current implemented game systems | `docs/AIdocs/AIDescriptions_coregame.md` |
 | File structure and ownership map | `docs/PROJECT_INFO.md` |
 | Wine variable flow and diagrams | `docs/WineSystem_VariableRelationshipMap.md` |
+| Prestige event creators and decay behavior | `docs/PrestigeEventSourceInventory.md` |
 | Taste research and future ideas | `docs/TasteSystem_WineFolly_Research.md` |
 | Taste Quality design spec | `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` |
 | Taste Quality implementation plan | `docs/superpowers/plans/2026-05-20-taste-quality-index.md` |

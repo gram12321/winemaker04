@@ -17,7 +17,6 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { clamp, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { NAMES, GRAPE_MERCHANT_SUFFIXES } from '../../constants/namesConstants';
 import { GAME_INITIALIZATION, SEASON_ORDER } from '../../constants';
 import { NotificationCategory } from '../../types/types';
 import type { EconomyPhase, GrapeVariety, Nationality, Season, WeatherIntensity, WeatherState, WineBatch, WineBatchState } from '../../types/types';
@@ -27,10 +26,15 @@ import {
   getBulkBuyer,
 } from './grapeBuyerMarketService';
 import {
+  getBulkSupplier,
+  getSeasonalSuppliers,
+  recordMarketSupplierPurchase,
+  type BuyMarketSupplierProfile,
+} from './grapeSupplierMarketService';
+import {
   type SupplierLoyaltyLevel,
   type SupplierLoyaltyRecord,
   getSupplierLoyalties,
-  getSupplierPriorityProfiles,
   getSupplierRelationshipPriceMultiplier,
   getSupplierPersistenceBonus,
   recordSupplierPurchase,
@@ -206,19 +210,13 @@ function toNationality(country?: string): Nationality {
   }
   return 'France';
 }
+function computeOfferAvailableKgForSupplier(supplier: BuyMarketSupplierProfile, companyValue: number, prestige: number): number {
+  if (supplier.remainingSeasonSupplyKg <= 0) return 0;
 
-function generateSupplierName(country: Nationality): string {
-  const namePool = NAMES[country];
-  const firstNamePool = Math.random() < 0.5 ? namePool.firstNames.male : namePool.firstNames.female;
-  const firstName = getRandomFromArray(firstNamePool);
-  const lastName = getRandomFromArray(namePool.lastNames);
-  const suffix = getRandomFromArray(GRAPE_MERCHANT_SUFFIXES[country]);
-  return `${firstName} ${lastName} ${suffix}`;
-}
-
-function toSupplierId(country: Nationality, supplierName: string): string {
-  const normalized = supplierName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  return `supplier_${country.toLowerCase()}_${normalized}`;
+  const baseAvailableKg = computeBuyOfferAvailableKg(companyValue, prestige);
+  const supplyScale = clamp(supplier.effectiveSeasonSupplyKg / 3000, 0.75, 4);
+  const scaled = clamp(Math.round(baseAvailableKg * supplyScale), BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_MAX_AVAILABLE_KG);
+  return Math.max(1, Math.min(scaled, supplier.remainingSeasonSupplyKg));
 }
 
 function toOfferModel(
@@ -363,21 +361,21 @@ function getNextSeason(season: Season, year: number): { season: Season; year: nu
 function buildNewOffer(
   companyId: string,
   offerIndex: number,
-  country: Nationality,
+  supplier: BuyMarketSupplierProfile,
   demandFactors: BuyMarketDemandFactors,
   companyValue: number,
   prestige: number,
-  preferredSupplier?: { supplierId: string; supplierName: string; level: number }
 ): BuyMarketOfferRow {
   const { week, season, year, economyPhase } = getCurrentTime();
   const offerId = `buy_offer_${season.toLowerCase()}_${year}_${offerIndex}_${Math.random().toString(36).slice(2, 7)}`;
   const batchState = getRandomFromArray(STATE_DISTRIBUTION);
   const qualityScore = Number(randomInRange(0.36, 0.9).toFixed(3));
-  const resolvedSupplierName = preferredSupplier?.supplierName ?? generateSupplierName(country);
-  const resolvedSupplierId = preferredSupplier?.supplierId ?? toSupplierId(country, resolvedSupplierName);
-  const supplierRelationshipMultiplier = getSupplierRelationshipPriceMultiplier((preferredSupplier?.level ?? 0) as SupplierLoyaltyLevel);
+  const resolvedSupplierName = supplier.supplierName;
+  const resolvedSupplierId = supplier.supplierId;
+  const supplierRelationshipMultiplier = getSupplierRelationshipPriceMultiplier(supplier.loyaltyLevel);
+  const basePricePerKg = Number((BASE_BUY_MARKET_PRICE_PER_KG * supplier.basePriceMultiplier).toFixed(2));
   const effectivePricePerKg = Number(computeBuyOfferPricePerKg({
-    basePrice: BASE_BUY_MARKET_PRICE_PER_KG,
+    basePrice: basePricePerKg,
     qualityScore,
     state: batchState,
     season,
@@ -397,17 +395,17 @@ function buildNewOffer(
     ware_group: 'grapes',
     supplier_id: resolvedSupplierId,
     supplier_name: resolvedSupplierName,
-    origin_tag: 'seasonal_rotation',
+    origin_tag: supplier.originTag,
     batch_state: batchState,
     grape_variety: getRandomFromArray(Object.keys(GRAPE_CONST)) as GrapeVariety,
-    available_kg: computeBuyOfferAvailableKg(companyValue, prestige),
+    available_kg: computeOfferAvailableKgForSupplier(supplier, companyValue, prestige),
     quality_score: qualityScore,
-    base_price_per_kg: BASE_BUY_MARKET_PRICE_PER_KG,
+    base_price_per_kg: basePricePerKg,
     effective_price_per_kg: effectivePricePerKg,
     weeks_on_market: 0,
     quality_decay_per_week: STATE_QUALITY_DECAY_PER_WEEK[batchState],
     min_quality_floor: 0.16,
-    is_persistent: Math.random() < (0.32 + getSupplierPersistenceBonus((preferredSupplier?.level ?? 0) as SupplierLoyaltyLevel)),
+    is_persistent: Math.random() < (0.32 + getSupplierPersistenceBonus(supplier.loyaltyLevel)),
     created_year: year,
     created_season: season,
     created_week: week,
@@ -422,12 +420,10 @@ function buildNewOffer(
 }
 
 function pickPreferredSupplier(
-  preferredSuppliers: Array<{ supplierId: string; supplierName: string; level: number }>,
+  suppliers: BuyMarketSupplierProfile[],
   offerIndex: number
-): { supplierId: string; supplierName: string; level: number } | undefined {
-  if (preferredSuppliers.length === 0) return undefined;
-  if (Math.random() > 0.45) return undefined;
-  return preferredSuppliers[offerIndex % preferredSuppliers.length];
+): BuyMarketSupplierProfile {
+  return suppliers[offerIndex % suppliers.length] ?? suppliers[0];
 }
 
 async function ensureOffers(companyId: string): Promise<void> {
@@ -440,18 +436,25 @@ async function ensureOffers(companyId: string): Promise<void> {
   const { country, demandFactors } = await getMarketContext(companyId);
   const companyValue = await calculateCompanyValue().catch(() => 0);
   const prestige = getGameState().prestige ?? 0;
-  const preferredSuppliers = await getSupplierPriorityProfiles(10);
+  const [bulkSupplier, seasonalSuppliers] = await Promise.all([
+    getBulkSupplier(country),
+    getSeasonalSuppliers(country),
+  ]);
+  const suppliers = [bulkSupplier, ...seasonalSuppliers].filter((supplier): supplier is BuyMarketSupplierProfile => !!supplier);
+  if (suppliers.length === 0) return;
 
   const targetCount = randomInt(MIN_SEASONAL_OFFERS, MAX_SEASONAL_OFFERS);
-  const generated = Array.from({ length: targetCount }, (_, index) => buildNewOffer(
-    companyId,
-    index,
-    country,
-    demandFactors,
-    companyValue,
-    prestige,
-    pickPreferredSupplier(preferredSuppliers, index)
-  ));
+  const generated = Array.from({ length: targetCount }, (_, index) => {
+    const supplier = pickPreferredSupplier(suppliers, index);
+    return buildNewOffer(
+      companyId,
+      index,
+      supplier,
+      demandFactors,
+      companyValue,
+      prestige
+    );
+  });
   await upsertBuyOfferRows(generated);
 }
 
@@ -485,7 +488,12 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
   const { country, demandFactors } = await getMarketContext(companyId);
   const companyValue = await calculateCompanyValue().catch(() => 0);
   const prestige = getGameState().prestige ?? 0;
-  const preferredSuppliers = await getSupplierPriorityProfiles(10);
+  const [bulkSupplier, seasonalSuppliers] = await Promise.all([
+    getBulkSupplier(country),
+    getSeasonalSuppliers(country),
+  ]);
+  const suppliers = [bulkSupplier, ...seasonalSuppliers].filter((supplier): supplier is BuyMarketSupplierProfile => !!supplier);
+  if (suppliers.length === 0) return;
 
   const existingRows = ((data || []) as unknown) as BuyMarketOfferRow[];
   const persistentRows = existingRows
@@ -494,21 +502,23 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
     .map((row) => ({
       ...row,
       origin_tag: 'trusted_carryover' as const,
-      supplier_name: row.supplier_name || generateSupplierName(country),
+      supplier_name: row.supplier_name || 'Seasonal Supplier',
       updated_at: new Date().toISOString(),
     }));
 
   const targetCount = randomInt(MIN_SEASONAL_OFFERS, MAX_SEASONAL_OFFERS);
   const generatedCount = Math.max(0, targetCount - persistentRows.length);
-  const newRows = Array.from({ length: generatedCount }, (_, index) => buildNewOffer(
-    companyId,
-    index + persistentRows.length,
-    country,
-    demandFactors,
-    companyValue,
-    prestige,
-    pickPreferredSupplier(preferredSuppliers, index)
-  ));
+  const newRows = Array.from({ length: generatedCount }, (_, index) => {
+    const supplier = pickPreferredSupplier(suppliers, index + persistentRows.length);
+    return buildNewOffer(
+      companyId,
+      index + persistentRows.length,
+      supplier,
+      demandFactors,
+      companyValue,
+      prestige
+    );
+  });
 
   const merged = [...persistentRows, ...newRows];
 
@@ -652,6 +662,12 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
     );
 
     await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear);
+    await recordMarketSupplierPurchase(
+      offer.supplier_id,
+      roundedQuantity,
+      gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
+      (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as Season
+    );
 
     const remainingKg = offer.available_kg - roundedQuantity;
     if (remainingKg <= 0) {

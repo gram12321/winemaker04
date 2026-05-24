@@ -57,6 +57,7 @@ export * from './sales/generateCustomer';
 export * from './sales/generateOrder';
 export * from './sales/grapeBuyerLoyaltyService';
 export * from './sales/grapeSupplierLoyaltyService';
+export * from './sales/grapeSupplierMarketService';
 export * from './sales/relationshipService';
 export * from './sales/contractGenerationService';
 export * from './sales/contractService';

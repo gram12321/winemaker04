@@ -16,6 +16,7 @@ export * from './customers/relationshipBoostsDB';
 export * from './customers/prestigeEventsDB';
 export * from './core/researchUnlocksDB';
 export * from './sales/grapeBuyerMarketDB';
+export * from './sales/grapeSupplierMarketDB';
 export * from './sales/grapeBuyerLoyaltyDB';
 export * from './sales/grapeSupplierLoyaltyDB';
 export { supabase } from './core/supabase';

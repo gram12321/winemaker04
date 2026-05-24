@@ -4,6 +4,8 @@ Status: Current variable relationship map
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](../CONTEXT.md). This document focuses on how the main wine-system variables depend on each other through the gameflow.
 
+Prestige event creators are inventoried separately in [PrestigeEventSourceInventory.md](PrestigeEventSourceInventory.md).
+
 ## 1) Purpose
 
 This map answers three questions:
@@ -58,6 +60,8 @@ flowchart LR
 - Bottling snapshots are the historical source for wine log, highscores, and achievement score checks.
 - Current cellar values may continue to evolve after bottling; historical snapshots must not drift.
 - Research unlocks and permanent effects are progression modifiers that may alter upstream vineyard/process inputs (for example health decay), but should not bypass structure and taste computation layers.
+- `prestige_events` is the prestige source ledger. Permanent rows use `decay_rate = 0`; one-off rows use `0 < decay_rate < 1` and fade through weekly decay.
+- Prestige event creators should write through `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit type, source id, decay rate, and payload metadata.
 
 ### 5.1 Progression Overlay Invariants
 
@@ -170,6 +174,39 @@ flowchart LR
   WL --> HIST["Historical vineyard analytics"]
 ```
 
+### 6.7 Prestige Event Flow
+
+```mermaid
+flowchart LR
+  START["Starting conditions"] --> PE["prestige_events ledger"]
+  VALUE["Company value"] --> PE
+  VBASE["Vine age and land value"] --> PE
+  CELLAR["Aged cellar collection"] --> PE
+  SALES["Wine sales and contracts"] --> PE
+  FEATURES["Wine feature manifestation and sale"] --> PE
+  ACH["Achievements"] --> PE
+  RESEARCH["Research completion rewards"] --> PE
+  FIN["Loan and bookkeeping penalties"] --> PE
+  ADMIN["Admin tools"] --> PE
+
+  PE --> PERM["Permanent rows\ndecay_rate = 0"]
+  PE --> DECAY["Decaying rows\n0 < decay_rate < 1"]
+  DECAY --> WEEKLY["Weekly decay\namount_base *= decay_rate"]
+  WEEKLY --> PE
+
+  PE --> AGG["calculateCurrentPrestige"]
+  AGG --> CP["Company prestige"]
+  AGG --> VP["Vineyard prestige"]
+
+  CP --> PRICE["Price multipliers"]
+  VP --> PRICE
+  VP --> LVM["landValueModifier and vineyard value"]
+  CP --> GATES["Research, market, customer, and contract gates"]
+  VP --> ACH2["Vineyard achievements"]
+  CP --> UI["Header and prestige modal"]
+  VP --> UI
+```
+
 ## 7) Contract Relationships
 
 | Contract requirement | Source variable | Notes |
@@ -230,6 +267,7 @@ This table follows the practical gameflow from land purchase through sales and p
 | Cellar evolution | Features, aging progress, oxidation, bottle aging | Current taste, current price, current score changes | Cellar UI, sales offers, current contract validation | Wine can become more or less valuable after bottling. |
 | Sales/contracts | Customer requirements, relationships, market context | Contract validity, orders, revenue | Money, customer relationships, prestige | The market evaluates wine variables against demand. |
 | Progression | Wine log, sales, scores, assets | Highscores, achievements, prestige events | Company value, reputation, future opportunities | Historical performance feeds long-term progression. |
+| Prestige events | Starting conditions, company value, vineyard factors, cellar collection, sales, features, achievements, research, loan/bookkeeping penalties | Company prestige, vineyard prestige, event breakdowns | Pricing, land value modifier, research gates, market systems, UI, achievements | Reputation is a ledger-derived progression signal with permanent and decaying sources. |
 
 ## 12) Main Variable Flow Display
 
@@ -274,4 +312,6 @@ flowchart TD
 - Keep research permanent effects routed through explicit domain services (for example vineyard manager) so modifier origins remain auditable.
 - Keep research benefit copy aligned with implementation so descriptive text does not imply mechanics that are not yet wired.
 - Keep anchor parsing strict: unknown anchor keys should be ignored, and new business logic should target only the compact anchor model.
+- Keep [PrestigeEventSourceInventory.md](PrestigeEventSourceInventory.md) in sync when adding new `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` write paths.
+- Complete a dedicated prestige consumer matrix after the creator inventory is reviewed.
 - If descriptor-level taste becomes gameplay-relevant, update this map and `CONTEXT.md` before wiring descriptors into outcomes.
