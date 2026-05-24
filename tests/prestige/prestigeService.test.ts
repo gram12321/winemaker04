@@ -257,4 +257,19 @@ describe('prestige service', () => {
     }));
     expect(vineyardEvent.amount_base).not.toBe(0.08);
   });
+
+  it('falls back to a generic achievement display when metadata is missing', async () => {
+    const { getEventDisplayData } = await import('@/lib/services/prestige/prestigeService');
+
+    const displayData = getEventDisplayData(prestigeEvent({
+      type: 'achievement',
+      amount: 1.5,
+      metadata: undefined
+    }));
+
+    expect(displayData).toEqual(expect.objectContaining({
+      titleBase: 'Achievement',
+      amountText: '+1.50 prestige'
+    }));
+  });
 });

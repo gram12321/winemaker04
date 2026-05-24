@@ -798,6 +798,14 @@ export function getEventDisplayData(event: PrestigeEvent): {
     [key: string]: any;
   };
 } {
+  const fallbackTitleBase = event.type === 'achievement'
+    ? 'Achievement'
+    : event.type === 'vineyard_achievement'
+      ? 'Vineyard Achievement'
+      : event.type.replace(/_/g, ' ');
+
+  const fallbackTitle = event.description || fallbackTitleBase;
+
   if (event.metadata) {
     const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
 
@@ -934,7 +942,15 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
     let title = '';
     let amountText = '';
+  if (event.type === 'achievement' || event.type === 'vineyard_achievement') {
+    console.warn(`Prestige event ${event.id} (${event.type}) is missing metadata; using fallback display.`);
+  }
 
+  return {
+    title: fallbackTitle,
+    titleBase: fallbackTitleBase,
+    amountText: `${event.amount >= 0 ? '+' : ''}${event.amount.toFixed(2)} prestige`,
+  };
     if (eventType === 'manifestation') {
       title = `${featureName} Manifestation: ${wineName}`;
       amountText = `${featureName} fault detected`;
@@ -1069,7 +1085,15 @@ export function getEventDisplayData(event: PrestigeEvent): {
     };
   }
 
-  throw new Error(`Event ${event.id} (${event.type}) missing required metadata`);
+  if (event.type === 'achievement' || event.type === 'vineyard_achievement') {
+    console.warn(`Prestige event ${event.id} (${event.type}) is missing metadata; using fallback display.`);
+  }
+
+  return {
+    title: fallbackTitle,
+    titleBase: fallbackTitleBase,
+    amountText: `${event.amount >= 0 ? '+' : ''}${event.amount.toFixed(2)} prestige`,
+  };
 }
 
 // ===== FEATURE PRESTIGE EVENTS =====
