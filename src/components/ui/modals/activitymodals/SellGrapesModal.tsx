@@ -535,15 +535,15 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           const favorites = buyer.favoriteGrapes ?? [];
 
           if (favorites.length === 0) {
-            return <span className="text-[11px] text-gray-500">No preference</span>;
+            return null;
           }
 
           return (
             <div className="flex flex-wrap items-center gap-1.5">
               {favorites.slice(0, 2).map((grape) => (
-                <div key={`${buyer.id}-${grape}`} className="inline-flex items-center rounded border border-gray-700 px-1.5 py-1">
-                  <GrapeIcon variety={grape as GrapeVariety} size="xs" tooltip={grape} />
-                </div>
+                <span key={`${buyer.id}-${grape}`} className="inline-flex items-center">
+                  <GrapeIcon variety={grape as GrapeVariety} size="xl" tooltip={grape} />
+                </span>
               ))}
             </div>
           );
@@ -650,7 +650,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
   return (
     <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="w-[96vw] max-w-7xl max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
+      <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
         </DialogHeader>
@@ -726,19 +726,17 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer</span><span className="text-right">{selectedBuyer?.name ?? 'Buyer'}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Base Price</span><span className="text-right">{formatNumber(BASE_GRAPE_PRICE_PER_KG, { currency: true, decimals: 2 })}/kg</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Price per kg</span><span className="text-right text-white">{formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({qualityPercent}%)</span><span className="text-right">×{pricing.qualityMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Prestige Factor</span><span className="text-right">×{pricing.prestigeBonus.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">×{selectedDemandPressureIndex.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">×{selectedVolatilityRiskIndex.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Context Factor</span><span className="text-right">×{pricing.marketContextMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{pricing.marketSensitivityMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Anti-Arbitrage Penalty</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer Market Multiplier</span><span className="text-right">×{pricing.buyerMultiplier.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{(pricing.relationshipMultiplier ?? 1).toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Favorite Grape Bonus</span><span className="text-right">+{(pricing.favoriteGrapeBonusMultiplier ?? 0).toFixed(3)}×</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">×{pricing.prestigeBonus.toFixed(3)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Floor</span><span className="text-right">{formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg</span></div>
+                    <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Final Price per kg</span><span className="text-right text-white">{formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Sale quantity</span><span className="text-right">{pricing.quantityKg.toLocaleString()} kg</span></div>
                   </div>
 
@@ -786,7 +784,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                         <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Market Context Factor</span><span className="text-right">×{pricing.marketContextMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{pricing.marketSensitivityMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Anti-Arbitrage Penalty</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer Market Multiplier</span><span className="text-right">×{pricing.buyerMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{pricing.relationshipMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Favorite Grape Bonus</span><span className="text-right">+{pricing.favoriteGrapeBonusMultiplier.toFixed(3)}×</span></div>
@@ -827,7 +825,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           </div>
 
           <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden">
-            <div className="overflow-x-auto max-h-[42vh]">
+            <div className="overflow-x-auto">
               <MarketOfferTable
                 rows={filteredAndSortedBuyers}
                 columns={buyerColumns}
