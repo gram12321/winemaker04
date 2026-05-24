@@ -1,9 +1,15 @@
 ---
 name: phaser-2d-game
-description: Implement 2D browser games with Phaser. Use when the user wants a Phaser, TypeScript, and Vite stack for scenes, gameplay systems, cameras, sprite animation, and DOM-overlay HUD patterns.
+description: Use only when the user explicitly asks for Phaser-based 2D browser game implementation. Not a default path for winemaker04 tasks.
 ---
 
 # Phaser 2D Game
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

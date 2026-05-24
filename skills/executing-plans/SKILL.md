@@ -1,9 +1,15 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
+description: Use when an approved written plan exists and needs direct sequential execution with review checkpoints.
 ---
 
 # Executing Plans
+
+## Routing Note
+
+Use this for direct execution of approved plans.
+
+If the plan has independent tasks that benefit from parallel subagents, route to `../subagent-driven-development/SKILL.md`.
 
 ## Overview
 

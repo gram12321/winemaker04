@@ -1,9 +1,15 @@
 ---
 name: sprite-pipeline
-description: Generate and normalize 2D sprite animations. Use when the user asks for full-strip generation from approved source frames, consistent anchor and scale normalization, or preview assets for browser-game animation.
+description: Use only when the user explicitly asks for 2D sprite generation or normalization workflows. Not a default path for winemaker04 tasks.
 ---
 
 # Sprite Pipeline
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

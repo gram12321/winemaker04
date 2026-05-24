@@ -1,9 +1,15 @@
 ---
 name: web-game-foundations
-description: Set browser-game architecture before implementation. Use when the user needs engine choice, simulation and render boundaries, input model, asset organization, or save/debug/performance strategy.
+description: Use only when the user explicitly asks for browser-game architecture and engine-choice work. Not a default path for winemaker04 tasks.
 ---
 
 # Web Game Foundations
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

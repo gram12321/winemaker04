@@ -1,9 +1,15 @@
 ---
 name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: Use when a multi-step task needs a concrete implementation plan before code changes, with explicit file targets, tests, and checkpoints.
 ---
 
 # Writing Plans
+
+## Routing Note
+
+Use this skill to create or refine a plan.
+
+After plan approval, route execution to `../executing-plans/SKILL.md` or `../subagent-driven-development/SKILL.md`.
 
 ## Overview
 

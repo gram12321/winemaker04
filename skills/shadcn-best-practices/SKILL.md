@@ -1,9 +1,25 @@
 ---
 name: shadcn
-description: Manages shadcn components and projects — adding, searching, fixing, debugging, styling, and composing UI. Provides project context, component docs, and usage examples. Applies when working with shadcn/ui, component registries, presets, --preset codes, or any project with a components.json file. Also triggers for "shadcn init", "create an app with --preset", or "switch to --preset".
+description: Use for shadcn component composition and fixes in winemaker04 when editing UI components that rely on existing shadcn source files and design tokens.
 ---
 
 # shadcn/ui
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+Use this skill for existing shadcn component usage and fixes in this repo.
+
+In winemaker04, do not treat this as a project-init or preset-switching default workflow.
+
+### Winemaker Overrides
+
+1. Prefer using already-installed components and existing local patterns.
+2. Do not run `shadcn init` or preset migration commands unless the user explicitly asks.
+3. Avoid introducing registry dependencies unless explicitly requested.
+4. Keep page files orchestration-focused; push reusable UI into shared components.
+5. Preserve existing import aliases and barrel exports.
 
 A framework for building ui, components and design systems. Components are added as source code to the user's project via the CLI.
 

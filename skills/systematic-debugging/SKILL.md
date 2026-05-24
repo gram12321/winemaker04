@@ -1,9 +1,15 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+description: Use as the default debugging workflow in winemaker04 when encountering bugs, test failures, regressions, or unexpected behavior.
 ---
 
 # Systematic Debugging
+
+## Routing Note
+
+This is the default debugging skill for winemaker04.
+
+Use `../diagnose/SKILL.md` only for deeper hard-bug loops after a reproducible feedback loop is needed, or when the user explicitly requests diagnose-style debugging.
 
 ## Overview
 

@@ -1,142 +1,62 @@
 ---
 name: javascript-typescript
-description: JavaScript and TypeScript development with ES6+, Node.js, React, and modern web frameworks. Use for frontend, backend, or full-stack JavaScript/TypeScript projects.
+description: Use for day-to-day TypeScript and React implementation work in winemaker04, including component code, service logic, typing, and safe refactors aligned to repo conventions.
 source: wshobson/agents
 license: MIT
 ---
 
-# JavaScript/TypeScript Development
+# JavaScript and TypeScript for Winemaker
 
-## TypeScript Configuration
+## Scope
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "outDir": "./dist"
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
+Use this skill for practical implementation details in winemaker04:
+
+- TypeScript typing and refactors
+- React component logic and hooks usage
+- Service-layer code changes
+- Utility and module organization
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+## Winemaker Rules
+
+- Keep business logic in `src/lib/services/`.
+- Keep database reads and writes in `src/lib/database/`.
+- Keep pages/components presentation-focused.
+- Prefer existing barrel imports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
+- Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
+- Use named imports and top-of-file imports.
+
+## TypeScript Practices
+
+1. Prefer explicit domain types over ad hoc inline object types.
+2. Extend existing shared interfaces before creating parallel shapes.
+3. Use narrow union types for domain states.
+4. Avoid `any`; use type guards and helper functions instead.
+5. Keep function signatures stable at module boundaries.
+
+## React and App Patterns
+
+1. Keep page components orchestration-only.
+2. Move calculations and business rules to service functions.
+3. Reuse existing hooks when possible (`useLoadingState()`, `useGameStateWithData()`, `useGameState()`).
+4. Avoid direct Supabase calls in components.
+5. Keep state updates aligned with existing reactive/global update flows.
+
+## Service-Layer Patterns
+
+1. Add constants for tunable values before adding new magic numbers.
+2. Keep multi-step calculations in focused service modules.
+3. Use domain naming from `CONTEXT.md`.
+4. Preserve company-scoped behavior for persisted state.
+
+## Verification
+
+Run the smallest useful checks for changed code:
+
+```bash
+npm test
+git diff --check
 ```
 
-## Type Patterns
-
-### Utility Types
-```typescript
-// Pick specific properties
-type UserPreview = Pick<User, 'id' | 'name'>;
-
-// Omit properties
-type CreateUser = Omit<User, 'id' | 'createdAt'>;
-
-// Make all properties optional
-type PartialUser = Partial<User>;
-
-// Make all properties required
-type RequiredUser = Required<User>;
-
-// Extract union types
-type Status = 'pending' | 'active' | 'inactive';
-type ActiveStatus = Extract<Status, 'active' | 'pending'>;
-```
-
-### Discriminated Unions
-```typescript
-type Result<T> =
-  | { success: true; data: T }
-  | { success: false; error: Error };
-
-function handleResult<T>(result: Result<T>) {
-  if (result.success) {
-    console.log(result.data); // T
-  } else {
-    console.error(result.error); // Error
-  }
-}
-```
-
-### Generic Constraints
-```typescript
-interface HasId {
-  id: string | number;
-}
-
-function findById<T extends HasId>(items: T[], id: T['id']): T | undefined {
-  return items.find(item => item.id === id);
-}
-```
-
-## Modern JavaScript
-
-### Destructuring & Spread
-```javascript
-const { name, ...rest } = user;
-const merged = { ...defaults, ...options };
-const [first, ...others] = items;
-```
-
-### Optional Chaining & Nullish Coalescing
-```javascript
-const city = user?.address?.city ?? 'Unknown';
-const count = data?.items?.length ?? 0;
-```
-
-### Array Methods
-```javascript
-const adults = users.filter(u => u.age >= 18);
-const names = users.map(u => u.name);
-const total = items.reduce((sum, item) => sum + item.price, 0);
-const hasAdmin = users.some(u => u.role === 'admin');
-const allActive = users.every(u => u.active);
-```
-
-## React Patterns
-
-```typescript
-// Props with children
-interface CardProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-// Event handlers
-interface ButtonProps {
-  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-}
-
-// Custom hooks
-function useLocalStorage<T>(key: string, initial: T) {
-  const [value, setValue] = useState<T>(() => {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : initial;
-  });
-
-  useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-
-  return [value, setValue] as const;
-}
-```
-
-## Node.js Patterns
-
-```typescript
-// ES Modules
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-
-// Error handling
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
-  process.exit(1);
-});
-```
+For large-risk refactors, expand verification based on impacted areas.

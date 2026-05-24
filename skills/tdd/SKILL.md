@@ -1,9 +1,15 @@
 ---
 name: tdd
-description: Test-driven development with red-green-refactor loop. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
+description: Use as the default practical TDD skill in winemaker04 when implementing behavior changes with test-first red-green-refactor cycles.
 ---
 
 # Test-Driven Development
+
+## Routing Note
+
+This is the default TDD skill for winemaker04 implementation work.
+
+Use `../test-driven-development/SKILL.md` only when the user explicitly asks for strict iron-law enforcement or full procedural TDD discipline.
 
 ## Philosophy
 

@@ -1,6 +1,6 @@
 ---
 name: supabase-postgres-best-practices
-description: Postgres performance optimization and best practices from Supabase. Use this skill when writing, reviewing, or optimizing Postgres queries, schema designs, or database configurations.
+description: Use for winemaker04 database work involving Supabase/Postgres queries, schema changes, indexing, RLS, and migration-safe performance tuning.
 metadata:
   author: supabase
   version: "1.1.0"
@@ -11,17 +11,34 @@ metadata:
 
 # Supabase Postgres Best Practices
 
-Comprehensive performance optimization guide for Postgres, maintained by Supabase. Contains rules across 8 categories, prioritized by impact to guide automated query optimization and schema design.
+Use this skill when the task is database-centric in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+## Winemaker Database Boundaries
+
+- Keep app-level DB reads and writes in `src/lib/database/`.
+- Keep business calculations in `src/lib/services/`.
+- For schema changes, create/update SQL migration files under `migrations/`.
+- Avoid direct database access from page or UI component code.
 
 ## When to Apply
 
 Reference these guidelines when:
-- Writing SQL queries or designing schemas
-- Implementing indexes or query optimization
-- Reviewing database performance issues
-- Configuring connection pooling or scaling
-- Optimizing for Postgres-specific features
-- Working with Row-Level Security (RLS)
+
+- Writing or reviewing SQL queries
+- Designing or changing schema
+- Implementing indexes and query-performance improvements
+- Reviewing RLS and access patterns
+- Diagnosing Postgres performance bottlenecks
+
+## Priority Focus For This Repo
+
+1. Query correctness and indexing
+2. Company-scoped data isolation
+3. RLS safety and least-privilege behavior
+4. Migration safety and reversibility
+5. Measured optimization using explain plans
 
 ## Rule Categories by Priority
 
@@ -53,6 +70,15 @@ Each rule file contains:
 - Optional EXPLAIN output or metrics
 - Additional context and references
 - Supabase-specific notes (when applicable)
+
+## Practical Sequence
+
+1. Confirm where the query is called from in `src/lib/database/`.
+2. Validate company scoping and filters first.
+3. Check indexes and query plan.
+4. Implement minimal safe SQL change.
+5. Add migration when schema/index changes are needed.
+6. Re-run targeted tests and check for regressions.
 
 ## References
 

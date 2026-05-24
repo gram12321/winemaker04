@@ -1,9 +1,15 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Use when executing an approved implementation plan that contains independent tasks suitable for subagent parallelization.
 ---
 
 # Subagent-Driven Development
+
+## Routing Note
+
+Use this only after a plan exists and task independence is clear.
+
+If no approved plan exists yet, route to `../writing-plans/SKILL.md` first.
 
 Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
 

@@ -1,19 +1,30 @@
 ---
 name: diagnose
-description: Disciplined diagnosis loop for hard bugs and performance regressions. Reproduce → minimise → hypothesise → instrument → fix → regression-test. Use when user says "diagnose this" / "debug this", reports a bug, says something is broken/throwing/failing, or describes a performance regression.
+description: Use for hard, intermittent, or performance-heavy bugs when deep diagnosis is needed, especially after baseline debugging confirms the issue but root cause remains unclear.
 ---
 
 # Diagnose
 
-A discipline for hard bugs. Skip phases only when explicitly justified.
+## Routing Note
 
-When exploring the codebase, use the project's domain glossary to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
+In winemaker04, start with `../systematic-debugging/SKILL.md` for most bugs.
+
+Use this skill when:
+
+- reproduction is intermittent or low-rate
+- performance profiling or deep instrumentation is needed
+- prior debugging attempts did not isolate root cause
+- the user explicitly asks for diagnose-style debugging
+
+A discipline for hard bugs. Skip phases only when the user explicitly states a reason in the conversation, and acknowledge the skip with a one-sentence rationale in your response.
+
+When exploring the codebase, use the project's domain glossary to get a clear mental model of the relevant modules, and check Architecture Decision Records (ADRs), typically in `docs/adr/` or `docs/decisions/`. If no ADR directory exists, skip this step.
 
 ## Phase 1 — Build a feedback loop
 
 **This is the skill.** Everything else is mechanical. If you have a fast, deterministic, agent-runnable pass/fail signal for the bug, you will find the cause — bisection, hypothesis-testing, and instrumentation all just consume that signal. If you don't have one, no amount of staring at code will save you.
 
-Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give up.**
+Spend disproportionate effort here. 
 
 ### Ways to construct one — try them in roughly this order
 
@@ -72,7 +83,7 @@ Each hypothesis must be **falsifiable**: state the prediction it makes.
 
 If you cannot state the prediction, the hypothesis is a vibe — discard or sharpen it.
 
-**Show the ranked list to the user before testing.** They often have domain knowledge that re-ranks instantly ("we just deployed a change to #3"), or know hypotheses they've already ruled out. Cheap checkpoint, big time saver. Don't block on it — proceed with your ranking if the user is AFK.
+**Show the ranked list to the user before testing.** They often have domain knowledge that re-ranks instantly ("we just deployed a change to #3"), or know hypotheses they've already ruled out. Cheap checkpoint, big time saver.
 
 ## Phase 4 — Instrument
 
@@ -90,13 +101,17 @@ Tool preference:
 
 ## Phase 5 — Fix + regression test
 
-Write the regression test **before the fix** — but only if there is a **correct seam** for it.
+Use this decision table to choose the regression-test path:
 
-A correct seam is one where the test exercises the **real bug pattern** as it occurs at the call site. If the only available seam is too shallow (single-caller test when the bug needs multiple callers, unit test that can't replicate the chain that triggered the bug), a regression test there gives false confidence.
+| Seam available? | Seam exercises real call chain? | Action |
+|---|---|---|
+| No | — | Document the gap, skip regression test, flag for architecture review |
+| Yes | No | Document false-confidence risk, skip regression test, flag for architecture review |
+| Yes | Yes | Write a failing regression test before the fix, then fix and verify |
 
-**If no correct seam exists, that itself is the finding.** Note it. The codebase architecture is preventing the bug from being locked down. Flag this for the next phase.
+For this phase, a correct seam is one where the test exercises the **real bug pattern** as it occurs at the call site. If the only available seam is too shallow (single-caller test when the bug needs multiple callers, unit test that cannot replicate the triggering chain), a regression test there gives false confidence.
 
-If a correct seam exists:
+If a correct seam exists and exercises the real call chain:
 
 1. Turn the minimised repro into a failing test at that seam.
 2. Watch it fail.
@@ -108,7 +123,7 @@ If a correct seam exists:
 
 Required before declaring done:
 
-- [ ] Original repro no longer reproduces (re-run the Phase 1 loop)
+- [ ] Original repro no longer reproduces (deterministic: 1 clean run; non-deterministic: at least 20 consecutive clean runs, and document run count in commit/PR notes)
 - [ ] Regression test passes (or absence of seam is documented)
 - [ ] All `[DEBUG-...]` instrumentation removed (`grep` the prefix)
 - [ ] Throwaway prototypes deleted (or moved to a clearly-marked debug location)

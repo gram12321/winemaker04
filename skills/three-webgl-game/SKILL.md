@@ -1,9 +1,15 @@
 ---
 name: three-webgl-game
-description: Implement browser-game runtimes with plain Three.js. Use when the user wants imperative scene control in TypeScript or Vite with GLB assets, loaders, physics, and low-level WebGL debugging.
+description: Use only when the user explicitly asks for plain Three.js browser-game runtime work. Not a default path for winemaker04 tasks.
 ---
 
 # Three WebGL Game
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

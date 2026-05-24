@@ -1,9 +1,15 @@
 ---
 name: game-playtest
-description: Run browser-game playtests and frontend QA. Use when the user asks for smoke tests, screenshot-based verification, browser automation, HUD or overlay review, or structured issue-finding in a browser game.
+description: Use only when the user explicitly asks for browser-game playtesting or game-surface QA. Not a default path for winemaker04 app tasks.
 ---
 
 # Game Playtest
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

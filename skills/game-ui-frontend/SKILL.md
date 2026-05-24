@@ -1,9 +1,15 @@
 ---
 name: game-ui-frontend
-description: Design UI surfaces for browser games. Use when the user asks for HUDs, menus, overlays, responsive layouts, or visual direction that must protect the playfield.
+description: Use only when the user explicitly asks for browser-game HUD/menu/overlay UI direction. Not a default path for winemaker04 app tasks.
 ---
 
 # Game UI Frontend
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

@@ -1,9 +1,26 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: Use in winemaker04 before claiming a fix or completion state, to run fresh relevant verification commands and report evidence-backed status.
 ---
 
 # Verification Before Completion
+
+## Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+Use this skill before any completion claim.
+
+## Winemaker Verification Baseline
+
+Start with the smallest useful checks:
+
+```bash
+npm test
+git diff --check
+```
+
+Then add focused checks based on the changed area.
 
 ## Overview
 

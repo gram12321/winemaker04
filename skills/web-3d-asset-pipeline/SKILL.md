@@ -1,9 +1,15 @@
 ---
 name: web-3d-asset-pipeline
-description: Prepare and optimize browser-game 3D assets. Use when the user asks for GLB or glTF shipping work, including Blender cleanup and export, collision or LOD setup, compression, texture packaging, and runtime validation.
+description: Use only when the user explicitly asks for 3D asset shipping work (GLB or glTF optimization). Not a default path for winemaker04 tasks.
 ---
 
 # Web 3D Asset Pipeline
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

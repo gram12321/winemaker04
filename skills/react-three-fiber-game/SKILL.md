@@ -1,9 +1,15 @@
 ---
 name: react-three-fiber-game
-description: Build React-hosted 3D browser games with React Three Fiber. Use when the user wants pmndrs-based scene composition, shared React state, and 3D HUD integration inside a React app.
+description: Use only when the user explicitly asks for React Three Fiber 3D game/runtime work. Not a default path for winemaker04 tasks.
 ---
 
 # React Three Fiber Game
+
+## Routing Note
+
+This is non-default in winemaker04.
+
+Default repo router: `../winemaker-game/SKILL.md`
 
 ## Overview
 

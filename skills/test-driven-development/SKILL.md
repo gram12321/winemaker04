@@ -1,9 +1,17 @@
 ---
 name: test-driven-development
-description: Use when implementing any feature or bugfix, before writing implementation code
+description: Use when strict, no-exception TDD enforcement is explicitly requested for a task, with mandatory failing-test-first discipline.
 ---
 
 # Test-Driven Development (TDD)
+
+## Routing Note
+
+In winemaker04, this is the strict TDD variant.
+
+Default TDD skill: `../tdd/SKILL.md`
+
+Use this strict variant when the user explicitly requests hardline TDD behavior.
 
 ## Overview
 
