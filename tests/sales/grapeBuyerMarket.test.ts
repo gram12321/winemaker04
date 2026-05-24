@@ -187,4 +187,113 @@ describe('grape buyer market', () => {
     expect(buyers.every(buyer => buyer.remainingSeasonLimitKg! > 0)).toBe(true);
     expect(mocks.createBuyerRow).toHaveBeenCalledTimes(BASE_SEASONAL_BUYER_COUNT + 2);
   });
+
+  it('adds foreign buyer-country coverage when country access is unlocked', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    mocks.getUnlockedItems.mockImplementation(async (type: string) => {
+      if (type === 'grape_buyer_country_access') return ['Italy'];
+      if (type === 'grape_buyer_slots') return [];
+      return [];
+    });
+
+    const { getSeasonalBuyers } = await import('@/lib/services/sales/grapeBuyerMarketService');
+    const buyers = await getSeasonalBuyers('France');
+
+    expect(buyers.some(buyer => buyer.exclusiveCountry === 'Italy')).toBe(true);
+    randomSpy.mockRestore();
+  });
+
+  it('applies buyer multiplier and limit research unlocks to seasonal buyer breadth', async () => {
+    const stableRows: BuyerRow[] = [
+      {
+        company_id: 'company-1',
+        buyer_id: 'season-1',
+        display_name: 'Season One',
+        country: 'France',
+        description: 'Season one buyer',
+        is_germany_coop: false,
+        base_multiplier: 1.3,
+        multiplier_min: 1.1,
+        multiplier_max: 1.8,
+        base_season_limit_kg: 1000,
+        base_yearly_limit_kg: 4000,
+        sold_this_season_kg: 0,
+        favorite_grape_1: null,
+        favorite_grape_2: null,
+        last_active_year: 2026,
+        last_active_season: 'Spring',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        company_id: 'company-1',
+        buyer_id: 'season-2',
+        display_name: 'Season Two',
+        country: 'France',
+        description: 'Season two buyer',
+        is_germany_coop: false,
+        base_multiplier: 1.4,
+        multiplier_min: 1.1,
+        multiplier_max: 1.9,
+        base_season_limit_kg: 1100,
+        base_yearly_limit_kg: 4400,
+        sold_this_season_kg: 0,
+        favorite_grape_1: null,
+        favorite_grape_2: null,
+        last_active_year: 2026,
+        last_active_season: 'Spring',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        company_id: 'company-1',
+        buyer_id: 'season-3',
+        display_name: 'Season Three',
+        country: 'France',
+        description: 'Season three buyer',
+        is_germany_coop: false,
+        base_multiplier: 1.5,
+        multiplier_min: 1.2,
+        multiplier_max: 2.0,
+        base_season_limit_kg: 1200,
+        base_yearly_limit_kg: 4800,
+        sold_this_season_kg: 0,
+        favorite_grape_1: null,
+        favorite_grape_2: null,
+        last_active_year: 2026,
+        last_active_season: 'Spring',
+        updated_at: new Date().toISOString(),
+      }
+    ];
+
+    mocks.setRows(stableRows);
+    mocks.getUnlockedItems.mockImplementation(async (type: string) => {
+      if (type === 'grape_buyer_slots') return [];
+      if (type === 'grape_buyer_limit_multiplier') return [];
+      if (type === 'grape_buyer_multiplier_bonus') return [];
+      return [];
+    });
+
+    const { getSeasonalBuyers } = await import('@/lib/services/sales/grapeBuyerMarketService');
+    const baseline = await getSeasonalBuyers('France');
+
+    mocks.setRows(stableRows);
+    mocks.getUnlockedItems.mockImplementation(async (type: string) => {
+      if (type === 'grape_buyer_slots') return [];
+      if (type === 'grape_buyer_limit_multiplier') return ['0.5'];
+      if (type === 'grape_buyer_multiplier_bonus') return ['0.2'];
+      return [];
+    });
+
+    const boosted = await getSeasonalBuyers('France');
+
+    for (const boostedBuyer of boosted) {
+      const baseBuyer = baseline.find(candidate => candidate.id === boostedBuyer.id);
+      const row = stableRows.find(candidate => candidate.buyer_id === boostedBuyer.id);
+      expect(baseBuyer).toBeTruthy();
+      expect(row).toBeTruthy();
+
+      const expectedBoostedPriceMultiplier = Number((row!.base_multiplier * 1.2).toFixed(2));
+      expect(boostedBuyer.priceMultiplier).toBe(expectedBoostedPriceMultiplier);
+      expect(boostedBuyer.effectiveSeasonLimitKg!).toBeGreaterThan(baseBuyer!.effectiveSeasonLimitKg!);
+    }
+  });
 });

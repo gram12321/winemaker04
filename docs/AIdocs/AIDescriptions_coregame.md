@@ -22,7 +22,7 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Game Tick System**: Weekly order generation, activity progression, vine aging, prestige updates
 
 **What's NOT Implemented**:
-- ❌ **Seasonal Effects**: No automatic seasonal effects on vineyards/wine
+- ❌ **Broad Seasonal Simulation Beyond Current Hooks**: Dedicated non-weather seasonal systems are still limited; current shipped seasonal impact is primarily weather-driven and market-linked.
 
 ### 2. Vineyard System ✅ **IMPLEMENTED**
 **What's Implemented**:

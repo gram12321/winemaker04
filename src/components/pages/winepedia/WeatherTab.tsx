@@ -119,8 +119,9 @@ export function WeatherTab() {
       <div className="space-y-1">
         <p className="font-medium">Weather Impact Scope</p>
         <p>
-          Shipped now: weather feeds grape buyer market volatility (price and demand pressure).
-          Planned next slices: vineyard health, ripeness growth, and taste/anchor channels.
+          Shipped now: weather feeds grape buyer market volatility (price and demand pressure),
+          and applies deterministic vineyard ripeness/health deltas through the weekly tick.
+          Planned next slices: severe event damage, recommended actions, and weather-linked achievement/research hooks.
         </p>
       </div>
     </div>
