@@ -6,13 +6,14 @@ import { loadVineyards } from '../../database/activities/vineyardDB';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from './relationshipService';
 import { getGameState, getCurrentPrestige } from '../core/gameState';
-import { addSalePrestigeEvent } from '../prestige/prestigeService';
+import { addSalePrestigeEvent, addFeaturePrestigeEvent } from '../prestige/prestigeService';
 import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 import { formatNumber } from '../../utils/utils';
+import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
 
 // ===== CONTRACT VALIDATION =====
 
@@ -350,6 +351,7 @@ export async function fulfillContract(
     
     // All validations passed - process fulfillment
     const fulfilledBatchIds: string[] = [];
+    const fulfilledWines: Array<{ wineBatch: WineBatch; quantity: number; value: number }> = [];
     
     // Deduct inventory
     for (const selectedWine of selectedWines) {
@@ -363,6 +365,11 @@ export async function fulfillContract(
       
       await saveWineBatch(updatedBatch);
       fulfilledBatchIds.push(selectedWine.wineBatchId);
+      fulfilledWines.push({
+        wineBatch,
+        quantity: selectedWine.quantity,
+        value: Math.round(contract.offeredPrice * selectedWine.quantity * 100) / 100
+      });
     }
     
     // Calculate revenue
@@ -392,6 +399,12 @@ export async function fulfillContract(
       `Contract (${contract.requestedQuantity} bottles)`,
       contract.requestedQuantity
     );
+
+    try {
+      await addContractFeaturePrestigeEvents(contract, fulfilledWines, currentPrestige);
+    } catch (error) {
+      console.error('Failed to create contract feature prestige events:', error);
+    }
     
     // Update contract status
     const gameState = getGameState();
@@ -446,6 +459,52 @@ export async function fulfillContract(
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error'
     };
+  }
+}
+
+async function addContractFeaturePrestigeEvents(
+  contract: WineContract,
+  fulfilledWines: Array<{ wineBatch: WineBatch; quantity: number; value: number }>,
+  currentCompanyPrestige: number
+): Promise<void> {
+  const configs = getAllFeatureConfigs();
+  const vineyards = await loadVineyards();
+
+  for (const fulfilledWine of fulfilledWines) {
+    const presentFeatures = (fulfilledWine.wineBatch.features || []).filter(feature => feature.isPresent);
+    if (presentFeatures.length === 0) {
+      continue;
+    }
+
+    const vineyard = vineyards.find(v => v.id === fulfilledWine.wineBatch.vineyardId);
+    const wineName = formatCompletedWineName(fulfilledWine.wineBatch);
+    const orderContext = {
+      id: `contract_${contract.id}_${fulfilledWine.wineBatch.id}`,
+      customerId: contract.customerId,
+      customerName: contract.customerName,
+      wineBatchId: fulfilledWine.wineBatch.id,
+      wineName,
+      requestedQuantity: fulfilledWine.quantity,
+      offeredPrice: contract.offeredPrice,
+      totalValue: fulfilledWine.value,
+      fulfillableQuantity: fulfilledWine.quantity,
+      fulfillableValue: fulfilledWine.value,
+      status: 'fulfilled'
+    } as any;
+
+    for (const feature of presentFeatures) {
+      const config = configs.find(candidate => candidate.id === feature.id);
+      if (!config?.effects.prestige?.onSale) {
+        continue;
+      }
+
+      await addFeaturePrestigeEvent(fulfilledWine.wineBatch, config, 'sale', {
+        customerName: contract.customerName,
+        order: orderContext,
+        vineyard,
+        currentCompanyPrestige
+      });
+    }
   }
 }
 

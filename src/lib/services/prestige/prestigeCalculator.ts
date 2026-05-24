@@ -5,7 +5,23 @@
 // - Sale events (no features): Scale with company ASSETS (business size)
 // - Feature events (positive/negative): Scale with company/vineyard PRESTIGE (reputation standards)
 
-import { NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
+import { Normalize1000To01WithTail, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
+
+export function softCapSigned(amount: number, cap: number): number {
+  const safeCap = Math.abs(cap);
+  if (safeCap === 0) {
+    return 0;
+  }
+
+  return Math.sign(amount) * safeCap * (1 - Math.exp(-Math.abs(amount) / safeCap));
+}
+
+export function calculateFeatureSeverityPrestigeMultiplier(baseAmount: number, severity: number = 1): number {
+  const clampedSeverity = Math.max(0, Math.min(1, severity ?? 1));
+  return baseAmount < 0
+    ? 0.4 + (0.6 * clampedSeverity)
+    : Math.pow(clampedSeverity, 1.25);
+}
 
 /**
  * Calculate dynamic prestige for REGULAR SALE EVENTS (positive, no features)
@@ -68,7 +84,8 @@ export function calculateFeatureSalePrestigeWithReputation(
     valueWeight?: number;
     prestigeWeight?: number;
   },
-  maxImpact?: number
+  maxImpact?: number,
+  featureSeverity: number = 1
 ): number {
   const { volumeWeight = 1, valueWeight = 1, prestigeWeight = 1 } = weights || {};
   
@@ -83,7 +100,8 @@ export function calculateFeatureSalePrestigeWithReputation(
   const prestigeFactor = Math.log(1 / (1 - NormalizeScrewed1000To01WithTail(companyPrestige) + 0.001)) / 5 * prestigeWeight;
   
   // Formula: baseAmount × (volume + value) × prestige
-  const amount = baseAmount * (volumeFactor + valueFactor) * prestigeFactor;
+  const severityFactor = calculateFeatureSeverityPrestigeMultiplier(baseAmount, featureSeverity);
+  const amount = baseAmount * (volumeFactor + valueFactor) * prestigeFactor * severityFactor;
   
   // Cap using provided maxImpact or default
   const cap = maxImpact !== undefined ? maxImpact : (baseAmount < 0 ? -10.0 : 10.0);
@@ -192,11 +210,16 @@ export function calculateCompanyManifestationPrestige(
  */
 export function calculateVineyardSalePrestige(
   baseAmount: number,
-  vineyardPrestige: number
+  vineyardPrestige: number,
+  saleValue: number = baseAmount * 10000,
+  saleVolume: number = 0,
+  maxImpact: number = 15
 ): number {
-  // Use vineyard prestige as multiplier (existing system)
-  // This is for POSITIVE vineyard sales showing vineyard quality
-  const prestigeFactor = Math.max(0.1, vineyardPrestige);
-  return baseAmount * prestigeFactor;
+  const volumeFactor = Math.log((Math.max(0, saleVolume) / 10) + 1);
+  const valueFactor = Math.log((Math.max(0, saleValue) / 1000) + 1);
+  const vineyardPrestigeFactor = 0.5 + (1.5 * Normalize1000To01WithTail(vineyardPrestige));
+  const rawAmount = Math.max(0, baseAmount) * (volumeFactor + valueFactor) * vineyardPrestigeFactor;
+
+  return softCapSigned(rawAmount, maxImpact);
 }
 

@@ -156,7 +156,8 @@ describe('sales order lifecycle', () => {
       'North Cellars',
       'Pinot Noir, Order Vineyard, 2026',
       'vineyard-1',
-      2
+      2,
+      6
     );
     expect(mocks.saveWineOrder).toHaveBeenCalledWith(expect.objectContaining({
       id: 'order-1',
@@ -165,6 +166,43 @@ describe('sales order lifecycle', () => {
       status: 'partially_fulfilled'
     }));
     expect(mocks.triggerGameUpdate).toHaveBeenCalledOnce();
+  });
+
+  it('passes fulfilled order size to feature sale prestige events for partial orders', async () => {
+    const feature = { id: 'terroir', isPresent: true, severity: 0.6, name: 'Terroir Expression', icon: 'T' };
+    const featureConfig = {
+      id: 'terroir',
+      effects: {
+        prestige: {
+          onSale: {
+            company: { calculation: 'dynamic', baseAmount: 0.05, decayRate: 0.95, maxImpact: 8 }
+          }
+        }
+      }
+    };
+
+    mocks.getWineBatchById.mockResolvedValue(wineBatch({ features: [feature] as any }));
+    (mocks.getAllFeatureConfigs as any).mockReturnValue([featureConfig as any]);
+    (mocks.loadVineyards as any).mockResolvedValue([{ id: 'vineyard-1', name: 'Order Vineyard', vineyardPrestige: 20 }]);
+
+    const { fulfillWineOrder } = await import('@/lib/services/sales/salesService');
+
+    await expect(fulfillWineOrder('order-1')).resolves.toBe(true);
+
+    expect(mocks.addFeaturePrestigeEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'batch-1' }),
+      featureConfig,
+      'sale',
+      expect.objectContaining({
+        customerName: 'North Cellars',
+        order: expect.objectContaining({
+          requestedQuantity: 6,
+          totalValue: 120,
+          fulfillableQuantity: 6,
+          fulfillableValue: 120
+        })
+      })
+    );
   });
 
   it('rejects an order by status update and refreshes the game view', async () => {

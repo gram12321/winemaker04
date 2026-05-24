@@ -102,7 +102,8 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
         order.customerName,
         order.wineName,
         wineBatch.vineyardId,
-        Math.max(0.1, vineyardPrestigeFactor)
+        Math.max(0.1, vineyardPrestigeFactor),
+        fulfillableQuantity
       );
         } else {
           // Fallback to company-level prestige event if no vineyard ID
@@ -127,6 +128,13 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     fulfillableValue,
     status: fulfillableQuantity < order.requestedQuantity ? 'partially_fulfilled' : 'fulfilled'
   };
+  const featurePrestigeOrder: WineOrder = {
+    ...updatedOrder,
+    requestedQuantity: fulfillableQuantity,
+    totalValue: fulfillableValue,
+    fulfillableQuantity,
+    fulfillableValue
+  };
   
   // Check for wine features with onSale prestige events (e.g., oxidation, green flavor)
   try {
@@ -145,7 +153,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
           // Pass full context for dynamic prestige calculation
           await addFeaturePrestigeEvent(wineBatch, config, 'sale', {
             customerName: order.customerName,
-            order: updatedOrder,  // Full order with actual fulfillable volume and value
+            order: featurePrestigeOrder,
             vineyard,
             currentCompanyPrestige: currentPrestige
           });

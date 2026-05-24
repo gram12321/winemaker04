@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PrestigeEvent, Vineyard } from '@/lib/types/types';
+import type { PrestigeEvent, Vineyard, WineBatch } from '@/lib/types/types';
+import type { FeatureConfig } from '@/lib/types/wineFeatures';
 
 const mocks = vi.hoisted(() => {
   let events: PrestigeEvent[] = [];
@@ -55,6 +56,10 @@ vi.mock('@/lib/services/wine/winescore/landValueModifierCalculation', () => ({
   getMaxLandValue: () => 1000000
 }));
 
+vi.mock('@/lib/services/wine/winescore/wineScoreCalculation', () => ({
+  getTasteQualityIndex: vi.fn(() => 0.7)
+}));
+
 function prestigeEvent(overrides: Partial<PrestigeEvent>): PrestigeEvent {
   return {
     id: overrides.id ?? 'event-1',
@@ -91,6 +96,77 @@ function vineyard(overrides: Partial<Vineyard> = {}): Vineyard {
     ...overrides
   };
 }
+
+function wineBatch(overrides: Partial<WineBatch> = {}): WineBatch {
+  return {
+    id: 'batch-1',
+    vineyardId: 'vineyard-1',
+    vineyardName: 'Prestige Vineyard',
+    grape: 'Pinot Noir',
+    quantity: 10,
+    state: 'bottled',
+    fermentationProgress: 100,
+    landValueModifierHarvestSnapshot: 1,
+    structureIndexHarvestSnapshot: 0.7,
+    tasteQualityIndexHarvestSnapshot: 0.7,
+    landValueModifier: 1,
+    tasteQualityIndex: 0.7,
+    structureIndex: 0.7,
+    characteristics: {
+      acidity: 0.5,
+      aroma: 0.5,
+      body: 0.5,
+      spice: 0.5,
+      sweetness: 0.5,
+      tannins: 0.5
+    },
+    estimatedPrice: 18,
+    grapeColor: 'red',
+    naturalYield: 0.5,
+    fragile: 0.2,
+    proneToOxidation: 0.2,
+    features: [
+      { id: 'terroir', isPresent: true, severity: 0.5, name: 'Terroir Expression', icon: 'T' }
+    ],
+    harvestStartDate: { week: 1, season: 'Fall', year: 2026 },
+    harvestEndDate: { week: 2, season: 'Fall', year: 2026 },
+    bottledDate: { week: 1, season: 'Winter', year: 2027 },
+    ...overrides
+  } as WineBatch;
+}
+
+const terroirSaleConfig: FeatureConfig = {
+  id: 'terroir',
+  name: 'Terroir Expression',
+  icon: 'T',
+  description: 'Expressive site character',
+  behavior: 'evolving',
+  behaviorConfig: {
+    spawnActive: true,
+    severityGrowth: { rate: 0.01, cap: 1 }
+  },
+  effects: {
+    prestige: {
+      onSale: {
+        company: {
+          calculation: 'dynamic',
+          baseAmount: 0.05,
+          decayRate: 0.95,
+          maxImpact: 8
+        },
+        vineyard: {
+          calculation: 'dynamic',
+          baseAmount: 0.08,
+          decayRate: 0.95,
+          maxImpact: 12
+        }
+      }
+    }
+  },
+  customerSensitivity: {} as FeatureConfig['customerSensitivity'],
+  displayPriority: 1,
+  badgeColor: 'success'
+};
 
 describe('prestige service', () => {
   beforeEach(() => {
@@ -134,5 +210,51 @@ describe('prestige service', () => {
       id: 'vineyard-1',
       vineyardPrestige: 3
     }));
+  });
+
+  it('soft-caps planting completion prestige near +2 for high-base vineyards', async () => {
+    const { addVineyardAchievementPrestigeEvent } = await import('@/lib/services/prestige/prestigeService');
+
+    await addVineyardAchievementPrestigeEvent('planting', 'vineyard-1', 50);
+
+    const event = (mocks.insertPrestigeEvent as any).mock.calls[0][0];
+    expect(event.amount_base).toBeGreaterThan(1.8);
+    expect(event.amount_base).toBeLessThanOrEqual(2);
+  });
+
+  it('uses fulfilled sale size and dynamic vineyard reputation for feature sale prestige', async () => {
+    const { addFeaturePrestigeEvent } = await import('@/lib/services/prestige/prestigeService');
+
+    await addFeaturePrestigeEvent(wineBatch(), terroirSaleConfig, 'sale', {
+      customerName: 'North Cellars',
+      order: {
+        requestedQuantity: 10,
+        totalValue: 200,
+        fulfillableQuantity: 6,
+        fulfillableValue: 120
+      } as any,
+      vineyard: vineyard({ vineyardPrestige: 80 }),
+      currentCompanyPrestige: 100
+    });
+
+    expect(mocks.insertPrestigeEvent).toHaveBeenCalledTimes(2);
+    const companyEvent = (mocks.insertPrestigeEvent as any).mock.calls
+      .map((call: any[]) => call[0])
+      .find((event: any) => event.payload.level === 'company');
+    const vineyardEvent = (mocks.insertPrestigeEvent as any).mock.calls
+      .map((call: any[]) => call[0])
+      .find((event: any) => event.payload.level === 'vineyard');
+
+    expect(companyEvent.payload).toEqual(expect.objectContaining({
+      saleVolume: 6,
+      saleValue: 120,
+      featureSeverity: 0.5
+    }));
+    expect(vineyardEvent.payload).toEqual(expect.objectContaining({
+      saleVolume: 6,
+      saleValue: 120,
+      featureSeverity: 0.5
+    }));
+    expect(vineyardEvent.amount_base).not.toBe(0.08);
   });
 });

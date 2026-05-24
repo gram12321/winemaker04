@@ -10,7 +10,7 @@ import { getMaxLandValue } from '../wine/winescore/landValueModifierCalculation'
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import { calculateCompanyValue } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
-import { calculateSalePrestigeWithAssets, calculateVineyardSalePrestige, calculateFeatureSalePrestigeWithReputation, calculateVineyardManifestationPrestige, calculateCompanyManifestationPrestige } from './prestigeCalculator';
+import { calculateSalePrestigeWithAssets, calculateVineyardSalePrestige, calculateFeatureSalePrestigeWithReputation, calculateVineyardManifestationPrestige, calculateCompanyManifestationPrestige, softCapSigned } from './prestigeCalculator';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 
 // Internal calculation output for creating prestige events
@@ -560,14 +560,16 @@ export async function addVineyardSalePrestigeEvent(
   customerName: string,
   wineName: string,
   vineyardId: string,
-  vineyardPrestigeFactor: number
+  vineyardPrestigeFactor: number,
+  saleVolume: number = 0
 ): Promise<void> {
   const basePrestigeAmount = saleValue / 10000;
 
-  // Calculate dynamic prestige using vineyard prestige multiplier
   const prestigeAmount = calculateVineyardSalePrestige(
     basePrestigeAmount,
-    vineyardPrestigeFactor
+    vineyardPrestigeFactor,
+    saleValue,
+    saleVolume
   );
 
   await insertPrestigeEvent({
@@ -581,6 +583,7 @@ export async function addVineyardSalePrestigeEvent(
       customerName,
       wineName,
       saleValue,
+      saleVolume,
       vineyardPrestigeFactor,
       calculatedAmount: prestigeAmount
     },
@@ -594,7 +597,9 @@ export async function addVineyardAchievementPrestigeEvent(
   vineyardId: string,
   baseVineyardPrestige: number
 ): Promise<void> {
-  const prestigeAmount = baseVineyardPrestige * 0.1;
+  const prestigeAmount = eventType === 'planting'
+    ? softCapSigned(baseVineyardPrestige * 0.1, 2)
+    : baseVineyardPrestige * 0.1;
 
   await insertPrestigeEvent({
     id: uuidv4(),
@@ -1105,6 +1110,14 @@ export async function addFeaturePrestigeEvent(
   const gameState = getGameState();
   const currentWeek = calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!);
   const eventContext = context || {};
+  const batchFeature = (batch.features || []).find(feature => feature.id === config.id);
+  const featureSeverity = Math.max(0, Math.min(1, batchFeature?.severity ?? 1));
+  const saleValue = eventContext.order
+    ? ((eventContext.order as any).fulfillableValue ?? eventContext.order.totalValue ?? 0)
+    : 0;
+  const saleVolume = eventContext.order
+    ? ((eventContext.order as any).fulfillableQuantity ?? eventContext.order.requestedQuantity ?? 0)
+    : 0;
 
   // Helper to calculate prestige amount based on config
   const calculateAmount = (
@@ -1120,16 +1133,19 @@ export async function addFeaturePrestigeEvent(
       case 'dynamic':
         // Dynamic calculations vary by event type
         if (eventType === 'sale' && eventContext.order) {
-          return isCompany
-            ? calculateFeatureSalePrestigeWithReputation(
-              levelConfig.baseAmount,
-              eventContext.order.totalValue || 0,
-              eventContext.order.requestedQuantity || 0,
-              eventContext.currentCompanyPrestige || 1,
-              levelConfig.scalingFactors,
-              levelConfig.maxImpact
-            )
-            : levelConfig.baseAmount;
+          const reputation = isCompany
+            ? eventContext.currentCompanyPrestige || 1
+            : eventContext.vineyard?.vineyardPrestige || 1;
+
+          return calculateFeatureSalePrestigeWithReputation(
+            levelConfig.baseAmount,
+            saleValue,
+            saleVolume,
+            reputation,
+            levelConfig.scalingFactors,
+            levelConfig.maxImpact,
+            featureSeverity
+          );
         } else if (eventType === 'manifestation') {
           const tasteQualityIndex = getTasteQualityIndex(batch);
           if (isCompany) {
@@ -1180,8 +1196,9 @@ export async function addFeaturePrestigeEvent(
         wineName: `${batch.vineyardName} ${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         customerName: eventContext.customerName,
-        saleVolume: eventContext.order?.requestedQuantity,
-        saleValue: eventContext.order?.totalValue,
+        saleVolume,
+        saleValue,
+        featureSeverity,
         companyPrestige: eventContext.currentCompanyPrestige,
         calculatedAmount: amount,
         eventType
@@ -1214,8 +1231,9 @@ export async function addFeaturePrestigeEvent(
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,
-        saleVolume: eventContext.order?.requestedQuantity,
-        saleValue: eventContext.order?.totalValue,
+        saleVolume,
+        saleValue,
+        featureSeverity,
         eventType
       }
     });

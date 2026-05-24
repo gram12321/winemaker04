@@ -4,7 +4,8 @@ import {
   calculateFeatureSalePrestigeWithReputation,
   calculateSalePrestigeWithAssets,
   calculateVineyardManifestationPrestige,
-  calculateVineyardSalePrestige
+  calculateVineyardSalePrestige,
+  softCapSigned
 } from '@/lib/services/prestige/prestigeCalculator';
 
 describe('prestige calculator', () => {
@@ -26,6 +27,18 @@ describe('prestige calculator', () => {
     expect(cappedPenalty).toBe(-8);
   });
 
+  it('scales feature sale prestige by feature severity before applying event caps', () => {
+    const fullPositive = calculateFeatureSalePrestigeWithReputation(1, 1000, 10, 50, undefined, 10, 1);
+    const mildPositive = calculateFeatureSalePrestigeWithReputation(1, 1000, 10, 50, undefined, 10, 0.25);
+    const severePenalty = calculateFeatureSalePrestigeWithReputation(-1, 1000, 10, 50, undefined, -10, 1);
+    const mildPenalty = calculateFeatureSalePrestigeWithReputation(-1, 1000, 10, 50, undefined, -10, 0.25);
+
+    expect(mildPositive).toBeGreaterThan(0);
+    expect(mildPositive).toBeLessThan(fullPositive * 0.3);
+    expect(severePenalty).toBeLessThan(mildPenalty);
+    expect(mildPenalty).toBeLessThan(0);
+  });
+
   it('scales manifestation events by batch size, quality, and company or vineyard reputation', () => {
     const companyEvent = calculateCompanyManifestationPrestige(1, 1200, 0.8, 600);
     const vineyardEvent = calculateVineyardManifestationPrestige(1, 1200, 0.8, 2);
@@ -34,8 +47,24 @@ describe('prestige calculator', () => {
     expect(vineyardEvent).toBeGreaterThan(0);
   });
 
-  it('keeps vineyard sale prestige tied directly to the vineyard prestige factor', () => {
-    expect(calculateVineyardSalePrestige(2, 3)).toBe(6);
-    expect(calculateVineyardSalePrestige(2, 0)).toBe(0.2);
+  it('soft-caps regular vineyard sale prestige instead of multiplying directly by vineyard prestige', () => {
+    const smallSale = calculateVineyardSalePrestige(0.012, 2, 120, 6);
+    const prestigeVineyardSale = calculateVineyardSalePrestige(2, 250, 20000, 1000);
+    const hugeSale = calculateVineyardSalePrestige(25, 1000, 250000, 10000);
+
+    expect(smallSale).toBeGreaterThan(0);
+    expect(prestigeVineyardSale).toBeGreaterThan(smallSale);
+    expect(prestigeVineyardSale).toBeLessThan(15);
+    expect(hugeSale).toBeLessThanOrEqual(15);
+    expect(hugeSale).toBeGreaterThan(12);
+    expect(calculateVineyardSalePrestige(2, 3, 120, 6)).toBeLessThan(6);
+  });
+
+  it('applies a smooth signed soft cap for bounded prestige events', () => {
+    expect(softCapSigned(0, 2)).toBe(0);
+    expect(softCapSigned(5, 2)).toBeGreaterThan(1.8);
+    expect(softCapSigned(5, 2)).toBeLessThan(2);
+    expect(softCapSigned(-5, 2)).toBeLessThan(-1.8);
+    expect(softCapSigned(-5, 2)).toBeGreaterThan(-2);
   });
 });

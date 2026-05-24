@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   getGameState: vi.fn(() => ({ week: 3, season: 'Fall', currentYear: 2026 })),
   getCurrentPrestige: vi.fn(async () => 35),
   addSalePrestigeEvent: vi.fn(async () => undefined),
+  addFeaturePrestigeEvent: vi.fn(async () => undefined),
+  getAllFeatureConfigs: vi.fn(() => []),
   triggerGameUpdate: vi.fn(() => undefined),
   triggerTopicUpdate: vi.fn(() => undefined),
   notificationAddMessage: vi.fn(async () => undefined)
@@ -50,7 +52,12 @@ vi.mock('@/lib/services/core/gameState', () => ({
 }));
 
 vi.mock('@/lib/services/prestige/prestigeService', () => ({
-  addSalePrestigeEvent: mocks.addSalePrestigeEvent
+  addSalePrestigeEvent: mocks.addSalePrestigeEvent,
+  addFeaturePrestigeEvent: mocks.addFeaturePrestigeEvent
+}));
+
+vi.mock('@/lib/constants/wineFeatures/commonFeaturesUtil', () => ({
+  getAllFeatureConfigs: mocks.getAllFeatureConfigs
 }));
 
 vi.mock('@/hooks/useGameUpdates', () => ({
@@ -129,6 +136,8 @@ describe('contract lifecycle', () => {
     mocks.getGameState.mockReturnValue({ week: 3, season: 'Fall', currentYear: 2026 });
     mocks.getContractById.mockResolvedValue(contract());
     mocks.getWineBatchById.mockResolvedValue(bottledWine());
+    mocks.loadVineyards.mockResolvedValue([]);
+    mocks.getAllFeatureConfigs.mockReturnValue([]);
   });
 
   it('fulfills a pending contract by validating wine, deducting inventory, booking revenue, and recording status', async () => {
@@ -171,6 +180,48 @@ describe('contract lifecycle', () => {
     });
     expect(mocks.triggerGameUpdate).toHaveBeenCalledOnce();
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('contracts');
+  });
+
+  it('creates feature sale prestige events for contract fulfillment using actual fulfilled wine quantities', async () => {
+    const feature = { id: 'terroir', isPresent: true, severity: 0.75, name: 'Terroir Expression', icon: 'T' };
+    const featureConfig = {
+      id: 'terroir',
+      effects: {
+        prestige: {
+          onSale: {
+            company: { calculation: 'dynamic', baseAmount: 0.05, decayRate: 0.95, maxImpact: 8 }
+          }
+        }
+      }
+    };
+
+    mocks.getWineBatchById.mockResolvedValue(bottledWine({ features: [feature] as any }));
+    (mocks.getAllFeatureConfigs as any).mockReturnValue([featureConfig as any]);
+    (mocks.loadVineyards as any).mockResolvedValue([{ id: 'vineyard-1', name: 'Contract Vineyard', vineyardPrestige: 25 }]);
+
+    const { fulfillContract } = await import('@/lib/services/sales/contractService');
+
+    await expect(fulfillContract('contract-1', [{ wineBatchId: 'batch-1', quantity: 5 }])).resolves.toEqual({
+      success: true,
+      message: 'Contract fulfilled successfully',
+      revenue: 110
+    });
+
+    expect(mocks.addFeaturePrestigeEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'batch-1' }),
+      featureConfig,
+      'sale',
+      expect.objectContaining({
+        customerName: 'Nordic Importer',
+        currentCompanyPrestige: 35,
+        order: expect.objectContaining({
+          requestedQuantity: 5,
+          totalValue: 110,
+          fulfillableQuantity: 5,
+          fulfillableValue: 110
+        })
+      })
+    );
   });
 
   it('rejects a pending contract with date metadata and a smaller relationship penalty', async () => {

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
       state = nextState;
     },
     getGameState: vi.fn(() => state),
+    getCurrentPrestige: vi.fn(async () => state.prestige ?? 0),
     updateGameState: vi.fn(async updates => {
       state = { ...state, ...updates };
     }),
@@ -40,6 +41,7 @@ vi.mock('uuid', () => ({
 
 vi.mock('@/lib/services/core/gameState', () => ({
   getGameState: mocks.getGameState,
+  getCurrentPrestige: mocks.getCurrentPrestige,
   updateGameState: mocks.updateGameState
 }));
 
@@ -194,6 +196,15 @@ describe('loan lifecycle', () => {
     }));
     expect(mocks.triggerGameUpdate).toHaveBeenCalledOnce();
   }, 15000);
+
+  it('scales loan prestige penalties harder for already famous companies while respecting the cap', async () => {
+    const { calculatePrestigePenaltyWithFame } = await import('@/lib/features/loanLender/services/finance/loanService');
+
+    expect(calculatePrestigePenaltyWithFame(-25, 0, { rate: 0.02, cap: 25 })).toBe(-25);
+    expect(calculatePrestigePenaltyWithFame(-25, 100, { rate: 0.02, cap: 25 })).toBe(-27);
+    expect(calculatePrestigePenaltyWithFame(-25, 2000, { rate: 0.02, cap: 25 })).toBe(-50);
+    expect(calculatePrestigePenaltyWithFame(-25, -100, { rate: 0.02, cap: 25 })).toBe(-25);
+  });
 
   it('processes a due seasonal payment and schedules the next payment date', async () => {
     mocks.setState({
