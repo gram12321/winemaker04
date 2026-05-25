@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { RESEARCH_PROJECTS, RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER, RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER, type UnlockType } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type UnlockType } from '@/lib/constants/researchConstants';
 import { calculateResearchCost, calculateResearchWork } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
 import { formatNumber } from '@/lib/utils/utils';
 
@@ -193,11 +193,10 @@ export function ResearchTab() {
   return (
     <div className="space-y-4 text-sm">
       <div>
-        <p className="font-medium mb-1">Core Formulas</p>
+        <p className="font-medium mb-1">Research Balance</p>
         <ul className="text-xs space-y-1">
-          <li>Cost formula: base category cost x (1 + (complexity - 1) x {RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER.toFixed(2)})</li>
-          <li>Default work complexity curve: (complexity - 1) x {RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER.toFixed(2)}</li>
-          <li>Project-specific work profiles can override complexity curve and add scope/setup work.</li>
+          <li>Work amount, money cost, and estimated weeks are explicit per-project balance constants.</li>
+          <li>Complexity is retained as a design tier and UI signal, not as a live cost/work formula.</li>
           <li>Contract gating uses unlock type contract_type in contract generation.</li>
         </ul>
       </div>

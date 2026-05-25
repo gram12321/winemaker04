@@ -5,7 +5,7 @@ import {
   calculateResearchTimeEstimate,
   getResearchProjectWithCalculations
 } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
-import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, RESEARCH_PROJECT_ECONOMICS } from '@/lib/constants/researchConstants';
 
 /**
  * Research Calculation Tests - Pure Functions
@@ -69,6 +69,12 @@ describe('Research Calculations - Pure Functions', () => {
       const uniqueWorkValues = new Set(workAmounts.map(w => w.work));
       expect(uniqueWorkValues.size).toBeGreaterThan(1);
     });
+
+    it('paces research as multi-month work for the expected company tier', () => {
+      expect(calculateResearchWork('admin_basic').totalWork).toBeGreaterThanOrEqual(150);
+      expect(calculateResearchWork('tech_fermentation').totalWork).toBeGreaterThanOrEqual(2500);
+      expect(calculateResearchWork('mkt_old_world_exchange').totalWork).toBeGreaterThanOrEqual(12000);
+    });
   });
 
   describe('calculateResearchCost', () => {
@@ -121,6 +127,22 @@ describe('Research Calculations - Pure Functions', () => {
         expect(cost).toBeGreaterThan(0);
         expect(isFinite(cost)).toBe(true);
       }
+    });
+
+    it('keeps cost-per-work-unit in a similar range for ordinary non-grant research', () => {
+      const representativeProjectIds = [
+        'tech_soil_analysis',
+        'tech_fermentation',
+        'mkt_restaurant_program',
+        'eff_bulk_chain_optimization',
+        'staff_training',
+      ];
+
+      const ratios = representativeProjectIds.map(projectId =>
+        calculateResearchCost(projectId) / calculateResearchWork(projectId).totalWork
+      );
+
+      expect(Math.max(...ratios) / Math.min(...ratios)).toBeLessThanOrEqual(2);
     });
   });
 
@@ -176,6 +198,11 @@ describe('Research Calculations - Pure Functions', () => {
         expect(project.complexity).toBeGreaterThan(0);
         expect(project.complexity).toBeLessThanOrEqual(10);
         expect(project.category).toBeTruthy();
+        expect(RESEARCH_PROJECT_ECONOMICS[project.id]).toEqual({
+          workAmount: expect.any(Number),
+          moneyCost: expect.any(Number),
+          estimatedWeeks: expect.any(Number),
+        });
         
         // Can calculate work and cost
         expect(() => calculateResearchWork(project.id)).not.toThrow();
@@ -208,6 +235,36 @@ describe('Research Calculations - Pure Functions', () => {
           expect(project.prestigeReward).toBeGreaterThan(0);
         }
       }
+    });
+
+    it('defines a chained research-speed path with escalating gates', () => {
+      const speedChain = [
+        'admin_research_methodology',
+        'admin_research_office',
+        'tech_experimental_cellar_lab',
+        'tech_innovation_program',
+        'tech_research_institute_network',
+      ].map(projectId => {
+        const project = RESEARCH_PROJECTS.find(candidate => candidate.id === projectId);
+        expect(project, projectId).toBeDefined();
+        return project!;
+      });
+
+      for (const project of speedChain) {
+        expect(project.permanentEffects).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              kind: 'research_skill_multiplier',
+              multiplier: expect.any(Number),
+            }),
+          ])
+        );
+      }
+
+      expect(speedChain[1].prerequisites).toContain(speedChain[0].id);
+      expect(speedChain[2].prerequisites).toEqual(expect.arrayContaining([speedChain[1].id, 'tech_fermentation']));
+      expect(speedChain[3].requiredAchievementIds).toContain('wine_score_tier_1');
+      expect(speedChain[4].requiredPrestige).toBeGreaterThan(speedChain[3].requiredPrestige ?? 0);
     });
   });
 });

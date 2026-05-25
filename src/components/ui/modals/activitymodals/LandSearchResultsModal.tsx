@@ -11,6 +11,8 @@ import {
   BASE_MAX_HECTARES_PER_VINEYARD,
   BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
   BASE_VINEYARD_COUNT_LIMIT,
+} from '@/lib/constants/researchConstants';
+import {
   buildVineyardCapacityState,
   getCapacityConstraintReason,
   type VineyardCapacityState

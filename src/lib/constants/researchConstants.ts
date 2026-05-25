@@ -55,6 +55,11 @@ export type ResearchPermanentEffect =
             kind: 'vineyard_health_decay_multiplier';
             multiplier: number;
             description?: string;
+      }
+      | {
+            kind: 'research_skill_multiplier';
+            multiplier: number;
+            description?: string;
       };
 
 export interface ResearchProject {
@@ -79,30 +84,99 @@ export interface ResearchProject {
       requiredAchievementIds?: string[]; // Achievement IDs that must be unlocked
 }
 
-// ===== RESEARCH CALCULATION CONSTANTS =====
+export interface ResearchProjectEconomics {
+      workAmount: number;
+      moneyCost: number;
+      estimatedWeeks: number;
+}
 
-/**
- * Base money cost (€) for research activities by category
- * This is the base monetary investment required to start research
- * Final cost is calculated as: baseCost * (1 + (complexity - 1) * RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER)
- */
-export const RESEARCH_BASE_MONEY_COST: Record<ResearchProject['category'], number> = {
-      administration: 8000,   // Lower cost, administrative tasks
-      projects: 5000,         // Lower cost, grant projects (you get money back)
-      technology: 20000,      // Medium-high cost, permanent improvements
-      agriculture: 15000,     // Medium cost, agricultural research (grape varieties, etc.)
-      efficiency: 18000,      // Medium cost, operational improvements
-      marketing: 12000,       // Medium cost, marketing research
-      staff: 10000           // Medium cost, staff-related research
+// Baseline gameplay caps used by services, UI constraints, and research ladder summaries.
+export const BASE_MAX_HECTARES_PER_VINEYARD = 0.5;
+export const BASE_TOTAL_VINEYARD_HECTARES_LIMIT = 1;
+export const BASE_VINEYARD_COUNT_LIMIT = 1;
+export const BASE_STAFF_LIMIT = 2;
+
+export const RESEARCH_PROJECT_ECONOMICS: Record<string, ResearchProjectEconomics> = {
+      admin_basic: { workAmount: 177, moneyCost: 5300, estimatedWeeks: 7 },
+      admin_research_methodology: { workAmount: 302, moneyCost: 6200, estimatedWeeks: 11 },
+      admin_research_office: { workAmount: 1206, moneyCost: 18500, estimatedWeeks: 23 },
+      tech_experimental_cellar_lab: { workAmount: 4730, moneyCost: 93700, estimatedWeeks: 62 },
+      tech_innovation_program: { workAmount: 11683, moneyCost: 231300, estimatedWeeks: 95 },
+      tech_research_institute_network: { workAmount: 46107, moneyCost: 912900, estimatedWeeks: 198 },
+      project_grant_basic: { workAmount: 132, moneyCost: 3900, estimatedWeeks: 5 },
+      project_grant_advanced: { workAmount: 1679, moneyCost: 10600, estimatedWeeks: 22 },
+      tech_soil_analysis: { workAmount: 1773, moneyCost: 35100, estimatedWeeks: 34 },
+      tech_fermentation: { workAmount: 3540, moneyCost: 70100, estimatedWeeks: 47 },
+      tech_fermentation_extended: { workAmount: 5361, moneyCost: 106100, estimatedWeeks: 70 },
+      tech_vineyard_health_monitoring: { workAmount: 3579, moneyCost: 70900, estimatedWeeks: 47 },
+      agri_barbera: { workAmount: 1396, moneyCost: 20100, estimatedWeeks: 27 },
+      agri_chardonnay: { workAmount: 2733, moneyCost: 39400, estimatedWeeks: 36 },
+      agri_pinot_noir: { workAmount: 3921, moneyCost: 56500, estimatedWeeks: 51 },
+      agri_primitivo: { workAmount: 2733, moneyCost: 39400, estimatedWeeks: 36 },
+      agri_sauvignon_blanc: { workAmount: 3921, moneyCost: 56500, estimatedWeeks: 51 },
+      agri_tempranillo: { workAmount: 2733, moneyCost: 39400, estimatedWeeks: 36 },
+      agri_sangiovese: { workAmount: 2733, moneyCost: 39400, estimatedWeeks: 36 },
+      eff_microplot_management: { workAmount: 320, moneyCost: 11900, estimatedWeeks: 12 },
+      eff_smallholding_operations: { workAmount: 430, moneyCost: 13900, estimatedWeeks: 16 },
+      eff_estate_foundations: { workAmount: 1118, moneyCost: 19100, estimatedWeeks: 22 },
+      eff_operational: { workAmount: 3619, moneyCost: 61900, estimatedWeeks: 48 },
+      eff_site_expansion: { workAmount: 4841, moneyCost: 82800, estimatedWeeks: 63 },
+      eff_estate_scale: { workAmount: 21946, moneyCost: 375300, estimatedWeeks: 131 },
+      eff_regional_holdings: { workAmount: 23100, moneyCost: 395000, estimatedWeeks: 138 },
+      eff_networked_estates: { workAmount: 45777, moneyCost: 782800, estimatedWeeks: 197 },
+      eff_industrial_fleet_management: { workAmount: 48007, moneyCost: 820900, estimatedWeeks: 207 },
+      eff_land_portfolio_management: { workAmount: 48582, moneyCost: 830800, estimatedWeeks: 209 },
+      eff_megavineyard_control: { workAmount: 51081, moneyCost: 873500, estimatedWeeks: 220 },
+      eff_agri_enterprise_planning: { workAmount: 51750, moneyCost: 884900, estimatedWeeks: 223 },
+      eff_global_land_network: { workAmount: 54559, moneyCost: 933000, estimatedWeeks: 235 },
+      eff_superestate_command: { workAmount: 55353, moneyCost: 946500, estimatedWeeks: 238 },
+      eff_total_land_budgeting: { workAmount: 425, moneyCost: 13900, estimatedWeeks: 16 },
+      eff_total_estate_area_2: { workAmount: 3536, moneyCost: 60500, estimatedWeeks: 46 },
+      eff_total_estate_area_4: { workAmount: 4754, moneyCost: 81300, estimatedWeeks: 62 },
+      eff_total_estate_area_8: { workAmount: 11490, moneyCost: 196500, estimatedWeeks: 94 },
+      eff_total_estate_area_16: { workAmount: 22053, moneyCost: 377100, estimatedWeeks: 132 },
+      eff_total_estate_area_32: { workAmount: 22365, moneyCost: 382400, estimatedWeeks: 134 },
+      eff_total_estate_area_64: { workAmount: 45564, moneyCost: 779100, estimatedWeeks: 196 },
+      eff_total_estate_area_128: { workAmount: 46112, moneyCost: 788500, estimatedWeeks: 198 },
+      eff_total_estate_area_256: { workAmount: 48817, moneyCost: 834800, estimatedWeeks: 210 },
+      eff_total_estate_area_512: { workAmount: 49463, moneyCost: 845800, estimatedWeeks: 213 },
+      eff_total_estate_area_1000: { workAmount: 52083, moneyCost: 890600, estimatedWeeks: 224 },
+      eff_total_estate_area_2000: { workAmount: 52836, moneyCost: 903500, estimatedWeeks: 227 },
+      eff_vineyard_registry: { workAmount: 433, moneyCost: 13900, estimatedWeeks: 16 },
+      eff_dual_estate_management: { workAmount: 1109, moneyCost: 19000, estimatedWeeks: 21 },
+      eff_vineyard_cluster_ops: { workAmount: 1686, moneyCost: 28800, estimatedWeeks: 32 },
+      eff_vineyard_dispatch: { workAmount: 3264, moneyCost: 55800, estimatedWeeks: 43 },
+      eff_vineyard_support_grid: { workAmount: 4898, moneyCost: 83800, estimatedWeeks: 64 },
+      eff_regional_site_supervision: { workAmount: 11503, moneyCost: 196700, estimatedWeeks: 94 },
+      eff_vineyard_network_coordination: { workAmount: 21993, moneyCost: 376100, estimatedWeeks: 132 },
+      eff_estate_grid_management: { workAmount: 22318, moneyCost: 381600, estimatedWeeks: 134 },
+      eff_holdings_command: { workAmount: 45740, moneyCost: 782200, estimatedWeeks: 197 },
+      eff_regional_hub_admin: { workAmount: 46310, moneyCost: 791900, estimatedWeeks: 199 },
+      eff_multi_region_estate_control: { workAmount: 49059, moneyCost: 838900, estimatedWeeks: 211 },
+      eff_global_vineyard_registry: { workAmount: 49733, moneyCost: 850400, estimatedWeeks: 214 },
+      mkt_research: { workAmount: 715, moneyCost: 11600, estimatedWeeks: 14 },
+      mkt_restaurant_program: { workAmount: 1234, moneyCost: 20000, estimatedWeeks: 24 },
+      mkt_collector_relations: { workAmount: 3520, moneyCost: 57000, estimatedWeeks: 46 },
+      mkt_chain_distribution: { workAmount: 8623, moneyCost: 139700, estimatedWeeks: 71 },
+      mkt_vintner_network: { workAmount: 2267, moneyCost: 36700, estimatedWeeks: 30 },
+      mkt_export_alliances: { workAmount: 8005, moneyCost: 129700, estimatedWeeks: 66 },
+      mkt_cross_border_buyer_network: { workAmount: 9155, moneyCost: 148300, estimatedWeeks: 75 },
+      mkt_transatlantic_buyer_desk: { workAmount: 17843, moneyCost: 289100, estimatedWeeks: 107 },
+      mkt_old_world_exchange: { workAmount: 37391, moneyCost: 605700, estimatedWeeks: 161 },
+      eff_bulk_chain_optimization: { workAmount: 3840, moneyCost: 65700, estimatedWeeks: 50 },
+      eff_contract_fulfillment_grid: { workAmount: 11490, moneyCost: 196500, estimatedWeeks: 94 },
+      tech_market_signal_engine: { workAmount: 5186, moneyCost: 102700, estimatedWeeks: 68 },
+      tech_negotiation_ai_cellar: { workAmount: 24169, moneyCost: 478500, estimatedWeeks: 145 },
+      staff_onboarding_program: { workAmount: 388, moneyCost: 7700, estimatedWeeks: 14 },
+      staff_training: { workAmount: 1451, moneyCost: 22200, estimatedWeeks: 28 },
+      staff_leadership_pipeline: { workAmount: 4028, moneyCost: 61600, estimatedWeeks: 53 },
+      staff_operational_management: { workAmount: 9389, moneyCost: 143700, estimatedWeeks: 77 },
+      staff_department_structure: { workAmount: 9775, moneyCost: 149600, estimatedWeeks: 80 },
+      staff_operations_hub: { workAmount: 18015, moneyCost: 275600, estimatedWeeks: 108 },
+      staff_enterprise_coordination: { workAmount: 18876, moneyCost: 288800, estimatedWeeks: 113 },
+      staff_multiestate_hr: { workAmount: 37028, moneyCost: 566500, estimatedWeeks: 159 },
+      staff_corporate_scale: { workAmount: 38957, moneyCost: 596000, estimatedWeeks: 168 },
 };
-
-/**
- * Complexity multipliers for work calculation
- * Higher complexity = more work required
- */
-export const RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER = 0.15; // Each complexity point adds 15% work
-
-export const RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER = 0.20; // Each complexity point adds 20% cost
 
 // Generic prestige scaling from research complexity, shared by all research types.
 const RESEARCH_PRESTIGE_PER_COMPLEXITY = 2;
@@ -163,16 +237,6 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
   // Create project ID from grape name (e.g., "Pinot Noir" -> "agri_pinot_noir")
   const projectId = `agri_${grape.toLowerCase().replace(/\s+/g, '_')}`;
   
-      // Grape research uses a generic work profile so the calculator can stay reusable
-      // while still scaling scope by complexity.
-      const workProfile: ResearchWorkProfile = {
-            scopeWorkAmountPerComplexity: 50,
-            complexityCurve: {
-                  kind: 'linear',
-                  multiplier: RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER
-            }
-      };
-
   // Prestige gate based on complexity: rare/difficult grapes require an established winery
   // complexity 2-4: always available (0), 5-7: established winery (10), 8-10: known winery (25)
   let requiredPrestige: number | undefined;
@@ -193,7 +257,6 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
     icon: iconPath, // Use image path instead of emoji
     prestigeReward,
     unlocks: [{ type: 'grape', value: grape }],
-            workProfile,
     ...(requiredPrestige !== undefined ? { requiredPrestige } : {})
   };
 }
@@ -623,6 +686,149 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
 
 const STAFF_LIMIT_RESEARCH_PROJECTS: ResearchProject[] = STAFF_LIMIT_RESEARCH_CHAIN.map(createStaffLimitResearchProject);
 
+const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
+      {
+            id: 'admin_research_methodology',
+            title: 'Research Methodology',
+            description: 'Standardize literature review, test notes, and project handoff practices for research staff.',
+            complexity: 3,
+            benefits: [
+                  'Research staff work 10% faster on research tasks',
+                  'Creates the operating discipline for larger research programs',
+                  `+${calculateResearchPrestigeFromComplexity(3)} Prestige points`
+            ],
+            category: 'administration',
+            icon: '📚',
+            prestigeReward: calculateResearchPrestigeFromComplexity(3),
+            requiredPrestige: 6,
+            prerequisites: ['admin_basic'],
+            permanentEffects: [{
+                  kind: 'research_skill_multiplier',
+                  multiplier: 1.1,
+                  description: 'Research staff work 10% faster on research tasks'
+            }],
+            workProfile: {
+                  scopeWorkAmount: 45,
+                  complexityCurve: { kind: 'linear', multiplier: 0.08 },
+                  categoryModifier: -0.05,
+                  extraInitialWork: 12
+            }
+      },
+      {
+            id: 'admin_research_office',
+            title: 'Applied Research Office',
+            description: 'Create a dedicated office for grant tracking, experimental design, and reusable research protocols.',
+            complexity: 5,
+            benefits: [
+                  'Research staff work 12% faster on research tasks',
+                  'Improves coordination across administrative and technical research',
+                  `+${calculateResearchPrestigeFromComplexity(5)} Prestige points`
+            ],
+            category: 'administration',
+            icon: '🗂️',
+            prestigeReward: calculateResearchPrestigeFromComplexity(5),
+            requiredPrestige: 14,
+            prerequisites: ['admin_research_methodology', 'project_grant_basic'],
+            permanentEffects: [{
+                  kind: 'research_skill_multiplier',
+                  multiplier: 1.12,
+                  description: 'Research staff work 12% faster on research tasks'
+            }],
+            workProfile: {
+                  scopeWorkAmount: 90,
+                  complexityCurve: { kind: 'linear', multiplier: 0.12 },
+                  categoryModifier: 0,
+                  extraInitialWork: 24
+            }
+      },
+      {
+            id: 'tech_experimental_cellar_lab',
+            title: 'Experimental Cellar Lab',
+            description: 'Build a practical lab for controlled cellar trials, sensory records, and faster technical iteration.',
+            complexity: 7,
+            benefits: [
+                  'Research staff work 15% faster on research tasks',
+                  'Requires proven wine quality before lab trials can justify the investment',
+                  `+${calculateResearchPrestigeFromComplexity(7)} Prestige points`
+            ],
+            category: 'technology',
+            icon: '🧪',
+            prestigeReward: calculateResearchPrestigeFromComplexity(7),
+            requiredPrestige: 28,
+            prerequisites: ['admin_research_office', 'tech_fermentation'],
+            requiredAchievementIds: ['wine_score_tier_1'],
+            permanentEffects: [{
+                  kind: 'research_skill_multiplier',
+                  multiplier: 1.15,
+                  description: 'Research staff work 15% faster on research tasks'
+            }],
+            workProfile: {
+                  scopeWorkAmount: 170,
+                  complexityCurve: { kind: 'exponential', base: 1.07 },
+                  categoryModifier: 0.12,
+                  extraInitialWork: 45
+            }
+      },
+      {
+            id: 'tech_innovation_program',
+            title: 'Innovation Program',
+            description: 'Coordinate formal innovation sprints across cellar, market, and estate operations.',
+            complexity: 8,
+            benefits: [
+                  'Research staff work 18% faster on research tasks',
+                  'Connects premium contract performance to deeper technical research',
+                  `+${calculateResearchPrestigeFromComplexity(8)} Prestige points`
+            ],
+            category: 'technology',
+            icon: '💡',
+            prestigeReward: calculateResearchPrestigeFromComplexity(8),
+            requiredPrestige: 44,
+            requiredCompanyValue: 2000000,
+            prerequisites: ['tech_experimental_cellar_lab', 'tech_fermentation_extended'],
+            requiredAchievementIds: ['wine_score_tier_1', 'single_contract_value_tier_2'],
+            permanentEffects: [{
+                  kind: 'research_skill_multiplier',
+                  multiplier: 1.18,
+                  description: 'Research staff work 18% faster on research tasks'
+            }],
+            workProfile: {
+                  scopeWorkAmount: 240,
+                  complexityCurve: { kind: 'exponential', base: 1.08 },
+                  categoryModifier: 0.16,
+                  extraInitialWork: 64
+            }
+      },
+      {
+            id: 'tech_research_institute_network',
+            title: 'Research Institute Network',
+            description: 'Partner with outside institutes and expert consultants to accelerate late-stage research programs.',
+            complexity: 10,
+            benefits: [
+                  'Research staff work 22% faster on research tasks',
+                  'Requires a recognized brand and enough technical depth to coordinate external institutes',
+                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
+            ],
+            category: 'technology',
+            icon: '🏛️',
+            prestigeReward: calculateResearchPrestigeFromComplexity(10),
+            requiredPrestige: 75,
+            requiredCompanyValue: 8000000,
+            prerequisites: ['tech_innovation_program', 'tech_market_signal_engine'],
+            requiredAchievementIds: ['prestige_master_tier_1', 'wine_score_tier_2'],
+            permanentEffects: [{
+                  kind: 'research_skill_multiplier',
+                  multiplier: 1.22,
+                  description: 'Research staff work 22% faster on research tasks'
+            }],
+            workProfile: {
+                  scopeWorkAmount: 360,
+                  complexityCurve: { kind: 'exponential', base: 1.1 },
+                  categoryModifier: 0.2,
+                  extraInitialWork: 90
+            }
+      }
+];
+
 // ===== AVAILABLE RESEARCH PROJECTS =====
 
 /**
@@ -644,6 +850,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '📋',
             prestigeReward: calculateResearchPrestigeFromComplexity(2)
       },
+      ...RESEARCH_SPEED_RESEARCH_PROJECTS,
       
       // ===== PROJECTS (Grants) =====
       {

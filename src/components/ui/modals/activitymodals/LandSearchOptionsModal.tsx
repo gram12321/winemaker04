@@ -7,11 +7,13 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
 import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   BASE_MAX_HECTARES_PER_VINEYARD,
   BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
   BASE_VINEYARD_COUNT_LIMIT,
+} from '@/lib/constants/researchConstants';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import {
   buildVineyardCapacityState,
   getNextVineyardCapacityHint,
   getNextVineyardCapacityResearch,

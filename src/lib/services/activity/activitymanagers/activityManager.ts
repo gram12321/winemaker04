@@ -12,6 +12,7 @@ import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber } from '@/lib/utils';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { getResearchPermanentEffects } from '@/lib/services/research/researchPermanentEffectsService';
 
 
 
@@ -408,6 +409,8 @@ export async function progressActivities(): Promise<void> {
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
+    const hasActiveResearch = activities.some(isResearchActivity);
+    const researchEffects = hasActiveResearch ? await getResearchPermanentEffects() : null;
 
     // Build staff task count map from active activities only
     const staffTaskCounts = new Map<string, number>();
@@ -423,11 +426,14 @@ export async function progressActivities(): Promise<void> {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
       const grapeVariety = activity.params.grape; // Get grape variety for XP bonus
+      const staffContributionOptions = isResearchActivity(activity)
+        ? { researchSkillMultiplier: researchEffects?.researchSkillMultiplier ?? 1 }
+        : undefined;
 
       // Calculate work contribution from staff (0 if no staff assigned)
       let workThisTick = 0;
       if (assignedStaff.length > 0) {
-        workThisTick = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety);
+        workThisTick = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety, staffContributionOptions);
 
         // Award XP to assigned staff
         const relevantSkill = WORK_CATEGORY_INFO[activity.category].skill;
@@ -439,7 +445,7 @@ export async function progressActivities(): Promise<void> {
         }
 
         for (const staff of assignedStaff) {
-          const contribution = calculateIndividualStaffContribution(staff, activity.category, staffTaskCounts, grapeVariety);
+          const contribution = calculateIndividualStaffContribution(staff, activity.category, staffTaskCounts, grapeVariety, staffContributionOptions);
           // Award XP equal to contribution
           await awardExperience(staff.id, contribution, xpCategories);
         }
@@ -535,10 +541,14 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     const assignedStaffIds = activity.params.assignedStaffIds || [];
     const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
     const grapeVariety = activity.params.grape;
+    const researchEffects = isResearchActivity(activity) ? await getResearchPermanentEffects() : null;
+    const staffContributionOptions = isResearchActivity(activity)
+      ? { researchSkillMultiplier: researchEffects?.researchSkillMultiplier ?? 1 }
+      : undefined;
 
     if (assignedStaff.length > 0) {
       // Calculate actual work contribution per week
-      const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety);
+      const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety, staffContributionOptions);
 
       if (workPerWeek > 0) {
         const weeksRemaining = Math.ceil(remainingWork / workPerWeek);
@@ -557,6 +567,15 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     isComplete,
     timeRemaining: isComplete ? 'Complete' : timeRemaining
   };
+}
+
+function isResearchActivity(activity: Activity): boolean {
+  const activityType = typeof activity.params?.type === 'string'
+    ? activity.params.type.toLowerCase()
+    : '';
+
+  return activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH
+    && (activityType === 'research' || typeof activity.params?.researchId === 'string');
 }
 
 /**

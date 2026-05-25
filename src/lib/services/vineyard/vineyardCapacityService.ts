@@ -1,10 +1,13 @@
-import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researchConstants';
+import {
+  BASE_MAX_HECTARES_PER_VINEYARD,
+  BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
+  BASE_VINEYARD_COUNT_LIMIT,
+  RESEARCH_PROJECTS,
+  type ResearchProject,
+} from '@/lib/constants/researchConstants';
 
 export type VineyardCapUnlockType = 'vineyard_size' | 'total_vineyard_hectares' | 'vineyard_count';
 
-export const BASE_MAX_HECTARES_PER_VINEYARD = 0.25;
-export const BASE_TOTAL_VINEYARD_HECTARES_LIMIT = 0.25;
-export const BASE_VINEYARD_COUNT_LIMIT = 1;
 
 export const CHAINED_VINEYARD_CAP_UNLOCK_TYPES: ReadonlySet<VineyardCapUnlockType> = new Set([
   'vineyard_size',

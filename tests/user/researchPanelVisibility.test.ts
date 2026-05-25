@@ -3,20 +3,41 @@ import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { getVisibleResearchProjects } from '@/components/finance/ResearchPanel';
 
 describe('getVisibleResearchProjects', () => {
-  it('shows only the next vineyard size research in the chain when none are completed', () => {
+  it('shows only the first incomplete vineyard size prerequisite tier when none are completed', () => {
     const efficiencyProjects = RESEARCH_PROJECTS.filter(project => project.category === 'efficiency');
 
     const visibleProjectIds = getVisibleResearchProjects(
       efficiencyProjects,
+      new Set<string>(['admin_basic']),
+      new Set<string>()
+    ).map(project => project.id);
+
+    expect(visibleProjectIds).toContain('eff_microplot_management');
+    expect(visibleProjectIds).not.toContain('eff_smallholding_operations');
+    expect(visibleProjectIds).toContain('eff_total_land_budgeting');
+    expect(visibleProjectIds).toContain('eff_vineyard_registry');
+    expect(visibleProjectIds).not.toContain('eff_estate_foundations');
+  });
+
+  it('hides prerequisite-locked project chains until the required project is completed', () => {
+    const grantProjects = RESEARCH_PROJECTS.filter(project => project.category === 'projects');
+
+    const initialVisibleProjectIds = getVisibleResearchProjects(
+      grantProjects,
       new Set<string>(),
       new Set<string>()
     ).map(project => project.id);
 
-    expect(visibleProjectIds).not.toContain('eff_microplot_management');
-    expect(visibleProjectIds).toContain('eff_smallholding_operations');
-    expect(visibleProjectIds).toContain('eff_total_land_budgeting');
-    expect(visibleProjectIds).toContain('eff_vineyard_registry');
-    expect(visibleProjectIds).not.toContain('eff_estate_foundations');
+    expect(initialVisibleProjectIds).toContain('project_grant_basic');
+    expect(initialVisibleProjectIds).not.toContain('project_grant_advanced');
+
+    const afterBasicGrantVisibleProjectIds = getVisibleResearchProjects(
+      grantProjects,
+      new Set<string>(['project_grant_basic']),
+      new Set<string>()
+    ).map(project => project.id);
+
+    expect(afterBasicGrantVisibleProjectIds).toContain('project_grant_advanced');
   });
 
   it('keeps completed chained research visible and shows the next staff cap research', () => {

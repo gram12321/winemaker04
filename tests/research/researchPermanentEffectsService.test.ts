@@ -13,6 +13,8 @@ vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: mocks.getCurrentCompanyId
 }));
 
+import { getResearchPermanentEffects } from '@/lib/services/research/researchPermanentEffectsService';
+
 describe('research permanent effects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -21,10 +23,9 @@ describe('research permanent effects', () => {
   });
 
   it('returns neutral multipliers when no completed research has permanent effects', async () => {
-    const { getResearchPermanentEffects } = await import('@/lib/services/research/researchPermanentEffectsService');
-
     await expect(getResearchPermanentEffects()).resolves.toEqual({
       vineyardHealthDecayMultiplier: 1,
+      researchSkillMultiplier: 1,
       activeEffects: []
     });
     expect(mocks.getUnlockedResearchIds).toHaveBeenCalledWith('company-1');
@@ -32,7 +33,6 @@ describe('research permanent effects', () => {
 
   it('aggregates completed permanent effects from research unlocks', async () => {
     mocks.getUnlockedResearchIds.mockResolvedValue(['tech_vineyard_health_monitoring']);
-    const { getResearchPermanentEffects } = await import('@/lib/services/research/researchPermanentEffectsService');
 
     const summary = await getResearchPermanentEffects('company-2');
 
@@ -45,5 +45,23 @@ describe('research permanent effects', () => {
       })
     ]);
     expect(mocks.getUnlockedResearchIds).toHaveBeenCalledWith('company-2');
+  });
+
+  it('compounds completed research-speed effects into a staff skill multiplier', async () => {
+    mocks.getUnlockedResearchIds.mockResolvedValue(['admin_research_methodology', 'admin_research_office']);
+
+    const summary = await getResearchPermanentEffects('company-2');
+
+    expect(summary.researchSkillMultiplier).toBeCloseTo(1.232);
+    expect(summary.activeEffects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        projectId: 'admin_research_methodology',
+        kind: 'research_skill_multiplier'
+      }),
+      expect.objectContaining({
+        projectId: 'admin_research_office',
+        kind: 'research_skill_multiplier'
+      })
+    ]));
   });
 });

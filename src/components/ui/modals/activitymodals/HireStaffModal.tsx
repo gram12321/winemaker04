@@ -3,14 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { createStaff, addStaff, getAllStaff, getRandomFirstName, getRandomLastName, getRandomNationality, generateRandomSkills, calculateWage } from '@/lib/services';
+import { BASE_STAFF_LIMIT } from '@/lib/constants/researchConstants';
 import { Nationality, StaffSkills } from '@/lib/types/types';
 import { formatNumber, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-
-const BASE_STAFF_LIMIT = 2;
 
 interface HireStaffModalProps {
   isOpen: boolean;

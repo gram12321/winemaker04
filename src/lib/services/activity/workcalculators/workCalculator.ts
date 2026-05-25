@@ -13,6 +13,10 @@ export interface WorkFactor {
   isPrimary?: boolean;    // Optional flag for primary rows like Amount/Task
 }
 
+export interface StaffContributionOptions {
+  researchSkillMultiplier?: number;
+}
+
 /**
  * Core work calculation function - simplified to be a generic calculator
  * without special case handling for different activities
@@ -93,7 +97,8 @@ export function calculateIndividualStaffContribution(
   staff: Staff,
   category: WorkCategory,
   staffTaskCounts: Map<string, number>,
-  grapeVariety?: string
+  grapeVariety?: string,
+  options: StaffContributionOptions = {}
 ): number {
   const relevantSkill = WORK_CATEGORY_INFO[category].skill;
 
@@ -112,6 +117,10 @@ export function calculateIndividualStaffContribution(
 
   // Calculate staff contribution: workforce × effective skill level
   let staffContribution = staff.workforce * effectiveSkill;
+
+  if (category === WorkCategory.ADMINISTRATION_AND_RESEARCH && options.researchSkillMultiplier) {
+    staffContribution *= Math.max(1, options.researchSkillMultiplier);
+  }
 
   // Apply grape variety experience bonus if applicable
   // Formula: contribution × (normalizeXP(grapeXP) + 1)
@@ -159,14 +168,15 @@ export function calculateStaffWorkContribution(
   assignedStaff: Staff[],
   category: WorkCategory,
   staffTaskCounts: Map<string, number>,
-  grapeVariety?: string
+  grapeVariety?: string,
+  options: StaffContributionOptions = {}
 ): number {
   if (assignedStaff.length === 0) return 0;
 
   let totalIndividualWork = 0;
 
   for (const staff of assignedStaff) {
-    totalIndividualWork += calculateIndividualStaffContribution(staff, category, staffTaskCounts, grapeVariety);
+    totalIndividualWork += calculateIndividualStaffContribution(staff, category, staffTaskCounts, grapeVariety, options);
   }
 
   // Apply team size efficiency factor with diminishing returns
@@ -194,9 +204,10 @@ export function calculateEstimatedWeeks(
   category: WorkCategory,
   staffTaskCounts: Map<string, number>,
   remainingWork: number,
-  grapeVariety?: string
+  grapeVariety?: string,
+  options: StaffContributionOptions = {}
 ): number {
-  const workPerWeek = calculateStaffWorkContribution(assignedStaff, category, staffTaskCounts, grapeVariety);
+  const workPerWeek = calculateStaffWorkContribution(assignedStaff, category, staffTaskCounts, grapeVariety, options);
 
   if (workPerWeek <= 0) return 0;
 
