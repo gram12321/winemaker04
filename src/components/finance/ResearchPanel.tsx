@@ -1,85 +1,369 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  CheckCircle2,
-  ChevronDown,
-  CircleDot,
-  Clock3,
-  GitBranch,
-  LockKeyhole,
-  Play,
-  Route,
-} from 'lucide-react';
-import {
-  Badge,
-  Button,
-} from '@/components/ui';
+import { type ComponentType, useEffect, useMemo, useState } from 'react';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import { Beaker, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
-import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchProject, type ResearchUnlock } from '@/lib/constants/researchConstants';
 import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
+import { calculateResearchCost, calculateResearchWork } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
-import { getCurrentPrestige } from '@/lib/services/core/gameState';
 import {
   type ResearchEligibilityContext,
+  getResearchPermanentEffects,
   getResearchRequirementReasons,
   isResearchProjectEligible,
   loadResearchEligibilityContext,
 } from '@/lib/services';
+import { formatNumber } from '@/lib/utils/utils';
 import {
-  RESEARCH_DISPLAY_GROUPS,
-  buildResearchFootprintSummary,
-  buildResearchPresentationRows,
-  formatResearchChainValue,
-  getUnlockTypeLabel,
-  getVisibleResearchProjects as deriveVisibleResearchProjects,
-  type ResearchDisplayGroup,
-  type ResearchDisplayGroupId,
-  type ResearchProjectPresentationRow,
-  type ResearchStatus,
-} from '@/lib/services/research/researchPresentationService';
-import { cn, formatNumber } from '@/lib/utils/utils';
+  CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
+  getBaseVineyardCapacityValue,
+  getChainedVineyardResearchUnlockType,
+  type VineyardCapUnlockType,
+} from '@/lib/services/vineyard/vineyardCapacityService';
+import { getCurrentPrestige } from '@/lib/services/core/gameState';
 
-export { getVisibleResearchProjects } from '@/lib/services/research/researchPresentationService';
+const CHAINED_RESEARCH_UNLOCK_TYPES = new Set<string>(['staff_limit', ...CHAINED_VINEYARD_CAP_UNLOCK_TYPES]);
+const BASE_STAFF_LIMIT = 2;
+
+type ResearchStatus = 'available' | 'in-progress' | 'completed' | 'locked';
+type ViewMode = 'focus' | 'full';
+type SortMode = 'recommended' | 'cost' | 'work' | 'complexity';
+type GroupId = 'governance' | 'capacity' | 'technology' | 'commercial' | 'varietal';
+type GroupTab = 'all' | GroupId;
+
+interface GroupDefinition {
+  id: GroupId;
+  title: string;
+  description: string;
+  icon: ComponentType<{ className?: string }>;
+  theme: {
+    border: string;
+    background: string;
+    accent: string;
+    soft: string;
+  };
+}
 
 interface ResearchPanelProps {
   bypassGates?: boolean;
   view?: 'catalog' | 'footprint' | 'both';
 }
 
-interface GroupStats {
-  total: number;
-  completed: number;
-  available: number;
-  inProgress: number;
+interface ResearchCardModel {
+  project: ResearchProject;
+  status: ResearchStatus;
+  lockReason: string;
+  totalWork: number;
+  totalCost: number;
+  chainType: string | null;
+  impactSummary: {
+    primary: string;
+    additionalCount: number;
+  };
 }
 
-const STATUS_ORDER: Record<ResearchStatus, number> = {
-  'in-progress': 0,
-  available: 1,
-  locked: 2,
-  completed: 3,
-};
+const GROUPS: GroupDefinition[] = [
+  {
+    id: 'governance',
+    title: 'Governance Foundations',
+    description: 'Administrative baseline, grants, and foundational operating projects.',
+    icon: Landmark,
+    theme: {
+      border: 'border-sky-200',
+      background: 'bg-sky-50/60',
+      accent: 'text-sky-800',
+      soft: 'text-sky-700',
+    },
+  },
+  {
+    id: 'capacity',
+    title: 'Capacity Progression',
+    description: 'Staff and vineyard scaling ladders with chained progression frontiers.',
+    icon: Compass,
+    theme: {
+      border: 'border-emerald-200',
+      background: 'bg-emerald-50/60',
+      accent: 'text-emerald-800',
+      soft: 'text-emerald-700',
+    },
+  },
+  {
+    id: 'technology',
+    title: 'Technology Systems',
+    description: 'Process and vineyard technology unlocks that alter long-term capability.',
+    icon: FlaskConical,
+    theme: {
+      border: 'border-violet-200',
+      background: 'bg-violet-50/60',
+      accent: 'text-violet-800',
+      soft: 'text-violet-700',
+    },
+  },
+  {
+    id: 'commercial',
+    title: 'Commercial Channels',
+    description: 'Market access, contract channels, and buyer progression pipelines.',
+    icon: Network,
+    theme: {
+      border: 'border-amber-200',
+      background: 'bg-amber-50/70',
+      accent: 'text-amber-800',
+      soft: 'text-amber-700',
+    },
+  },
+  {
+    id: 'varietal',
+    title: 'Varietal Catalog',
+    description: 'Grape variety research with complexity-driven progression pacing.',
+    icon: Grape,
+    theme: {
+      border: 'border-rose-200',
+      background: 'bg-rose-50/70',
+      accent: 'text-rose-800',
+      soft: 'text-rose-700',
+    },
+  },
+];
 
-const GROUP_ORDER = new Map<ResearchDisplayGroupId, number>(
-  RESEARCH_DISPLAY_GROUPS.map((group, index) => [group.id, index])
-);
+function getChainedResearchUnlockType(project: ResearchProject): string | null {
+  const vineyardChainType = getChainedVineyardResearchUnlockType(project);
+  if (vineyardChainType) {
+    return vineyardChainType;
+  }
 
-const PROJECT_ORDER = new Map<string, number>(
-  RESEARCH_PROJECTS.map((project, index) => [project.id, index])
-);
+  const chainedUnlock = project.unlocks?.find((unlock) => CHAINED_RESEARCH_UNLOCK_TYPES.has(unlock.type));
+  return chainedUnlock?.type ?? null;
+}
+
+function getCurrentChainLimit(chainType: string, projects: ResearchProject[], completedResearch: Set<string>): number | null {
+  if (chainType === 'staff_limit') {
+    let currentLimit = BASE_STAFF_LIMIT;
+    for (const project of projects) {
+      if (!completedResearch.has(project.id)) {
+        continue;
+      }
+
+      const unlock = project.unlocks?.find((candidate) => candidate.type === 'staff_limit' && typeof candidate.value === 'number');
+      if (unlock && typeof unlock.value === 'number') {
+        currentLimit = Math.max(currentLimit, unlock.value);
+      }
+    }
+    return currentLimit;
+  }
+
+  if (CHAINED_VINEYARD_CAP_UNLOCK_TYPES.has(chainType as VineyardCapUnlockType)) {
+    let currentLimit = getBaseVineyardCapacityValue(chainType as VineyardCapUnlockType);
+    for (const project of projects) {
+      if (!completedResearch.has(project.id)) {
+        continue;
+      }
+
+      const unlock = project.unlocks?.find((candidate) => candidate.type === chainType && typeof candidate.value === 'number');
+      if (unlock && typeof unlock.value === 'number') {
+        currentLimit = Math.max(currentLimit, unlock.value);
+      }
+    }
+    return currentLimit;
+  }
+
+  return null;
+}
+
+export function getVisibleResearchProjects(
+  projects: ResearchProject[],
+  completedResearch: Set<string>,
+  activeResearch: Set<string>,
+  bypassGates = false
+): ResearchProject[] {
+  if (bypassGates) {
+    return projects;
+  }
+
+  const chainFrontierByType = new Map<string, string>();
+  const currentChainLimitByType = new Map<string, number | null>();
+
+  for (const project of projects) {
+    const chainType = getChainedResearchUnlockType(project);
+    if (!chainType || currentChainLimitByType.has(chainType)) {
+      continue;
+    }
+
+    currentChainLimitByType.set(chainType, getCurrentChainLimit(chainType, projects, completedResearch));
+  }
+
+  for (const project of projects) {
+    const chainType = getChainedResearchUnlockType(project);
+    if (!chainType || chainFrontierByType.has(chainType) || completedResearch.has(project.id)) {
+      continue;
+    }
+
+    if (activeResearch.has(project.id)) {
+      chainFrontierByType.set(chainType, project.id);
+      continue;
+    }
+
+    const currentLimit = currentChainLimitByType.get(chainType);
+    const unlock = project.unlocks?.find((candidate) => candidate.type === chainType && typeof candidate.value === 'number');
+    if (currentLimit !== undefined && currentLimit !== null && unlock && typeof unlock.value === 'number' && unlock.value <= currentLimit) {
+      continue;
+    }
+
+    chainFrontierByType.set(chainType, project.id);
+  }
+
+  return projects.filter((project) => {
+    const chainType = getChainedResearchUnlockType(project);
+    if (!chainType) {
+      return true;
+    }
+
+    if (completedResearch.has(project.id) || activeResearch.has(project.id)) {
+      return true;
+    }
+
+    return chainFrontierByType.get(chainType) === project.id;
+  });
+}
+
+function getStatusBadgeVariant(status: ResearchStatus): 'secondary' | 'outline' | 'default' {
+  if (status === 'completed') return 'default';
+  if (status === 'locked') return 'outline';
+  return 'secondary';
+}
+
+function toUnlockLabel(unlock: ResearchUnlock): string {
+  if (unlock.displayName) {
+    return unlock.displayName;
+  }
+
+  switch (unlock.type) {
+    case 'staff_limit':
+      return `Staff cap ${unlock.value}`;
+    case 'vineyard_size':
+      return `Vineyard size ${unlock.value} ha`;
+    case 'total_vineyard_hectares':
+      return `Total vineyard area ${unlock.value} ha`;
+    case 'vineyard_count':
+      return `Vineyard count ${unlock.value}`;
+    case 'contract_type':
+      return `Contract type ${unlock.value}`;
+    case 'grape':
+      return `Grape ${unlock.value}`;
+    case 'fermentation_technology':
+      return `Fermentation ${unlock.value}`;
+    case 'grape_buyer_slots':
+      return `Buyer slots ${unlock.value}`;
+    case 'grape_buyer_limit_multiplier':
+      return `Buyer hard limit x${unlock.value}`;
+    case 'grape_buyer_multiplier_bonus':
+      return `Buyer multiplier +${unlock.value}`;
+    case 'grape_buyer_country_access':
+      return `Buyer access ${unlock.value}`;
+    case 'wine_feature':
+      return `Wine feature ${unlock.value}`;
+    default:
+      return `${unlock.type} ${String(unlock.value)}`;
+  }
+}
+
+function toReadableToken(raw: string): string {
+  return raw
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function readableChainType(chainType: string | null): string {
+  if (!chainType) return '';
+  return toReadableToken(chainType);
+}
+
+function buildImpactSummary(project: ResearchProject): { primary: string; additionalCount: number } {
+  const unlockLabels = (project.unlocks || []).map((unlock) => toUnlockLabel(unlock));
+  const effectLabels = (project.permanentEffects || []).map((effect) => effect.description || effect.kind);
+  const allLabels = [...unlockLabels, ...effectLabels];
+
+  if (allLabels.length > 0) {
+    return {
+      primary: allLabels[0],
+      additionalCount: Math.max(0, allLabels.length - 1),
+    };
+  }
+
+  return {
+    primary: project.benefits[0] || 'Research capability upgrade',
+    additionalCount: Math.max(0, project.benefits.length - 1),
+  };
+}
+
+function projectGroup(project: ResearchProject): GroupId {
+  const unlockTypes = new Set((project.unlocks || []).map((unlock) => unlock.type));
+
+  if (unlockTypes.has('grape')) {
+    return 'varietal';
+  }
+
+  if (
+    unlockTypes.has('contract_type') ||
+    unlockTypes.has('grape_buyer_slots') ||
+    unlockTypes.has('grape_buyer_limit_multiplier') ||
+    unlockTypes.has('grape_buyer_multiplier_bonus') ||
+    unlockTypes.has('grape_buyer_country_access') ||
+    project.category === 'marketing'
+  ) {
+    return 'commercial';
+  }
+
+  if (
+    unlockTypes.has('staff_limit') ||
+    unlockTypes.has('vineyard_size') ||
+    unlockTypes.has('total_vineyard_hectares') ||
+    unlockTypes.has('vineyard_count') ||
+    project.category === 'staff' ||
+    project.category === 'efficiency'
+  ) {
+    return 'capacity';
+  }
+
+  if (project.category === 'technology' || project.category === 'agriculture') {
+    return 'technology';
+  }
+
+  return 'governance';
+}
 
 export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPanelProps) {
   const [activeResearch, setActiveResearch] = useState<Set<string>>(new Set());
   const [completedResearch, setCompletedResearch] = useState<Set<string>>(new Set());
+  const [completedResearchOrder, setCompletedResearchOrder] = useState<string[]>([]);
   const [currentPrestige, setCurrentPrestige] = useState<number>(0);
   const [eligibilityContext, setEligibilityContext] = useState<ResearchEligibilityContext | null>(null);
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
-  const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
-  const [scrollTargetProjectId, setScrollTargetProjectId] = useState<string | null>(null);
-  const [startingProjectId, setStartingProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [expandedProjectId, setExpandedProjectId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<GroupTab>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('focus');
+  const [sortMode, setSortMode] = useState<SortMode>('recommended');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | ResearchStatus>('all');
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [permanentEffectsSummary, setPermanentEffectsSummary] = useState<{
+    vineyardHealthDecayMultiplier: number;
+    activeEffects: Array<{ projectId: string; projectTitle: string; description: string; kind: string }>;
+  }>({
+    vineyardHealthDecayMultiplier: 1,
+    activeEffects: [],
+  });
 
   const { subscribe } = useGameUpdates();
+
+  const groupById = useMemo(() => {
+    const map = new Map<GroupId, GroupDefinition>();
+    for (const group of GROUPS) {
+      map.set(group.id, group);
+    }
+    return map;
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -98,49 +382,21 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
       isMounted = false;
       unsubscribe();
     };
+    // Subscribe identity is stable from hook and needed for real-time updates.
   }, [subscribe]);
 
-  useEffect(() => {
-    if (!highlightedProjectId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setHighlightedProjectId(current => current === highlightedProjectId ? null : current);
-    }, 1800);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [highlightedProjectId]);
-
-  useEffect(() => {
-    if (!scrollTargetProjectId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      document.getElementById(getResearchRowDomId(scrollTargetProjectId))?.scrollIntoView({
-        block: 'center',
-        behavior: 'smooth',
-      });
-      setScrollTargetProjectId(null);
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [scrollTargetProjectId]);
-
   const loadResearchStatus = async () => {
-    const [activities, completedIds, prestige] = await Promise.all([
+    const [activities, completedIds, prestige, effects] = await Promise.all([
       getAllActivities(),
       getUnlockedResearchIds(),
       getCurrentPrestige(),
+      getResearchPermanentEffects(),
     ]);
 
-    const researchActivities = activities.filter(
-      activity => activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH
-    );
+    const researchActivities = activities.filter((activity) => activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH);
 
     const active = new Set<string>();
-    researchActivities.forEach(activity => {
+    researchActivities.forEach((activity) => {
       const researchId = activity.params?.researchId;
       if (researchId && activity.status === 'active') {
         active.add(researchId as string);
@@ -148,817 +404,669 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
     });
 
     const completedSet = new Set(completedIds);
+    const context = await loadResearchEligibilityContext(prestige, completedSet);
+
     setActiveResearch(active);
     setCompletedResearch(completedSet);
+    setCompletedResearchOrder(completedIds);
     setCurrentPrestige(prestige);
-    setEligibilityContext(await loadResearchEligibilityContext(prestige, completedSet));
+    setEligibilityContext(context);
+    setPermanentEffectsSummary(effects);
   };
 
-  const allRows = useMemo(
-    () => buildResearchPresentationRows(RESEARCH_PROJECTS, RESEARCH_PROJECTS),
-    []
-  );
-
-  const statusByProjectId = useMemo(() => {
-    const context = getEligibilityContextFallback(currentPrestige, completedResearch, eligibilityContext);
-
-    return new Map(
-      allRows.map(row => {
-        const status = getResearchStatus(row.project, {
-          activeResearch,
-          bypassGates,
-          completedResearch,
-          context,
-        });
-        return [row.project.id, status] as const;
-      })
-    );
-  }, [activeResearch, allRows, bypassGates, completedResearch, currentPrestige, eligibilityContext]);
-
-  const lockReasonByProjectId = useMemo(() => {
-    const context = getEligibilityContextFallback(currentPrestige, completedResearch, eligibilityContext);
-    const reasons = new Map<string, string>();
-
-    for (const row of allRows) {
-      if (statusByProjectId.get(row.project.id) === 'locked') {
-        reasons.set(row.project.id, getLockReason(row.project, context));
-      }
-    }
-
-    return reasons;
-  }, [allRows, completedResearch, currentPrestige, eligibilityContext, statusByProjectId]);
-
-  const footprint = useMemo(
-    () => buildResearchFootprintSummary({
-      projects: RESEARCH_PROJECTS,
-      completedResearch,
-      activeResearch,
-    }),
-    [activeResearch, completedResearch]
-  );
-
-  const visibleRows = useMemo(() => {
-    const visibleIds = new Set(
-      deriveVisibleResearchProjects(RESEARCH_PROJECTS, completedResearch, activeResearch, bypassGates)
-        .map(project => project.id)
-    );
-
-    return allRows
-      .filter(row => visibleIds.has(row.project.id))
-      .sort((left, right) => compareRecommended(left, right, statusByProjectId));
-  }, [activeResearch, allRows, bypassGates, completedResearch, statusByProjectId]);
-
-  const groupedRows = useMemo(() => (
-    RESEARCH_DISPLAY_GROUPS
-      .map(group => ({
-        group,
-        rows: visibleRows.filter(row => row.group.id === group.id),
-      }))
-      .filter(group => group.rows.length > 0)
-  ), [visibleRows]);
-
-  const groupStatsById = useMemo(() => {
-    const stats = new Map<ResearchDisplayGroupId, GroupStats>();
-
-    for (const group of RESEARCH_DISPLAY_GROUPS) {
-      const groupRows = allRows.filter(row => row.group.id === group.id);
-      stats.set(group.id, {
-        total: groupRows.length,
-        completed: groupRows.filter(row => statusByProjectId.get(row.project.id) === 'completed').length,
-        available: groupRows.filter(row => statusByProjectId.get(row.project.id) === 'available').length,
-        inProgress: groupRows.filter(row => statusByProjectId.get(row.project.id) === 'in-progress').length,
-      });
-    }
-
-    return stats;
-  }, [allRows, statusByProjectId]);
-
   const handleStartResearch = async (project: ResearchProject) => {
-    const status = statusByProjectId.get(project.id);
-    if (status === 'in-progress' || status === 'completed' || status === 'locked') {
+    if (activeResearch.has(project.id) || completedResearch.has(project.id)) {
       return;
     }
 
-    setStartingProjectId(project.id);
-    try {
-      await getResearchUpgradeFeature().workflow.startResearch(project.id);
-      await loadResearchStatus();
-    } finally {
-      setStartingProjectId(null);
-    }
+    await getResearchUpgradeFeature().workflow.startResearch(project.id);
+    await loadResearchStatus();
   };
 
-  const toggleExpanded = (projectId: string) => {
-    setExpandedProjectIds(previous => {
-      const next = new Set(previous);
-      if (next.has(projectId)) {
-        next.delete(projectId);
-      } else {
-        next.add(projectId);
+  const getResearchStatus = (project: ResearchProject): ResearchStatus => {
+    if (completedResearch.has(project.id)) return 'completed';
+    if (activeResearch.has(project.id)) return 'in-progress';
+
+    if (!bypassGates) {
+      const context =
+        eligibilityContext || {
+          currentPrestige,
+          completedResearch,
+          companyValue: Number.MAX_SAFE_INTEGER,
+          maxBuyerLoyaltyLevel: 3 as const,
+          unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map((id) => id)),
+        };
+
+      if (!isResearchProjectEligible(project, context)) {
+        return 'locked';
       }
-      return next;
+    }
+
+    return 'available';
+  };
+
+  const getLockReason = (project: ResearchProject): string => {
+    const context =
+      eligibilityContext || {
+        currentPrestige,
+        completedResearch,
+        companyValue: Number.MAX_SAFE_INTEGER,
+        maxBuyerLoyaltyLevel: 3 as const,
+        unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map((id) => id)),
+      };
+
+    const reasons = getResearchRequirementReasons(project, context).map((reason) => {
+      if (reason.startsWith('Complete prerequisite research: ')) {
+        const rawIds = reason.replace('Complete prerequisite research: ', '').split(', ').filter(Boolean);
+        const missingTitles = rawIds.map((id) => RESEARCH_PROJECTS.find((candidate) => candidate.id === id)?.title ?? id);
+        return `Complete first: ${missingTitles.join(', ')}`;
+      }
+      return reason;
     });
+
+    return reasons.join(' | ');
   };
 
-  const jumpToProject = (projectId: string) => {
-    setExpandedProjectIds(previous => new Set(previous).add(projectId));
-    setHighlightedProjectId(projectId);
-    setScrollTargetProjectId(projectId);
-  };
+  const projectModels = useMemo(() => {
+    const models = RESEARCH_PROJECTS.map((project) => {
+      const status = getResearchStatus(project);
+      const lockReason = status === 'locked' ? getLockReason(project) : '';
+      const { totalWork } = calculateResearchWork(project.id);
+      const totalCost = calculateResearchCost(project.id);
 
-  return (
-    <div className="flex flex-col gap-5">
-      {view !== 'catalog' && <ResearchFootprintOverview footprint={footprint} />}
+      return {
+        project,
+        status,
+        lockReason,
+        totalWork,
+        totalCost,
+        chainType: getChainedResearchUnlockType(project),
+        impactSummary: buildImpactSummary(project),
+      } as ResearchCardModel;
+    });
 
-      {view !== 'footprint' && (groupedRows.length > 0 ? (
-        <div className="flex flex-col gap-5">
-          {groupedRows.map(({ group, rows }) => (
-            <ResearchGroupSection
-              key={group.id}
-              group={group}
-              rows={rows}
-              stats={groupStatsById.get(group.id)}
-              expandedProjectIds={expandedProjectIds}
-              highlightedProjectId={highlightedProjectId}
-              lockReasonByProjectId={lockReasonByProjectId}
-              statusByProjectId={statusByProjectId}
-              startingProjectId={startingProjectId}
-              onJumpToProject={jumpToProject}
-              onStartResearch={handleStartResearch}
-              onToggleExpanded={toggleExpanded}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-          No research projects are currently visible.
-        </div>
-      ))}
-    </div>
+    return models;
+    // Computed each render from current state; safe due moderate catalog size.
+  }, [activeResearch, completedResearch, currentPrestige, eligibilityContext, bypassGates]);
+
+  const unlockFootprint = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    for (const model of projectModels) {
+      if (model.status !== 'completed') continue;
+      for (const unlock of model.project.unlocks || []) {
+        const label = toReadableToken(unlock.type);
+        counts.set(label, (counts.get(label) || 0) + 1);
+      }
+    }
+
+    return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [projectModels]);
+
+  const groupedModels = useMemo(() => {
+    const byGroup = new Map<GroupId, ResearchCardModel[]>();
+    for (const group of GROUPS) {
+      byGroup.set(group.id, []);
+    }
+
+    for (const model of projectModels) {
+      byGroup.get(projectGroup(model.project))?.push(model);
+    }
+
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const applySort = (models: ResearchCardModel[]): ResearchCardModel[] => {
+      if (sortMode === 'recommended') {
+        return models;
+      }
+
+      const sorted = [...models];
+      sorted.sort((a, b) => {
+        if (sortMode === 'cost') return a.totalCost - b.totalCost;
+        if (sortMode === 'work') return a.totalWork - b.totalWork;
+        return a.project.complexity - b.project.complexity;
+      });
+      return sorted;
+    };
+
+    const filtered = new Map<GroupId, ResearchCardModel[]>();
+
+    for (const group of GROUPS) {
+      const groupModels = byGroup.get(group.id) || [];
+      const visibleBase =
+        viewMode === 'focus'
+          ? getVisibleResearchProjects(
+              groupModels.map((model) => model.project),
+              completedResearch,
+              activeResearch,
+              bypassGates
+            )
+          : groupModels.map((model) => model.project);
+
+      const visibleIds = new Set(visibleBase.map((project) => project.id));
+
+      const next = groupModels.filter((model) => {
+        if (!visibleIds.has(model.project.id)) return false;
+
+        if (hideCompleted && model.status === 'completed') {
+          return false;
+        }
+
+        if (statusFilter !== 'all' && model.status !== statusFilter) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const searchable = [
+          model.project.title,
+          model.project.id,
+          model.project.description,
+          model.impactSummary.primary,
+          ...(model.project.benefits || []),
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return searchable.includes(normalizedSearch);
+      });
+
+      filtered.set(group.id, applySort(next));
+    }
+
+    return filtered;
+  }, [
+    projectModels,
+    viewMode,
+    completedResearch,
+    activeResearch,
+    bypassGates,
+    hideCompleted,
+    statusFilter,
+    searchTerm,
+    sortMode,
+  ]);
+
+  const allVisibleModels = useMemo(() => {
+    const list: ResearchCardModel[] = [];
+    const targetGroups = activeTab === 'all' ? GROUPS.map((group) => group.id) : [activeTab];
+    for (const groupId of targetGroups) {
+      list.push(...(groupedModels.get(groupId) || []));
+    }
+    return list;
+  }, [groupedModels, activeTab]);
+
+  useEffect(() => {
+    if (!allVisibleModels.length) {
+      setSelectedProjectId('');
+      return;
+    }
+
+    const exists = allVisibleModels.some((model) => model.project.id === selectedProjectId);
+    if (!exists) {
+      setSelectedProjectId(allVisibleModels[0].project.id);
+    }
+  }, [allVisibleModels, selectedProjectId]);
+
+  const selectedModel = useMemo(
+    () => allVisibleModels.find((model) => model.project.id === selectedProjectId) || null,
+    [allVisibleModels, selectedProjectId]
   );
-}
 
-function ResearchFootprintOverview(props: {
-  footprint: ReturnType<typeof buildResearchFootprintSummary>;
-}) {
-  const { footprint } = props;
+  const selectedDependents = useMemo(() => {
+    if (!selectedModel) return [];
+
+    return RESEARCH_PROJECTS.filter((project) => (project.prerequisites || []).includes(selectedModel.project.id));
+  }, [selectedModel]);
+
+  const selectedPrerequisites = useMemo(() => {
+    if (!selectedModel) return [];
+
+    const prerequisiteIds = selectedModel.project.prerequisites || [];
+    return prerequisiteIds
+      .map((id) => RESEARCH_PROJECTS.find((project) => project.id === id))
+      .filter((project): project is ResearchProject => Boolean(project));
+  }, [selectedModel]);
+
+  const selectedChainContext = useMemo(() => {
+    if (!selectedModel?.chainType) return null;
+
+    const chainProjects = RESEARCH_PROJECTS.filter((project) => getChainedResearchUnlockType(project) === selectedModel.chainType)
+      .map((project) => {
+        const unlock = project.unlocks?.find((candidate) => candidate.type === selectedModel.chainType && typeof candidate.value === 'number');
+        return {
+          project,
+          value: unlock && typeof unlock.value === 'number' ? unlock.value : Number.MAX_SAFE_INTEGER,
+        };
+      })
+      .sort((a, b) => a.value - b.value)
+      .map((entry) => entry.project);
+
+    const currentIndex = chainProjects.findIndex((project) => project.id === selectedModel.project.id);
+    const previous = currentIndex > 0 ? chainProjects[currentIndex - 1] : null;
+    const next = currentIndex >= 0 && currentIndex < chainProjects.length - 1 ? chainProjects[currentIndex + 1] : null;
+
+    return {
+      chainType: selectedModel.chainType,
+      previous,
+      next,
+      size: chainProjects.length,
+    };
+  }, [selectedModel]);
+
+  const recentImpactModels = useMemo(() => {
+    const ordered = completedResearchOrder.length ? completedResearchOrder : Array.from(completedResearch);
+    const recentIds = [...ordered].slice(-5).reverse();
+
+    return recentIds
+      .map((id) => projectModels.find((model) => model.project.id === id))
+      .filter((model): model is ResearchCardModel => Boolean(model));
+  }, [completedResearchOrder, completedResearch, projectModels]);
+
+  const groupStats = useMemo(() => {
+    const map = new Map<GroupId, { total: number; completed: number; frontier: number }>();
+
+    for (const group of GROUPS) {
+      const models = groupedModels.get(group.id) || [];
+      map.set(group.id, {
+        total: models.length,
+        completed: models.filter((model) => model.status === 'completed').length,
+        frontier: models.filter((model) => model.status === 'available' || model.status === 'in-progress').length,
+      });
+    }
+
+    return map;
+  }, [groupedModels]);
+
+  const renderRow = (model: ResearchCardModel) => {
+    const isSelected = selectedProjectId === model.project.id;
+    const isExpanded = expandedProjectId === model.project.id;
+    const isDisabled = model.status === 'completed' || model.status === 'in-progress' || model.status === 'locked';
+    const group = groupById.get(projectGroup(model.project));
+    const GroupIcon = group?.icon || Beaker;
+
+    return (
+      <div
+        key={model.project.id}
+        className={`rounded-md border px-3 py-2 transition-colors ${
+          isSelected ? `${group?.theme.border || 'border-slate-900'} ${group?.theme.background || 'bg-slate-50'}` : 'border-slate-200 bg-white'
+        } ${model.status === 'completed' ? 'opacity-80' : ''}`}
+        onClick={() => setSelectedProjectId(model.project.id)}
+      >
+        <div className="grid gap-2 md:grid-cols-[1.5fr_2fr_1fr_auto] md:items-center">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <GroupIcon className={`h-3.5 w-3.5 ${group?.theme.soft || 'text-slate-600'}`} />
+              <Badge variant={getStatusBadgeVariant(model.status)} className="text-[10px] uppercase tracking-wide">
+                {model.status === 'in-progress' ? 'In Progress' : model.status}
+              </Badge>
+              <p className="truncate text-xs font-semibold text-slate-900">{model.project.title}</p>
+            </div>
+            <p className="mt-1 truncate text-[11px] text-slate-600">{model.project.description}</p>
+          </div>
+
+          <div className="min-w-0">
+            <p className="truncate text-[11px] text-slate-700">
+              {model.impactSummary.primary}
+              {model.impactSummary.additionalCount > 0 ? ` (+${model.impactSummary.additionalCount})` : ''}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              {typeof model.project.requiredPrestige === 'number' ? (
+                <Badge variant="outline" className="text-[10px]">P{model.project.requiredPrestige}</Badge>
+              ) : null}
+              {model.project.prerequisites?.length ? (
+                <Badge variant="outline" className="text-[10px]">Prereq {model.project.prerequisites.length}</Badge>
+              ) : null}
+              {typeof model.project.requiredCompanyValue === 'number' ? (
+                <Badge variant="outline" className="text-[10px]">Value gate</Badge>
+              ) : null}
+              {typeof model.project.requiredBuyerLoyaltyLevel === 'number' ? (
+                <Badge variant="outline" className="text-[10px]">Loyalty gate</Badge>
+              ) : null}
+              {model.chainType ? (
+                <Badge variant="secondary" className="text-[10px]">{readableChainType(model.chainType)}</Badge>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-700 md:text-right">
+            <div>{formatNumber(model.totalCost, { currency: true, decimals: 0 })}</div>
+            <div>{model.totalWork.toLocaleString()} work</div>
+            <div>C{model.project.complexity}/10</div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleStartResearch(model.project);
+              }}
+              disabled={isDisabled}
+              className="h-7 px-2 text-[11px]"
+            >
+              {model.status === 'completed'
+                ? 'Completed'
+                : model.status === 'in-progress'
+                ? 'Running'
+                : model.status === 'locked'
+                ? 'Locked'
+                : 'Start'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-[11px]"
+              onClick={(event) => {
+                event.stopPropagation();
+                setExpandedProjectId(isExpanded ? '' : model.project.id);
+              }}
+            >
+              {isExpanded ? 'Less' : 'More'}
+            </Button>
+          </div>
+        </div>
+
+        {isExpanded ? (
+          <div className="mt-2 space-y-2 border-t border-slate-200 pt-2 text-[11px] text-slate-700">
+            <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-slate-600">Project Ref: {model.project.id}</div>
+            {model.status === 'locked' && model.lockReason ? (
+              <div className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{model.lockReason}</div>
+            ) : null}
+            {model.project.benefits.length ? (
+              <div>
+                <p className="font-semibold text-slate-800">Benefits</p>
+                <ul className="mt-1 space-y-0.5">
+                  {model.project.benefits.map((benefit, index) => (
+                    <li key={`${model.project.id}-benefit-${index}`}>- {benefit}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const showFootprintCard = view !== 'catalog';
+  const showProgressionCard = view !== 'footprint';
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Route className="size-4 text-muted-foreground" />
-            Research Footprint
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Completed unlocks, active work, and current ladder caps from the research catalog.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{footprint.statusCounts.completed} completed</Badge>
-          <Badge variant="outline">{footprint.statusCounts.inProgress} in progress</Badge>
-          <Badge variant="outline">{footprint.statusCounts.remaining} remaining</Badge>
-        </div>
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-[1.1fr_1.2fr_1fr]">
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Unlock Footprint</div>
-          <div className="flex flex-wrap gap-2">
-            {footprint.unlockTypeSummaries.length > 0 ? (
-              footprint.unlockTypeSummaries.map(summary => (
-                <Badge key={summary.type} variant={summary.completedCount > 0 ? 'secondary' : 'outline'}>
-                  {summary.label}: {summary.completedCount}/{summary.totalCount}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">No unlock payloads in catalog.</span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Capacity Ladders</div>
-          <div className="grid gap-2">
-            {footprint.ladderSummaries.map(summary => {
-              const progressPercent = summary.totalSteps > 0
-                ? Math.round((summary.completedSteps / summary.totalSteps) * 100)
-                : 0;
-
-              return (
-                <div key={summary.chainType} className="grid gap-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span className="font-medium">{summary.label}</span>
-                    <span className="text-muted-foreground">
-                      Current {summary.currentLabel}
-                      {summary.activeProjectTitle ? ` | active: ${summary.activeProjectTitle}` : ''}
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${progressPercent}%` }} />
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {summary.completedSteps}/{summary.totalSteps} steps
-                    {summary.nextProjectTitle ? ` | next: ${summary.nextProjectTitle}` : ' | ladder complete'}
-                  </div>
-                </div>
-              );
-            })}
+    <div className="space-y-4">
+      {showFootprintCard ? (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Research Effects and Unlock Footprint</CardTitle>
+          <CardDescription className="text-xs">
+            Mechanical overview of active research effects and completed unlock distribution.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">Health decay x{permanentEffectsSummary.vineyardHealthDecayMultiplier.toFixed(2)}</Badge>
+            <Badge variant="outline">Completed {completedResearch.size}</Badge>
+            <Badge variant="outline">Active {activeResearch.size}</Badge>
           </div>
 
-          <div className="mt-3 flex flex-col gap-2">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Chained Research</div>
-            <div className="grid gap-2">
-              {footprint.chainSummaries.length > 0 ? (
-                footprint.chainSummaries.map(summary => {
-                  const progressPercent = summary.totalSteps > 0
-                    ? Math.round((summary.completedSteps / summary.totalSteps) * 100)
-                    : 0;
-
-                  return (
-                    <div key={summary.chainId} className="grid gap-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span className="font-medium">{summary.label}</span>
-                        <span className="text-muted-foreground">
-                          Current {summary.currentProjectTitle ?? 'starting up'}
-                          {summary.activeProjectTitle ? ` | active: ${summary.activeProjectTitle}` : ''}
-                        </span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${progressPercent}%` }} />
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {summary.completedSteps}/{summary.totalSteps} steps
-                        {summary.nextProjectTitle ? ` | next: ${summary.nextProjectTitle}` : ' | chain complete'}
-                      </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div>
+              <p className="mb-1 font-semibold text-slate-800">Active Permanent Effects</p>
+              {permanentEffectsSummary.activeEffects.length ? (
+                <div className="space-y-1">
+                  {permanentEffectsSummary.activeEffects.map((effect) => (
+                    <div key={`${effect.projectId}-${effect.kind}`} className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-900">
+                      {effect.projectTitle}: {effect.description}
                     </div>
-                  );
-                })
+                  ))}
+                </div>
               ) : (
-                <span className="text-xs text-muted-foreground">No prerequisite chains in catalog yet.</span>
+                <div className="rounded border border-dashed border-slate-300 px-2 py-1 text-slate-500">No permanent effects active.</div>
+              )}
+            </div>
+
+            <div>
+              <p className="mb-1 font-semibold text-slate-800">Unlock Footprint</p>
+              {unlockFootprint.length ? (
+                <div className="flex flex-wrap gap-1">
+                  {unlockFootprint.map(([label, count]) => (
+                    <Badge key={label} variant="outline" className="text-[10px]">
+                      {label}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded border border-dashed border-slate-300 px-2 py-1 text-slate-500">No unlocks completed yet.</div>
+              )}
+
+              <p className="mb-1 mt-3 font-semibold text-slate-800">Recent Impact Feed</p>
+              {recentImpactModels.length ? (
+                <div className="space-y-1">
+                  {recentImpactModels.map((model) => (
+                    <div key={`recent-${model.project.id}`} className="rounded border border-slate-200 px-2 py-1">
+                      {model.project.title}: {model.impactSummary.primary}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded border border-dashed border-slate-300 px-2 py-1 text-slate-500">No recent research completions.</div>
               )}
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+      ) : null}
 
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Completed Impacts</div>
-          {footprint.completedImpactLines.length > 0 ? (
-            <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
-              {footprint.completedImpactLines.slice(-4).map(line => (
-                <li key={line} className="rounded-md bg-background px-2 py-1">
-                  {line}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="rounded-md border border-dashed bg-background px-3 py-2 text-xs text-muted-foreground">
-              Completed research impacts will appear here.
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+      {showProgressionCard ? (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Research Progression</CardTitle>
+          <CardDescription className="text-xs">
+            Tabbed compact progression with dependency path map, readable labels, and chain flow context.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as GroupTab)}>
+            <TabsList className="mb-3 grid h-auto grid-cols-3 gap-1 p-1 lg:grid-cols-6">
+              <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+              {GROUPS.map((group) => {
+                const Icon = group.icon;
+                return (
+                  <TabsTrigger key={`tab-${group.id}`} value={group.id} className="flex items-center gap-1 text-xs">
+                    <Icon className="h-3.5 w-3.5" />
+                    {group.title.split(' ')[0]}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
 
-function ResearchGroupSection(props: {
-  group: ResearchDisplayGroup;
-  rows: ResearchProjectPresentationRow[];
-  stats?: GroupStats;
-  expandedProjectIds: Set<string>;
-  highlightedProjectId: string | null;
-  lockReasonByProjectId: Map<string, string>;
-  statusByProjectId: Map<string, ResearchStatus>;
-  startingProjectId: string | null;
-  onJumpToProject: (projectId: string) => void;
-  onStartResearch: (project: ResearchProject) => void;
-  onToggleExpanded: (projectId: string) => void;
-}) {
-  const frontierCount = props.rows.filter(row => {
-    const status = props.statusByProjectId.get(row.project.id);
-    return status === 'available' || status === 'in-progress';
-  }).length;
-
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">{props.group.title}</h3>
-          <p className="text-xs text-muted-foreground">{props.group.description}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">
-            {props.stats?.completed ?? 0}/{props.stats?.total ?? props.rows.length} completed
-          </Badge>
-          <Badge variant="outline">{frontierCount} frontier</Badge>
-          {(props.stats?.inProgress ?? 0) > 0 && (
-            <Badge variant="outline">{props.stats?.inProgress} active</Badge>
-          )}
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border bg-background">
-        <div className="hidden border-b bg-muted/40 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(7rem,0.45fr)_minmax(7.5rem,0.45fr)] lg:gap-3">
-          <div>Project</div>
-          <div>Gates</div>
-          <div>Impact</div>
-          <div>Cost / Work</div>
-          <div>Action</div>
-        </div>
-        <div className="divide-y">
-          {props.rows.map(row => (
-            <ResearchProjectRow
-              key={row.project.id}
-              row={row}
-              isHighlighted={props.highlightedProjectId === row.project.id}
-              isExpanded={props.expandedProjectIds.has(row.project.id)}
-              lockReason={props.lockReasonByProjectId.get(row.project.id) || ''}
-              status={props.statusByProjectId.get(row.project.id) || 'available'}
-              startingProjectId={props.startingProjectId}
-              onJumpToProject={props.onJumpToProject}
-              onStartResearch={props.onStartResearch}
-              onToggleExpanded={props.onToggleExpanded}
+            <TabsContent value={activeTab} className="space-y-3">
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-6">
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search project or effect"
+              className="h-8 text-xs lg:col-span-2"
             />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
-function ResearchProjectRow(props: {
-  row: ResearchProjectPresentationRow;
-  status: ResearchStatus;
-  isHighlighted: boolean;
-  isExpanded: boolean;
-  lockReason: string;
-  startingProjectId: string | null;
-  onJumpToProject: (projectId: string) => void;
-  onStartResearch: (project: ResearchProject) => void;
-  onToggleExpanded: (projectId: string) => void;
-}) {
-  const { row, status } = props;
-  const isDisabled = status === 'in-progress' || status === 'completed' || status === 'locked' || props.startingProjectId === row.project.id;
-  const chainLabel = row.chainType && row.chainUnlockValue !== null
-    ? `${row.chainLabel} -> ${formatResearchChainValue(row.chainType, row.chainUnlockValue)}`
-    : null;
-  const isCompactCompleted = status === 'completed' && !props.isExpanded;
-  const rowGridClass = 'lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(7rem,0.45fr)_minmax(7.5rem,0.45fr)]';
-
-  if (isCompactCompleted) {
-    return (
-      <div
-        id={getResearchRowDomId(row.project.id)}
-        className={cn(
-          'grid gap-2 px-3 py-2 text-xs transition-colors lg:grid lg:items-center',
-          rowGridClass,
-          props.isHighlighted ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/10'
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <Button
-            aria-expanded={props.isExpanded}
-            aria-label={`Expand ${row.project.title}`}
-            variant="ghost"
-            size="icon"
-            onClick={() => props.onToggleExpanded(row.project.id)}
-            className="size-7 shrink-0"
-          >
-            <ChevronDown data-icon="inline-start" />
-          </Button>
-          <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0">
-            <div className="truncate font-medium text-foreground">{row.project.title}</div>
-            <div className="truncate text-muted-foreground">{row.primaryImpact}</div>
-          </div>
-        </div>
-        <div className="hidden min-w-0 text-muted-foreground lg:block">
-          {row.chainLabel || 'Completed research'}
-        </div>
-        <div className="hidden min-w-0 truncate text-muted-foreground lg:block">
-          {row.unlocksNextLinks.length ? `Unlocks next: ${formatTitleList(row.unlocksNextTitles)}` : 'No direct follow-up'}
-        </div>
-        <div className="hidden text-muted-foreground lg:block">Done</div>
-        <div className="flex lg:justify-end">
-          <Badge variant="outline">Done</Badge>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      id={getResearchRowDomId(row.project.id)}
-      className={cn(
-        'grid gap-3 px-3 py-3 transition-colors lg:grid lg:items-center',
-        rowGridClass,
-        props.isHighlighted && 'bg-primary/10 ring-1 ring-primary/30',
-        status === 'completed' && !props.isHighlighted && 'bg-muted/10 text-muted-foreground',
-        status === 'locked' && 'bg-muted/10'
-      )}
-    >
-      <div className="flex min-w-0 items-start gap-3">
-        <Button
-          aria-expanded={props.isExpanded}
-          aria-label={`${props.isExpanded ? 'Collapse' : 'Expand'} ${row.project.title}`}
-          variant="ghost"
-          size="icon"
-          onClick={() => props.onToggleExpanded(row.project.id)}
-          className="mt-0.5 shrink-0"
-        >
-          <ChevronDown
-            data-icon="inline-start"
-            className={cn('transition-transform', props.isExpanded && 'rotate-180')}
-          />
-        </Button>
-
-        <div className="mt-1 shrink-0">
-          <StatusIcon status={status} />
-        </div>
-
-        {renderProjectIcon(row.project)}
-
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h4 className="break-words text-sm font-semibold text-foreground">{row.project.title}</h4>
-            <StatusBadge status={status} />
-          </div>
-          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{row.project.description}</p>
-          {chainLabel && (
-            <Badge variant="outline" className="mt-2">
-              <GitBranch className="mr-1 size-3" />
-              {chainLabel}
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-2 text-xs">
-        <div className="flex flex-wrap gap-1.5">
-          {row.gateChips.length > 0 ? (
-            row.gateChips.map(chip => (
-              <Badge key={`${row.project.id}-${chip.type}`} variant="outline">
-                {chip.label}
-              </Badge>
-            ))
-          ) : (
-            <Badge variant="secondary">Open</Badge>
-          )}
-        </div>
-        <div className="flex flex-col gap-1 text-muted-foreground">
-          {row.prerequisiteLinks.length ? (
-            <span className="min-w-0">
-              Depends:{' '}
-              <DependencyInlineLinks
-                links={row.prerequisiteLinks}
-                maxVisible={1}
-                onJumpToProject={props.onJumpToProject}
-              />
-            </span>
-          ) : (
-            <span>No prerequisites</span>
-          )}
-          {row.unlocksNextLinks.length ? (
-            <span className="min-w-0">
-              Unlocks next:{' '}
-              <DependencyInlineLinks
-                links={row.unlocksNextLinks}
-                maxVisible={1}
-                onJumpToProject={props.onJumpToProject}
-              />
-            </span>
-          ) : (
-            <span>No direct follow-up</span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-2 text-xs">
-        <div className="font-medium text-foreground">{row.primaryImpact}</div>
-        <div className="flex flex-wrap gap-1.5">
-          {row.unlockTypeLabels.length > 0 ? (
-            row.unlockTypeLabels.map(label => (
-              <Badge key={`${row.project.id}-${label}`} variant="secondary">
-                {label}
-              </Badge>
-            ))
-          ) : (
-            <Badge variant="outline">Permanent / knowledge</Badge>
-          )}
-        </div>
-      </div>
-
-      <div className="grid min-w-0 grid-cols-3 gap-2 text-xs lg:grid-cols-1">
-        <Metric label="Cost" value={formatNumber(row.totalCost, { currency: true, decimals: 0 })} />
-        <Metric label="Work" value={row.totalWork.toLocaleString()} />
-        <Metric label="Cx" value={`${row.project.complexity}/10`} />
-      </div>
-
-      <div className="flex min-w-0 lg:justify-end">
-        <Button
-          size="sm"
-          variant={status === 'available' ? 'default' : 'outline'}
-          disabled={isDisabled}
-          onClick={() => props.onStartResearch(row.project)}
-          className="w-full min-w-0 px-2"
-        >
-          {getActionIcon(status, props.startingProjectId === row.project.id)}
-          {getActionLabel(status, props.startingProjectId === row.project.id)}
-        </Button>
-      </div>
-
-      {props.isExpanded && (
-        <div className="rounded-md border bg-muted/20 p-3 lg:col-span-5">
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
-            <div className="flex flex-col gap-2">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Benefits</div>
-              <ul className="flex flex-col gap-1 text-sm">
-                {row.project.benefits.map(benefit => (
-                  <li key={benefit} className="flex gap-2">
-                    <span className="mt-1 size-1.5 rounded-full bg-primary" />
-                    <span>{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dependency Path</div>
-              <div className="flex flex-col gap-2 text-sm">
-                <DependencyLine
-                  label="Depends on"
-                  links={row.prerequisiteLinks}
-                  fallback="No prerequisites"
-                  onJumpToProject={props.onJumpToProject}
-                />
-                <DependencyLine
-                  label="Current node"
-                  links={[{ id: row.project.id, title: row.project.title }]}
-                  onJumpToProject={props.onJumpToProject}
-                />
-                <DependencyLine
-                  label="Unlocks next"
-                  links={row.unlocksNextLinks}
-                  fallback="No direct follow-up"
-                  onJumpToProject={props.onJumpToProject}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payload</div>
-              <div className="flex flex-col gap-2 text-sm">
-                {(row.project.unlocks || []).length > 0 ? (
-                  row.project.unlocks?.map((unlock, index) => (
-                    <div key={`${row.project.id}-unlock-${index}`} className="rounded-md bg-background px-2 py-1">
-                      <span className="font-medium">{getUnlockTypeLabel(unlock.type)}:</span>{' '}
-                      {unlock.displayName || String(unlock.value)}
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-md bg-background px-2 py-1">No unlock payload.</div>
-                )}
-                {(row.project.permanentEffects || []).map((effect, index) => (
-                  <div key={`${row.project.id}-effect-${index}`} className="rounded-md bg-background px-2 py-1">
-                    <span className="font-medium">Permanent effect:</span> {effect.description || effect.kind}
-                  </div>
-                ))}
-                {props.lockReason && (
-                  <div className="rounded-md border bg-background px-2 py-1 text-muted-foreground">
-                    <span className="font-medium text-foreground">Locked:</span> {props.lockReason}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Metric(props: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-muted/40 px-2 py-1">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{props.label}</div>
-      <div className="font-semibold text-foreground">{props.value}</div>
-    </div>
-  );
-}
-
-function DependencyInlineLinks(props: {
-  links: { id: string; title: string }[];
-  maxVisible?: number;
-  onJumpToProject: (projectId: string) => void;
-}) {
-  const visibleLinks = props.maxVisible ? props.links.slice(0, props.maxVisible) : props.links;
-  const remainingCount = props.maxVisible ? Math.max(0, props.links.length - props.maxVisible) : 0;
-
-  return (
-    <>
-      {visibleLinks.map((link, index) => (
-        <span key={link.id}>
-          {index > 0 ? ', ' : ''}
-          <button
-            type="button"
-            onClick={() => props.onJumpToProject(link.id)}
-            className="font-medium text-primary underline-offset-2 hover:underline"
-          >
-            {link.title}
-          </button>
-        </span>
-      ))}
-      {remainingCount > 0 && <span> +{remainingCount}</span>}
-    </>
-  );
-}
-
-function DependencyLine(props: {
-  label: string;
-  links: { id: string; title: string }[];
-  fallback?: string;
-  onJumpToProject: (projectId: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{props.label}</span>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {props.links.length > 0 ? (
-          props.links.map(link => (
-            <Button
-              key={link.id}
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => props.onJumpToProject(link.id)}
-              className="h-7 px-2 text-xs"
+            <select
+              value={viewMode}
+              onChange={(event) => setViewMode(event.target.value as ViewMode)}
+              className="h-8 rounded border border-slate-300 px-2 text-xs"
             >
-              {link.title}
-            </Button>
-          ))
-        ) : (
-          <span className="text-xs text-muted-foreground">{props.fallback}</span>
-        )}
-      </div>
+              <option value="focus">Focus</option>
+              <option value="full">Full tree</option>
+            </select>
+
+            <select
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              className="h-8 rounded border border-slate-300 px-2 text-xs"
+            >
+              <option value="recommended">Recommended sort</option>
+              <option value="cost">Cost asc</option>
+              <option value="work">Work asc</option>
+              <option value="complexity">Complexity asc</option>
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as 'all' | ResearchStatus)}
+              className="h-8 rounded border border-slate-300 px-2 text-xs"
+            >
+              <option value="all">All statuses</option>
+              <option value="available">Available</option>
+              <option value="in-progress">In progress</option>
+              <option value="locked">Locked</option>
+              <option value="completed">Completed</option>
+            </select>
+
+            <label className="flex h-8 items-center gap-2 rounded border border-slate-300 px-2 text-xs">
+              <input
+                type="checkbox"
+                checked={hideCompleted}
+                onChange={(event) => setHideCompleted(event.target.checked)}
+              />
+              Hide completed
+            </label>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[2.3fr_1fr]">
+            <div className="space-y-3">
+              {(activeTab === 'all' ? GROUPS : GROUPS.filter((group) => group.id === activeTab)).map((group) => {
+                const models = groupedModels.get(group.id) || [];
+                const stats = groupStats.get(group.id) || { total: 0, completed: 0, frontier: 0 };
+                const Icon = group.icon;
+
+                return (
+                  <div key={group.id} className={`rounded-lg border p-3 ${group.theme.border} ${group.theme.background}`}>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className={`flex items-center gap-1 text-sm font-semibold ${group.theme.accent}`}>
+                          <Icon className="h-4 w-4" />
+                          {group.title}
+                        </p>
+                        <p className={`text-[11px] ${group.theme.soft}`}>{group.description}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-1 text-[10px]">
+                        <Badge variant="outline">Visible {stats.total}</Badge>
+                        <Badge variant="outline">Completed {stats.completed}</Badge>
+                        <Badge variant="outline">Frontier {stats.frontier}</Badge>
+                      </div>
+                    </div>
+
+                    {models.length ? (
+                      <div className="space-y-1.5">{models.map((model) => renderRow(model))}</div>
+                    ) : (
+                      <div className="rounded border border-dashed border-slate-300 bg-white/80 px-2 py-3 text-[11px] text-slate-500">
+                        No projects match the current filters.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <Card className="h-fit lg:sticky lg:top-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Dependency Side Map</CardTitle>
+                <CardDescription className="text-xs">Selected project dependency context and chain neighbors.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-xs">
+                {selectedModel ? (
+                  <>
+                    <div>
+                      <p className="font-semibold text-slate-900">{selectedModel.project.title}</p>
+                      <p className="text-slate-600">{selectedModel.project.description}</p>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <p className="mb-1 font-semibold text-slate-800">Dependency Path</p>
+                      {selectedPrerequisites.length ? (
+                        <div className="mb-2 rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                          {selectedPrerequisites.map((project) => project.title).join(' -> ')}{' -> '}{selectedModel.project.title}
+                        </div>
+                      ) : (
+                        <div className="mb-2 rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                          Start Node{' -> '}{selectedModel.project.title}
+                        </div>
+                      )}
+
+                      <p className="mb-1 font-semibold text-slate-800">Prerequisites</p>
+                      {selectedPrerequisites.length ? (
+                        <div className="space-y-1">
+                          {selectedPrerequisites.map((project) => {
+                            const status = completedResearch.has(project.id) ? 'completed' : 'missing';
+                            return (
+                              <div key={`prereq-${project.id}`} className="rounded border border-slate-200 px-2 py-1">
+                                {project.title} ({status})
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-slate-500">No prerequisites.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 font-semibold text-slate-800">Unlocks Next</p>
+                      {selectedDependents.length ? (
+                        <div className="mb-2 rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                          {selectedModel.project.title}{' -> '}{selectedDependents.slice(0, 3).map((project) => project.title).join(' -> ')}
+                        </div>
+                      ) : null}
+                      {selectedDependents.length ? (
+                        <div className="space-y-1">
+                          {selectedDependents.slice(0, 6).map((project) => (
+                            <div key={`dependent-${project.id}`} className="rounded border border-slate-200 px-2 py-1">
+                              {project.title}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-slate-500">No direct dependents.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 font-semibold text-slate-800">Chain Context</p>
+                      {selectedChainContext ? (
+                        <div className="space-y-1">
+                          <div className="rounded border border-slate-200 px-2 py-1">Chain: {readableChainType(selectedChainContext.chainType)}</div>
+                          <div className="rounded border border-slate-200 px-2 py-1">Steps in chain: {selectedChainContext.size}</div>
+                          <div className="rounded border border-slate-200 px-2 py-1">
+                            Previous: {selectedChainContext.previous ? selectedChainContext.previous.title : 'none'}
+                          </div>
+                          <div className="rounded border border-slate-200 px-2 py-1">
+                            Next: {selectedChainContext.next ? selectedChainContext.next.title : 'none'}
+                          </div>
+                          <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                            {(selectedChainContext.previous ? `${selectedChainContext.previous.title} -> ` : '') +
+                              selectedModel.project.title +
+                              (selectedChainContext.next ? ` -> ${selectedChainContext.next.title}` : '')}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-slate-500">Not part of a numeric ladder chain.</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-slate-500">Select a project to inspect dependencies.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+      ) : null}
     </div>
   );
-}
-
-function StatusIcon({ status }: { status: ResearchStatus }) {
-  switch (status) {
-    case 'completed':
-      return <CheckCircle2 className="size-4 text-muted-foreground" />;
-    case 'in-progress':
-      return <Clock3 className="size-4 animate-pulse text-sky-600" />;
-    case 'locked':
-      return <LockKeyhole className="size-4 text-amber-600" />;
-    case 'available':
-      return <CircleDot className="size-4 text-primary" />;
-    default:
-      return null;
-  }
-}
-
-function StatusBadge({ status }: { status: ResearchStatus }) {
-  switch (status) {
-    case 'completed':
-      return <Badge variant="secondary">Completed</Badge>;
-    case 'in-progress':
-      return <Badge variant="secondary">In progress</Badge>;
-    case 'locked':
-      return <Badge variant="outline">Locked</Badge>;
-    case 'available':
-      return <Badge>Available</Badge>;
-    default:
-      return null;
-  }
-}
-
-function getActionIcon(status: ResearchStatus, isStarting: boolean) {
-  if (isStarting || status === 'in-progress') {
-    return <Clock3 data-icon="inline-start" />;
-  }
-
-  if (status === 'completed') {
-    return <CheckCircle2 data-icon="inline-start" />;
-  }
-
-  if (status === 'locked') {
-    return <LockKeyhole data-icon="inline-start" />;
-  }
-
-  return <Play data-icon="inline-start" />;
-}
-
-function getActionLabel(status: ResearchStatus, isStarting: boolean): string {
-  if (isStarting) {
-    return 'Starting...';
-  }
-
-  switch (status) {
-    case 'completed':
-      return 'Completed';
-    case 'in-progress':
-      return 'In Progress';
-    case 'locked':
-      return 'Locked';
-    case 'available':
-      return 'Start';
-    default:
-      return 'Start';
-  }
-}
-
-function renderProjectIcon(project: ResearchProject) {
-  if (!project.icon) {
-    return null;
-  }
-
-  if (project.icon.startsWith('/') || project.icon.startsWith('http')) {
-    return (
-      <img
-        src={project.icon}
-        alt=""
-        className="mt-0.5 size-8 shrink-0 object-contain"
-        onError={(event) => {
-          event.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  }
-
-  return <div className="mt-1 w-6 shrink-0 text-center text-lg leading-none">{project.icon}</div>;
-}
-
-function compareRecommended(
-  left: ResearchProjectPresentationRow,
-  right: ResearchProjectPresentationRow,
-  statusByProjectId: Map<string, ResearchStatus>
-): number {
-  const leftGroup = GROUP_ORDER.get(left.group.id) ?? Number.MAX_SAFE_INTEGER;
-  const rightGroup = GROUP_ORDER.get(right.group.id) ?? Number.MAX_SAFE_INTEGER;
-  if (leftGroup !== rightGroup) {
-    return leftGroup - rightGroup;
-  }
-
-  const leftStatus = STATUS_ORDER[statusByProjectId.get(left.project.id) || 'available'];
-  const rightStatus = STATUS_ORDER[statusByProjectId.get(right.project.id) || 'available'];
-  if (leftStatus !== rightStatus) {
-    return leftStatus - rightStatus;
-  }
-
-  return (PROJECT_ORDER.get(left.project.id) ?? 0) - (PROJECT_ORDER.get(right.project.id) ?? 0);
-}
-
-function getResearchStatus(project: ResearchProject, input: {
-  activeResearch: Set<string>;
-  bypassGates: boolean;
-  completedResearch: Set<string>;
-  context: ResearchEligibilityContext;
-}): ResearchStatus {
-  if (input.completedResearch.has(project.id)) return 'completed';
-  if (input.activeResearch.has(project.id)) return 'in-progress';
-  if (!input.bypassGates && !isResearchProjectEligible(project, input.context)) return 'locked';
-  return 'available';
-}
-
-function getLockReason(project: ResearchProject, context: ResearchEligibilityContext): string {
-  const reasons = getResearchRequirementReasons(project, context).map(reason => {
-    if (reason.startsWith('Complete prerequisite research: ')) {
-      const rawIds = reason.replace('Complete prerequisite research: ', '').split(', ').filter(Boolean);
-      const missingTitles = rawIds.map(id => RESEARCH_PROJECTS.find(candidate => candidate.id === id)?.title ?? id);
-      return `Complete first: ${missingTitles.join(', ')}`;
-    }
-    return reason;
-  });
-
-  return reasons.join(' | ');
-}
-
-function getEligibilityContextFallback(
-  currentPrestige: number,
-  completedResearch: Set<string>,
-  eligibilityContext: ResearchEligibilityContext | null
-): ResearchEligibilityContext {
-  return eligibilityContext || {
-    currentPrestige,
-    completedResearch,
-    companyValue: Number.MAX_SAFE_INTEGER,
-    maxBuyerLoyaltyLevel: 3 as const,
-    unlockedAchievementIds: new Set(RESEARCH_PROJECTS.flatMap(project => project.requiredAchievementIds || [])),
-  };
-}
-
-function getResearchRowDomId(projectId: string): string {
-  return `research-row-${projectId}`;
-}
-
-function formatTitleList(values: string[]): string {
-  if (values.length <= 1) {
-    return values[0] || '';
-  }
-
-  return `${values[0]} +${values.length - 1}`;
 }
