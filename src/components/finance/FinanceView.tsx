@@ -16,6 +16,7 @@ import {
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { StaffWageSummary } from './StaffWageSummary';
+import { FounderPanel } from './FounderPanel';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { loadTransactions } from '@/lib/services';
@@ -308,6 +309,7 @@ export default function FinanceView() {
           <div className="space-y-6">
             <IncomeBalanceView period={activePeriod} filters={periodFilters} />
             <StaffWageSummary />
+            <FounderPanel />
           </div>
         </TabsContent>
         <TabsContent value="cashflow">

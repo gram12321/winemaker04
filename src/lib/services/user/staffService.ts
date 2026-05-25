@@ -13,6 +13,10 @@ import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
 import { getRandomFromArray } from '@/lib/utils';
+import { calculateCompanyValue } from '../finance/financeService';
+import { FOUNDER_BUYOUT_PERCENT_OF_ASSETS } from '@/lib/constants/staffConstants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
+import { addTransaction } from '../finance/financeService';
 
 /**
  * Calculate effective skill level combining base skill and experience.
@@ -104,7 +108,8 @@ export function createStaff(
   skillLevel: number = 0.3,
   specializations: string[] = [],
   nationality: Nationality = 'United States',
-  skills?: StaffSkills
+  skills?: StaffSkills,
+  isFounder: boolean = false
 ): Staff {
   const gameState = getGameState();
   const calculatedSkills = skills || generateRandomSkills(skillLevel, specializations);
@@ -116,7 +121,9 @@ export function createStaff(
     skillLevel,
     specializations,
     skills: calculatedSkills,
-    wage: calculateWage(calculatedSkills, specializations),
+    // Founders earn profit share instead of wages; wage is set to 0
+    wage: isFounder ? 0 : calculateWage(calculatedSkills, specializations),
+    isFounder,
     workforce: 50,
     hireDate: {
       week: gameState.week || 1,
@@ -209,6 +216,57 @@ export async function initializeStaffSystem(): Promise<void> {
   } catch (error) {
     console.error('Error initializing staff system:', error);
     updateGameState({ staff: [] });
+  }
+}
+
+/**
+ * Buy out a founder: converts them to a salaried employee.
+ * Cost = FOUNDER_BUYOUT_PERCENT_OF_ASSETS * total company asset value.
+ * Returns an error string on failure, or null on success.
+ */
+export async function buyoutFounder(staffId: string): Promise<string | null> {
+  try {
+    const staff = await getStaffById(staffId);
+    if (!staff) return 'Staff member not found.';
+    if (!staff.isFounder) return 'This staff member is not a founder.';
+
+    const companyValue = await calculateCompanyValue();
+    const buyoutCost = Math.round(companyValue * FOUNDER_BUYOUT_PERCENT_OF_ASSETS);
+
+    const gameState = getGameState();
+    if ((gameState.money ?? 0) < buyoutCost) {
+      return `Insufficient funds. Buyout costs ${buyoutCost.toLocaleString('en-EU', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} but you only have ${(gameState.money ?? 0).toLocaleString('en-EU', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}.`;
+    }
+
+    // Recalculate a proper salaried wage for the now-converted employee
+    const newWage = calculateWage(staff.skills, staff.specializations);
+
+    const updatedStaff: Staff = { ...staff, isFounder: false, wage: newWage };
+
+    // Persist the buyout cost as a capital-flow transaction
+    await addTransaction(
+      -buyoutCost,
+      `Founder buyout: ${staff.name}`,
+      TRANSACTION_CATEGORIES.FOUNDER_BUYOUT,
+      false
+    );
+
+    // Update DB + game state
+    await saveStaffToDb(updatedStaff);
+    const currentStaffList = getGameState().staff || [];
+    updateGameState({ staff: currentStaffList.map(s => s.id === staffId ? updatedStaff : s) });
+
+    await notificationService.addMessage(
+      `${staff.name} has been bought out for €${buyoutCost.toLocaleString()}. They are now a salaried employee earning €${newWage.toLocaleString()}/week.`,
+      'staffService.buyoutFounder',
+      'Founder Buyout',
+      NotificationCategory.FINANCE_AND_STAFF
+    );
+
+    return null; // success
+  } catch (error) {
+    console.error('Error buying out founder:', error);
+    return 'An unexpected error occurred during buyout.';
   }
 }
 

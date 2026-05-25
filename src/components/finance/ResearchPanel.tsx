@@ -8,27 +8,13 @@ import {
   LockKeyhole,
   Play,
   Route,
-  Search,
-  X,
 } from 'lucide-react';
 import {
   Badge,
   Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui';
 import { WorkCategory } from '@/lib/types/types';
-import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researchConstants';
 import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
@@ -49,7 +35,6 @@ import {
   getVisibleResearchProjects as deriveVisibleResearchProjects,
   type ResearchDisplayGroup,
   type ResearchDisplayGroupId,
-  type ResearchGateType,
   type ResearchProjectPresentationRow,
   type ResearchStatus,
 } from '@/lib/services/research/researchPresentationService';
@@ -57,13 +42,9 @@ import { cn, formatNumber } from '@/lib/utils/utils';
 
 export { getVisibleResearchProjects } from '@/lib/services/research/researchPresentationService';
 
-type ResearchPanelTab = 'active' | 'progression' | 'selection';
-type ResearchStatusFilter = 'all' | ResearchStatus;
-type ResearchGateFilter = 'all' | 'none' | ResearchGateType;
-type ResearchSortMode = 'recommended' | 'cost' | 'work' | 'complexity';
-
 interface ResearchPanelProps {
   bypassGates?: boolean;
+  view?: 'catalog' | 'footprint' | 'both';
 }
 
 interface GroupStats {
@@ -88,18 +69,11 @@ const PROJECT_ORDER = new Map<string, number>(
   RESEARCH_PROJECTS.map((project, index) => [project.id, index])
 );
 
-export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
+export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPanelProps) {
   const [activeResearch, setActiveResearch] = useState<Set<string>>(new Set());
   const [completedResearch, setCompletedResearch] = useState<Set<string>>(new Set());
   const [currentPrestige, setCurrentPrestige] = useState<number>(0);
   const [eligibilityContext, setEligibilityContext] = useState<ResearchEligibilityContext | null>(null);
-  const [activeTab, setActiveTab] = useState<ResearchPanelTab>('progression');
-  const [hideCompleted, setHideCompleted] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ResearchStatusFilter>('all');
-  const [gateFilter, setGateFilter] = useState<ResearchGateFilter>('all');
-  const [unlockFilter, setUnlockFilter] = useState<'all' | UnlockType>('all');
-  const [sortMode, setSortMode] = useState<ResearchSortMode>('recommended');
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
   const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
   const [scrollTargetProjectId, setScrollTargetProjectId] = useState<string | null>(null);
@@ -139,7 +113,7 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
   }, [highlightedProjectId]);
 
   useEffect(() => {
-    if (!scrollTargetProjectId || activeTab !== 'selection') {
+    if (!scrollTargetProjectId) {
       return;
     }
 
@@ -152,7 +126,7 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeTab, scrollTargetProjectId]);
+  }, [scrollTargetProjectId]);
 
   const loadResearchStatus = async () => {
     const [activities, completedIds, prestige] = await Promise.all([
@@ -223,89 +197,25 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
     [activeResearch, completedResearch]
   );
 
-  const availableUnlockTypes = useMemo(() => {
-    const types = new Set<UnlockType>();
-    for (const project of RESEARCH_PROJECTS) {
-      for (const unlock of project.unlocks || []) {
-        types.add(unlock.type);
-      }
-    }
-
-    return Array.from(types).sort((left, right) => getUnlockTypeLabel(left).localeCompare(getUnlockTypeLabel(right)));
-  }, []);
-
-  const baseRows = useMemo(() => {
-    if (activeTab === 'selection') {
-      return allRows;
-    }
-
+  const visibleRows = useMemo(() => {
     const visibleIds = new Set(
       deriveVisibleResearchProjects(RESEARCH_PROJECTS, completedResearch, activeResearch, bypassGates)
         .map(project => project.id)
     );
 
-    return allRows.filter(row => visibleIds.has(row.project.id));
-  }, [activeResearch, activeTab, allRows, bypassGates, completedResearch]);
-
-  const filteredRows = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    const rows = baseRows.filter(row => {
-      const status = statusByProjectId.get(row.project.id) || 'available';
-
-      if (activeTab === 'active' && status !== 'in-progress' && status !== 'available') {
-        return false;
-      }
-
-      if (hideCompleted && status === 'completed') {
-        return false;
-      }
-
-      if (statusFilter !== 'all' && status !== statusFilter) {
-        return false;
-      }
-
-      if (gateFilter === 'none' && row.gateChips.length > 0) {
-        return false;
-      }
-
-      if (gateFilter !== 'all' && gateFilter !== 'none' && !row.gateChips.some(chip => chip.type === gateFilter)) {
-        return false;
-      }
-
-      if (unlockFilter !== 'all' && !row.project.unlocks?.some(unlock => unlock.type === unlockFilter)) {
-        return false;
-      }
-
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      const searchableText = [
-        row.project.id,
-        row.project.title,
-        row.project.description,
-        row.primaryImpact,
-        ...row.project.benefits,
-        ...row.unlockTypeLabels,
-        ...row.prerequisiteTitles,
-        ...row.unlocksNextTitles,
-      ].join(' ').toLowerCase();
-
-      return searchableText.includes(normalizedSearch);
-    });
-
-    return [...rows].sort((left, right) => compareResearchRows(left, right, sortMode, statusByProjectId));
-  }, [activeTab, baseRows, gateFilter, hideCompleted, searchTerm, sortMode, statusByProjectId, statusFilter, unlockFilter]);
+    return allRows
+      .filter(row => visibleIds.has(row.project.id))
+      .sort((left, right) => compareRecommended(left, right, statusByProjectId));
+  }, [activeResearch, allRows, bypassGates, completedResearch, statusByProjectId]);
 
   const groupedRows = useMemo(() => (
     RESEARCH_DISPLAY_GROUPS
       .map(group => ({
         group,
-        rows: filteredRows.filter(row => row.group.id === group.id),
+        rows: visibleRows.filter(row => row.group.id === group.id),
       }))
       .filter(group => group.rows.length > 0)
-  ), [filteredRows]);
+  ), [visibleRows]);
 
   const groupStatsById = useMemo(() => {
     const stats = new Map<ResearchDisplayGroupId, GroupStats>();
@@ -350,24 +260,7 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
     });
   };
 
-  const resetFilters = () => {
-    setSearchTerm('');
-    setStatusFilter('all');
-    setGateFilter('all');
-    setUnlockFilter('all');
-    setSortMode('recommended');
-    setHideCompleted(false);
-    setActiveTab('progression');
-  };
-
   const jumpToProject = (projectId: string) => {
-    setActiveTab('selection');
-    setSearchTerm('');
-    setStatusFilter('all');
-    setGateFilter('all');
-    setUnlockFilter('all');
-    setSortMode('recommended');
-    setHideCompleted(false);
     setExpandedProjectIds(previous => new Set(previous).add(projectId));
     setHighlightedProjectId(projectId);
     setScrollTargetProjectId(projectId);
@@ -375,110 +268,9 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ResearchPanelTab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="progression">Progression</TabsTrigger>
-          <TabsTrigger value="selection">Selection</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {view !== 'catalog' && <ResearchFootprintOverview footprint={footprint} />}
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
-        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.3fr)_repeat(4,minmax(150px,0.7fr))]">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="research-search" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Search
-            </Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="research-search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Title, gate, unlock, benefit..."
-                className="pl-9"
-              />
-            </div>
-          </div>
-
-          <FilterSelect
-            id="research-status-filter"
-            label="Status"
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as ResearchStatusFilter)}
-            options={[
-              ['all', 'All statuses'],
-              ['available', 'Available'],
-              ['in-progress', 'In progress'],
-              ['locked', 'Locked'],
-              ['completed', 'Completed'],
-            ]}
-          />
-
-          <FilterSelect
-            id="research-gate-filter"
-            label="Gate"
-            value={gateFilter}
-            onValueChange={(value) => setGateFilter(value as ResearchGateFilter)}
-            options={[
-              ['all', 'All gates'],
-              ['none', 'No gates'],
-              ['prestige', 'Prestige'],
-              ['prerequisite', 'Prerequisite'],
-              ['company', 'Company value'],
-              ['loyalty', 'Buyer loyalty'],
-              ['achievement', 'Achievement'],
-            ]}
-          />
-
-          <FilterSelect
-            id="research-unlock-filter"
-            label="Unlock"
-            value={unlockFilter}
-            onValueChange={(value) => setUnlockFilter(value as 'all' | UnlockType)}
-            options={[
-              ['all', 'All unlocks'],
-              ...availableUnlockTypes.map(type => [type, getUnlockTypeLabel(type)] as const),
-            ]}
-          />
-
-          <FilterSelect
-            id="research-sort"
-            label="Sort"
-            value={sortMode}
-            onValueChange={(value) => setSortMode(value as ResearchSortMode)}
-            options={[
-              ['recommended', 'Recommended'],
-              ['cost', 'Cost'],
-              ['work', 'Work'],
-              ['complexity', 'Complexity'],
-            ]}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <SwitchControl
-              id="research-hide-completed"
-              checked={hideCompleted}
-              label="Hide completed"
-              onCheckedChange={setHideCompleted}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>{filteredRows.length} shown from {baseRows.length} {getTabScopeLabel(activeTab)} projects</span>
-            <Button variant="outline" size="sm" onClick={resetFilters}>
-              <X data-icon="inline-start" />
-              Reset
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <ResearchFootprintOverview footprint={footprint} />
-
-      {groupedRows.length > 0 ? (
+      {view !== 'footprint' && (groupedRows.length > 0 ? (
         <div className="flex flex-col gap-5">
           {groupedRows.map(({ group, rows }) => (
             <ResearchGroupSection
@@ -499,55 +291,9 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
         </div>
       ) : (
         <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-          No research projects match the current filters.
+          No research projects are currently visible.
         </div>
-      )}
-    </div>
-  );
-}
-
-function FilterSelect(props: {
-  id: string;
-  label: string;
-  value: string;
-  onValueChange: (value: string) => void;
-  options: readonly (readonly [string, string])[];
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={props.id} className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {props.label}
-      </Label>
-      <Select value={props.value} onValueChange={props.onValueChange}>
-        <SelectTrigger id={props.id}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {props.options.map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-function SwitchControl(props: {
-  id: string;
-  checked: boolean;
-  label: string;
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Switch id={props.id} checked={props.checked} onCheckedChange={props.onCheckedChange} />
-      <Label htmlFor={props.id} className="cursor-pointer text-sm">
-        {props.label}
-      </Label>
+      ))}
     </div>
   );
 }
@@ -619,6 +365,40 @@ function ResearchFootprintOverview(props: {
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Chained Research</div>
+            <div className="grid gap-2">
+              {footprint.chainSummaries.length > 0 ? (
+                footprint.chainSummaries.map(summary => {
+                  const progressPercent = summary.totalSteps > 0
+                    ? Math.round((summary.completedSteps / summary.totalSteps) * 100)
+                    : 0;
+
+                  return (
+                    <div key={summary.chainId} className="grid gap-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="font-medium">{summary.label}</span>
+                        <span className="text-muted-foreground">
+                          Current {summary.currentProjectTitle ?? 'starting up'}
+                          {summary.activeProjectTitle ? ` | active: ${summary.activeProjectTitle}` : ''}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${progressPercent}%` }} />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {summary.completedSteps}/{summary.totalSteps} steps
+                        {summary.nextProjectTitle ? ` | next: ${summary.nextProjectTitle}` : ' | chain complete'}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <span className="text-xs text-muted-foreground">No prerequisite chains in catalog yet.</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1112,27 +892,6 @@ function renderProjectIcon(project: ResearchProject) {
   return <div className="mt-1 w-6 shrink-0 text-center text-lg leading-none">{project.icon}</div>;
 }
 
-function compareResearchRows(
-  left: ResearchProjectPresentationRow,
-  right: ResearchProjectPresentationRow,
-  sortMode: ResearchSortMode,
-  statusByProjectId: Map<string, ResearchStatus>
-): number {
-  if (sortMode === 'cost') {
-    return left.totalCost - right.totalCost || compareRecommended(left, right, statusByProjectId);
-  }
-
-  if (sortMode === 'work') {
-    return left.totalWork - right.totalWork || compareRecommended(left, right, statusByProjectId);
-  }
-
-  if (sortMode === 'complexity') {
-    return left.project.complexity - right.project.complexity || compareRecommended(left, right, statusByProjectId);
-  }
-
-  return compareRecommended(left, right, statusByProjectId);
-}
-
 function compareRecommended(
   left: ResearchProjectPresentationRow,
   right: ResearchProjectPresentationRow,
@@ -1190,18 +949,6 @@ function getEligibilityContextFallback(
     maxBuyerLoyaltyLevel: 3 as const,
     unlockedAchievementIds: new Set(RESEARCH_PROJECTS.flatMap(project => project.requiredAchievementIds || [])),
   };
-}
-
-function getTabScopeLabel(tab: ResearchPanelTab): string {
-  if (tab === 'active') {
-    return 'active';
-  }
-
-  if (tab === 'selection') {
-    return 'catalog';
-  }
-
-  return 'progression';
 }
 
 function getResearchRowDomId(projectId: string): string {

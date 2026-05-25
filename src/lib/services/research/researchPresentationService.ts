@@ -116,6 +116,17 @@ export interface ResearchLadderSummary {
   activeProjectTitle: string | null;
 }
 
+export interface ResearchChainSummary {
+  chainId: string;
+  label: string;
+  projectIds: string[];
+  completedSteps: number;
+  totalSteps: number;
+  currentProjectTitle: string | null;
+  nextProjectTitle: string | null;
+  activeProjectTitle: string | null;
+}
+
 export interface ResearchFootprintSummary {
   statusCounts: {
     total: number;
@@ -125,6 +136,7 @@ export interface ResearchFootprintSummary {
   };
   unlockTypeSummaries: ResearchUnlockTypeSummary[];
   ladderSummaries: ResearchLadderSummary[];
+  chainSummaries: ResearchChainSummary[];
   completedImpactLines: string[];
 }
 
@@ -397,6 +409,7 @@ export function buildResearchFootprintSummary(input: {
     },
     unlockTypeSummaries: buildUnlockTypeSummaries(input.projects, input.completedResearch, input.activeResearch),
     ladderSummaries: buildLadderSummaries(input.projects, input.completedResearch, input.activeResearch),
+    chainSummaries: buildResearchChainSummaries(input.projects, input.completedResearch, input.activeResearch),
     completedImpactLines: completedProjects.slice(-6).map(project => `${project.title}: ${getPrimaryResearchImpact(project)}`),
   };
 }
@@ -480,6 +493,145 @@ function buildLadderSummaries(
       activeProjectTitle: activeProject?.title ?? null,
     };
   }).filter((summary): summary is ResearchLadderSummary => Boolean(summary));
+}
+
+function buildResearchChainSummaries(
+  projects: ResearchProject[],
+  completedResearch: Set<string>,
+  activeResearch: Set<string>
+): ResearchChainSummary[] {
+  const projectById = new Map(projects.map(project => [project.id, project] as const));
+  const adjacency = new Map<string, Set<string>>();
+
+  for (const project of projects) {
+    adjacency.set(project.id, new Set());
+  }
+
+  for (const project of projects) {
+    for (const prerequisiteId of project.prerequisites || []) {
+      if (!projectById.has(prerequisiteId)) {
+        continue;
+      }
+
+      adjacency.get(prerequisiteId)?.add(project.id);
+    }
+  }
+
+  const visited = new Set<string>();
+  const components: string[][] = [];
+
+  for (const project of projects) {
+    if (visited.has(project.id) || !(project.prerequisites?.length || adjacency.get(project.id)?.size)) {
+      continue;
+    }
+
+    const stack = [project.id];
+    const componentIds: string[] = [];
+    visited.add(project.id);
+
+    while (stack.length > 0) {
+      const currentId = stack.pop() as string;
+      componentIds.push(currentId);
+
+      const currentProject = projectById.get(currentId);
+      if (!currentProject) {
+        continue;
+      }
+
+      const relatedIds = new Set<string>([
+        ...(currentProject.prerequisites || []).filter(prerequisiteId => projectById.has(prerequisiteId)),
+        ...(Array.from(adjacency.get(currentId) || [])),
+      ]);
+
+      for (const relatedId of relatedIds) {
+        if (visited.has(relatedId)) {
+          continue;
+        }
+
+        visited.add(relatedId);
+        stack.push(relatedId);
+      }
+    }
+
+    components.push(componentIds);
+  }
+
+  return components
+    .map(componentIds => {
+      const componentProjects = componentIds
+        .map(id => projectById.get(id))
+        .filter((project): project is ResearchProject => Boolean(project))
+        .sort((left, right) => projects.indexOf(left) - projects.indexOf(right));
+
+      const componentSet = new Set(componentProjects.map(project => project.id));
+      const inDegree = new Map<string, number>();
+      const outgoing = new Map<string, Set<string>>();
+
+      for (const project of componentProjects) {
+        inDegree.set(project.id, 0);
+        outgoing.set(project.id, new Set());
+      }
+
+      for (const project of componentProjects) {
+        for (const prerequisiteId of project.prerequisites || []) {
+          if (!componentSet.has(prerequisiteId)) {
+            continue;
+          }
+
+          inDegree.set(project.id, (inDegree.get(project.id) || 0) + 1);
+          outgoing.get(prerequisiteId)?.add(project.id);
+        }
+      }
+
+      const orderedIds: string[] = [];
+      const availableIds = componentProjects
+        .filter(project => (inDegree.get(project.id) || 0) === 0)
+        .map(project => project.id)
+        .sort((left, right) => projects.findIndex(project => project.id === left) - projects.findIndex(project => project.id === right));
+
+      while (availableIds.length > 0) {
+        const currentId = availableIds.shift() as string;
+        orderedIds.push(currentId);
+
+        for (const nextId of outgoing.get(currentId) || []) {
+          const nextDegree = (inDegree.get(nextId) || 0) - 1;
+          inDegree.set(nextId, nextDegree);
+          if (nextDegree === 0) {
+            availableIds.push(nextId);
+            availableIds.sort((left, right) => projects.findIndex(project => project.id === left) - projects.findIndex(project => project.id === right));
+          }
+        }
+      }
+
+      if (orderedIds.length < 2) {
+        return null;
+      }
+
+      const orderedProjects = orderedIds
+        .map(id => projectById.get(id))
+        .filter((project): project is ResearchProject => Boolean(project));
+
+      const completedProjectTitles = orderedProjects.filter(project => completedResearch.has(project.id)).map(project => project.title);
+      const activeProject = orderedProjects.find(project => activeResearch.has(project.id)) || null;
+      const nextProject = orderedProjects.find(project => !completedResearch.has(project.id)) || null;
+      const chainLabelProject = orderedProjects.find(project => project.prerequisites?.length) || orderedProjects[0] || null;
+      const completedOrderedProjects = orderedProjects.filter(project => completedResearch.has(project.id));
+      const lastCompletedProject = completedOrderedProjects.length > 0
+        ? completedOrderedProjects[completedOrderedProjects.length - 1]
+        : null;
+
+      return {
+        chainId: chainLabelProject?.id ?? orderedProjects[0]!.id,
+        label: chainLabelProject?.title ?? orderedProjects[0]!.title,
+        projectIds: orderedProjects.map(project => project.id),
+        completedSteps: completedProjectTitles.length,
+        totalSteps: orderedProjects.length,
+        currentProjectTitle: activeProject?.title ?? lastCompletedProject?.title ?? nextProject?.title ?? null,
+        nextProjectTitle: nextProject?.title ?? null,
+        activeProjectTitle: activeProject?.title ?? null,
+      } satisfies ResearchChainSummary;
+    })
+    .filter((summary): summary is ResearchChainSummary => Boolean(summary));
 }
 
 function findNumericUnlock(project: ResearchProject, type: UnlockType): (ResearchUnlock & { value: number }) | null {

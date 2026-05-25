@@ -66,5 +66,10 @@ describe('research presentation service', () => {
         expect.objectContaining({ chainType: 'staff_limit', currentValue: 5, completedSteps: 2 }),
       ])
     );
+    expect(footprint.chainSummaries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Research Methodology' }),
+      ])
+    );
   });
 });

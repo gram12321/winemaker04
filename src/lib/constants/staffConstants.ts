@@ -12,6 +12,15 @@ export const BASE_WEEKLY_WAGE = 500;
 // Skill wage multiplier - how much extra wage per skill point
 export const SKILL_WAGE_MULTIPLIER = 1000;
 
+// ===== FOUNDER ECONOMY CONSTANTS =====
+
+// Percentage of yearly net profit each active founder receives as a Founder Return
+// Range 15–25 %; tunable here without touching service logic
+export const FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT = 20;
+
+// Cost to buy out a single founder, expressed as a fraction of total company asset value
+export const FOUNDER_BUYOUT_PERCENT_OF_ASSETS = 0.15;
+
 // ===== NATIONALITY CONSTANTS =====
 
 export const NATIONALITIES: Nationality[] = ['Italy', 'Germany', 'France', 'Spain', 'United States'];

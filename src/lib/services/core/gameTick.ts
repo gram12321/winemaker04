@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason, processYearlyFounderDistributions } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
@@ -200,6 +200,14 @@ const onNewYear = async (
 
   // Update vineyard vine yields
   await updateVineyardVineYields();
+
+  // Process Founder Return distributions for the year that just ended
+  try {
+    const staff = await getAllStaff();
+    await processYearlyFounderDistributions(staff, _previousYear);
+  } catch (error) {
+    console.error('Error processing yearly founder distributions:', error);
+  }
 
   // Run board/share yearly hooks (e.g. growth trend updates)
   try {

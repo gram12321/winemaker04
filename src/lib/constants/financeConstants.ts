@@ -42,6 +42,10 @@ export const TRANSACTION_CATEGORIES = {
   RESEARCH: 'Research',
   OTHER: 'Other',
 
+  // Founder categories
+  FOUNDER_RETURN: 'Founder Return',
+  FOUNDER_BUYOUT: 'Founder Buyout',
+
   // Loan categories
   LOAN_RECEIVED: 'Loan Received',
   LOAN_PAYMENT: 'Loan Payment',
@@ -65,6 +69,9 @@ export const CAPITAL_FLOW_TRANSACTION_CATEGORIES = new Set<string>([
   TRANSACTION_CATEGORIES.LOAN_PAYMENT,
   TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE,
   TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT,
+  // Founder distributions are profit-sharing capital flows, not P&L expenses
+  TRANSACTION_CATEGORIES.FOUNDER_RETURN,
+  TRANSACTION_CATEGORIES.FOUNDER_BUYOUT,
   ...CAPITALIZED_TRANSACTION_CATEGORIES
 ]);
 

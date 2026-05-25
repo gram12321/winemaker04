@@ -3,3 +3,4 @@ export { IncomeBalanceView } from './IncomeBalanceView';
 export { CashFlowView } from './CashFlowView';
 export { ResearchPanel } from './ResearchPanel';
 export { StaffWageSummary } from './StaffWageSummary';
+export { FounderPanel } from './FounderPanel';

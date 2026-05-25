@@ -27,6 +27,7 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         skill_level: staff.skillLevel,
         specializations: staff.specializations,
         wage: staff.wage,
+        is_founder: staff.isFounder ?? false,
         team_ids: staff.teamIds || [],
         skill_field: staff.skills.field,
         skill_winery: staff.skills.winery,
@@ -82,6 +83,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
       skillLevel: row.skill_level,
       specializations: row.specializations || [],
       wage: row.wage,
+      isFounder: row.is_founder ?? false,
       teamIds: row.team_ids || [],
       skills: {
         field: row.skill_field,

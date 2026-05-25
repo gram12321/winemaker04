@@ -800,7 +800,8 @@ export interface Staff {
   nationality: Nationality;
   skillLevel: number;  // 0-1 scale, overall skill level
   specializations: string[]; // Array of specialization keys (e.g., 'field', 'winery')
-  wage: number;        // Monthly wage in euros
+  wage: number;        // Monthly wage in euros (0 for founders — they earn profit share instead)
+  isFounder?: boolean; // True while the staff member is a founding partner; cleared on buyout
   teamIds: string[];   // Multiple team assignments (replaces single teamId)
   skills: StaffSkills;
   experience: Record<string, number>; // Experience points by category (e.g., 'skill:field', 'grape:Barbera')

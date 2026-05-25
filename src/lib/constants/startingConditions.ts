@@ -8,6 +8,7 @@ export interface StartingStaffMember {
   nationality: Nationality;
   skillLevel: number;
   specializations: string[];
+  isFounder?: boolean; // If true, staff starts as a founding partner (0 wages, profit share)
 }
 
 export interface StartingVineyardConfig {
@@ -74,14 +75,16 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Latosha',
         nationality: 'France',
         skillLevel: 0.5,
-        specializations: ['winery']
+        specializations: ['winery'],
+        isFounder: true
       },
       {
         firstName: 'Camille',
         lastName: 'Latosha',
         nationality: 'France',
         skillLevel: 0.5,
-        specializations: ['administrationAndResearch']
+        specializations: ['administrationAndResearch'],
+        isFounder: true
       }
     ],
     startingVineyard: {
@@ -129,14 +132,16 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'De Luca',
         nationality: 'Italy',
         skillLevel: 0.5,
-        specializations: ['winery']
+        specializations: ['winery'],
+        isFounder: true
       },
       {
         firstName: 'Bianca',
         lastName: 'De Luca',
         nationality: 'Italy',
         skillLevel: 0.5,
-        specializations: ['field']
+        specializations: ['field'],
+        isFounder: true
       }
     ],
     startingVineyard: {
@@ -184,28 +189,32 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.5,
-        specializations: ['winery']
+        specializations: ['winery'],
+        isFounder: true
       },
       {
         firstName: 'Lukas',
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.5,
-        specializations: ['financeAndStaff']
+        specializations: ['financeAndStaff'],
+        isFounder: true
       },
       {
         firstName: 'Elsa',
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.7,
-        specializations: ['sales']
+        specializations: ['sales'],
+        isFounder: true
       },
       {
         firstName: 'Klara',
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.2,
-        specializations: ['administrationAndResearch']
+        specializations: ['administrationAndResearch'],
+        isFounder: true
       }
     ],
     startingVineyard: {
@@ -244,7 +253,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Torres',
         nationality: 'Spain',
         skillLevel: 0.5,
-        specializations: ['winery']
+        specializations: ['winery'],
+        isFounder: true
       }
     ],
     startingVineyard: {
@@ -285,14 +295,16 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Mondavi',
         nationality: 'United States',
         skillLevel: 0.5,
-        specializations: ['winery']
+        specializations: ['winery'],
+        isFounder: true
       },
       {
         firstName: 'Robert',
         lastName: 'Mondavi',
         nationality: 'United States',
         skillLevel: 0.5,
-        specializations: ['administrationAndResearch']
+        specializations: ['administrationAndResearch'],
+        isFounder: true
       }
     ],
     startingVineyard: {

@@ -3,9 +3,9 @@
 
 import { Staff, StaffSkills } from '@/lib/types/types';
 import { getColorClass, getBadgeColorClasses, formatNumber } from '@/lib/utils/utils';
-import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER } from '@/lib/constants/staffConstants';
+import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER, FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT } from '@/lib/constants/staffConstants';
 import { getGameState } from '../core/gameState';
-import { addTransaction } from './financeService';
+import { addTransaction, calculateFinancialData } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
@@ -261,5 +261,57 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
   } catch (error) {
     console.error('Error processing seasonal wages:', error);
     return null;
+  }
+}
+
+// ===== FOUNDER PROFIT-SHARE =====
+
+/**
+ * Process yearly Founder Return distributions.
+ * Called at the start of each new year (Spring week 1) for the year that just ended.
+ * Each active founder receives FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT % of yearly net profit.
+ * No payout occurs when profit is zero or negative.
+ */
+export async function processYearlyFounderDistributions(
+  staff: Staff[],
+  previousYear: number
+): Promise<void> {
+  try {
+    const founders = staff.filter(s => s.isFounder === true);
+    if (founders.length === 0) return;
+
+    // Calculate net profit for the year that just ended
+    const financialData = await calculateFinancialData('year', { year: previousYear });
+    const yearlyNetProfit = financialData.netIncome; // income - expenses (P&L, excludes capital flows)
+
+    if (yearlyNetProfit <= 0) {
+      // Lean year — founders receive nothing (by design)
+      return;
+    }
+
+    const sharePercent = FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT / 100;
+    const totalPaid = await Promise.all(
+      founders.map(async (founder) => {
+        const amount = Math.round(yearlyNetProfit * sharePercent);
+        await addTransaction(
+          -amount,
+          `Founder Return ${previousYear}: ${founder.name} (${FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% of net profit)`,
+          TRANSACTION_CATEGORIES.FOUNDER_RETURN,
+          false
+        );
+        return amount;
+      })
+    );
+
+    const grandTotal = totalPaid.reduce((sum, v) => sum + v, 0);
+
+    await notificationService.addMessage(
+      `Founder Returns paid for ${previousYear}: ${founders.length} founder${founders.length > 1 ? 's' : ''} received a combined ${formatNumber(grandTotal, { currency: true, decimals: 0 })} (${FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% each of ${formatNumber(yearlyNetProfit, { currency: true, decimals: 0 })} net profit).`,
+      'wageService.founderDistributions',
+      'Founder Returns',
+      NotificationCategory.FINANCE_AND_STAFF
+    );
+  } catch (error) {
+    console.error('Error processing yearly founder distributions:', error);
   }
 }

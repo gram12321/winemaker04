@@ -256,7 +256,9 @@ export async function applyStartingConditions(
         staffConfig.lastName,
         staffConfig.skillLevel,
         staffConfig.specializations,
-        staffConfig.nationality as any // Nationality type
+        staffConfig.nationality as any, // Nationality type
+        undefined,
+        staffConfig.isFounder ?? false
       );
 
       const addedStaff = await addStaff(staff);

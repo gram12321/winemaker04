@@ -3,11 +3,13 @@ import { Leaf, ShieldCheck, Sparkles } from 'lucide-react';
 import { ResearchPanel } from '@/components/finance';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { getResearchPermanentEffects, getResearchViewSummary, type ResearchPermanentEffectsSummary } from '@/lib/services';
-import { Badge } from '@/components/ui';
+import { Badge, Tabs, TabsList, TabsTrigger } from '@/components/ui';
 
 const RESEARCH_HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1400&h=500&fit=crop';
+type ResearchViewTab = 'active-effects' | 'footprint' | 'catalog';
 
 export function ResearchPage() {
+  const [activeTab, setActiveTab] = useState<ResearchViewTab>('catalog');
   const [activeBonuses, setActiveBonuses] = useState<ResearchPermanentEffectsSummary>({
     vineyardHealthDecayMultiplier: 1,
     researchSkillMultiplier: 1,
@@ -54,57 +56,73 @@ export function ResearchPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-background p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkles className="size-4 text-muted-foreground" />
-              Active Research Effects
-            </div>
-            <p className="text-xs text-muted-foreground">Permanent effects currently applied from completed research.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{activeBonuses.activeEffects.length} active</Badge>
-            <Badge variant="outline">
-              <Leaf className="mr-1 size-3" />
-              Health decay x{activeBonuses.vineyardHealthDecayMultiplier.toFixed(2)}
-            </Badge>
-            <Badge variant="outline">
-              <ShieldCheck className="mr-1 size-3" />
-              Reduction {healthDecayReductionPercent.toFixed(1)}%
-            </Badge>
-            <Badge variant="outline">
-              <Sparkles className="mr-1 size-3" />
-              Research speed +{researchSkillBoostPercent.toFixed(1)}%
-            </Badge>
-          </div>
-        </div>
+      <div className="flex flex-col gap-3">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ResearchViewTab)} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="active-effects">Active Research Effects</TabsTrigger>
+            <TabsTrigger value="footprint">Research Footprint</TabsTrigger>
+            <TabsTrigger value="catalog">Catalog</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {hasEffects ? (
-          <div className="grid gap-2 md:grid-cols-2">
-            {activeBonuses.activeEffects.map((effect) => (
-              <div key={`${effect.projectId}-${effect.kind}`} className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-medium text-foreground">{effect.projectTitle}</div>
-                  <Badge variant="outline">Permanent</Badge>
+        {activeTab === 'active-effects' && (
+          <div className="flex flex-col gap-3 rounded-lg border bg-background p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="size-4 text-muted-foreground" />
+                  Active Research Effects
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{effect.description}</div>
+                <p className="text-xs text-muted-foreground">Permanent effects currently applied from completed research.</p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-            No permanent research bonuses are active yet.
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">{activeBonuses.activeEffects.length} active</Badge>
+                <Badge variant="outline">
+                  <Leaf className="mr-1 size-3" />
+                  Health decay x{activeBonuses.vineyardHealthDecayMultiplier.toFixed(2)}
+                </Badge>
+                <Badge variant="outline">
+                  <ShieldCheck className="mr-1 size-3" />
+                  Reduction {healthDecayReductionPercent.toFixed(1)}%
+                </Badge>
+                <Badge variant="outline">
+                  <Sparkles className="mr-1 size-3" />
+                  Research speed +{researchSkillBoostPercent.toFixed(1)}%
+                </Badge>
+              </div>
+            </div>
+
+            {hasEffects ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                {activeBonuses.activeEffects.map((effect) => (
+                  <div key={`${effect.projectId}-${effect.kind}`} className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-medium text-foreground">{effect.projectTitle}</div>
+                      <Badge variant="outline">Permanent</Badge>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">{effect.description}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+                No permanent research bonuses are active yet.
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      <div className="flex flex-col gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Research Progression</h3>
-          <p className="text-sm text-muted-foreground">Develop capabilities, unlock technologies, and scale your winery progression.</p>
-        </div>
-        <ResearchPanel />
+        {activeTab === 'footprint' && <ResearchPanel view="footprint" />}
+
+        {activeTab === 'catalog' && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Research Catalog</h3>
+              <p className="text-sm text-muted-foreground">Develop capabilities, unlock technologies, and scale your winery progression.</p>
+            </div>
+            <ResearchPanel view="catalog" />
+          </div>
+        )}
       </div>
     </div>
   );
