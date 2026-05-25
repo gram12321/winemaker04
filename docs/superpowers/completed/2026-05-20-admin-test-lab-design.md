@@ -1,5 +1,9 @@
 # Admin Test Lab Design
 
+Status: Completed design record. Code-verified on 2026-05-25.
+
+Current implementation note: the shipped Test Lab uses a browser-side scenario registry and runner for gameflow scenarios, with `/api/test-run` retained as the server-side Vitest runner endpoint. The original `/api/test-lab/scenarios`, `/api/test-lab/run`, and `/api/test-lab/cleanup` endpoint ideas below are historical design options, not current implementation requirements.
+
 ## Purpose
 
 Winemaker04 needs a development-only Admin Test Lab that lets developers and AI agents test gameflow systems without manually clicking through weeks and seasons. The tool should make it possible to set up a targeted state, execute one or more game actions, inspect the resulting game state, and clean up the created data.
@@ -341,7 +345,7 @@ Phase 3: Add fixture isolation and cleanup.
 
 - Add run id creation and tagging.
 - Add cleanup service for test-created entities.
-- Make dedicated test company mode the default.
+- Use active-company mode as the default for gameflow scenarios, with dedicated test-company creation available as an explicit scenario.
 
 Phase 4: Add gameflow controls.
 

@@ -2,6 +2,8 @@
 
 Date: 2026-05-22
 
+Status: Superseded historical audit. Rechecked on 2026-05-25; the suite has grown substantially since this audit, several listed gaps now have coverage, and the current full suite is not green because `tests/user/researchPanelVisibility.test.ts` has two failing visibility expectations. Keep this document as a completed audit record, not as the current coverage source of truth.
+
 ## Purpose
 
 Evaluate whether the current automated Vitest suite still makes sense, whether any tests are obsolete, and which implemented game mechanics need better automated coverage.

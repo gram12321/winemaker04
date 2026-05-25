@@ -1,6 +1,8 @@
 # Test Expansion Checklist (From 2026-05-24 Audit)
 
-Source: coverage gaps listed in docs/AIdocs/2026-05-24-founder-economy-implementation-audit.md.
+Status: Active checklist. Rechecked on 2026-05-25; most market/weather-center/research-unlock slices are complete, while Priority A weather boundary/deterministic fixture coverage remains open. Current full test suite has two failing `researchPanelVisibility` expectations.
+
+Source: coverage gaps listed in `docs/superpowers/plans/2026-05-24-founder-economy-implementation-audit.md`.
 
 ## Priority A - Weather Impact Service
 - [x] Add dedicated unit tests for weather impact coefficients, seasonal adjustment, and response labeling.

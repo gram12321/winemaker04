@@ -1,5 +1,12 @@
 # Bulk Grape Buy Market Implementation Plan
 
+Status: Completed with minor implementation-shape deviations. Code-verified on 2026-05-25 and moved to `docs/superpowers/completed/`.
+
+Completion notes:
+- Buy-offer persistence, service lifecycle, Winery entry, purchase flow, weekly decay, seasonal refresh, and focused tests are implemented.
+- The generic market table/action pieces exist, but `BuyFromMarketModal` uses dialog primitives directly instead of the `MarketWindow` wrapper.
+- Sell-side multi-state grape sales were implemented after this plan, so deferred sell-side notes are historical.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a Winery-first Buy from Market flow for grape-state offers (grapes, must, must_fermenting) using a reusable generic market UI shell and shared market volatility behavior.

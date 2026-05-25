@@ -14,7 +14,10 @@ This file holds stable domain language for the winery management game. Variable 
 | Structure Layer | Player-facing structural channels and structure index | `acidity`, `aroma`, `body`, `spice`, `sweetness`, `tannins`, `structureIndex` |
 | Taste Layer | Flavor-family and descriptor model used for taste wheel and taste quality | 14 families, descriptors grouped under families |
 | Lifecycle Modifiers | Ongoing evolving systems after wine creation | feature severities, bottle aging, prestige effects |
-| Outcome Metrics | Economy and progression outputs | wine score, price, contracts, highscores, achievements |
+| Weather Layer | Global weekly weather state and forecast that modifies market and vineyard behavior | `weatherState`, `weatherIntensity`, `weatherForecastPattern`, `nextWeekForecastState` |
+| Market Layer | Buyer/supplier demand and supply surfaces outside direct bottle orders | grape buyer market, grape supplier market, bulk fallback channels, loyalty, economy/weather pressure |
+| Ownership Layer | Founder and board/share concepts that affect finance and constraints | `isFounder`, Founder Return, founder buyout, `boardShare` feature seam |
+| Outcome Metrics | Economy and progression outputs | wine score, price, contracts, grape sales, highscores, achievements |
 | Snapshot | Immutable historical capture at event boundaries | harvest snapshot, bottling snapshot, winelog snapshot |
 
 ## Core Variable Groups
@@ -141,6 +144,22 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | `ContractRequirement.type` | Customer requirement category, such as `tasteQuality`, `structureIndex`, `landValue`, `country`, `region`, `grape`, `grapeColor`, `altitude`, `aspect`, `characteristicMin`, `characteristicMax`, or `characteristicDeviation`. |
 | `ContractRequirement.value` | Requirement threshold or target. Its unit depends on requirement type: 0-1 score, absolute land value, vintage year/age, or characteristic threshold. |
 
+## Weather and Grape Market Parameters
+
+| Variable or concept | Description |
+|---|---|
+| `WeatherState` | Current weekly weather state: `Clear`, `Rain`, `Heat`, `Frost`, `Storm`, or `Snow`. |
+| `WeatherIntensity` | Current weather intensity: `Mild`, `Moderate`, or `Severe`. |
+| `WeatherForecastPattern` | Seasonal forecast pattern used to bias current and future weather: `Stable`, `Wet`, `Dry`, `Cold`, `Heat`, or `Storm-prone`. |
+| `WeatherForecastConfidence` | Forecast confidence tier. UI communicates forecast reliability; actual weather can still differ. |
+| `nextWeekForecastState` / `nextWeekForecastIntensity` | Forecasted next-week weather shown to the player. |
+| Vineyard weather impact | Weather modifies vineyard ripeness and health as bounded deviations from seasonal baselines. Site response uses aspect, altitude, terroir, and soil response. |
+| Grape buyer market | Sell-side market for grapes/must/batches, with bulk fallback buyer plus seasonal buyers. Price and limit pressure depend on season, economy, weather, buyer type, loyalty, research, and batch quality/state. |
+| Grape supplier market | Buy-side market for purchasing grapes, with bulk supplier fallback plus seasonal suppliers. Offers are persisted and decay/update over time. |
+| Buyer/supplier loyalty | Relationship progression that improves price/limits or supply persistence. |
+
+Weather is currently active for vineyard health/ripeness, Weather Center reporting, Winepedia reference content, and grape-market volatility. Severe weather event chains, mitigation actions, weather research upgrades, and weather achievements remain future layers.
+
 ## Research Progression Variables
 
 | Variable or concept | Description |
@@ -156,9 +175,21 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | `ResearchProject.permanentEffects` | Always-on modifiers from completed research (current shipped effect kind: `vineyard_health_decay_multiplier`). |
 | `startingResearch` | Starting-condition field for country-specific pre-unlocked research IDs applied during company setup. |
 
-Current implemented enforcement includes grape planting, fermentation method availability, staff cap, vineyard size/total-hectares/vineyard-count caps, and contract customer-channel access. Research progression modifiers are designed to alter upstream systems and access rules, not to bypass structure/taste score computation.
+Current implemented enforcement includes grape planting, fermentation method availability, staff cap, vineyard size/total-hectares/vineyard-count caps, contract customer-channel access, and grape buyer market access/scaling. Research progression modifiers are designed to alter upstream systems and access rules, not to bypass structure/taste score computation.
 
 Known limitation: some project `benefits` strings are still design-facing flavor text and are not yet backed by dedicated mechanics. Treat `unlocks` and `permanentEffects` as the authoritative implementation source for current gameplay impact.
+
+## Founder and Board/Share Variables
+
+| Variable or concept | Description |
+|---|---|
+| `Staff.isFounder` | Active founder flag. Founders have zero wage and participate in Founder Return distributions until bought out. |
+| Founder Return | Yearly distribution paid to each active founder when the previous year had positive net profit. Current constant: 20% of yearly net profit per founder. |
+| Founder buyout | Converts a founder into a salaried staff member. Current cost constant: 15% of total company asset value per founder. |
+| `FOUNDER_RETURN` / `FOUNDER_BUYOUT` | Transaction categories used for founder distributions and buyouts. |
+| `boardShare` feature seam | Current mainline default is no-op. Board/share constants and database scaffolding remain, but active public-company/share-market runtime is not wired. |
+
+Founder economy is the current shipped ownership slice. It should not be confused with the larger public-company/share-market system described in `docs/superpowers/plans/PublicCompanyPlan.md` and `docs/superpowers/plans/PublicCompanyImplementation.md`, which are historical implemented-feature and reintroduction references.
 
 ## Snapshot Variables
 

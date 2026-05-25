@@ -4,7 +4,7 @@ Status: Current variable relationship map
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](../CONTEXT.md). This document focuses on how the main wine-system variables depend on each other through the gameflow.
 
-Prestige event creators are inventoried separately in [PrestigeEventSourceInventory.md](PrestigeEventSourceInventory.md).
+Prestige event creators are inventoried separately in [PrestigeEventSourceInventory.md](superpowers/completed/PrestigeEventSourceInventory.md).
 
 ## 1) Purpose
 
@@ -13,6 +13,7 @@ This map answers three questions:
 - Which variables are produced at each stage of wine gameplay?
 - Which variables are snapshots, and which continue to change?
 - Which subsystems consume each variable later for UI, economy, contracts, highscores, and achievements?
+- Which global progression overlays, such as weather, research, prestige, and founder economy, feed into wine and market outcomes?
 
 ## 2) Reading Rules
 
@@ -25,17 +26,19 @@ This map answers three questions:
 ```mermaid
 flowchart LR
   LS["Land search / vineyard setup"] --> VM["Vineyard management"]
+  WX["Weekly weather"] --> VM
   VM --> H["Harvest"]
   H --> WB["Wine batch"]
   WB --> C["Crushing"]
   C --> F["Fermentation"]
   F --> B["Bottling"]
   B --> CE["Cellar evolution"]
-  CE --> S["Sales and contracts"]
+  CE --> S["Sales, contracts, and grape markets"]
   B --> WL["Wine log"]
   WL --> PR["Highscores and achievements"]
   S --> ECO["Money, prestige, customer relationships"]
   PR --> ECO
+  WX --> S
 ```
 
 ## 4) Main Variable Groups
@@ -48,7 +51,10 @@ flowchart LR
 | Structure Layer | Characteristics plus anchor-adjusted ideal ranges | `structureIndex` |
 | Taste Layer | Anchors, characteristics, grape color, features, aging | Taste families, descriptors, `tasteQualityIndex` |
 | Lifecycle Modifiers | Features, bottle aging, oxidation, prestige | Current taste, price, cellar value, risk |
-| Outcome Metrics | Structure, taste quality, land value, lifecycle modifiers | Wine score, price, contract validity, historical records |
+| Weather Layer | Weekly weather state, intensity, forecast, season, site response | Vineyard health/ripeness deviations, grape market pressure, Weather Center rows |
+| Market Layer | Wine variables, grapes/must, economy phase, weather, relationships, research | Orders, contracts, grape sales, grape purchases, revenue, loyalty |
+| Ownership Layer | Staff founder flag, yearly profit, company value, board/share feature seam | Founder Returns, buyouts, optional future board/share constraints |
+| Outcome Metrics | Structure, taste quality, land value, lifecycle modifiers, markets | Wine score, price, contract validity, historical records, sales, prestige |
 
 ## 5) Relationship Invariants
 
@@ -57,6 +63,10 @@ flowchart LR
 - Structure and taste are different layers: structure scores physical balance; taste quality scores family balance.
 - Land value affects price and contracts as site/static quality; it is not taste quality.
 - Sales-channel research affects customer/contract access and pricing opportunities; it is not a structure or taste variable.
+- Weather affects vineyard health/ripeness and market pressure as explicit deviations; it should not be hidden inside wine score formulas.
+- Grape buyer/supplier markets are market overlays. They can use wine/grape state and quality, economy, weather, loyalty, and research unlocks, but they should not mutate historical wine snapshots.
+- Founder economy is a finance/staff ownership layer. It affects wages, yearly distributions, buyout, and cash flow; it does not replace the archived public-company/share-market design.
+- The current `boardShare` feature seam is no-op in mainline. Share/board constants and database scaffolding are not active share-market runtime.
 - Bottling snapshots are the historical source for wine log, highscores, and achievement score checks.
 - Current cellar values may continue to evolve after bottling; historical snapshots must not drift.
 - Research unlocks and permanent effects are progression modifiers that may alter upstream vineyard/process inputs (for example health decay), but should not bypass structure and taste computation layers.
@@ -68,7 +78,7 @@ flowchart LR
 ### 5.1 Progression Overlay Invariants
 
 - Research progression gates control option availability and scaling boundaries, not score formula shortcuts.
-- Unlock-based gates currently affect grape planting, fermentation method availability, staff cap, vineyard size cap, and contract channel eligibility.
+- Unlock-based gates currently affect grape planting, fermentation method availability, staff cap, vineyard size cap, contract channel eligibility, and grape buyer market access/scaling.
 - Permanent research effects are aggregated from completed research and applied through explicit domain services.
 - Current permanent-effect slice modifies vineyard health decay; additional effect kinds should follow the same explicit, auditable service pattern.
 
@@ -212,6 +222,32 @@ flowchart LR
   VP --> UI
 ```
 
+### 6.8 Weather, Grape Market, And Founder Finance Flow
+
+```mermaid
+flowchart LR
+  TIME["Week/season/year"] --> WTH["Weather state,\nintensity, forecast"]
+  WTH --> VIMP["Vineyard weather impact"]
+  SITE["Aspect, altitude,\nterroir, soil"] --> VIMP
+  VIMP --> VINE["Vineyard health\nand ripeness"]
+  VINE --> HARVEST["Harvest output\nand anchors"]
+
+  WTH --> GM["Grape buyer/supplier\nmarket pressure"]
+  ECO["Economy phase"] --> GM
+  REL["Buyer/supplier loyalty"] --> GM
+  RES["Research unlocks"] --> GM
+  GRAPE["Grapes, must,\nor batch state"] --> GM
+  GM --> CASH["Transactions,\nrevenue/cost"]
+  GM --> PRESTIGE["Bulk grape achievements\nand prestige sources"]
+
+  STAFF["Founder staff"] --> FW["Zero wages"]
+  PROFIT["Yearly net profit"] --> FR["Founder Return"]
+  COMPANY["Company value"] --> FB["Founder buyout cost"]
+  FW --> CASH
+  FR --> CASH
+  FB --> CASH
+```
+
 ## 7) Contract Relationships
 
 | Contract requirement | Source variable | Notes |
@@ -242,6 +278,9 @@ flowchart LR
 | Land value tab | Vineyard factors behind the land value modifier. |
 | Origins tab | Characteristic changes grouped by source/effect. |
 | Wine log and vineyard analytics | Bottling snapshots and historical production records. |
+| Weather Center | Current weather context, per-vineyard health/ripeness impact, site-response explanation. |
+| Grape market modals | Buyer/supplier options, economy/weather pressure, price/limit factors, loyalty context. |
+| Finance Founder Panel | Active founders, yearly profit-share explanation, buyout cost/action. |
 
 ## 10) Current Implementation Checkpoints
 
@@ -253,6 +292,10 @@ flowchart LR
 | Wine log snapshots | Wine log and wine highscores use bottling snapshots for taste quality, structure, land value, and wine score. |
 | Achievement wine score | `wine_score_threshold` achievements use finite persisted `WineLogEntry.wineScore`; missing or non-finite scores do not derive a fallback. |
 | Contract quality split | `tasteQuality` and `landValue` are separate requirements. |
+| Weather vineyard integration | Weather state/intensity create bounded health and ripeness deviations through `weatherImpactService`; Weather Center exposes the breakdown. |
+| Grape markets | Sell-side buyers and buy-side suppliers are active, including bulk fallback channels, seasonal rows, loyalty, economy/weather volatility, and research unlock scaling. |
+| Founder economy | Founders are staff with `isFounder`, zero wages, yearly positive-profit Founder Returns, and buyout conversion to salaried employees. |
+| Board/share runtime | Current mainline has a no-op `boardShare` seam and share/board scaffolding only; public-company docs are reintroduction references, not active runtime. |
 | Descriptor hierarchy | Descriptors are grouped under flavor families and remain display-only for now. |
 | Current conclusion | The family-level taste system is sufficient for now; descriptor scoring and unified customer taste preferences remain deferred. |
 
@@ -263,6 +306,7 @@ This table follows the practical gameflow from land purchase through sales and p
 | Game phase | Player/state inputs | Main variables produced | Main downstream consumers | Player-visible effect |
 |---|---|---|---|---|
 | Land search and vineyard ownership | Country, region, soil, altitude, aspect, hectares, land value | Site Factors | Suitability, land value modifier, contracts | Land choice changes crop fit, site quality, and future market eligibility. |
+| Weather tick | Season, year, previous weather, forecast pattern/confidence | Weather state, intensity, next-week forecast | Vineyard health/ripeness, grape markets, Weather Center | Weather changes vineyard outlook and market pressure without changing historical snapshots. |
 | Vineyard maintenance | Health, overgrowth, density, vine age, grape planted | Updated Site Factors and yield conditions | Harvest yield, anchors, land value modifier | Good maintenance improves harvest potential and reduces penalties. |
 | Grape identity | Grape constants and planted variety | Intrinsic Grape Traits | Anchors, base characteristics, taste color rules, yield, risk | Variety changes wine style, risks, and customer fit. |
 | Harvest | Ripeness, site factors, grape traits | Harvest anchors, harvest snapshots, initial wine batch | Winery processing, structure, taste, lifecycle | Harvest timing freezes the starting identity of the wine. |
@@ -271,6 +315,8 @@ This table follows the practical gameflow from land purchase through sales and p
 | Bottling | Current wine state | Bottling snapshots, `wineScoreBottlingSnapshot`, wine log row | Highscores, achievements, historical analytics | Bottling freezes the historical record while cellar values may continue evolving. |
 | Cellar evolution | Features, aging progress, oxidation, bottle aging | Current taste, current price, current score changes | Cellar UI, sales offers, current contract validation | Wine can become more or less valuable after bottling. |
 | Sales/contracts | Customer requirements, relationships, market context | Contract validity, orders, revenue | Money, customer relationships, prestige | The market evaluates wine variables against demand. |
+| Grape market | Grapes/must/batch state, buyer/supplier rows, season, economy, weather, loyalty, research | Grape sale price/limits, buy offers, loyalty, bulk achievements | Money, grape inventory, prestige/research gates | The market gives liquidity and sourcing options outside bottled wine sales. |
+| Founder economy | Founder staff, company value, yearly net profit | Zero wages, Founder Returns, buyout transactions | Cash flow, staff wages, finance UI | Starting teams can survive early years without normal wage pressure, then convert later. |
 | Progression | Wine log, sales, scores, assets | Highscores, achievements, prestige events | Company value, reputation, future opportunities | Historical performance feeds long-term progression. |
 | Prestige events | Starting conditions, company value, vineyard factors, cellar collection, sales, features, achievements, research, loan/bookkeeping penalties | Company prestige, vineyard prestige, event breakdowns | Pricing, land value modifier, research gates, market systems, UI, achievements | Reputation is a ledger-derived progression signal with permanent and decaying sources. |
 
@@ -317,6 +363,9 @@ flowchart TD
 - Keep research permanent effects routed through explicit domain services (for example vineyard manager) so modifier origins remain auditable.
 - Keep research benefit copy aligned with implementation so descriptive text does not imply mechanics that are not yet wired.
 - Keep anchor parsing strict: unknown anchor keys should be ignored, and new business logic should target only the compact anchor model.
-- Keep [PrestigeEventSourceInventory.md](PrestigeEventSourceInventory.md) in sync when adding new `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` write paths.
+- Keep [PrestigeEventSourceInventory.md](superpowers/completed/PrestigeEventSourceInventory.md) in sync when adding new `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` write paths.
 - Complete a dedicated prestige consumer matrix after the creator inventory is reviewed.
+- Keep public-company/share docs framed as archived/reintroduction references unless the active `boardShare` feature is rewired.
+- Keep weather impact docs in sync when severe weather events, mitigation actions, or weather research upgrades become real mechanics.
+- Keep grape market docs and research benefit copy aligned when adding new buyer/supplier unlock effects.
 - If descriptor-level taste becomes gameplay-relevant, update this map and `CONTEXT.md` before wiring descriptors into outcomes.

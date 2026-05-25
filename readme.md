@@ -2,7 +2,7 @@
 
 Turn-based single-player winery simulation built with React, TypeScript, Vite, Tailwind, ShadCN UI, and Supabase.
 
-The game models vineyard ownership, grape growing, winemaking, contracts, customer sales, finance, prestige, achievements, and company progression. Core simulation logic lives in services; React components should stay focused on presentation and interaction.
+The game models vineyard ownership, grape growing, weather, winemaking, grape markets, contracts, customer sales, finance, founder economy, prestige, achievements, and company progression. Core simulation logic lives in services; React components should stay focused on presentation and interaction.
 
 ## Quick Start
 
@@ -23,10 +23,10 @@ npm run build
 | Area | Path | Notes |
 |---|---|---|
 | App shell and routing | `src/App.tsx`, `src/main.tsx` | React entry point and page selection. |
-| Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, research, staff, Winepedia, highscores. |
+| Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, research, staff, Weather Center, Winepedia, highscores. |
 | Shared UI | `src/components/ui/` | ShadCN wrappers, modals, reusable game UI. |
 | Hooks | `src/hooks/` | Game state, loading, sorting, mobile detection, reactive updates. |
-| Services | `src/lib/services/` | Domain logic for core game, vineyard, wine, sales, finance, activities, prestige. |
+| Services | `src/lib/services/` | Domain logic for core game, vineyard/weather, wine, sales/grape markets, finance/founders, activities, research, prestige. |
 | Database | `src/lib/database/` | Supabase access grouped by domain. |
 | Types | `src/lib/types/` | Shared TypeScript domain and UI interfaces. |
 | Constants | `src/lib/constants/` | Grapes, vineyards, economy, staff, wine features, taste labels. |
@@ -51,14 +51,18 @@ npm run build
 | Current implemented game systems | `docs/AIdocs/AIDescriptions_coregame.md` |
 | File structure and ownership map | `docs/PROJECT_INFO.md` |
 | Wine variable flow and diagrams | `docs/WineSystem_VariableRelationshipMap.md` |
-| Prestige event creators and decay behavior | `docs/PrestigeEventSourceInventory.md` |
-| Taste research and future ideas | `docs/TasteSystem_WineFolly_Research.md` |
-| Taste Quality design spec | `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` |
-| Taste Quality implementation plan | `docs/superpowers/plans/2026-05-20-taste-quality-index.md` |
-| Contract taste/site UI plan | `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` |
+| Prestige event creators and decay behavior | `docs/superpowers/completed/PrestigeEventSourceInventory.md` |
+| Taste research and future ideas | `docs/superpowers/plans/TasteSystem_WineFolly_Research.md` |
+| Taste Quality design spec | `docs/superpowers/completed/2026-05-20-taste-quality-index-design.md` |
+| Taste Quality implementation plan | `docs/superpowers/completed/2026-05-20-taste-quality-index.md` |
+| Contract taste/site UI plan | `docs/superpowers/completed/2026-05-20-contract-taste-site-ui.md` |
 | Research unified design, rollout status, and handoff pipeline | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
-| Admin Test Lab design | `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` |
-| Admin Test Lab implementation plan | `docs/superpowers/plans/2026-05-21-admin-test-lab.md` |
+| Weather vineyard integration and follow-up design | `docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md` |
+| Grape market completed rollout docs | `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-design.md`, `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-execution.md` |
+| Founder economy active plan | `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` |
+| Public-company/share reintroduction references | `docs/superpowers/plans/PublicCompanyPlan.md`, `docs/superpowers/plans/PublicCompanyImplementation.md` |
+| Admin Test Lab design | `docs/superpowers/completed/2026-05-20-admin-test-lab-design.md` |
+| Admin Test Lab implementation plan | `docs/superpowers/completed/2026-05-21-admin-test-lab.md` |
 | Development prompt guidance | `docs/AIdocs/AIpromt_newpromt.md` |
 | Documentation maintenance guidance | `docs/AIdocs/AIpromt_docs.md` |
 | Cleanup/refactor guidance | `docs/AIdocs/AIpromt_codecleaning.md` |
@@ -86,6 +90,13 @@ Use `docs/versionlog.md` as the canonical running change history for meaningful 
 - Permanent effects are active via runtime aggregation (current shipped slice: vineyard health decay multiplier).
 - Research UI is split into Active Research Effects, Research Footprint, and Catalog tabs; catalog includes `Hide completed` and no longer embeds the footprint card.
 - Some project benefit text is still aspirational and does not yet map to a dedicated gameplay mechanic.
+
+## Current Systems Snapshot
+
+- Weather is active for weekly state/forecast, Weather Center visibility, vineyard health/ripeness deviations, and grape market volatility.
+- Sell-side and buy-side grape markets are active with bulk fallback channels, seasonal buyers/suppliers, loyalty, economy/weather pressure, and research unlock scaling.
+- Founder economy is active as a light ownership slice: founders have zero wages, receive yearly profit-share returns when profitable, and can be bought out into salaried staff.
+- Public-company/share-market runtime is not active in mainline; the public company docs are retained as historical implemented-feature and reintroduction references.
 
 ## Database Notes
 

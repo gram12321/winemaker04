@@ -1,6 +1,6 @@
 # Early-Game Balance: Founder Economy & Starting Conditions
 **Created:** 2026-05-20  
-**Status:** Design / Partially implemented (bulk grape sales + dynamic buyer market shipped, founder-economy systems still open)  
+**Status:** Partially implemented. Code-verified on 2026-05-25: founder wage replacement, yearly profit-share distributions, founder buyout, staff `isFounder` persistence, and Founder Panel UI are now shipped; story-triggered staff reveals, startup advisor, separate founder-equity table, and broader country archetypes remain open.
 **Branch context:** taste  
 
 ---
@@ -70,6 +70,27 @@ These are numerically sound but not highly creative:
 
 ---
 
+## 3.1 Implementation Sync (2026-05-25)
+
+Shipped since this design was first written:
+
+- Starting staff can be founders through `isFounder`.
+- Founders are created with zero weekly wage and receive yearly Founder Return distributions from net profit.
+- Founder buyout converts a founder to a salaried employee.
+- The Finance view includes a Founding Partners panel.
+- The staff table has an `is_founder` migration-backed persistence field.
+
+Still open:
+
+- automatic founder conversion milestones,
+- separate `founder_equity` table,
+- story-triggered family/staff reveal flow,
+- startup bankruptcy advisor,
+- broader country-archetype systems beyond current founder and grape-market mechanics,
+- explicit founder-economy test coverage.
+
+---
+
 ## 4. Out-of-the-Box Ideas (Second Pass)
 
 ### 4.1 Founder Profit-Share Model (Player's Idea — Expanded)
@@ -86,7 +107,7 @@ Starting staff are **founders, not employees.** They take:
 
 This aligns with how real family wineries actually work in the first few years.
 
-**Implementation note:** Profit share could be stored as a `foundingSharePercent` field on the Staff model, active only while `staff.isFounder === true`. When the company meets the transition condition, `isFounder` flips to `false` and normal wage calculation begins.
+**Current implementation note (2026-05-25):** The shipped slice stores `staff.isFounder` directly on staff and persists it as `staff.is_founder`. Founders have zero weekly wage, receive yearly Founder Return distributions from positive yearly net profit, and can be manually bought out into salaried staff. A separate `foundingSharePercent` field and automatic conversion trigger are not implemented.
 
 ---
 
@@ -174,6 +195,9 @@ An optional **pre-sale contract** at company creation or early game:
 
 This is thematically real: en primeur (wine futures) is a foundational part of Bordeaux's economy.
 
+Detailed split-design for this section (Wine Pre-Sale Contracts + Harvest Forward Contracts):
+`docs/superpowers/specs/2026-05-25-harvest-forward-presale-contracts-design.md`
+
 ---
 
 ### 4.7 Seasonal vs. Permanent Staff Model
@@ -198,13 +222,13 @@ src/lib/features/<featureName>/
   active.tsx        ← live implementation + UI wiring
   index.ts          ← registry: configure*Feature() + get*Feature()
 ```
-The base service calls `getFounderEconomyFeature().ticks.processFounderDistributions(companyId)` — one line added, nothing structurally changed.
+Historical architecture option: the base service could call `getFounderEconomyFeature().ticks.processFounderDistributions(companyId)`. Current implementation did not create a `founderEconomy` feature seam; founder logic lives in `src/lib/services/finance/wageService.ts`, `src/lib/services/user/staffService.ts`, `src/components/finance/FounderPanel.tsx`, `src/lib/constants/staffConstants.ts`, and `src/lib/constants/startingConditions.ts`.
 
 ### Feature Bucketing
 | Feature | Where it lives | Pattern |
 |---------|---------------|---------|
 | **Sell Grapes** | `src/lib/features/sellGrapes/` OR `src/lib/services/sales/sellGrapesService.ts` | Full standalone feature — no StarterCondition prefix |
-| **Founder Profit-Share** | `src/lib/features/founderEconomy/` | StarterConditionXFeature — injects into `wageService` |
+| **Founder Profit-Share** | Current: finance/staff services + `FounderPanel`; historical option: `src/lib/features/founderEconomy/` | Shipped without feature seam; optional future seam only if ownership grows |
 | **Country Archetypes** | `src/lib/features/countryArchetype/` | StarterConditionXFeature — per-country modifier registry |
 | **Story Staff Reveals** | `src/lib/features/storyEvents/` | Event service; hooks into achievement/season-advance |
 | **Starting Advisor** | Extend company creation component | Use existing `WarningModal` (severity: 'warning', custom actions) |
@@ -222,7 +246,7 @@ The base service calls `getFounderEconomyFeature().ticks.processFounderDistribut
 - Don't port full Simulus01 tutorial system — overkill; build lean event service
 
 ### DB: Founder Equity
-Separate `founder_equity` table `(staff_id, company_id, share_percent, converted_at)` — cleaner than polluting staff table with a lifecycle concept.
+Current shipped implementation uses `staff.is_founder` only. A separate `founder_equity` table `(staff_id, company_id, share_percent, converted_at)` remains an open future option if founder ownership becomes more detailed than the current equal-per-founder return model.
 
 ---
 
@@ -246,11 +270,11 @@ Separate `founder_equity` table `(staff_id, company_id, share_percent, converted
 
 ## 6. Open Questions
 
-- [ ] Should profit-share founders be visible in the staff wage line of the finance screen, or shown as a separate "founder distributions" line?
-- [ ] What % profit share feels balanced? (Suggestion: 5–10% per founder of gross wine revenue)
+- [x] Should profit-share founders be visible in the staff wage line of the finance screen, or shown as a separate "founder distributions" line? Shipped as a separate Finance `FounderPanel` with `Founder Return` capital-flow transactions.
+- [x] What % profit share feels balanced? Current shipped constant is 20% of yearly net profit per active founder.
 - [ ] Does the story-trigger system need its own event/notification architecture, or can it hook into the existing `notificationService`?
 - [ ] Should the advisor be a blocking warning ("You must confirm this risky setup") or advisory-only?
-- [ ] Should cooperative/bulk sales have their own UI in the Winery/Sales screen?
+- [x] Should cooperative/bulk sales have their own UI in the Winery/Sales screen? Sell-side grape buyer market is active from the Winery sell-grapes flow; buy-side market uses the buy-from-market modal.
 
 ---
 
@@ -259,9 +283,10 @@ Separate `founder_equity` table `(staff_id, company_id, share_percent, converted
 | File | Relevance |
 |------|-----------|
 | `src/lib/constants/startingConditions.ts` | Starting staff, loans, vineyard config per country |
-| `src/lib/services/finance/wageService.ts` | `processSeasonalWages()` — where founder logic hooks in |
-| `src/lib/services/user/staffService.ts` | `createStaff()`, `generateRandomSkills()` — add `isFounder` flag |
-| `src/lib/constants/staffConstants.ts` | `BASE_WEEKLY_WAGE`, `SKILL_WAGE_MULTIPLIER` |
+| `src/lib/services/finance/wageService.ts` | `processSeasonalWages()`, `processYearlyFounderDistributions()` |
+| `src/lib/services/user/staffService.ts` | `createStaff()`, `generateRandomSkills()`, `buyoutFounder()` |
+| `src/components/finance/FounderPanel.tsx` | Active founder display and buyout action |
+| `src/lib/constants/staffConstants.ts` | `BASE_WEEKLY_WAGE`, `SKILL_WAGE_MULTIPLIER`, founder return and buyout constants |
 | `src/lib/services/core/startingConditionsService.ts` | Company creation flow — advisor UI data comes from here |
 | `src/lib/services/vineyard/vineyardManager.ts` | Yield formula — used by advisor forecast |
 
@@ -427,7 +452,8 @@ Buying consistently from the same supplier builds a relationship (similar to coo
 
 ### Still open from founder-economy plan
 
-- Founder profit-share conversion system
+- Automatic founder conversion milestones beyond manual buyout
+- Separate founder-equity table
 - Story-triggered family/staff reveal flow
 - Starting setup bankruptcy advisor
 - Country archetype-specific founder economy systems beyond current grape-buyer market

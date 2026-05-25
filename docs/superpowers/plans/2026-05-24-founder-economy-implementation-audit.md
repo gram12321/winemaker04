@@ -2,13 +2,15 @@
 Date: 2026-05-24
 Scope anchor: founder-economy design thread and downstream systems from v0.24+ (bulk buy/sell market, weather, research, achievements)
 
+Status: Superseded audit snapshot. Rechecked on 2026-05-25: this audit is still useful for market/weather/research lineage, but its founder-economy core status is stale. Founder wage replacement, yearly profit share, buyout, `isFounder` persistence, and Founder Panel UI are now implemented. Remaining founder gaps are automatic conversion milestones, separate founder-equity table, story-triggered reveals, startup advisor, country archetypes, and founder tests.
+
 ## Executive Summary
 The founder-economy initiative has materially shipped in adjacent mechanics (bulk grape sell/buy economy, weather layer, research progression hardening), but the original founder-specific labor/equity model is still mostly unimplemented.
 
 High-confidence status:
 - Implemented strongly: bulk grape market ecosystem (sell + buy + supplier/buyer loyalty + seasonal/weekly lifecycle), weather phase 1 and most of phase 2, research gates and progression enforcement.
 - Partially implemented: generic market UI shell usage, test depth for buy-market and weather systems, weather docs alignment, “planned” weather alerts/recommendations.
-- Not implemented from the founder-economy spec core: founder profit-share wage replacement, founder equity data model, story-triggered family reveals, startup bankruptcy advisor step.
+- Partially implemented from the founder-economy spec core: founder profit-share wage replacement, yearly Founder Return distribution, founder buyout, `isFounder` persistence, and UI are shipped. Founder equity table, story-triggered family reveals, startup bankruptcy advisor step, country archetypes, and tests remain open.
 
 ## Baseline Timeline (v0.24+)
 Based on current version history in docs/versionlog.md:
@@ -18,7 +20,7 @@ Based on current version history in docs/versionlog.md:
 ## Design Doc Status Matrix
 
 ### 1) docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md
-Status: Partially Implemented (adjacent systems shipped, founder core still open)
+Status: Partially Implemented (adjacent systems shipped; founder wage/profit-share slice now shipped; broader founder onboarding remains open)
 
 Implemented:
 - Bulk/cooperative bridge income exists on sell side.
@@ -34,22 +36,30 @@ Implemented:
   - src/lib/constants/startingConditions.ts
   - src/lib/services/core/startingConditionsService.ts
 
-Missing/Not shipped from original founder concept:
-- Founder wage replacement (profit-share instead of salary) and conversion lifecycle.
-  - No founder flag/equity shape in staff service or wage service:
-    - src/lib/services/user/staffService.ts
-    - src/lib/services/finance/wageService.ts
+Implemented since the original audit:
+- Founder wage replacement through `staff.isFounder` and zero wages.
+  - src/lib/services/user/staffService.ts
+  - src/lib/services/finance/wageService.ts
+- Yearly Founder Return distributions.
+- Manual founder buyout conversion to salaried employee.
+- Founder Panel UI in Finance.
+- Staff `is_founder` persistence.
+  - src/lib/database/core/staffDB.ts
+  - migrations/20260525000000_add_is_founder_to_staff.sql
+
+Still missing from original founder concept:
 - Founder equity persistence table from design suggestion.
   - No founder_equity migration/table present under migrations/
 - Story-triggered family member reveals and progressive staffing events.
   - No dedicated story event system in current core services for this flow.
 - Startup bankruptcy advisor step in company creation flow.
   - No dedicated startup risk forecast setup step found in creation path.
+- Founder-specific tests.
 
 Notes:
 - Germany still starts with 4 staff in starting conditions, so the specific “reduce initial wage burden via staged reveals/founder model” remains unresolved at architecture level.
 
-### 2) docs/superpowers/plans/2026-05-23-bulk-grape-buy-market-execution.md
+### 2) docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-execution.md
 Status: Mostly Implemented
 
 Implemented:
@@ -73,7 +83,7 @@ Partial/misaligned vs execution-plan intent:
 - Planned service test depth not fully realized.
   - tests/sales/buyGrapeMarketService.test.ts currently validates spread/state-label basics, but does not fully cover decay-by-state integration or purchase side effects with DB/inventory assertions.
 
-### 3) docs/superpowers/specs/2026-05-23-bulk-grape-buy-market-design.md
+### 3) docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-design.md
 Status: Implemented with targeted intentional asymmetries
 
 Implemented:
@@ -94,7 +104,7 @@ Open quality/maintenance items:
 - Generic shell reuse remains partial (MarketWindow not actually wiring the buy modal).
 - Test suite depth for end-to-end buy lifecycle still thin relative to doc ambition.
 
-### 4) docs/superpowers/specs/2026-05-23-weather-forecast-volatility-design.md
+### 4) docs/superpowers/completed/2026-05-23-weather-forecast-volatility-design.md
 Status: Implemented (Phase 1 complete, and surpassed)
 
 Implemented:
@@ -168,7 +178,7 @@ Still not implemented from design’s future tracks:
 - Achievement-triggered research visibility layer (distinct from hard eligibility).
 - Site-conditional research availability.
 
-### 7) docs/AIdocs/buy-sell-grape-symmetry-analysis.md
+### 7) docs/superpowers/completed/buy-sell-grape-symmetry-analysis.md
 Status: Aligned with codebase direction
 
 Current code appears consistent with the documented resolved asymmetries/gaps:
@@ -219,8 +229,8 @@ Cross-system coupling now in place:
 - Decide whether equipment/vineyard-technique tracks are still in-scope, and either implement minimal slices or mark explicitly deferred in current design docs.
 
 ## Risk Register
-- Balance risk: startup wage pressure remains structurally unsolved where founder model is not active.
-- Drift risk: docs/specs and in-game docs differ (notably weather phase status statements).
+- Balance risk: founder wage pressure is now solved for starts that use `isFounder`, but founder return percentage, buyout cost, and no-payout lean years still need balance attention.
+- Drift risk: old audit notes and in-game copy can lag behind the now-shipped founder/weather/market slices.
 - Regression risk: buy/sell + weather + research are tightly coupled; weak integration tests increase break risk during balancing changes.
 - UX risk: parallel market abstractions (generic shell vs bespoke modal) can diverge and increase maintenance cost.
 
@@ -234,12 +244,15 @@ Strong:
   - tests/research/researchPermanentEffectsService.test.ts
 - Tick weather fields are covered at smoke level.
   - tests/core/gameTick.test.ts
+- Vineyard weather impact and Weather Center behavior tests now exist.
+  - tests/vineyard/weatherImpactService.test.ts
+  - tests/vineyard/weatherCenterService.test.ts
+  - tests/vineyard/weatherCenterPage.test.ts
 
 Gaps:
-- No dedicated weatherImpactService unit test suite found.
-- No Weather Center service/page behavior tests found.
 - buyGrapeMarketService test file is lighter than design acceptance depth (limited assertion breadth).
-- No explicit founder-economy mechanic tests (because mechanic is not yet implemented as a dedicated system).
+- No explicit founder-economy mechanic tests for yearly Founder Return distribution, buyout conversion, or finance panel behavior.
+- Current full suite still has two failing research panel visibility expectations.
 
 ## Bottom Line
-The branch of work has successfully delivered a large economic and simulation expansion around the founder-economy initiative, but the original founder-specific compensation/onboarding architecture remains the largest unclosed “midway design” gap. If the goal is to close the original design intent, founder economy mechanics and startup advisory UX should be the next primary implementation slice, followed by weather-doc alignment and deeper integration tests.
+The branch of work has successfully delivered a large economic and simulation expansion around the founder-economy initiative. The founder compensation core is now shipped, while the remaining founder gaps are startup advisory UX, story-triggered staff reveals, automatic conversion milestones, a possible `founder_equity` table, broader country archetypes, and founder-specific tests.

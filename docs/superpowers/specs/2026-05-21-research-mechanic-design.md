@@ -1,6 +1,6 @@
 # Research System Unified Design + Handoff
 **Date:** 2026-05-25
-**Status:** Unified living spec (mechanics + UI), handoff-ready at end of current pass
+**Status:** Active living spec. Code-verified on 2026-05-25: core runtime, core UI, and major unlock enforcement are implemented; equipment, vineyard-technique, wine-feature enforcement, and deeper visibility/reveal rules remain active backlog.
 
 ---
 
@@ -8,7 +8,7 @@
 
 This file replaces and consolidates:
 - `docs/superpowers/specs/2026-05-21-research-mechanic-design.md`
-- `docs/superpowers/specs/reserachui.md`
+- `docs/superpowers/completed/2026-05-25-research-ui-spec-merged.md`
 
 It is intentionally handoff-oriented:
 - keeps a concise snapshot of what is already implemented,
@@ -87,9 +87,13 @@ Not implemented:
 
 ### 3.3 UI/UX Progression Goals Not Finished
 
-Not implemented from the compact progression roadmap:
-- Focus vs Full Tree interaction mode is not currently an explicit top-level player-facing model.
-- Dependency mini-map is still basic and should be hardened or simplified after UX playtest.
+Implemented since the earlier UI note:
+- Focus vs Full Tree exists as a Catalog control.
+- Completed projects are shown by default and can be hidden with `Hide completed`.
+
+Still not complete:
+- Dependency mini-map behavior remains basic and should be hardened or simplified after UX playtest.
+- Visibility filtering is frontier-focused for chained numeric ladders; it does not yet implement a broader reveal-on-discovery model.
 - Unified progression readability metrics are present, but not yet tuned with player telemetry.
 
 ### 3.4 Balance and Economy Calibration

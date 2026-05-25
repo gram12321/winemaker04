@@ -1,13 +1,21 @@
 <!-- 61552660-7b1f-4bec-9806-49b1b5e4667f be31404a-f0ad-4ef4-a0d9-36007f209789 -->
 # Share Price Valuation System Redesign
 
+Status: Historical implemented feature and reintroduction reference. Current mainline code-verified on 2026-05-25.
+
+This document describes the larger public-company/share system that was implemented in an earlier code line and later removed or disabled from active mainline. It should be kept as a reference for reintroducing that system, not deleted as obsolete design noise.
+
+Current mainline repo state: the documented `src/lib/services/finance/shares/*` services, `ShareManagementPanel.tsx`, and active share-price runtime are not wired in this repo. Current code has share/board data scaffolding (`company_shares`, `company_metrics_history`, `shareValuationConstants`) and a `boardShare` feature shell that defaults to a no-op adapter. Local branch names indicate reintroduction work may exist outside this branch (`archive/board-share-active-seam`, `feature/readd-board-share`).
+
+Current overlap: [2026-05-20-early-game-balance-founder-economy.md](2026-05-20-early-game-balance-founder-economy.md) now implements a light founder-perspective slice: founder staff, zero wages, profit-share distributions, buyout, persistence, and Founder Panel UI. That founder slice addresses a small part of the larger ownership/company-finance theme, but it is not the public-company/share-market system described below.
+
 ## Overview
 
 Transform share price from simple `book_value × economy_multiplier` to a comprehensive incremental adjustment system that compares actual performance against expected benchmarks. Credit rating is one input among several, with careful separation to avoid double-counting.
 
-## Implementation Status: ✅ COMPLETE
+## Implementation Status: Previously Implemented, Currently Archived/Disabled
 
-The system has been fully implemented using an **incremental adjustment model** rather than the originally planned multiplier-based deterministic calculation. This provides more realistic, gradual price movements.
+The system described below was fully implemented using an **incremental adjustment model** rather than the originally planned multiplier-based deterministic calculation. In the current mainline, this is a historical implementation record and reintroduction target, not active runtime behavior.
 
 **Architecture Refactor (Version 0.096):**
 The share system has been refactored into a modular architecture with clear separation of concerns:

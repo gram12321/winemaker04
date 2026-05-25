@@ -60,6 +60,132 @@ Use this structure for every new entry:
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.281a - Documentation Sync For Research/Founder Updates
+**Date:** 2026-05-25 | **Commit(s):** 4621f07 | **Stats:** 10 insertions(+), 6 deletions(-)
+
+### Summary
+- Synced top-level project docs after the research presentation and founder revenue changes landed.
+- Kept terminology and status summaries aligned across the main onboarding docs.
+
+### Changes
+- `CONTEXT.md` (+2/-2) - small context/status alignment update.
+- `docs/AIdocs/AIDescriptions_coregame.md` (+3/-1) - refreshed implemented-status wording.
+- `docs/PROJECT_INFO.md` (+2/-2) - updated project info to match the current research/founder surfaces.
+- `readme.md` (+3/-1) - aligned README summaries with the latest systems state.
+
+### Notes
+- Despite the label, `0.281a` is the newest commit in this sequence and comes after `0.29` in actual chronology.
+
+---
+
+## Version 0.28, 0.29, 0.281 - Research Presentation Completion and Founder Revenue Integration
+**Date:** 2026-05-25 | **Commit(s):** 12647fd, 203306a, eb262df | **Stats:** 4,350 insertions(+), 2,559 deletions(-)
+
+### Summary
+- Reworked research presentation into a larger service-driven UI split with dedicated presentation constants, view shaping, and tab-level orchestration.
+- Added founder revenue support through staff/state/migration changes plus a dedicated finance panel.
+- Finished the research UI pass with a large cleanup/rewrite that reduced spec drift between design docs and shipped screen structure.
+
+### Changes
+- **NEW FILE:** `src/lib/services/research/researchPresentationService.ts` (514 lines, later expanded) - centralizes research panel/view presentation shaping instead of leaving display logic scattered across UI components.
+- **NEW FILE:** `src/lib/constants/researchPresentationConstants.ts` (25 lines) - shared presentation labels/config for the new research UI layout.
+- `src/components/finance/ResearchPanel.tsx` (+1628/-771 in `12647fd`, +353/-367 in `203306a`, +1087/-1421 in `eb262df`) - major UI refactor that reorganizes research display, then trims/finalizes the structure in the follow-up finish commit.
+- `src/components/pages/Research.tsx` (+154/-1, then +110/-55) - page-level orchestration updates for the revised research UI flow and view separation.
+- `src/lib/constants/researchConstants.ts` and `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` - rebalance research definitions and calculation behavior around the new presentation and progression pass.
+- **NEW FILE:** `src/components/finance/FounderPanel.tsx` (115 lines) and **NEW FILE:** `migrations/20260525000000_add_is_founder_to_staff.sql` (9 lines) - founder revenue surface and persistence support.
+- `src/lib/services/finance/wageService.ts`, `src/lib/services/user/staffService.ts`, `src/lib/database/core/staffDB.ts`, `src/lib/constants/staffConstants.ts`, and `src/lib/constants/startingConditions.ts` - founder-related staffing and startup behavior updates.
+- **NEW FILE:** `tests/research/researchPresentationService.test.ts` (70 lines, then expanded), **NEW FILE:** `tests/activity/staffResearchSpeed.test.ts` (56 lines), and updates to `tests/user/researchPanelVisibility.test.ts` / `tests/user/researchCalculations.test.ts` - regression coverage for the reworked research presentation and staffing interactions.
+- **NEW FILE:** `docs/superpowers/specs/reserachui.md` (343 lines, later heavily revised) and updates to `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` - design docs brought closer to the shipped research UI.
+
+### Notes
+- These commits are now pushed on `main` and were verified against GitHub commit diffs.
+- The dominant change is UI/service restructuring around research presentation, with founder revenue added as a parallel finance/staff feature.
+- Version tags are not strictly monotonic here: `0.29` is followed by `0.281` in commit chronology, so ordering in this log follows actual commit order rather than numeric sorting.
+
+---
+
+## Version 0.x-0.xa - Prestige Modal and Research Constants Hotfixes
+**Date:** 2026-05-24 | **Commit(s):** f6a5613, a976939 | **Stats:** 43 insertions(+), 5 deletions(-)
+
+### Summary
+- Applied two narrow follow-up fixes after the larger prestige/test/docs train.
+- Corrected prestige modal behavior in service logic and fixed a small research constants issue.
+
+### Changes
+- `src/lib/services/prestige/prestigeService.ts` (+25/-1) - targeted prestige modal/service hotfix.
+- `tests/prestige/prestigeService.test.ts` (+15) - added regression coverage for the prestige fix.
+- `src/lib/constants/researchConstants.ts` (+3/-4) - corrected a research constant definition mismatch.
+
+### Notes
+- This is a micro-fix pair and should be read as stabilization work on top of the 0.26-0.27 feature/test passes.
+
+---
+
+## Version 0.27-0.27a - Test Expansion, Audit Docs, and Skill Maintenance
+**Date:** 2026-05-24 | **Commit(s):** 525ed1e, 6f2c682, 9c3ecaf | **Stats:** 1,774 insertions(+), 386 deletions(-)
+
+### Summary
+- Expanded automated coverage around buy-market decay, contract unlocks, grape buyer behavior, and weather systems.
+- Added implementation-audit and test-expansion docs to support the newer founder economy and weather/market work.
+- Performed a broad maintenance pass across agent skill files, including the repository-specific `winemaker-game` skill.
+
+### Changes
+- **NEW FILE:** `docs/AIdocs/2026-05-24-founder-economy-implementation-audit.md` (245 lines) and **NEW FILE:** `docs/AIdocs/2026-05-24-test-expansion-checklist.md` (29 lines) - audit/checklist docs for recent system growth.
+- **NEW FILE:** `tests/sales/buyGrapeMarketDecay.test.ts` (115 lines), **NEW FILE:** `tests/sales/contractGenerationUnlocks.test.ts` (86 lines), **NEW FILE:** `tests/vineyard/weatherCenterPage.test.ts` (147 lines), **NEW FILE:** `tests/vineyard/weatherCenterService.test.ts` (177 lines), **NEW FILE:** `tests/vineyard/weatherImpactService.test.ts` (114 lines) - new regression coverage for recent market and weather mechanics.
+- `tests/sales/buyGrapeMarketService.test.ts` (+210/-1) and `tests/sales/grapeBuyerMarket.test.ts` (+109) - deeper buy-market and buyer behavior verification.
+- `skills/winemaker-game/SKILL.md` (+134/-5 in `6f2c682`, +27/-120 in `9c3ecaf`) - substantial update/rewrite of repo-specific workflow guidance.
+- Broad skill maintenance across `skills/javascript-typescript/SKILL.md`, `skills/game-studio/SKILL.md`, `skills/supabase-best-practices/SKILL.md`, and many other `skills/*.md` files - refines agent routing and instruction quality.
+- `src/components/pages/winepedia/WeatherTab.tsx` (+3/-2) and `docs/AIdocs/AIDescriptions_coregame.md` (+1/-1) - small alignment updates around shipped weather/test coverage.
+
+### Notes
+- This entry is mostly tooling, test, and documentation support work rather than a new gameplay feature launch.
+- The skill-file churn is significant enough to log because it changes how future agent sessions are steered in this repository.
+
+---
+
+## Version 0.26-0.261 - Prestige System Expansion, Balance Pass, and Test Coverage
+**Date:** 2026-05-24 | **Commit(s):** 3681418, 975b382, 35a7b54 | **Stats:** 2,252 insertions(+), 1,113 deletions(-)
+
+### Summary
+- Expanded prestige mechanics, documentation, and source inventory, then followed with a balance pass and targeted test coverage.
+- Connected prestige changes into contracts, loans, and achievement-related reward flows.
+- Added Admin Test Lab target plumbing so the growing automated suite can be selected and parsed more cleanly.
+
+### Changes
+- `src/lib/services/prestige/prestigeService.ts` (+31/-10 in `3681418`, +37/-19 in `975b382`) and `src/lib/services/prestige/prestigeCalculator.ts` (+31/-8) - broad prestige rule and balancing updates.
+- **NEW FILE:** `tests/prestige/prestigeService.test.ts` (138 lines) plus substantial follow-up additions, **NEW FILE:** `tests/user/achievementPrestigeBalance.test.ts` (12 lines), and updates to `tests/prestige/prestigeCalculator.test.ts` - prestige verification baseline and balancing assertions.
+- `docs/PrestigeEventSourceInventory.md` (+148/-53, then +46/-44) - documents prestige event sources and later tuning changes.
+- **NEW FILE:** `docs/PrestigeBalanceRecommendations.md` (142 lines) - explicit balance follow-up for prestige mechanics.
+- `src/lib/features/loanLender/services/finance/loanService.ts` (+87/-13), `src/lib/services/sales/contractService.ts` (+60/-1), and `src/lib/services/sales/salesService.ts` (+10/-2) - prestige/balance effects propagated into adjacent finance and contract logic.
+- `src/components/pages/admin/TestLabPage.tsx` (+44/-6), `server/test-runner-parser.ts` (+22/-3), `server/test-runner.ts` (+4/-4), and **NEW FILE:** `src/lib/services/admin/testLab/automatedTestTargets.ts` (43 lines) - improved admin test targeting and parser behavior.
+- `readme.md` (+17/-4), `docs/versionlog.md` (+1012/-923), and `docs/WineSystem_VariableRelationshipMap.md` (+5) - documentation sync for the prestige/release-note pass.
+
+### Notes
+- This is a combined prestige feature/balance/test sequence; the large documentation churn in `3681418` is mostly versionlog modernization plus prestige inventory updates.
+- `0.261` is primarily QA/tooling hardening around the prestige work rather than a separate mechanic release.
+
+---
+
+## Version 0.251K - Bulk Market Finalization and Prestige Scenario Coverage
+**Date:** 2026-05-24 | **Commit(s):** 3df43d6 | **Stats:** 619 insertions(+), 22 deletions(-)
+
+### Summary
+- Applied one final follow-up pass to the bulk buy/sell market work after 0.251J.
+- Added a detailed symmetry-analysis doc and introduced prestige scenario archetype tests in parallel.
+- Refined the repo skill guidance again while touching final buy/sell modal behavior.
+
+### Changes
+- **NEW FILE:** `docs/AIdocs/buy-sell-grape-symmetry-analysis.md` (229 lines) - documents behavioral asymmetries and intended parity between buy/sell flows.
+- `src/components/ui/modals/activitymodals/BuyFromMarketModal.tsx` (+39/-15) and `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (+5/-2) - final modal polish and consistency fixes.
+- `src/lib/services/sales/buyGrapeMarketService.ts` (+29/-4), `src/lib/services/sales/grapeBuyerMarketService.ts` (+2), and `src/lib/services/sales/grapeSupplierMarketService.ts` (+2) - final service-side corrections supporting the UI pass.
+- **NEW FILE:** `tests/prestige/prestigeEventScenarioArchetypes.test.ts` (243 lines) - adds scenario coverage for prestige event archetypes.
+- `skills/winemaker-game/SKILL.md` (+36) and `skills/improve-codebase-architecture/SKILL.md` (+34/-1) - guidance updates bundled into the same commit.
+
+### Notes
+- This entry is a narrow postscript to the larger 0.25-0.251J market rollout rather than a new standalone feature train.
+
+---
+
 ## Version 0.25-0.251J - Bulk Grape Buy/Sell and Weather Gameplay Expansion
 **Date:** 2026-05-22 to 2026-05-24 | **Commit(s):** e7343ef, d2174dd, 7203dc4, 4d57ed2, 8b88525, fe4874f, 515c37a, 132d92f, 3a6c6fd, 120b6f3, 87bdafb | **Stats:** 8,524 insertions(+), 2,050 deletions(-)
 

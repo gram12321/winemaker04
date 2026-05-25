@@ -1,6 +1,8 @@
 # Weather Forecast Volatility Design
 **Date:** 2026-05-23  
-**Status:** Approved for phased implementation
+**Status:** Completed for Phase 1. Code-verified on 2026-05-25 and moved to `docs/superpowers/completed/`.
+
+Completion note: weather types, deterministic seasonal/weekly generation, week-ahead forecast, game-tick state writes, header UI, Weather Center navigation, and grape-market volatility integration are implemented. Vineyard weather impacts moved beyond this Phase 1 design and are tracked in `docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md`.
 
 ## 1. Goal
 Add a top-level Weather system, parallel to Economy Phase, with:

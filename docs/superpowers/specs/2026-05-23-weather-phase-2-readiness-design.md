@@ -1,12 +1,14 @@
 # Weather Phase 2 Final Design: Vineyard Integration
 **Date:** 2026-05-23  
-**Status:** Final design, implementation-ready
+**Status:** Core Phase 2 implementation shipped; active edge-test and future-mechanics follow-up remains. Code-verified on 2026-05-25.
+
+Implementation note: deterministic vineyard health/ripeness impact, site coupling, Weather Center, and planned-alert shell are implemented. Severe weather event mechanics, recommended action engine, research/weather upgrades, weather achievements, and additional boundary/deterministic fixture tests remain deferred or active follow-up.
 
 ## 1. Purpose and Lineage
 This document defines the final Phase 2 design for extending weather into vineyard simulation.
 
 Source lineage:
-- `docs/superpowers/specs/2026-05-23-weather-forecast-volatility-design.md`
+- `docs/superpowers/completed/2026-05-23-weather-forecast-volatility-design.md`
 - `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` (bulk grape market iteration context)
 
 This Phase 2 design applies weather to:

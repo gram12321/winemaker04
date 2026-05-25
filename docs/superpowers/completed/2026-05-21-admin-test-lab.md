@@ -1,6 +1,8 @@
 # Admin Test Lab Implementation Plan
 
-Status: Partially implemented. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md`; updated 2026-05-22 to use active-company scenarios as the default Test Lab model.
+Status: Implemented with documented deviations. Created 2026-05-21 from `docs/superpowers/completed/2026-05-20-admin-test-lab-design.md`; updated 2026-05-22 to use active-company scenarios as the default Test Lab model; code-verified on 2026-05-25.
+
+Verification note: the active implementation includes the dev/loopback gate, structured `/api/test-run`, scenario registry, browser-side scenario runner, Test Lab UI, durable run ids, tagged fixture creation, cleanup helpers, and `completeActivityNow()`. Broad active-company shortcuts such as money, prestige, research, and staff XP are not fully cleanup-reversible by design. The checkbox list below is the original execution checklist, not the current status source.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

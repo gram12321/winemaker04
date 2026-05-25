@@ -1,6 +1,14 @@
 # Bulk Grape Buy Market Design
 **Date:** 2026-05-23  
-**Status:** Draft for review
+**Status:** Completed. Code-verified on 2026-05-25 and moved to `docs/superpowers/completed/`.
+
+## Completion Note
+
+The grape buy-market slice is implemented: persistence, buy-market service, Winery entry/modal, weekly decay, seasonal refresh, supplier trust, purchase side effects, and tests are present. Later implementation also shipped sell-side multi-state support, so the original "sell-side expansion deferred" notes are historical rather than current.
+
+Known implementation deviations from this design record:
+- `BuyFromMarketModal` uses dialog primitives directly instead of routing through `MarketWindow`.
+- The purchase flow uses row selection/quantity plus footer confirmation rather than a fully inline per-row buy button.
 
 ---
 

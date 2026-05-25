@@ -36,7 +36,7 @@ Status: Complete. Rechecked against implementation on 2026-05-21.
   - Shows current taste quality, 14 family rows, ideal markers, accepted ranges, and family scores.
 - Modify `src/components/ui/components/WineTasteProfilePanel.tsx`
   - Add the new breakdown without replacing the current taste radar wheel.
-- Modify `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md`
+- Modify `docs/superpowers/completed/2026-05-20-taste-quality-index-design.md`
   - Record future TODOs for descriptor scoring and unified customer preferences.
 - Modify `src/lib/services/wine/taste/tasteQualityIndexService.ts`
   - Add a short TODO explaining descriptor scoring is intentionally not part of the current score.
