@@ -152,11 +152,11 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | `ResearchProject.requiredCompanyValue` | Minimum company value gate for advanced progression projects. |
 | `ResearchProject.requiredBuyerLoyaltyLevel` | Minimum best buyer relationship tier for grape-buyer progression projects. |
 | `ResearchProject.requiredAchievementIds` | Achievement unlock gates used for late progression projects. |
-| `ResearchProject.unlocks` | Unlock payloads applied on completion (`grape`, `fermentation_technology`, `staff_limit`, `vineyard_size`, `contract_type`, and grape-buyer progression unlock types). |
+| `ResearchProject.unlocks` | Unlock payloads applied on completion (`grape`, `fermentation_technology`, `staff_limit`, `vineyard_size`, `total_vineyard_hectares`, `vineyard_count`, `contract_type`, and grape-buyer progression unlock types). |
 | `ResearchProject.permanentEffects` | Always-on modifiers from completed research (current shipped effect kind: `vineyard_health_decay_multiplier`). |
 | `startingResearch` | Starting-condition field for country-specific pre-unlocked research IDs applied during company setup. |
 
-Current implemented enforcement includes grape planting, fermentation method availability, staff cap, vineyard size cap, and contract customer-channel access. Research progression modifiers are designed to alter upstream systems and access rules, not to bypass structure/taste score computation.
+Current implemented enforcement includes grape planting, fermentation method availability, staff cap, vineyard size/total-hectares/vineyard-count caps, and contract customer-channel access. Research progression modifiers are designed to alter upstream systems and access rules, not to bypass structure/taste score computation.
 
 Known limitation: some project `benefits` strings are still design-facing flavor text and are not yet backed by dedicated mechanics. Treat `unlocks` and `permanentEffects` as the authoritative implementation source for current gameplay impact.
 

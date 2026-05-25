@@ -56,7 +56,7 @@ npm run build
 | Taste Quality design spec | `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` |
 | Taste Quality implementation plan | `docs/superpowers/plans/2026-05-20-taste-quality-index.md` |
 | Contract taste/site UI plan | `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` |
-| Research mechanic design and rollout status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
+| Research unified design, rollout status, and handoff pipeline | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
 | Admin Test Lab design | `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` |
 | Admin Test Lab implementation plan | `docs/superpowers/plans/2026-05-21-admin-test-lab.md` |
 | Development prompt guidance | `docs/AIdocs/AIpromt_newpromt.md` |
@@ -81,8 +81,10 @@ Use `docs/versionlog.md` as the canonical running change history for meaningful 
 
 - Core gates are implemented: completed-state tracking, prestige/prerequisite eligibility, and service-side validation.
 - Unlock enforcement is active for grapes, fermentation methods, staff cap, vineyard size cap, and contract sales channels.
+- Vineyard capacity enforcement includes vineyard size, total hectares, and vineyard-count ladders.
 - Starting conditions now include regional `startingResearch` pre-unlocks applied during setup.
 - Permanent effects are active via runtime aggregation (current shipped slice: vineyard health decay multiplier).
+- Research UI is split into Active Research Effects, Research Footprint, and Catalog tabs; catalog includes `Hide completed` and no longer embeds the footprint card.
 - Some project benefit text is still aspirational and does not yet map to a dedicated gameplay mechanic.
 
 ## Database Notes

@@ -133,11 +133,13 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Unlock Persistence**: Completed research is persisted company-scoped through `src/lib/database/core/researchUnlocksDB.ts`
 - **UI**: Dedicated research page (`src/components/pages/Research.tsx`) and panel (`src/components/finance/ResearchPanel.tsx`) with completed, in-progress, locked, and available states
 - **Active Bonuses UI**: Research page now surfaces permanent bonuses from completed research in a visible summary panel
+- **Research Views**: Page-level tabs split into Active Research Effects, Research Footprint, and Catalog
+- **Catalog Behavior**: Catalog now focuses on progression interaction and supports `Hide completed`; footprint/effects summary is rendered in the dedicated footprint view instead of inside catalog
 - **Implemented Gates**:
   - `grape` unlocks in planting
   - `fermentation_technology` unlocks in fermentation options modal
   - `contract_type` unlocks in contract generation
-  - `staff_limit` and `vineyard_size` tier caps in hiring and land search
+  - `staff_limit`, `vineyard_size`, `total_vineyard_hectares`, and `vineyard_count` tier caps in hiring and land search
 - **Permanent Effect Minimum Slice**: Runtime permanent-effect aggregation for completed research, applied to vineyard health degradation (`vineyard_health_decay_multiplier`)
 
 **What's NOT Implemented Yet**:

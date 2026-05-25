@@ -7,8 +7,8 @@
 |---|---|---|
 | Research catalog and gates | `src/lib/constants/researchConstants.ts` | Project definitions, unlock payloads, prerequisites, prestige/company/achievement/buyer gates, generic work profiles, permanent effects. |
 | Research work and cost calculator | `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` | Shared complexity-based work and cost calculation across categories. |
-| Research UI panel | `src/components/finance/ResearchPanel.tsx` | Loads active/completed state, applies gate visibility, and supports admin bypass mode. |
-| Research page bonuses panel | `src/components/pages/Research.tsx` | Displays active permanent research effects. |
+| Research UI panel | `src/components/finance/ResearchPanel.tsx` | Loads active/completed state, applies gate visibility, supports admin bypass mode, and now supports view-specific rendering (`catalog`, `footprint`, `both`). |
+| Research page bonuses panel | `src/components/pages/Research.tsx` | Page-level tabs for Active Research Effects, Research Footprint, and Catalog; catalog focuses on progression while footprint is isolated to the footprint tab. |
 | Permanent effects aggregation | `src/lib/services/research/researchPermanentEffectsService.ts` | Aggregates completed research effects into runtime modifiers. |
 | Starting condition head-starts | `src/lib/constants/startingConditions.ts` | Country-specific `startingResearch` definitions. |
 | Starting condition application | `src/lib/services/core/startingConditionsService.ts` | Applies `startingResearch` unlocks during setup. |
