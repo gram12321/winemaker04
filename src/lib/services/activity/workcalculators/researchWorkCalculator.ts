@@ -56,14 +56,6 @@ export function calculateResearchCost(projectId: string): number {
 }
 
 /**
- * Calculate estimated time to complete research.
- */
-export function calculateResearchTimeEstimate(projectId: string): string {
-      const weeks = getProjectAndEconomics(projectId).economics.estimatedWeeks;
-      return `${weeks} week${weeks === 1 ? '' : 's'}`;
-}
-
-/**
  * Get research project details with calculated work and cost.
  * Convenience function for UI.
  */
@@ -71,19 +63,16 @@ export function getResearchProjectWithCalculations(projectId: string): {
       project: ResearchProject;
       totalWork: number;
       totalCost: number;
-      timeEstimate: string;
       workFactors: WorkFactor[];
 } {
       const { project } = getProjectAndEconomics(projectId);
       const { totalWork, factors } = calculateResearchWork(projectId);
       const totalCost = calculateResearchCost(projectId);
-      const timeEstimate = calculateResearchTimeEstimate(projectId);
 
       return {
             project,
             totalWork,
             totalCost,
-            timeEstimate,
             workFactors: factors
       };
 }

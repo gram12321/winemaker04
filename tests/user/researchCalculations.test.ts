@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateResearchWork,
   calculateResearchCost,
-  calculateResearchTimeEstimate,
   getResearchProjectWithCalculations
 } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
 import { RESEARCH_PROJECTS, RESEARCH_PROJECT_ECONOMICS } from '@/lib/constants/researchConstants';
@@ -11,7 +10,7 @@ import { RESEARCH_PROJECTS, RESEARCH_PROJECT_ECONOMICS } from '@/lib/constants/r
  * Research Calculation Tests - Pure Functions
  * 
  * These tests validate research calculations without requiring database or company setup.
- * Focuses on the mathematical correctness of work, cost, and time estimates.
+ * Focuses on the mathematical correctness of work and cost.
  */
 describe('Research Calculations - Pure Functions', () => {
   describe('calculateResearchWork', () => {
@@ -146,26 +145,6 @@ describe('Research Calculations - Pure Functions', () => {
     });
   });
 
-  describe('calculateResearchTimeEstimate', () => {
-    it('returns time estimate as a string', () => {
-      const project = RESEARCH_PROJECTS[0];
-      const estimate = calculateResearchTimeEstimate(project.id);
-      
-      expect(typeof estimate).toBe('string');
-      expect(estimate).toMatch(/\d+\s+week/);
-    });
-
-    it('time estimate is reasonable (not zero, not extremely large)', () => {
-      for (const project of RESEARCH_PROJECTS.slice(0, 10)) {
-        const estimate = calculateResearchTimeEstimate(project.id);
-        const weeks = parseInt(estimate.match(/\d+/)?.[0] || '0');
-        
-        expect(weeks).toBeGreaterThan(0);
-        expect(weeks).toBeLessThan(1000); // Reasonable upper bound
-      }
-    });
-  });
-
   describe('getResearchProjectWithCalculations', () => {
     it('returns complete project data with all calculations', () => {
       const project = RESEARCH_PROJECTS[0];
@@ -175,7 +154,6 @@ describe('Research Calculations - Pure Functions', () => {
       expect(result.project.id).toBe(project.id);
       expect(result.totalWork).toBeGreaterThan(0);
       expect(result.totalCost).toBeGreaterThan(0);
-      expect(typeof result.timeEstimate).toBe('string');
       expect(Array.isArray(result.workFactors)).toBe(true);
     });
 
@@ -201,7 +179,6 @@ describe('Research Calculations - Pure Functions', () => {
         expect(RESEARCH_PROJECT_ECONOMICS[project.id]).toEqual({
           workAmount: expect.any(Number),
           moneyCost: expect.any(Number),
-          estimatedWeeks: expect.any(Number),
         });
         
         // Can calculate work and cost

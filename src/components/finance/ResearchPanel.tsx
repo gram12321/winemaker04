@@ -3,11 +3,11 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { Beaker, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
 import { RESEARCH_PROJECTS, type ResearchProject, type ResearchUnlock } from '@/lib/constants/researchConstants';
-import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
+import { getAllActivities } from '@/lib/services';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
-import { calculateResearchCost, calculateResearchWork } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
+import { calculateResearchCost, calculateResearchWork } from '@/lib/services';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
+import { getUnlockedResearchIds } from '@/lib/database';
 import {
   type ResearchEligibilityContext,
   getResearchPermanentEffects,
@@ -18,14 +18,11 @@ import {
 import { formatNumber } from '@/lib/utils/utils';
 import {
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
-  getBaseVineyardCapacityValue,
   getChainedVineyardResearchUnlockType,
-  type VineyardCapUnlockType,
 } from '@/lib/services/vineyard/vineyardCapacityService';
-import { getCurrentPrestige } from '@/lib/services/core/gameState';
+import { getCurrentPrestige } from '@/lib/services';
 
 const CHAINED_RESEARCH_UNLOCK_TYPES = new Set<string>(['staff_limit', ...CHAINED_VINEYARD_CAP_UNLOCK_TYPES]);
-const BASE_STAFF_LIMIT = 2;
 
 type ResearchStatus = 'available' | 'in-progress' | 'completed' | 'locked';
 type ViewMode = 'focus' | 'full';
@@ -137,40 +134,6 @@ function getChainedResearchUnlockType(project: ResearchProject): string | null {
   return chainedUnlock?.type ?? null;
 }
 
-function getCurrentChainLimit(chainType: string, projects: ResearchProject[], completedResearch: Set<string>): number | null {
-  if (chainType === 'staff_limit') {
-    let currentLimit = BASE_STAFF_LIMIT;
-    for (const project of projects) {
-      if (!completedResearch.has(project.id)) {
-        continue;
-      }
-
-      const unlock = project.unlocks?.find((candidate) => candidate.type === 'staff_limit' && typeof candidate.value === 'number');
-      if (unlock && typeof unlock.value === 'number') {
-        currentLimit = Math.max(currentLimit, unlock.value);
-      }
-    }
-    return currentLimit;
-  }
-
-  if (CHAINED_VINEYARD_CAP_UNLOCK_TYPES.has(chainType as VineyardCapUnlockType)) {
-    let currentLimit = getBaseVineyardCapacityValue(chainType as VineyardCapUnlockType);
-    for (const project of projects) {
-      if (!completedResearch.has(project.id)) {
-        continue;
-      }
-
-      const unlock = project.unlocks?.find((candidate) => candidate.type === chainType && typeof candidate.value === 'number');
-      if (unlock && typeof unlock.value === 'number') {
-        currentLimit = Math.max(currentLimit, unlock.value);
-      }
-    }
-    return currentLimit;
-  }
-
-  return null;
-}
-
 export function getVisibleResearchProjects(
   projects: ResearchProject[],
   completedResearch: Set<string>,
@@ -182,16 +145,6 @@ export function getVisibleResearchProjects(
   }
 
   const chainFrontierByType = new Map<string, string>();
-  const currentChainLimitByType = new Map<string, number | null>();
-
-  for (const project of projects) {
-    const chainType = getChainedResearchUnlockType(project);
-    if (!chainType || currentChainLimitByType.has(chainType)) {
-      continue;
-    }
-
-    currentChainLimitByType.set(chainType, getCurrentChainLimit(chainType, projects, completedResearch));
-  }
 
   for (const project of projects) {
     const chainType = getChainedResearchUnlockType(project);
@@ -204,9 +157,7 @@ export function getVisibleResearchProjects(
       continue;
     }
 
-    const currentLimit = currentChainLimitByType.get(chainType);
-    const unlock = project.unlocks?.find((candidate) => candidate.type === chainType && typeof candidate.value === 'number');
-    if (currentLimit !== undefined && currentLimit !== null && unlock && typeof unlock.value === 'number' && unlock.value <= currentLimit) {
+    if (hasMissingPrerequisites(project, completedResearch)) {
       continue;
     }
 
@@ -215,16 +166,25 @@ export function getVisibleResearchProjects(
 
   return projects.filter((project) => {
     const chainType = getChainedResearchUnlockType(project);
-    if (!chainType) {
-      return true;
-    }
 
     if (completedResearch.has(project.id) || activeResearch.has(project.id)) {
       return true;
     }
 
+    if (hasMissingPrerequisites(project, completedResearch)) {
+      return false;
+    }
+
+    if (!chainType) {
+      return true;
+    }
+
     return chainFrontierByType.get(chainType) === project.id;
   });
+}
+
+function hasMissingPrerequisites(project: ResearchProject, completedResearch: Set<string>): boolean {
+  return Boolean(project.prerequisites?.some((id) => !completedResearch.has(id)));
 }
 
 function getStatusBadgeVariant(status: ResearchStatus): 'secondary' | 'outline' | 'default' {
@@ -277,6 +237,10 @@ function toReadableToken(raw: string): string {
 function readableChainType(chainType: string | null): string {
   if (!chainType) return '';
   return toReadableToken(chainType);
+}
+
+function toReadableProjectReference(projectId: string): string {
+  return toReadableToken(projectId);
 }
 
 function buildImpactSummary(project: ResearchProject): { primary: string; additionalCount: number } {
@@ -695,20 +659,20 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
         } ${model.status === 'completed' ? 'opacity-80' : ''}`}
         onClick={() => setSelectedProjectId(model.project.id)}
       >
-        <div className="grid gap-2 md:grid-cols-[1.5fr_2fr_1fr_auto] md:items-center">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1.7fr)_minmax(0,2.3fr)_auto_auto] md:items-center">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <GroupIcon className={`h-3.5 w-3.5 ${group?.theme.soft || 'text-slate-600'}`} />
               <Badge variant={getStatusBadgeVariant(model.status)} className="text-[10px] uppercase tracking-wide">
                 {model.status === 'in-progress' ? 'In Progress' : model.status}
               </Badge>
-              <p className="truncate text-xs font-semibold text-slate-900">{model.project.title}</p>
+              <p className="text-xs font-semibold leading-snug text-slate-900 break-words">{model.project.title}</p>
             </div>
-            <p className="mt-1 truncate text-[11px] text-slate-600">{model.project.description}</p>
+            <p className="mt-1 text-[11px] leading-snug text-slate-600 break-words">{model.project.description}</p>
           </div>
 
           <div className="min-w-0">
-            <p className="truncate text-[11px] text-slate-700">
+            <p className="text-[11px] leading-snug text-slate-700 break-words">
               {model.impactSummary.primary}
               {model.impactSummary.additionalCount > 0 ? ` (+${model.impactSummary.additionalCount})` : ''}
             </p>
@@ -771,7 +735,9 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
 
         {isExpanded ? (
           <div className="mt-2 space-y-2 border-t border-slate-200 pt-2 text-[11px] text-slate-700">
-            <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-slate-600">Project Ref: {model.project.id}</div>
+            <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-slate-600">
+              Project Label: {toReadableProjectReference(model.project.id)}
+            </div>
             {model.status === 'locked' && model.lockReason ? (
               <div className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{model.lockReason}</div>
             ) : null}
