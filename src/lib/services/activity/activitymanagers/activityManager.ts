@@ -409,8 +409,7 @@ export async function progressActivities(): Promise<void> {
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
-    const hasActiveResearch = activities.some(isResearchActivity);
-    const researchEffects = hasActiveResearch ? await getResearchPermanentEffects() : null;
+    const researchEffects = await getResearchPermanentEffects();
 
     // Build staff task count map from active activities only
     const staffTaskCounts = new Map<string, number>();
@@ -426,9 +425,10 @@ export async function progressActivities(): Promise<void> {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
       const grapeVariety = activity.params.grape; // Get grape variety for XP bonus
-      const staffContributionOptions = isResearchActivity(activity)
-        ? { researchSkillMultiplier: researchEffects?.researchSkillMultiplier ?? 1 }
-        : undefined;
+      const staffContributionOptions = {
+        allStaffWorkMultiplier: researchEffects.allStaffWorkMultiplier,
+        ...(isResearchActivity(activity) ? { researchSkillMultiplier: researchEffects.researchSkillMultiplier } : {}),
+      };
 
       // Calculate work contribution from staff (0 if no staff assigned)
       let workThisTick = 0;

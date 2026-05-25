@@ -14,6 +14,7 @@ export function ResearchPage() {
     vineyardHealthDecayMultiplier: 1,
     researchSkillMultiplier: 1,
     administrationAndResearchWorkMultiplier: 1,
+    allStaffWorkMultiplier: 1,
     activeEffects: []
   });
 

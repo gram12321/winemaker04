@@ -70,7 +70,7 @@ describe('Research Calculations - Pure Functions', () => {
     });
 
     it('paces research as multi-month work for the expected company tier', () => {
-      expect(calculateResearchWork('admin_basic').totalWork).toBeGreaterThanOrEqual(150);
+      expect(calculateResearchWork('foundation_admin_baseline').totalWork).toBeGreaterThanOrEqual(150);
       expect(calculateResearchWork('tech_fermentation').totalWork).toBeGreaterThanOrEqual(2500);
       expect(calculateResearchWork('mkt_old_world_exchange').totalWork).toBeGreaterThanOrEqual(12000);
     });
@@ -134,7 +134,7 @@ describe('Research Calculations - Pure Functions', () => {
         'tech_fermentation',
         'mkt_restaurant_program',
         'eff_bulk_chain_optimization',
-        'staff_training',
+        'foundation_staff_training',
       ];
 
       const ratios = representativeProjectIds.map(projectId =>
@@ -216,8 +216,8 @@ describe('Research Calculations - Pure Functions', () => {
 
     it('defines a chained research-speed path with escalating gates', () => {
       const speedChain = [
-        'admin_research_methodology',
-        'admin_research_office',
+        'foundation_admin_methodology',
+        'foundation_admin_office',
         'tech_experimental_cellar_lab',
         'tech_innovation_program',
         'tech_research_institute_network',

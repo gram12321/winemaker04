@@ -65,6 +65,11 @@ export type ResearchPermanentEffect =
             kind: 'administration_and_research_work_multiplier';
             multiplier: number;
             description?: string;
+      }
+      | {
+            kind: 'all_staff_work_multiplier';
+            multiplier: number;
+            description?: string;
       };
 
 export interface ResearchProject {
@@ -85,6 +90,7 @@ export interface ResearchProject {
       requiredPrestige?: number; // Minimum prestige score required to start this research
       prerequisites?: string[]; // Project IDs that must be completed before this research is available
       requiredCompanyValue?: number; // Minimum company value required to start this research
+      requiredCompanyAgeWeeks?: number; // Minimum company age in weeks required to start this research
       requiredBuyerLoyaltyLevel?: BuyerLoyaltyLevel; // Minimum best buyer relationship level
       requiredAchievementIds?: string[]; // Achievement IDs that must be unlocked
 }
@@ -101,14 +107,15 @@ export const BASE_VINEYARD_COUNT_LIMIT = 1;
 export const BASE_STAFF_LIMIT = 2;
 
 export const RESEARCH_PROJECT_ECONOMICS: Record<string, ResearchProjectEconomics> = {
-      admin_basic: { workAmount: 177, moneyCost: 5300 },
-      admin_research_methodology: { workAmount: 302, moneyCost: 6200 },
-      admin_research_office: { workAmount: 1206, moneyCost: 18500 },
+      foundation_admin_baseline: { workAmount: 177, moneyCost: 5300 },
+      foundation_admin_methodology: { workAmount: 302, moneyCost: 6200 },
+      foundation_admin_office: { workAmount: 1206, moneyCost: 18500 },
       tech_experimental_cellar_lab: { workAmount: 4730, moneyCost: 93700 },
       tech_innovation_program: { workAmount: 11683, moneyCost: 231300 },
       tech_research_institute_network: { workAmount: 46107, moneyCost: 912900 },
-      project_grant_basic: { workAmount: 132, moneyCost: 3900 },
-      project_grant_advanced: { workAmount: 1679, moneyCost: 10600 },
+      foundation_grant_basic: { workAmount: 132, moneyCost: 3900 },
+      foundation_grant_programmatic: { workAmount: 620, moneyCost: 9800 },
+      foundation_grant_advanced: { workAmount: 1679, moneyCost: 10600 },
       tech_soil_analysis: { workAmount: 1773, moneyCost: 35100 },
       tech_fermentation: { workAmount: 3540, moneyCost: 70100 },
       tech_fermentation_extended: { workAmount: 5361, moneyCost: 106100 },
@@ -171,9 +178,9 @@ export const RESEARCH_PROJECT_ECONOMICS: Record<string, ResearchProjectEconomics
       eff_contract_fulfillment_grid: { workAmount: 11490, moneyCost: 196500 },
       tech_market_signal_engine: { workAmount: 5186, moneyCost: 102700 },
       tech_negotiation_ai_cellar: { workAmount: 24169, moneyCost: 478500 },
-      staff_onboarding_program: { workAmount: 388, moneyCost: 7700 },
-      staff_training: { workAmount: 1451, moneyCost: 22200 },
-      staff_leadership_pipeline: { workAmount: 4028, moneyCost: 61600 },
+      foundation_staff_onboarding: { workAmount: 388, moneyCost: 7700 },
+      foundation_staff_training: { workAmount: 1451, moneyCost: 22200 },
+      foundation_staff_leadership: { workAmount: 4028, moneyCost: 61600 },
       staff_operational_management: { workAmount: 9389, moneyCost: 143700 },
       staff_department_structure: { workAmount: 9775, moneyCost: 149600 },
       staff_operations_hub: { workAmount: 18015, moneyCost: 275600 },
@@ -274,12 +281,15 @@ interface UnlockResearchProjectConfig {
       icon: string;
       requiredPrestige?: number;
       requiredCompanyValue?: number;
+      requiredCompanyAgeWeeks?: number;
+      requiredAchievementIds?: string[];
       prerequisites?: string[];
       unlockType: 'vineyard_size' | 'total_vineyard_hectares' | 'vineyard_count' | 'staff_limit';
       unlockValue: number;
       unlockDisplayName: string;
       benefits: string[];
       workProfile: ResearchWorkProfile;
+      permanentEffects?: ResearchPermanentEffect[];
 }
 
 interface CapacityResearchProjectConfig extends Omit<UnlockResearchProjectConfig, 'category' | 'unlockType' | 'unlockDisplayName'> {
@@ -303,13 +313,16 @@ function createUnlockResearchProject(config: UnlockResearchProjectConfig): Resea
             prestigeReward: calculateResearchPrestigeFromComplexity(config.complexity),
             requiredPrestige: config.requiredPrestige,
             requiredCompanyValue: config.requiredCompanyValue,
+            requiredCompanyAgeWeeks: config.requiredCompanyAgeWeeks,
+            requiredAchievementIds: config.requiredAchievementIds,
             prerequisites: config.prerequisites,
             unlocks: [{
                   type: config.unlockType,
                   value: config.unlockValue,
                   displayName: config.unlockDisplayName
             }],
-            workProfile: config.workProfile
+            workProfile: config.workProfile,
+            permanentEffects: config.permanentEffects
       };
 }
 
@@ -340,7 +353,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             complexity: 2,
             icon: '🌱',
             requiredPrestige: 2,
-            prerequisites: ['admin_basic'],
+            prerequisites: ['foundation_admin_baseline'],
             unlockType: 'vineyard_size',
             unlockValue: 0.25,
             benefits: ['Raises max size per vineyard to 0.25 hectares'],
@@ -537,7 +550,7 @@ const TOTAL_VINEYARD_HECTARE_RESEARCH_PROJECTS: ResearchProject[] = [
             complexity: 3,
             icon: '📏',
             requiredPrestige: 5,
-            prerequisites: ['admin_basic'],
+            prerequisites: ['foundation_admin_baseline'],
             unlockType: 'total_vineyard_hectares',
             unlockValue: 1,
             benefits: ['Raises max total vineyard area to 1 hectare'],
@@ -557,7 +570,7 @@ const TOTAL_VINEYARD_HECTARE_RESEARCH_PROJECTS: ResearchProject[] = [
 ];
 
 const VINEYARD_COUNT_RESEARCH_PROJECTS: ResearchProject[] = [
-      createCapacityResearchProject({ id: 'eff_vineyard_registry', title: 'Vineyard Registry', description: 'Introduce formal registry and oversight for more than one vineyard.', complexity: 3, icon: '📚', requiredPrestige: 6, prerequisites: ['admin_basic'], unlockType: 'vineyard_count', unlockValue: 2, benefits: ['Raises max vineyard count to 2'], workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.08, extraInitialWork: 14 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_registry', title: 'Vineyard Registry', description: 'Introduce formal registry and oversight for more than one vineyard.', complexity: 3, icon: '📚', requiredPrestige: 6, prerequisites: ['foundation_admin_baseline'], unlockType: 'vineyard_count', unlockValue: 2, benefits: ['Raises max vineyard count to 2'], workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.08, extraInitialWork: 14 } }),
       createCapacityResearchProject({ id: 'eff_dual_estate_management', title: 'Dual Estate Management', description: 'Coordinate planning for a three-vineyard operation.', complexity: 4, icon: '🏷️', requiredPrestige: 10, prerequisites: ['eff_vineyard_registry'], unlockType: 'vineyard_count', unlockValue: 3, benefits: ['Raises max vineyard count to 3'], workProfile: { scopeWorkAmount: 92, complexityCurve: { kind: 'linear', multiplier: 0.15 }, categoryModifier: 0.1, extraInitialWork: 20 } }),
       createCapacityResearchProject({ id: 'eff_vineyard_cluster_ops', title: 'Vineyard Cluster Operations', description: 'Run a small network of separate vineyard sites.', complexity: 5, icon: '🪴', requiredPrestige: 16, prerequisites: ['eff_dual_estate_management'], unlockType: 'vineyard_count', unlockValue: 5, benefits: ['Raises max vineyard count to 5'], workProfile: { scopeWorkAmount: 128, complexityCurve: { kind: 'linear', multiplier: 0.17 }, categoryModifier: 0.12, extraInitialWork: 28 } }),
       createCapacityResearchProject({ id: 'eff_vineyard_dispatch', title: 'Multi-Vineyard Dispatch', description: 'Dispatch labor and logistics across a wider site network.', complexity: 6, icon: '🚚', requiredPrestige: 24, requiredCompanyValue: 900000, prerequisites: ['eff_vineyard_cluster_ops'], unlockType: 'vineyard_count', unlockValue: 8, benefits: ['Raises max vineyard count to 8'], workProfile: { scopeWorkAmount: 176, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.15, extraInitialWork: 40 } }),
@@ -573,39 +586,56 @@ const VINEYARD_COUNT_RESEARCH_PROJECTS: ResearchProject[] = [
 
 const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       {
-            id: 'staff_onboarding_program',
+            id: 'foundation_staff_onboarding',
             title: 'Staff Onboarding Program',
             description: 'Create hiring playbooks and role onboarding standards to safely grow the team.',
             complexity: 3,
             icon: '🧾',
-            requiredPrestige: 6,
+            requiredCompanyValue: 180000,
+            requiredAchievementIds: ['sales_count_tier_1'],
             unlockValue: 3,
-            benefits: ['Raises staff capacity to 3 employees', 'Improves onboarding consistency'],
+            benefits: ['Raises staff capacity to 3 employees', 'All staff complete work 5% faster'],
+            permanentEffects: [{
+                  kind: 'all_staff_work_multiplier',
+                  multiplier: 1.05,
+                  description: 'All staff complete work 5% faster'
+            }],
             workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.06, extraInitialWork: 10 }
       },
       {
-            id: 'staff_training',
+            id: 'foundation_staff_training',
             title: 'Staff Training Programs',
             description: 'Develop structured training programs for winery and vineyard staff',
             complexity: 5,
             icon: '👥',
-            requiredPrestige: 10,
-            prerequisites: ['staff_onboarding_program'],
+            prerequisites: ['foundation_staff_onboarding'],
+            requiredCompanyValue: 350000,
+            requiredAchievementIds: ['sales_count_tier_2'],
             unlockValue: 5,
-            benefits: ['Raises staff capacity to 5 employees', 'Structured staff development framework', 'Improved staff retention'],
+            benefits: ['Raises staff capacity to 5 employees', 'All staff complete work 6% faster'],
+            permanentEffects: [{
+                  kind: 'all_staff_work_multiplier',
+                  multiplier: 1.06,
+                  description: 'All staff complete work 6% faster'
+            }],
             workProfile: { scopeWorkAmount: 120, complexityCurve: { kind: 'linear', multiplier: 0.16 }, categoryModifier: 0.08, extraInitialWork: 20 }
       },
       {
-            id: 'staff_leadership_pipeline',
+            id: 'foundation_staff_leadership',
             title: 'Leadership Pipeline',
             description: 'Formalize lead roles and mentoring so larger teams remain effective and coordinated.',
             complexity: 7,
             icon: '🧑‍💼',
-            requiredPrestige: 26,
             requiredCompanyValue: 1200000,
-            prerequisites: ['staff_training'],
+            requiredAchievementIds: ['sales_count_tier_3'],
+            prerequisites: ['foundation_staff_training'],
             unlockValue: 7,
-            benefits: ['Raises staff capacity to 7 employees', 'Improves team scaling and retention'],
+            benefits: ['Raises staff capacity to 7 employees', 'All staff complete work 7% faster'],
+            permanentEffects: [{
+                  kind: 'all_staff_work_multiplier',
+                  multiplier: 1.07,
+                  description: 'All staff complete work 7% faster'
+            }],
             workProfile: { scopeWorkAmount: 180, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.1, extraInitialWork: 40 }
       },
       {
@@ -616,7 +646,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             icon: '📋',
             requiredPrestige: 34,
             requiredCompanyValue: 2200000,
-            prerequisites: ['staff_leadership_pipeline'],
+            prerequisites: ['foundation_staff_leadership'],
             unlockValue: 10,
             benefits: ['Raises staff capacity to 10 employees'],
             workProfile: { scopeWorkAmount: 230, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.11, extraInitialWork: 50 }
@@ -692,7 +722,7 @@ const STAFF_LIMIT_RESEARCH_PROJECTS: ResearchProject[] = STAFF_LIMIT_RESEARCH_CH
 
 const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
       {
-            id: 'admin_research_methodology',
+            id: 'foundation_admin_methodology',
             title: 'Research Methodology',
             description: 'Standardize literature review, test notes, and project handoff practices for research staff.',
             complexity: 3,
@@ -704,8 +734,9 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'administration',
             icon: '📚',
             prestigeReward: calculateResearchPrestigeFromComplexity(3),
-            requiredPrestige: 6,
-            prerequisites: ['admin_basic'],
+            requiredCompanyValue: 220000,
+            requiredCompanyAgeWeeks: 16,
+            prerequisites: ['foundation_admin_baseline'],
             permanentEffects: [{
                   kind: 'research_skill_multiplier',
                   multiplier: 1.1,
@@ -719,7 +750,7 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             }
       },
       {
-            id: 'admin_research_office',
+            id: 'foundation_admin_office',
             title: 'Applied Research Office',
             description: 'Create a dedicated office for grant tracking, experimental design, and reusable research protocols.',
             complexity: 5,
@@ -731,8 +762,9 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'administration',
             icon: '🗂️',
             prestigeReward: calculateResearchPrestigeFromComplexity(5),
-            requiredPrestige: 14,
-            prerequisites: ['admin_research_methodology', 'project_grant_basic'],
+            requiredCompanyValue: 450000,
+            requiredCompanyAgeWeeks: 28,
+            prerequisites: ['foundation_admin_methodology', 'foundation_grant_programmatic'],
             permanentEffects: [{
                   kind: 'research_skill_multiplier',
                   multiplier: 1.12,
@@ -759,7 +791,7 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '🧪',
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
             requiredPrestige: 28,
-            prerequisites: ['admin_research_office', 'tech_fermentation'],
+            prerequisites: ['foundation_admin_office', 'tech_fermentation'],
             requiredAchievementIds: ['wine_score_tier_1'],
             permanentEffects: [{
                   kind: 'research_skill_multiplier',
@@ -841,7 +873,7 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
 export const RESEARCH_PROJECTS: ResearchProject[] = [
       // ===== ADMINISTRATION =====
       {
-            id: 'admin_basic',
+            id: 'foundation_admin_baseline',
             title: 'Basic Administration',
             description: 'Improve administrative processes and documentation',
             complexity: 2,
@@ -852,6 +884,8 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'administration',
             icon: '📋',
             prestigeReward: calculateResearchPrestigeFromComplexity(2),
+            requiredCompanyValue: 120000,
+            requiredCompanyAgeWeeks: 8,
             permanentEffects: [{
                   kind: 'administration_and_research_work_multiplier',
                   multiplier: 0.88,
@@ -862,7 +896,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       
       // ===== PROJECTS (Grants) =====
       {
-            id: 'project_grant_basic',
+            id: 'foundation_grant_basic',
             title: 'Basic Research Grant',
             description: 'Apply for a basic research grant to fund vineyard improvements',
             complexity: 3,
@@ -874,10 +908,30 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'projects',
             icon: '💰',
             rewardAmount: 15000,
-            prestigeReward: calculateResearchPrestigeFromComplexity(3)
+            prestigeReward: calculateResearchPrestigeFromComplexity(3),
+            requiredPrestige: 8,
+            requiredAchievementIds: ['revenue_generation_tier_1']
       },
       {
-            id: 'project_grant_advanced',
+            id: 'foundation_grant_programmatic',
+            title: 'Programmatic Grant Desk',
+            description: 'Build repeatable grant submission operations for larger strategic funding rounds.',
+            complexity: 5,
+            benefits: [
+                  'Receive €25,000 grant funding',
+                  `+${calculateResearchPrestigeFromComplexity(5)} Prestige points`,
+                  'Unlocks advanced grant and grant-gated expansion tracks'
+            ],
+            category: 'projects',
+            icon: '🗃️',
+            rewardAmount: 25000,
+            prestigeReward: calculateResearchPrestigeFromComplexity(5),
+            requiredPrestige: 16,
+            requiredAchievementIds: ['revenue_generation_tier_2'],
+            prerequisites: ['foundation_grant_basic']
+      },
+      {
+            id: 'foundation_grant_advanced',
             title: 'Advanced Research Grant',
             description: 'Secure funding for advanced viticulture research — requires an established track record',
             complexity: 7,
@@ -890,8 +944,9 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '🏆',
             rewardAmount: 40000,
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 10,
-            prerequisites: ['project_grant_basic']
+            requiredPrestige: 28,
+            requiredAchievementIds: ['revenue_generation_tier_3'],
+            prerequisites: ['foundation_grant_programmatic']
       },
       
       // ===== TECHNOLOGY =====
@@ -930,7 +985,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '🧪',
             prestigeReward: calculateResearchPrestigeFromComplexity(6),
             requiredPrestige: 15,
-            prerequisites: ['admin_basic'],
+            prerequisites: ['foundation_admin_baseline'],
             unlocks: [{ type: 'fermentation_technology', value: 'Temperature Controlled', displayName: 'Temperature Controlled fermentation' }],
             workProfile: {
                   scopeWorkAmount: 130,
@@ -1074,7 +1129,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             prestigeReward: calculateResearchPrestigeFromComplexity(8),
             requiredPrestige: 36,
             requiredCompanyValue: 2000000,
-            prerequisites: ['mkt_collector_relations'],
+            prerequisites: ['mkt_collector_relations', 'foundation_grant_programmatic'],
             unlocks: [{ type: 'contract_type', value: 'Chain Store', displayName: 'Chain Store contracts' }],
             workProfile: {
                   scopeWorkAmount: 210,
@@ -1265,7 +1320,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
             requiredPrestige: 28,
             requiredAchievementIds: ['bulk_grape_kg_sold_tier_1'],
-            prerequisites: ['tech_soil_analysis'],
+            prerequisites: ['tech_soil_analysis', 'foundation_grant_programmatic'],
             unlocks: [{ type: 'grape_buyer_multiplier_bonus', value: 0.04, displayName: '+0.04 buyer multiplier' }],
             workProfile: {
                   scopeWorkAmount: 180,
@@ -1319,5 +1374,3 @@ export function getResearchProject(id: string): ResearchProject | undefined {
 export function getResearchProjectsByCategory(category: ResearchProject['category']): ResearchProject[] {
       return RESEARCH_PROJECTS.filter(project => project.category === category);
 }
-
-

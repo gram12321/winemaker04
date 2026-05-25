@@ -57,6 +57,7 @@ export type ResearchGateType =
   | 'prestige'
   | 'prerequisite'
   | 'company'
+  | 'age'
   | 'loyalty'
   | 'achievement';
 
@@ -181,7 +182,11 @@ export function getResearchDisplayGroup(project: ResearchProject): ResearchDispl
   const unlockTypes = new Set((project.unlocks || []).map(unlock => unlock.type));
   const permanentEffectKinds = new Set((project.permanentEffects || []).map(effect => effect.kind));
 
-  if (project.category === 'administration' || permanentEffectKinds.has('research_skill_multiplier')) {
+  if (
+    project.category === 'administration' ||
+    permanentEffectKinds.has('research_skill_multiplier') ||
+    permanentEffectKinds.has('administration_and_research_work_multiplier')
+  ) {
     return RESEARCH_DISPLAY_GROUP_BY_ID.foundation_governance;
   }
 
@@ -195,6 +200,7 @@ export function getResearchDisplayGroup(project: ResearchProject): ResearchDispl
 
   if (
     project.category === 'staff' ||
+    permanentEffectKinds.has('all_staff_work_multiplier') ||
     Array.from(unlockTypes).some(type => CHAINED_RESEARCH_UNLOCK_TYPES.has(type))
   ) {
     return RESEARCH_DISPLAY_GROUP_BY_ID.vineyard_capacity;
@@ -223,6 +229,10 @@ export function getResearchGateChips(project: ResearchProject): ResearchGateChip
       type: 'company',
       label: `Company ${formatNumber(project.requiredCompanyValue, { currency: true, compact: true })}`,
     });
+  }
+
+  if (typeof project.requiredCompanyAgeWeeks === 'number') {
+    chips.push({ type: 'age', label: `Age ${project.requiredCompanyAgeWeeks}w` });
   }
 
   if (typeof project.requiredBuyerLoyaltyLevel === 'number') {

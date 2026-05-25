@@ -8,7 +8,7 @@ describe('getVisibleResearchProjects', () => {
 
     const visibleProjectIds = getVisibleResearchProjects(
       efficiencyProjects,
-      new Set<string>(['admin_basic']),
+      new Set<string>(['foundation_admin_baseline']),
       new Set<string>()
     ).map(project => project.id);
 
@@ -28,21 +28,31 @@ describe('getVisibleResearchProjects', () => {
       new Set<string>()
     ).map(project => project.id);
 
-    expect(initialVisibleProjectIds).toContain('project_grant_basic');
-    expect(initialVisibleProjectIds).not.toContain('project_grant_advanced');
+    expect(initialVisibleProjectIds).toContain('foundation_grant_basic');
+    expect(initialVisibleProjectIds).not.toContain('foundation_grant_programmatic');
+    expect(initialVisibleProjectIds).not.toContain('foundation_grant_advanced');
 
     const afterBasicGrantVisibleProjectIds = getVisibleResearchProjects(
       grantProjects,
-      new Set<string>(['project_grant_basic']),
+      new Set<string>(['foundation_grant_basic']),
       new Set<string>()
     ).map(project => project.id);
 
-    expect(afterBasicGrantVisibleProjectIds).toContain('project_grant_advanced');
+    expect(afterBasicGrantVisibleProjectIds).toContain('foundation_grant_programmatic');
+    expect(afterBasicGrantVisibleProjectIds).not.toContain('foundation_grant_advanced');
+
+    const afterProgrammaticVisibleProjectIds = getVisibleResearchProjects(
+      grantProjects,
+      new Set<string>(['foundation_grant_basic', 'foundation_grant_programmatic']),
+      new Set<string>()
+    ).map(project => project.id);
+
+    expect(afterProgrammaticVisibleProjectIds).toContain('foundation_grant_advanced');
   });
 
   it('keeps completed chained research visible and shows the next staff cap research', () => {
     const staffProjects = RESEARCH_PROJECTS.filter(project => project.category === 'staff');
-    const completedResearch = new Set<string>(['staff_onboarding_program', 'staff_training']);
+    const completedResearch = new Set<string>(['foundation_staff_onboarding', 'foundation_staff_training']);
 
     const visibleProjectIds = getVisibleResearchProjects(
       staffProjects,
@@ -50,9 +60,9 @@ describe('getVisibleResearchProjects', () => {
       new Set<string>()
     ).map(project => project.id);
 
-    expect(visibleProjectIds).toContain('staff_onboarding_program');
-    expect(visibleProjectIds).toContain('staff_training');
-    expect(visibleProjectIds).toContain('staff_leadership_pipeline');
+    expect(visibleProjectIds).toContain('foundation_staff_onboarding');
+    expect(visibleProjectIds).toContain('foundation_staff_training');
+    expect(visibleProjectIds).toContain('foundation_staff_leadership');
     expect(visibleProjectIds).not.toContain('staff_operational_management');
   });
 
@@ -61,13 +71,13 @@ describe('getVisibleResearchProjects', () => {
 
     const visibleProjectIds = getVisibleResearchProjects(
       staffProjects,
-      new Set<string>(['staff_onboarding_program']),
-      new Set<string>(['staff_training'])
+      new Set<string>(['foundation_staff_onboarding']),
+      new Set<string>(['foundation_staff_training'])
     ).map(project => project.id);
 
-    expect(visibleProjectIds).toContain('staff_onboarding_program');
-    expect(visibleProjectIds).toContain('staff_training');
-    expect(visibleProjectIds).not.toContain('staff_leadership_pipeline');
+    expect(visibleProjectIds).toContain('foundation_staff_onboarding');
+    expect(visibleProjectIds).toContain('foundation_staff_training');
+    expect(visibleProjectIds).not.toContain('foundation_staff_leadership');
   });
 
   it('leaves admin bypass mode unchanged', () => {

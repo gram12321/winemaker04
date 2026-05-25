@@ -18,8 +18,8 @@ function projectById(id: string) {
 
 describe('research presentation service', () => {
   it('maps catalog projects into progression-first display groups', () => {
-    expect(getResearchDisplayGroup(projectById('admin_basic')).id).toBe('foundation_governance');
-    expect(getResearchDisplayGroup(projectById('staff_training')).id).toBe('vineyard_capacity');
+    expect(getResearchDisplayGroup(projectById('foundation_admin_baseline')).id).toBe('foundation_governance');
+    expect(getResearchDisplayGroup(projectById('foundation_staff_training')).id).toBe('vineyard_capacity');
     expect(getResearchDisplayGroup(projectById('tech_fermentation')).id).toBe('winemaking_technology');
     expect(getResearchDisplayGroup(projectById('mkt_restaurant_program')).id).toBe('market_commercial');
 
@@ -42,13 +42,16 @@ describe('research presentation service', () => {
     ]);
     expect(dependencyMetadata.prerequisiteTitles).toEqual(['Fermentation Technology Basics']);
     expect(getPrimaryResearchImpact(project)).toBe('Unlocks Extended Maceration fermentation method');
+
+    const foundationGateTypes = getResearchGateChips(projectById('foundation_admin_baseline')).map(chip => chip.type);
+    expect(foundationGateTypes).toEqual(expect.arrayContaining(['company', 'age']));
   });
 
   it('derives unlock-next titles and ladder footprint summaries', () => {
     const dependencyMetadata = getResearchDependencyMetadata(projectById('tech_fermentation'), RESEARCH_PROJECTS);
     const footprint = buildResearchFootprintSummary({
       projects: RESEARCH_PROJECTS,
-      completedResearch: new Set(['staff_onboarding_program', 'staff_training', 'tech_fermentation']),
+      completedResearch: new Set(['foundation_staff_onboarding', 'foundation_staff_training', 'tech_fermentation']),
       activeResearch: new Set(['tech_fermentation_extended']),
     });
 

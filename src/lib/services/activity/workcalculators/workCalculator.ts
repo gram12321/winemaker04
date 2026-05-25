@@ -15,6 +15,7 @@ export interface WorkFactor {
 
 export interface StaffContributionOptions {
   researchSkillMultiplier?: number;
+  allStaffWorkMultiplier?: number;
 }
 
 /**
@@ -117,6 +118,10 @@ export function calculateIndividualStaffContribution(
 
   // Calculate staff contribution: workforce × effective skill level
   let staffContribution = staff.workforce * effectiveSkill;
+
+  if (options.allStaffWorkMultiplier) {
+    staffContribution *= Math.max(1, options.allStaffWorkMultiplier);
+  }
 
   if (category === WorkCategory.ADMINISTRATION_AND_RESEARCH && options.researchSkillMultiplier) {
     staffContribution *= Math.max(1, options.researchSkillMultiplier);

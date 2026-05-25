@@ -318,7 +318,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       startingVineAge: 3 // Young Chardonnay vines in Napa
     },
     startingUnlockedGrape: 'Chardonnay', // Common in Napa Valley
-    startingResearch: ['project_grant_basic'] // US research grant culture
+    startingResearch: ['foundation_grant_basic'] // US research grant culture
   }
 };
 
@@ -331,4 +331,3 @@ export function getStartingCountries(): StartingCountry[] {
 export function getStartingCondition(country: StartingCountry): StartingCondition | undefined {
   return STARTING_CONDITIONS[country];
 }
-

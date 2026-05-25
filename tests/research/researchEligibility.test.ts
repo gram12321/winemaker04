@@ -11,6 +11,7 @@ function context(overrides: Partial<ResearchEligibilityContext> = {}): ResearchE
     currentPrestige: 50,
     completedResearch: new Set(['starter_project']),
     companyValue: 1000000,
+    companyAgeWeeks: 24,
     maxBuyerLoyaltyLevel: 2,
     unlockedAchievementIds: new Set(['bulk_grape_kg_sold_tier_1']),
     ...overrides
@@ -24,11 +25,12 @@ function project(overrides: Partial<ResearchProject> = {}): ResearchProject {
     description: 'Test project',
     complexity: 5,
     benefits: [],
-    category: 'market',
+    category: 'marketing',
     icon: 'test',
     requiredPrestige: 40,
     prerequisites: ['starter_project'],
     requiredCompanyValue: 750000,
+    requiredCompanyAgeWeeks: 12,
     requiredBuyerLoyaltyLevel: 2,
     requiredAchievementIds: ['bulk_grape_kg_sold_tier_1'],
     ...overrides
@@ -49,12 +51,14 @@ describe('research eligibility', () => {
         requiredPrestige: 75,
         prerequisites: ['starter_project', 'missing_prereq'],
         requiredCompanyValue: 2000000,
+        requiredCompanyAgeWeeks: 40,
         requiredBuyerLoyaltyLevel: 4,
         requiredAchievementIds: ['bulk_grape_kg_sold_tier_1', 'missing_achievement']
       }),
       context({
         currentPrestige: 12.8,
         companyValue: 100000,
+        companyAgeWeeks: 6,
         maxBuyerLoyaltyLevel: 1,
         completedResearch: new Set(['starter_project']),
         unlockedAchievementIds: new Set(['bulk_grape_kg_sold_tier_1'])
@@ -65,6 +69,7 @@ describe('research eligibility', () => {
       'Requires 75 prestige (you have 12)',
       'Complete prerequisite research: missing_prereq',
       expect.stringContaining('Requires company value'),
+      'Requires company age 40 weeks (you have 6)',
       'Requires buyer loyalty level 4 (your best level is 1)',
       'Requires achievements: missing_achievement'
     ]);

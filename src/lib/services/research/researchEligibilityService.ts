@@ -2,13 +2,17 @@
 import { getAllAchievementUnlocks } from '@/lib/database/core/achievementsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
+import { getGameState } from '@/lib/services/core/gameState';
 import { getMaxBuyerLoyaltyLevel, type BuyerLoyaltyLevel } from '@/lib/services';
+import { GAME_INITIALIZATION } from '@/lib/constants';
+import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
 
 export interface ResearchEligibilityContext {
   currentPrestige: number;
   completedResearch: Set<string>;
   companyValue: number;
+  companyAgeWeeks: number;
   maxBuyerLoyaltyLevel: BuyerLoyaltyLevel;
   unlockedAchievementIds: Set<string>;
 }
@@ -27,10 +31,24 @@ export async function loadResearchEligibilityContext(
     getAllAchievementUnlocks(targetCompanyId),
   ]);
 
+  const gameState = getGameState();
+  const currentAbsoluteWeeks = calculateAbsoluteWeeks(
+    gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+    (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as any,
+    gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR
+  );
+  const initialAbsoluteWeeks = calculateAbsoluteWeeks(
+    GAME_INITIALIZATION.STARTING_WEEK,
+    GAME_INITIALIZATION.STARTING_SEASON,
+    GAME_INITIALIZATION.STARTING_YEAR
+  );
+  const companyAgeWeeks = Math.max(0, currentAbsoluteWeeks - initialAbsoluteWeeks);
+
   return {
     currentPrestige,
     completedResearch,
     companyValue,
+    companyAgeWeeks,
     maxBuyerLoyaltyLevel,
     unlockedAchievementIds: new Set(unlocks.map(unlock => unlock.achievementId)),
   };
@@ -52,6 +70,10 @@ export function getResearchRequirementReasons(project: ResearchProject, context:
 
   if (project.requiredCompanyValue !== undefined && context.companyValue < project.requiredCompanyValue) {
     reasons.push(`Requires company value ${formatNumber(Math.floor(project.requiredCompanyValue), { currency: true, decimals: 0 })} (you have ${formatNumber(Math.floor(context.companyValue), { currency: true, decimals: 0 })})`);
+  }
+
+  if (project.requiredCompanyAgeWeeks !== undefined && context.companyAgeWeeks < project.requiredCompanyAgeWeeks) {
+    reasons.push(`Requires company age ${project.requiredCompanyAgeWeeks} weeks (you have ${Math.floor(context.companyAgeWeeks)})`);
   }
 
   if (project.requiredBuyerLoyaltyLevel !== undefined && context.maxBuyerLoyaltyLevel < project.requiredBuyerLoyaltyLevel) {

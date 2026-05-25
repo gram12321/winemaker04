@@ -13,6 +13,7 @@ export interface ResearchPermanentEffectsSummary {
   vineyardHealthDecayMultiplier: number;
   researchSkillMultiplier: number;
   administrationAndResearchWorkMultiplier: number;
+  allStaffWorkMultiplier: number;
   activeEffects: ResearchPermanentEffectEntry[];
 }
 
@@ -43,6 +44,13 @@ function applyPermanentEffect(
         administrationAndResearchWorkMultiplier: Math.max(0.5, current.administrationAndResearchWorkMultiplier * Math.max(0.5, multiplier))
       };
     }
+    case 'all_staff_work_multiplier': {
+      const multiplier = Number.isFinite(effect.multiplier) ? effect.multiplier : 1;
+      return {
+        ...current,
+        allStaffWorkMultiplier: Math.min(3, current.allStaffWorkMultiplier * Math.max(1, multiplier))
+      };
+    }
     default:
       return current;
   }
@@ -56,6 +64,7 @@ export async function getResearchPermanentEffects(companyId?: string): Promise<R
     vineyardHealthDecayMultiplier: 1,
     researchSkillMultiplier: 1,
     administrationAndResearchWorkMultiplier: 1,
+    allStaffWorkMultiplier: 1,
     activeEffects: []
   };
 

@@ -399,6 +399,7 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
           currentPrestige,
           completedResearch,
           companyValue: Number.MAX_SAFE_INTEGER,
+          companyAgeWeeks: Number.MAX_SAFE_INTEGER,
           maxBuyerLoyaltyLevel: 3 as const,
           unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map((id) => id)),
         };
@@ -417,6 +418,7 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
         currentPrestige,
         completedResearch,
         companyValue: Number.MAX_SAFE_INTEGER,
+        companyAgeWeeks: Number.MAX_SAFE_INTEGER,
         maxBuyerLoyaltyLevel: 3 as const,
         unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map((id) => id)),
       };
@@ -689,6 +691,9 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
               ) : null}
               {typeof model.project.requiredCompanyValue === 'number' ? (
                 <Badge variant="outline" className="text-[10px]">Value gate</Badge>
+              ) : null}
+              {typeof model.project.requiredCompanyAgeWeeks === 'number' ? (
+                <Badge variant="outline" className="text-[10px]">Age gate</Badge>
               ) : null}
               {typeof model.project.requiredBuyerLoyaltyLevel === 'number' ? (
                 <Badge variant="outline" className="text-[10px]">Loyalty gate</Badge>

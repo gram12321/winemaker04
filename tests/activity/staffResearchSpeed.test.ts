@@ -53,4 +53,38 @@ describe('research speed staff contribution', () => {
     expect(boostedResearchContribution).toBeCloseTo(baseResearchContribution * 1.25);
     expect(fieldContribution).toBe(baseResearchContribution);
   });
+
+  it('applies all-staff multiplier to both administration and field work', () => {
+    const staff = [researchStaff()];
+    const staffTaskCounts = new Map<string, number>([['staff-1', 1]]);
+
+    const baseResearchContribution = calculateStaffWorkContribution(
+      staff,
+      WorkCategory.ADMINISTRATION_AND_RESEARCH,
+      staffTaskCounts
+    );
+    const baseFieldContribution = calculateStaffWorkContribution(
+      staff,
+      WorkCategory.PLANTING,
+      staffTaskCounts
+    );
+
+    const boostedResearchContribution = calculateStaffWorkContribution(
+      staff,
+      WorkCategory.ADMINISTRATION_AND_RESEARCH,
+      staffTaskCounts,
+      undefined,
+      { allStaffWorkMultiplier: 1.1 }
+    );
+    const boostedFieldContribution = calculateStaffWorkContribution(
+      staff,
+      WorkCategory.PLANTING,
+      staffTaskCounts,
+      undefined,
+      { allStaffWorkMultiplier: 1.1 }
+    );
+
+    expect(boostedResearchContribution).toBeCloseTo(baseResearchContribution * 1.1);
+    expect(boostedFieldContribution).toBeCloseTo(baseFieldContribution * 1.1);
+  });
 });

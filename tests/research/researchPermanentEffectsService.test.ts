@@ -27,6 +27,7 @@ describe('research permanent effects', () => {
       vineyardHealthDecayMultiplier: 1,
       researchSkillMultiplier: 1,
       administrationAndResearchWorkMultiplier: 1,
+      allStaffWorkMultiplier: 1,
       activeEffects: []
     });
     expect(mocks.getUnlockedResearchIds).toHaveBeenCalledWith('company-1');
@@ -49,33 +50,51 @@ describe('research permanent effects', () => {
   });
 
   it('compounds completed research-speed effects into a staff skill multiplier', async () => {
-    mocks.getUnlockedResearchIds.mockResolvedValue(['admin_research_methodology', 'admin_research_office']);
+    mocks.getUnlockedResearchIds.mockResolvedValue(['foundation_admin_methodology', 'foundation_admin_office']);
 
     const summary = await getResearchPermanentEffects('company-2');
 
     expect(summary.researchSkillMultiplier).toBeCloseTo(1.232);
     expect(summary.activeEffects).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        projectId: 'admin_research_methodology',
+        projectId: 'foundation_admin_methodology',
         kind: 'research_skill_multiplier'
       }),
       expect.objectContaining({
-        projectId: 'admin_research_office',
+        projectId: 'foundation_admin_office',
         kind: 'research_skill_multiplier'
       })
     ]));
   });
 
   it('applies admin overhead work reduction from basic administration', async () => {
-    mocks.getUnlockedResearchIds.mockResolvedValue(['admin_basic']);
+    mocks.getUnlockedResearchIds.mockResolvedValue(['foundation_admin_baseline']);
 
     const summary = await getResearchPermanentEffects('company-2');
 
     expect(summary.administrationAndResearchWorkMultiplier).toBeCloseTo(0.88);
     expect(summary.activeEffects).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        projectId: 'admin_basic',
+        projectId: 'foundation_admin_baseline',
         kind: 'administration_and_research_work_multiplier'
+      })
+    ]));
+  });
+
+  it('compounds global staff productivity effects from the staff foundation lane', async () => {
+    mocks.getUnlockedResearchIds.mockResolvedValue(['foundation_staff_onboarding', 'foundation_staff_training']);
+
+    const summary = await getResearchPermanentEffects('company-2');
+
+    expect(summary.allStaffWorkMultiplier).toBeCloseTo(1.113);
+    expect(summary.activeEffects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        projectId: 'foundation_staff_onboarding',
+        kind: 'all_staff_work_multiplier'
+      }),
+      expect.objectContaining({
+        projectId: 'foundation_staff_training',
+        kind: 'all_staff_work_multiplier'
       })
     ]));
   });
