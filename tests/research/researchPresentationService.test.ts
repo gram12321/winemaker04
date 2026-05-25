@@ -71,7 +71,7 @@ describe('research presentation service', () => {
     );
     expect(footprint.chainSummaries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: 'Research Methodology' }),
+        expect.objectContaining({ label: 'Intermediate Admin Program' }),
       ])
     );
   });

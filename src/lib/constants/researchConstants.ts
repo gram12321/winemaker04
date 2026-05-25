@@ -587,8 +587,8 @@ const VINEYARD_COUNT_RESEARCH_PROJECTS: ResearchProject[] = [
 const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       {
             id: 'foundation_staff_onboarding',
-            title: 'Staff Onboarding Program',
-            description: 'Create hiring playbooks and role onboarding standards to safely grow the team.',
+            title: 'Basic Staff Program',
+            description: 'Establish the Basic Staff Program with hiring playbooks and onboarding standards.',
             complexity: 3,
             icon: '🧾',
             requiredCompanyValue: 180000,
@@ -604,8 +604,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'foundation_staff_training',
-            title: 'Staff Training Programs',
-            description: 'Develop structured training programs for winery and vineyard staff',
+            title: 'Intermediate Staff Program',
+            description: 'Expand into the Intermediate Staff Program with structured cross-team training.',
             complexity: 5,
             icon: '👥',
             prerequisites: ['foundation_staff_onboarding'],
@@ -622,8 +622,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'foundation_staff_leadership',
-            title: 'Leadership Pipeline',
-            description: 'Formalize lead roles and mentoring so larger teams remain effective and coordinated.',
+            title: 'Advanced Staff Program',
+            description: 'Advance to formal lead roles and mentoring through the Advanced Staff Program.',
             complexity: 7,
             icon: '🧑‍💼',
             requiredCompanyValue: 1200000,
@@ -640,8 +640,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'staff_operational_management',
-            title: 'Operational Management Framework',
-            description: 'Define role responsibilities and shift coordination to support a larger operational team.',
+            title: 'Expert Staff Program',
+            description: 'Run the Expert Staff Program to formalize shift ownership and operating cadence.',
             complexity: 8,
             icon: '📋',
             requiredPrestige: 34,
@@ -653,8 +653,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'staff_department_structure',
-            title: 'Department Structure Program',
-            description: 'Establish specialist teams and reporting structures for multi-function operations.',
+            title: 'Specialist Staff Program',
+            description: 'Adopt the Specialist Staff Program with dedicated teams and reporting structure.',
             complexity: 8,
             icon: '🗂️',
             requiredPrestige: 44,
@@ -666,8 +666,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'staff_operations_hub',
-            title: 'Operations Hub Command',
-            description: 'Centralize scheduling and workforce assignment for high-output seasons.',
+            title: 'Professional Staff Program',
+            description: 'Scale the Professional Staff Program with centralized staffing and season planning.',
             complexity: 9,
             icon: '🏭',
             requiredPrestige: 56,
@@ -679,8 +679,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'staff_enterprise_coordination',
-            title: 'Enterprise Coordination Office',
-            description: 'Coordinate large staffing pools with clear operating cadences and accountability.',
+            title: 'Elite Staff Program',
+            description: 'Coordinate large workforce pools under the Elite Staff Program governance model.',
             complexity: 9,
             icon: '🏢',
             requiredPrestige: 68,
@@ -692,8 +692,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'staff_multiestate_hr',
-            title: 'Multi-Estate HR Systems',
-            description: 'Deploy enterprise hiring, retention, and role planning across multiple operating sites.',
+            title: 'Master Staff Program',
+            description: 'Deploy multi-site hiring, retention, and role planning in the Master Staff Program.',
             complexity: 10,
             icon: '🌍',
             requiredPrestige: 84,
@@ -705,8 +705,8 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
       },
       {
             id: 'staff_corporate_scale',
-            title: 'Corporate Scale Workforce',
-            description: 'Structure governance and workforce control systems for corporation-level staffing.',
+            title: 'Grandmaster Staff Program',
+            description: 'Complete the Grandmaster Staff Program with corporation-scale workforce governance.',
             complexity: 10,
             icon: '🏛️',
             requiredPrestige: 102,
@@ -723,12 +723,12 @@ const STAFF_LIMIT_RESEARCH_PROJECTS: ResearchProject[] = STAFF_LIMIT_RESEARCH_CH
 const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
       {
             id: 'foundation_admin_methodology',
-            title: 'Research Methodology',
-            description: 'Standardize literature review, test notes, and project handoff practices for research staff.',
+            title: 'Intermediate Admin Program',
+            description: 'Standardize reviews, notes, and handoffs as the Intermediate Admin Program foundation.',
             complexity: 3,
             benefits: [
                   'Research staff work 10% faster on research tasks',
-                  'Creates the operating discipline for larger research programs',
+                  'Establishes the Intermediate Admin Program operating discipline',
                   `+${calculateResearchPrestigeFromComplexity(3)} Prestige points`
             ],
             category: 'administration',
@@ -751,12 +751,12 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
       },
       {
             id: 'foundation_admin_office',
-            title: 'Applied Research Office',
-            description: 'Create a dedicated office for grant tracking, experimental design, and reusable research protocols.',
+            title: 'Advanced Admin Program',
+            description: 'Expand into the Advanced Admin Program with dedicated grant and protocol operations.',
             complexity: 5,
             benefits: [
                   'Research staff work 12% faster on research tasks',
-                  'Improves coordination across administrative and technical research',
+                  'Improves Advanced Admin Program coordination across technical and administrative work',
                   `+${calculateResearchPrestigeFromComplexity(5)} Prestige points`
             ],
             category: 'administration',
@@ -779,8 +779,8 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
       },
       {
             id: 'tech_experimental_cellar_lab',
-            title: 'Experimental Cellar Lab',
-            description: 'Build a practical lab for controlled cellar trials, sensory records, and faster technical iteration.',
+            title: 'Expert Admin Program',
+            description: 'Unlock the Expert Admin Program with controlled cellar trials and formal iteration loops.',
             complexity: 7,
             benefits: [
                   'Research staff work 15% faster on research tasks',
@@ -807,8 +807,8 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
       },
       {
             id: 'tech_innovation_program',
-            title: 'Innovation Program',
-            description: 'Coordinate formal innovation sprints across cellar, market, and estate operations.',
+            title: 'Specialist Admin Program',
+            description: 'Run Specialist Admin Program innovation sprints across cellar, market, and estate teams.',
             complexity: 8,
             benefits: [
                   'Research staff work 18% faster on research tasks',
@@ -836,8 +836,8 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
       },
       {
             id: 'tech_research_institute_network',
-            title: 'Research Institute Network',
-            description: 'Partner with outside institutes and expert consultants to accelerate late-stage research programs.',
+            title: 'Professional Admin Program',
+            description: 'Scale the Professional Admin Program through institute partnerships and external experts.',
             complexity: 10,
             benefits: [
                   'Research staff work 22% faster on research tasks',
@@ -874,8 +874,8 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       // ===== ADMINISTRATION =====
       {
             id: 'foundation_admin_baseline',
-            title: 'Basic Administration',
-            description: 'Improve administrative processes and documentation',
+            title: 'Basic Admin Program',
+            description: 'Launch the Basic Admin Program with core administrative processes and documentation.',
             complexity: 2,
             benefits: [
                   'Administration and research tasks require 12% less work',
@@ -897,13 +897,13 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       // ===== PROJECTS (Grants) =====
       {
             id: 'foundation_grant_basic',
-            title: 'Basic Research Grant',
-            description: 'Apply for a basic research grant to fund vineyard improvements',
+            title: 'Basic Research Program',
+            description: 'Start the Basic Research Program with entry-level funding for vineyard improvement work.',
             complexity: 3,
             benefits: [
                   'Receive €15,000 grant funding',
                   `+${calculateResearchPrestigeFromComplexity(3)} Prestige points`,
-                  'Establishes track record for advanced grant applications'
+                  'Builds the baseline track record for higher-tier research programs'
             ],
             category: 'projects',
             icon: '💰',
@@ -914,13 +914,13 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       },
       {
             id: 'foundation_grant_programmatic',
-            title: 'Programmatic Grant Desk',
-            description: 'Build repeatable grant submission operations for larger strategic funding rounds.',
+            title: 'Intermediate Research Program',
+            description: 'Operate an Intermediate Research Program with repeatable funding and submission workflows.',
             complexity: 5,
             benefits: [
                   'Receive €25,000 grant funding',
                   `+${calculateResearchPrestigeFromComplexity(5)} Prestige points`,
-                  'Unlocks advanced grant and grant-gated expansion tracks'
+                  'Unlocks Advanced Research Program and grant-gated expansion tracks'
             ],
             category: 'projects',
             icon: '🗃️',
@@ -932,13 +932,13 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       },
       {
             id: 'foundation_grant_advanced',
-            title: 'Advanced Research Grant',
-            description: 'Secure funding for advanced viticulture research — requires an established track record',
+            title: 'Advanced Research Program',
+            description: 'Run the Advanced Research Program for high-value viticulture initiatives and premium funding.',
             complexity: 7,
             benefits: [
                   'Receive €40,000 grant funding',
                   `+${calculateResearchPrestigeFromComplexity(7)} Prestige points`,
-                  'Opens premium research funding opportunities'
+                  'Opens premium, top-tier research funding opportunities'
             ],
             category: 'projects',
             icon: '🏆',
