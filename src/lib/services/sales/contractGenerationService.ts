@@ -19,6 +19,7 @@ import {
   AVAILABLE_SITE_COUNTRIES,
   AVAILABLE_SITE_REGIONS,
   CONTRACT_PRICING,
+  PRESALE_CONTRACT_CONFIG,
   MULTI_YEAR_CONFIG,
   COMPLEXITY_THRESHOLDS,
   CUSTOMER_MAX_WINE_AGE,
@@ -489,7 +490,7 @@ export async function generateContracts(): Promise<{
       };
     }
 
-    // Generate contract for selected customer
+    // Generate standard customer contract (pre-sale is now handled by the forward NPC-buyer system)
     const contract = await generateContractForCustomer(selectedCustomer);
     await saveWineContract(contract);
 
@@ -1232,6 +1233,9 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   pricePerBottle: number;
   quantity: number;
 }> {
+  const prestige = await getCurrentPrestige();
+  const prestigeNormalized = NormalizeScrewed1000To01WithTail(prestige);
+
   // Base price depends on customer purchasing power and market share
   const basePrice = CONTRACT_PRICING.baseMin + (customer.purchasingPower * (CONTRACT_PRICING.baseMax - CONTRACT_PRICING.baseMin));
   
@@ -1264,7 +1268,11 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   
   // Market share scaling with high randomness (0.25-1.75x variation, ±75%)
   const randomFactor = 0.25 + Math.random() * 1.5;
-  const quantity = Math.round(baseQuantity * marketShareScaled * randomFactor);
+  const prestigeSizeMultiplier = Math.min(
+    1 + prestigeNormalized * 0.9,
+    PRESALE_CONTRACT_CONFIG.prestigeSizeMultiplierCap
+  );
+  const quantity = Math.round(baseQuantity * marketShareScaled * randomFactor * prestigeSizeMultiplier);
   
   // Minimum quantities from imported constants
   const minQuantity = CONTRACT_MIN_QUANTITIES[customer.customerType];

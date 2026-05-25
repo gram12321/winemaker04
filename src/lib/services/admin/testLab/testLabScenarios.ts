@@ -306,6 +306,24 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     defaultParams: {}
   },
   {
+    id: 'sales.generate-bottle-presale-contract',
+    title: 'Generate Test Bottle Pre-Sale Contract',
+    group: 'Sales Flow',
+    description: 'Creates an offered bottle pre-sale contract with upfront/final/default economics for the active company.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'sales.generate-grape-forward-contract',
+    title: 'Generate Test Grape Forward Pre-Sale Contract',
+    group: 'Sales Flow',
+    description: 'Creates an offered forward contract for grapes or must with upfront payment and due-date settlement.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
     id: 'research.grant-all',
     title: 'Grant All Research',
     group: 'Research and Staff',

@@ -1,16 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { WineContract } from '@/lib/types/types';
-import { rejectContract } from '@/lib/services/sales/contractService';
+import { GrapeForwardContract, WineContract } from '@/lib/types/types';
+import { acceptWinePresaleContract, rejectContract } from '@/lib/services/sales/contractService';
 import { getContractGenerationChance } from '@/lib/services/sales/contractGenerationService';
+import { acceptForwardContract, autoDeliverForwardContract, getForwardContracts, rejectForwardContract } from '@/lib/services/sales/forwardContractService';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
+import { FORWARD_CONTRACT_CONFIG } from '@/lib/constants/contractConstants';
 import { formatNumber, formatGameDateFromObject, formatPercent } from '@/lib/utils/utils';
+import { NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedTooltip } from '../../ui';
 import { getFlagIcon } from '@/lib/utils';
 import { LoadingProps } from '@/lib/types/UItypes';
 import { Info } from 'lucide-react';
 import AssignWineModal from './AssignWineModal';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
+import { useGameStateWithData } from '@/hooks';
 
 interface ContractsTabProps extends LoadingProps {
   contracts: WineContract[];
@@ -47,7 +51,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
   isLoading,
   withLoading
 }) => {
-  const [contractStatusFilter, setContractStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected' | 'expired'>('pending');
+  const [contractStatusFilter, setContractStatusFilter] = useState<'all' | 'offered' | 'pending' | 'fulfilled' | 'defaulted' | 'rejected' | 'expired'>('pending');
   const [selectedContract, setSelectedContract] = useState<WineContract | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [contractsPage, setContractsPage] = useState<number>(1);
@@ -67,6 +71,35 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
   } | null>(null);
   const [contractTypeAccess, setContractTypeAccess] = useState<ContractTypeAccessRow[]>([]);
 
+  const forwardContracts = useGameStateWithData(
+    () => getForwardContracts(),
+    [],
+    { topic: 'contracts' }
+  ) as GrapeForwardContract[];
+
+  const presaleChanceInfo = useMemo(() => {
+    const prestige = contractChanceInfo?.currentPrestige ?? 0;
+    const prestigeNormalized = NormalizeScrewed1000To01WithTail(prestige);
+    const perTickOfferChance = Math.min(
+      FORWARD_CONTRACT_CONFIG.baseGenerationChance * (1 + prestigeNormalized),
+      FORWARD_CONTRACT_CONFIG.baseGenerationChance * FORWARD_CONTRACT_CONFIG.prestigeOfferCountMultiplierCap
+    );
+
+    const openForwardCount = forwardContracts.filter(contract => ['offered', 'accepted'].includes(contract.status)).length;
+    const blockedByCap = openForwardCount >= FORWARD_CONTRACT_CONFIG.maxActiveOpenContracts;
+
+    return {
+      prestige,
+      perTickOfferChance,
+      isBlocked: blockedByCap,
+      blockReason: blockedByCap ? `Max active forward pre-sale contracts reached (${FORWARD_CONTRACT_CONFIG.maxActiveOpenContracts})` : undefined,
+      openForwardCount
+    };
+  }, [contractChanceInfo, forwardContracts]);
+
+  const getForwardUnitLabel = (contract: GrapeForwardContract): string =>
+    contract.targetState === 'bottled' ? 'bottles' : 'kg';
+
   // Filter contracts by status
   const filteredContracts = useMemo(() => {
     if (contractStatusFilter === 'all') return contracts;
@@ -75,7 +108,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
 
   // Get pending contracts for bulk actions
   const pendingContracts = useMemo(() => 
-    contracts.filter(c => c.status === 'pending'),
+    contracts.filter(c => c.status === 'pending' || c.status === 'offered'),
     [contracts]
   );
 
@@ -178,6 +211,36 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
     });
   };
 
+  const handleAcceptPresaleContract = async (contractId: string) => {
+    await withLoading(async () => {
+      const result = await acceptWinePresaleContract(contractId);
+      if (!result.success) {
+        alert(result.message);
+      }
+    });
+  };
+
+  const handleAcceptForwardContract = async (contractId: string) => {
+    await withLoading(async () => {
+      const result = await acceptForwardContract(contractId);
+      if (!result.success) alert(result.message);
+    });
+  };
+
+  const handleRejectForwardContract = async (contractId: string) => {
+    await withLoading(async () => {
+      const result = await rejectForwardContract(contractId);
+      if (!result.success) alert(result.message);
+    });
+  };
+
+  const handleAutoDeliverForwardContract = async (contractId: string) => {
+    await withLoading(async () => {
+      const result = await autoDeliverForwardContract(contractId);
+      if (!result.success) alert(result.message);
+    });
+  };
+
   // Handle rejecting all pending contracts
   const handleRejectAll = () => withLoading(async () => {
     if (pendingContracts.length === 0) return;
@@ -247,7 +310,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
       {/* Filter Buttons */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-gray-600 font-medium">Filter:</span>
-        {(['all', 'pending', 'fulfilled', 'rejected', 'expired'] as const).map(status => {
+        {(['all', 'offered', 'pending', 'fulfilled', 'defaulted', 'rejected', 'expired'] as const).map(status => {
           const count = status === 'all' 
             ? contracts.length 
             : contracts.filter(c => c.status === status).length;
@@ -277,7 +340,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
             <h3 className="text-sm font-semibold">Contract Generation</h3>
             <p className="text-gray-500 text-xs">Current chance to receive new contracts</p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
             <UnifiedTooltip
               content={
                 contractChanceInfo ? (
@@ -363,6 +426,52 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                   )}
                 </div>
                 <div className={contractChanceInfo?.isBlocked ? 'text-red-500' : 'text-green-500'}>ℹ️</div>
+              </div>
+            </UnifiedTooltip>
+            <UnifiedTooltip
+              content={
+                <div className="space-y-2 text-xs">
+                  <div className="font-semibold">Pre-sale Offer Details (Bulk Buyer Flow)</div>
+                  <div className="text-[10px] text-gray-400 mb-2">Generated from bulk buyer NPCs and can target grapes, must, or bottled stock.</div>
+                  <div className="space-y-1">
+                    <div>Company Prestige: <span className="font-medium">{formatNumber(presaleChanceInfo.prestige, { decimals: 1, forceDecimals: true })}</span></div>
+                    <div>Per Tick Offer Chance: <span className="font-medium">{formatPercent(presaleChanceInfo.perTickOfferChance, 1, true)}</span></div>
+                    <div className="text-[10px] text-gray-400">Base {formatPercent(FORWARD_CONTRACT_CONFIG.baseGenerationChance, 1, true)} scaled by prestige</div>
+                    <div>
+                      Estimated Per Tick:{' '}
+                      <span className="font-medium">
+                        {presaleChanceInfo.isBlocked
+                          ? 'Blocked (N/A)'
+                          : formatPercent(presaleChanceInfo.perTickOfferChance, 2, true)}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-400">Offer size and pricing scale using the same market context as bulk grape trade (company value + prestige + buyer market profile).</div>
+                    <div>Open Forward Pre-sales: <span className="font-medium">{presaleChanceInfo.openForwardCount} / {FORWARD_CONTRACT_CONFIG.maxActiveOpenContracts}</span></div>
+                    <div>Economics: <span className="font-medium">{Math.round(FORWARD_CONTRACT_CONFIG.upfrontPercent * 100)}% upfront</span>, <span className="font-medium">{Math.round(FORWARD_CONTRACT_CONFIG.defaultPenaltyPercentOnAdvance * 100)}% default penalty on advance</span></div>
+                    {presaleChanceInfo.isBlocked && (
+                      <div className="text-[10px] text-red-300">Blocked: {presaleChanceInfo.blockReason}</div>
+                    )}
+                    <div className="text-[10px] text-gray-400 border-t pt-1 mt-1">Includes bottled pre-sale offers alongside grape/must targets.</div>
+                  </div>
+                </div>
+              }
+              className="max-w-xs"
+              variant="default"
+            >
+              <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg border cursor-help ${
+                presaleChanceInfo.isBlocked
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-indigo-50 border-indigo-200'
+              }`}>
+                <div className={`text-xs ${presaleChanceInfo.isBlocked ? 'text-amber-700' : 'text-indigo-700'}`}>
+                  <span className="font-medium">Natural Pre-sale Chance:</span>
+                  <span className={`ml-2 text-sm font-bold ${presaleChanceInfo.isBlocked ? 'text-amber-800' : 'text-indigo-800'}`}>
+                    {presaleChanceInfo.isBlocked
+                      ? 'Blocked'
+                      : formatPercent(presaleChanceInfo.perTickOfferChance, 1, true)}
+                  </span>
+                </div>
+                <div className={presaleChanceInfo.isBlocked ? 'text-amber-500' : 'text-indigo-500'}>i</div>
               </div>
             </UnifiedTooltip>
           </div>
@@ -532,6 +641,11 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                       <span className={`px-1.5 py-0.5 rounded text-xs ${getCustomerTypeBadge(contract.customerType)}`}>
                         {contract.customerType}
                       </span>
+                      {contract.contractMode === 'wine_presale' && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700">
+                          Pre-sale
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">{formatNumber(contract.requestedQuantity)}</TableCell>
                     <TableCell className="text-right">{formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}</TableCell>
@@ -580,6 +694,24 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                       })}
                     </TableCell>
                     <TableCell>
+                      {contract.status === 'offered' && contract.contractMode === 'wine_presale' && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleAcceptPresaleContract(contract.id)}
+                            disabled={isLoading}
+                            className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded disabled:opacity-50"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRejectContract(contract.id)}
+                            disabled={isLoading}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
                       {contract.status === 'pending' && (
                         <div className="flex gap-1">
                           <button
@@ -602,6 +734,91 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                   </TableRow>
                 );
               })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Forward Contracts */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-sm font-semibold text-gray-800">Harvest Forward Contracts</h3>
+          <p className="text-xs text-gray-500">Bulk grape/must pre-sale agreements with upfront payment and later delivery.</p>
+        </div>
+        <Table className="text-xs">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Buyer</TableHead>
+              <TableHead>Target</TableHead>
+              <TableHead className="text-right">Quantity</TableHead>
+              <TableHead className="text-right">Delivered</TableHead>
+              <TableHead className="text-right">Value</TableHead>
+              <TableHead>Due</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {forwardContracts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-gray-500 py-6">
+                  No forward contracts available yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              forwardContracts.map((contract) => (
+                <TableRow key={contract.id}>
+                  <TableCell className="font-medium">{contract.buyerName}</TableCell>
+                  <TableCell>
+                    {contract.targetState}{contract.targetGrape ? ` / ${contract.targetGrape}` : ''}
+                  </TableCell>
+                  <TableCell className="text-right">{formatNumber(contract.quantityKg)} {getForwardUnitLabel(contract)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(contract.deliveredKg)} {getForwardUnitLabel(contract)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(contract.totalValue, { currency: true, decimals: 2 })}</TableCell>
+                  <TableCell>{formatGameDateFromObject({ week: contract.dueWeek, season: contract.dueSeason, year: contract.dueYear })}</TableCell>
+                  <TableCell>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-700">{contract.status}</span>
+                  </TableCell>
+                  <TableCell>
+                    {contract.status === 'offered' && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleAcceptForwardContract(contract.id)}
+                          disabled={isLoading}
+                          className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded disabled:opacity-50"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleRejectForwardContract(contract.id)}
+                          disabled={isLoading}
+                          className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                    {contract.status === 'accepted' && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleAutoDeliverForwardContract(contract.id)}
+                          disabled={isLoading}
+                          className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
+                        >
+                          Auto Deliver
+                        </button>
+                        <button
+                          onClick={() => handleRejectForwardContract(contract.id)}
+                          disabled={isLoading}
+                          className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

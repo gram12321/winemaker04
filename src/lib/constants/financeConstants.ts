@@ -26,6 +26,10 @@ export const TRANSACTION_CATEGORIES = {
   DIVIDEND_PAYMENT: 'Dividend Payment',
   DIVIDEND_RECEIVED: 'Dividend Received',
   VINEYARD_SALE: 'Vineyard Sale', // Forced vineyard seizure/sale
+  CONTRACT_ADVANCE_IN: 'Contract Advance In',
+  CONTRACT_FINAL_SETTLEMENT_IN: 'Contract Final Settlement In',
+  FORWARD_ADVANCE_IN: 'Forward Advance In',
+  FORWARD_FINAL_SETTLEMENT_IN: 'Forward Final Settlement In',
 
   // Expense categories
   STAFF_WAGES: 'Staff Wages',
@@ -40,6 +44,8 @@ export const TRANSACTION_CATEGORIES = {
   SUPPLIES: 'Supplies',
   UTILITIES: 'Utilities',
   RESEARCH: 'Research',
+  CONTRACT_DEFAULT_PENALTY_OUT: 'Contract Default Penalty Out',
+  FORWARD_DEFAULT_PENALTY_OUT: 'Forward Default Penalty Out',
   OTHER: 'Other',
 
   // Founder categories

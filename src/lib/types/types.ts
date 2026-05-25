@@ -417,7 +417,9 @@ export interface ContractRequirement {
 }
 
 // Contract status types
-export type ContractStatus = 'pending' | 'fulfilled' | 'rejected' | 'expired';
+export type ContractStatus = 'offered' | 'pending' | 'fulfilled' | 'defaulted' | 'rejected' | 'expired';
+
+export type ContractMode = 'spot' | 'wine_presale';
 
 // Multi-year contract terms
 export interface ContractTerms {
@@ -445,6 +447,13 @@ export interface WineContract {
 
   // Contract status
   status: ContractStatus;
+  contractMode?: ContractMode;
+
+  // Presale economics (used when contractMode === 'wine_presale')
+  upfrontPercent?: number;
+  upfrontPaidAmount?: number;
+  finalPaymentAmount?: number;
+  defaultPenaltyAmount?: number;
 
   // Date tracking (decomposed GameDate for database compatibility)
   createdWeek: number;
@@ -463,6 +472,14 @@ export interface WineContract {
   rejectedSeason?: Season;
   rejectedYear?: number;
 
+  defaultedWeek?: number;
+  defaultedSeason?: Season;
+  defaultedYear?: number;
+
+  acceptedWeek?: number;
+  acceptedSeason?: Season;
+  acceptedYear?: number;
+
   // Multi-year terms (optional, if undefined it's a single delivery)
   terms?: ContractTerms;
 
@@ -473,6 +490,43 @@ export interface WineContract {
   relationshipAtCreation: number; // Customer relationship when contract was offered
 
   // Metadata
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// ===== FORWARD CONTRACT TYPES =====
+
+export type ForwardContractStatus = 'offered' | 'accepted' | 'fulfilled' | 'defaulted' | 'rejected' | 'expired';
+export type ForwardTargetState = 'grapes' | 'must_ready' | 'must_fermenting' | 'bottled' | 'any';
+
+export interface GrapeForwardContract {
+  id: string;
+  companyId: string;
+  buyerId: string;
+  buyerName: string;
+  targetState: ForwardTargetState;
+  targetGrape?: GrapeVariety;
+  quantityKg: number;
+  deliveredKg: number;
+  unitPricePerKg: number;
+  totalValue: number;
+  upfrontPercent: number;
+  upfrontPaidAmount: number;
+  finalPaymentAmount: number;
+  defaultPenaltyAmount: number;
+  status: ForwardContractStatus;
+  createdWeek: number;
+  createdSeason: Season;
+  createdYear: number;
+  dueWeek: number;
+  dueSeason: Season;
+  dueYear: number;
+  acceptedWeek?: number;
+  acceptedSeason?: Season;
+  acceptedYear?: number;
+  settledWeek?: number;
+  settledSeason?: Season;
+  settledYear?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

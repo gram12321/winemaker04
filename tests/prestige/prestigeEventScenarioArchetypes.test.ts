@@ -29,7 +29,7 @@ const archetypes = {
     saleVolume: 100,
     baseVineyardPrestige: 0.5,
     featureSeverity: 0.25,
-    researchProjectId: 'project_grant_basic',
+    researchProjectId: 'foundation_grant_basic',
     achievementTier: 2
   },
   establishedRegionalEstate: {

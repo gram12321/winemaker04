@@ -23,6 +23,8 @@ const runnerMocks = vi.hoisted(() => ({
   createBottledWine: vi.fn(),
   adminGenerateTestOrders: vi.fn(async () => ({ totalOrdersCreated: 2, customersGenerated: 0 })),
   adminGenerateTestContract: vi.fn(async () => ({ success: true, message: 'Contract generated' })),
+  adminGenerateTestBottlePresaleContract: vi.fn(async () => ({ success: true, message: 'Bottle pre-sale generated' })),
+  adminGenerateTestForwardPresaleContract: vi.fn(async () => ({ success: true, message: 'Forward pre-sale generated' })),
   adminSetGoldToCompany: vi.fn(async () => undefined),
   adminSetPlayerBalance: vi.fn(async () => ({ success: true, message: 'Player balance set' })),
   adminAddPrestigeToCompany: vi.fn(async () => undefined),
@@ -77,6 +79,8 @@ vi.mock('@/lib/services/admin/testLab/testLabFixtureService', () => ({
 vi.mock('@/lib/services/admin/adminService', () => ({
   adminGenerateTestOrders: runnerMocks.adminGenerateTestOrders,
   adminGenerateTestContract: runnerMocks.adminGenerateTestContract,
+  adminGenerateTestBottlePresaleContract: runnerMocks.adminGenerateTestBottlePresaleContract,
+  adminGenerateTestForwardPresaleContract: runnerMocks.adminGenerateTestForwardPresaleContract,
   adminSetGoldToCompany: runnerMocks.adminSetGoldToCompany,
   adminSetPlayerBalance: runnerMocks.adminSetPlayerBalance,
   adminAddPrestigeToCompany: runnerMocks.adminAddPrestigeToCompany,
@@ -194,6 +198,14 @@ describe('Admin Test Lab behavior', () => {
       group: 'Sales Flow',
       mutatesData: true
     }));
+    expect(getTestLabScenario('sales.generate-bottle-presale-contract')).toEqual(expect.objectContaining({
+      group: 'Sales Flow',
+      mutatesData: true
+    }));
+    expect(getTestLabScenario('sales.generate-grape-forward-contract')).toEqual(expect.objectContaining({
+      group: 'Sales Flow',
+      mutatesData: true
+    }));
     expect(getTestLabScenario('finance.set-company-money')).toEqual(expect.objectContaining({
       group: 'Finance Flow',
       mutatesData: true
@@ -227,6 +239,16 @@ describe('Admin Test Lab behavior', () => {
       mode: 'run',
       params: {}
     });
+    const bottlePresaleResult = await runTestLabScenario({
+      scenarioId: 'sales.generate-bottle-presale-contract',
+      mode: 'run',
+      params: {}
+    });
+    const forwardPresaleResult = await runTestLabScenario({
+      scenarioId: 'sales.generate-grape-forward-contract',
+      mode: 'run',
+      params: {}
+    });
 
     expect(orderResult).toMatchObject({
       status: 'passed',
@@ -236,8 +258,18 @@ describe('Admin Test Lab behavior', () => {
       status: 'passed',
       summary: 'Contract generated'
     });
+    expect(bottlePresaleResult).toMatchObject({
+      status: 'passed',
+      summary: 'Bottle pre-sale generated'
+    });
+    expect(forwardPresaleResult).toMatchObject({
+      status: 'passed',
+      summary: 'Forward pre-sale generated'
+    });
     expect(runnerMocks.adminGenerateTestOrders).toHaveBeenCalledOnce();
     expect(runnerMocks.adminGenerateTestContract).toHaveBeenCalledOnce();
+    expect(runnerMocks.adminGenerateTestBottlePresaleContract).toHaveBeenCalledOnce();
+    expect(runnerMocks.adminGenerateTestForwardPresaleContract).toHaveBeenCalledOnce();
   });
 
   it('runs finance and research scenarios through active-company admin services', async () => {

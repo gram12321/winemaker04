@@ -80,7 +80,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
           <h3 className="text-white text-sm font-semibold">
             {activeTab === 'cellar' && 'Wine Cellar Inventory'}
             {activeTab === 'orders' && 'Pending Orders'}
-            {activeTab === 'contracts' && 'Wine Contracts'}
+            {activeTab === 'contracts' && 'Wine and Pre-sale Contracts'}
           </h3>
         </div>
       </div>
@@ -117,7 +117,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
-          Contracts ({allContracts.filter(c => c.status === 'pending').length})
+          Contracts ({allContracts.filter(c => c.status === 'pending' || c.status === 'offered').length})
         </button>
       </div>
 

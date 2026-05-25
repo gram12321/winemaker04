@@ -6,7 +6,7 @@ import { loadVineyards } from '../../database/activities/vineyardDB';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from './relationshipService';
 import { getGameState, getCurrentPrestige } from '../core/gameState';
-import { addSalePrestigeEvent, addFeaturePrestigeEvent } from '../prestige/prestigeService';
+import { addSalePrestigeEvent, addFeaturePrestigeEvent, addContractOutcomePrestigeEvent } from '../prestige/prestigeService';
 import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
@@ -14,6 +14,55 @@ import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 import { formatNumber } from '../../utils/utils';
 import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
+import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
+import { CONTRACT_PRESTIGE_CONFIG } from '../../constants/contractConstants';
+
+function isWinePresaleContract(contract: WineContract): boolean {
+  return contract.contractMode === 'wine_presale';
+}
+
+export async function acceptWinePresaleContract(contractId: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const contract = await getContractById(contractId);
+    if (!contract) return { success: false, message: 'Contract not found' };
+    if (!isWinePresaleContract(contract)) return { success: false, message: 'Contract is not a wine pre-sale contract' };
+    if (contract.status !== 'offered') return { success: false, message: 'Contract is not offered' };
+
+    const gameState = getGameState();
+    const acceptedWeek = gameState.week || 1;
+    const acceptedSeason = gameState.season || 'Spring';
+    const acceptedYear = gameState.currentYear || 2024;
+
+    const upfrontAmount = contract.upfrontPaidAmount ?? Math.round(contract.totalValue * (contract.upfrontPercent ?? 0.25) * 100) / 100;
+
+    await addTransaction(
+      upfrontAmount,
+      `Pre-sale advance accepted: ${contract.customerName} (${contract.requestedQuantity} bottles)`,
+      TRANSACTION_CATEGORIES.CONTRACT_ADVANCE_IN,
+      false
+    );
+
+    await updateContractStatus(contractId, 'pending', {
+      acceptedWeek,
+      acceptedSeason,
+      acceptedYear,
+    });
+
+    await notificationService.addMessage(
+      `Accepted wine pre-sale from ${contract.customerName}. Received ${formatNumber(upfrontAmount, { currency: true, decimals: 2 })} upfront.`,
+      'contractService.acceptWinePresaleContract',
+      'Pre-sale Accepted',
+      NotificationCategory.SALES_ORDERS
+    );
+
+    triggerGameUpdate();
+    triggerTopicUpdate('contracts');
+    return { success: true, message: 'Pre-sale accepted' };
+  } catch (error) {
+    console.error('Error accepting wine pre-sale contract:', error);
+    return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
 // ===== CONTRACT VALIDATION =====
 
@@ -312,6 +361,9 @@ export async function fulfillContract(
     }
     
     if (contract.status !== 'pending') {
+      if (contract.status === 'offered' && isWinePresaleContract(contract)) {
+        return { success: false, message: 'Accept this pre-sale contract before assigning wine.' };
+      }
       return { success: false, message: 'Contract is not pending' };
     }
     
@@ -372,14 +424,21 @@ export async function fulfillContract(
       });
     }
     
-    // Calculate revenue
-    const revenue = Math.round(contract.offeredPrice * contract.requestedQuantity * 100) / 100;
+    // Calculate settlement value
+    const spotRevenue = Math.round(contract.offeredPrice * contract.requestedQuantity * 100) / 100;
+    const revenue = isWinePresaleContract(contract)
+      ? Math.round((contract.finalPaymentAmount ?? Math.max(0, contract.totalValue - (contract.upfrontPaidAmount || 0))) * 100) / 100
+      : spotRevenue;
     
     // Add transaction
     await addTransaction(
       revenue,
-      `Contract fulfilled: ${contract.customerName} - ${contract.requestedQuantity} bottles`,
-      'Wine Sales',
+      isWinePresaleContract(contract)
+        ? `Pre-sale final settlement: ${contract.customerName} - ${contract.requestedQuantity} bottles`
+        : `Contract fulfilled: ${contract.customerName} - ${contract.requestedQuantity} bottles`,
+      isWinePresaleContract(contract)
+        ? TRANSACTION_CATEGORIES.CONTRACT_FINAL_SETTLEMENT_IN
+        : TRANSACTION_CATEGORIES.WINE_SALES,
       false
     );
     
@@ -393,12 +452,25 @@ export async function fulfillContract(
     );
     
     // Add prestige event
-    await addSalePrestigeEvent(
-      revenue,
-      contract.customerName,
-      `Contract (${contract.requestedQuantity} bottles)`,
-      contract.requestedQuantity
-    );
+    if (isWinePresaleContract(contract)) {
+      await addContractOutcomePrestigeEvent({
+        outcome: 'presale_fulfilled',
+        baseAmount: CONTRACT_PRESTIGE_CONFIG.presaleFulfillBase,
+        description: `Wine pre-sale fulfilled for ${contract.customerName}`,
+        metadata: {
+          contractId: contract.id,
+          requestedQuantity: contract.requestedQuantity,
+          settlementRevenue: revenue,
+        },
+      });
+    } else {
+      await addSalePrestigeEvent(
+        revenue,
+        contract.customerName,
+        `Contract (${contract.requestedQuantity} bottles)`,
+        contract.requestedQuantity
+      );
+    }
 
     try {
       await addContractFeaturePrestigeEvents(contract, fulfilledWines, currentPrestige);
@@ -522,8 +594,8 @@ export async function rejectContract(contractId: string): Promise<{
       return { success: false, message: 'Contract not found' };
     }
     
-    if (contract.status !== 'pending') {
-      return { success: false, message: 'Contract is not pending' };
+    if (!['pending', 'offered'].includes(contract.status)) {
+      return { success: false, message: 'Contract is not pending or offered' };
     }
     
     // Update contract status
@@ -591,16 +663,51 @@ export async function expireOldContracts(): Promise<number> {
       };
       
       if (isDateAfter(currentDate, contractExpires)) {
-        await updateContractStatus(contract.id, 'expired');
-        
-        // Apply small relationship penalty
-        await createRelationshipBoost(
-          contract.customerId,
-          -3,
-          0,
-          'Contract expired (not accepted)'
-        );
-        
+        if (isWinePresaleContract(contract) && contract.status === 'pending') {
+          const defaultPenalty = contract.defaultPenaltyAmount ?? 0;
+          await updateContractStatus(contract.id, 'defaulted', {
+            defaultedWeek: currentDate.week,
+            defaultedSeason: currentDate.season,
+            defaultedYear: currentDate.year,
+          });
+
+          if (defaultPenalty > 0) {
+            await addTransaction(
+              -defaultPenalty,
+              `Pre-sale default penalty: ${contract.customerName}`,
+              TRANSACTION_CATEGORIES.CONTRACT_DEFAULT_PENALTY_OUT,
+              false
+            );
+          }
+
+          await createRelationshipBoost(
+            contract.customerId,
+            -10,
+            0,
+            'Wine pre-sale defaulted'
+          );
+
+          await addContractOutcomePrestigeEvent({
+            outcome: 'presale_defaulted',
+            baseAmount: CONTRACT_PRESTIGE_CONFIG.presaleDefaultBase,
+            description: `Wine pre-sale defaulted for ${contract.customerName}`,
+            metadata: {
+              contractId: contract.id,
+              penalty: defaultPenalty,
+            },
+          });
+        } else {
+          await updateContractStatus(contract.id, 'expired');
+
+          // Apply small relationship penalty
+          await createRelationshipBoost(
+            contract.customerId,
+            -3,
+            0,
+            'Contract expired (not accepted)'
+          );
+        }
+
         expiredCount++;
       }
     }

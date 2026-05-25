@@ -98,6 +98,7 @@ Use `docs/versionlog.md` as the canonical running change history for meaningful 
 - Founder economy is active as a light ownership slice: founders have zero wages, receive yearly profit-share returns when profitable, and can be bought out into salaried staff.
 - Public-company/share-market runtime is not active in mainline; the public company docs are retained as historical implemented-feature and reintroduction references.
 
+
 ## Database Notes
 
 The app uses Supabase. Local environment variables live in `.env.local`, which is gitignored.

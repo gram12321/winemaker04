@@ -113,7 +113,7 @@ The following are optional mode skills (never mandatory by default):
 - No AI git commit unless the user explicitly requests it.
 - Do not start `npm run dev` unless explicitly asked.
 - Do not run `npm run build` by default; use only when asked or when change risk justifies it.
-- After major updates, ask whether `readme.md` and `docs/versionlog.md` should be updated.
+- After major updates, ask whether `readme.md` should be updated.
 - For schema changes, update SQL under `migrations/` after validating intended DB changes.
 - Keep `docs/AIdocs/AIpromt_codecleaning.md` as the detailed cleanup playbook. The completion sanitary gate below runs in parallel and does not supersede it.
 

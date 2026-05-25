@@ -21,7 +21,7 @@ export function FounderPanel() {
       setCompanyValue(value);
       return value;
     },
-    [0],
+    0,
     { topic: 'finance' }
   );
 
@@ -29,7 +29,7 @@ export function FounderPanel() {
 
   const buyoutCostPerFounder = Math.round(companyValue * FOUNDER_BUYOUT_PERCENT_OF_ASSETS);
 
-  async function handleBuyout(staffId: string, name: string) {
+  async function handleBuyout(staffId: string) {
     setBuyingOut(staffId);
     setError(null);
     const result = await buyoutFounder(staffId);
@@ -74,7 +74,7 @@ export function FounderPanel() {
                   </div>
                 </div>
                 <Button
-                  onClick={() => handleBuyout(founder.id, founder.name)}
+                  onClick={() => handleBuyout(founder.id)}
                   disabled={buyingOut === founder.id}
                   className="ml-4 text-xs px-3 py-1 h-auto bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
                 >

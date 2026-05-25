@@ -45,10 +45,13 @@ const mocks = vi.hoisted(() => {
     processWeeklyFeatureRisks: vi.fn(async () => undefined),
     processWeeklyFermentation: vi.fn(async () => undefined),
     processSeasonalWages: vi.fn(async () => 'Seasonal wages paid'),
+    processYearlyFounderDistributions: vi.fn(async () => undefined),
     processWeeklyBuyGrapeOfferDecay: vi.fn(async () => undefined),
     refreshBuyGrapeMarketForSeason: vi.fn(async () => undefined),
     generateContracts: vi.fn(async () => undefined),
+    generateForwardContracts: vi.fn(async () => undefined),
     expireOldContracts: vi.fn(async () => undefined),
+    expireAndDefaultForwardContracts: vi.fn(async () => undefined),
     expireOldOrders: vi.fn(async () => undefined),
     triggerGameUpdate: vi.fn(() => undefined),
     hasMinimizedModals: vi.fn(() => false),
@@ -88,8 +91,11 @@ vi.mock('@/lib/services', () => ({
   processWeeklyFeatureRisks: mocks.processWeeklyFeatureRisks,
   processWeeklyFermentation: mocks.processWeeklyFermentation,
   processSeasonalWages: mocks.processSeasonalWages,
+  processYearlyFounderDistributions: mocks.processYearlyFounderDistributions,
   processWeeklyBuyGrapeOfferDecay: mocks.processWeeklyBuyGrapeOfferDecay,
-  refreshBuyGrapeMarketForSeason: mocks.refreshBuyGrapeMarketForSeason
+  refreshBuyGrapeMarketForSeason: mocks.refreshBuyGrapeMarketForSeason,
+  generateForwardContracts: mocks.generateForwardContracts,
+  expireAndDefaultForwardContracts: mocks.expireAndDefaultForwardContracts
 }));
 
 vi.mock('@/lib/services/wine/features/featureService', () => ({
@@ -209,7 +215,9 @@ describe('processGameTick', () => {
     expect(mocks.restructureForcedLoansIfNeeded).toHaveBeenCalledOnce();
     expect(mocks.generateSophisticatedWineOrders).toHaveBeenCalledOnce();
     expect(mocks.generateContracts).toHaveBeenCalledOnce();
+    expect(mocks.generateForwardContracts).toHaveBeenCalledOnce();
     expect(mocks.expireOldContracts).toHaveBeenCalledOnce();
+    expect(mocks.expireAndDefaultForwardContracts).toHaveBeenCalledOnce();
     expect(mocks.expireOldOrders).toHaveBeenCalledOnce();
     expect(mocks.processWeeklyFermentation).toHaveBeenCalledOnce();
     expect(mocks.processWeeklyFeatureRisks).toHaveBeenCalledOnce();

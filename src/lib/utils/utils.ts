@@ -29,6 +29,35 @@ export function clamp01(value: number): number {
   return clamp(value, 0, 1);
 }
 
+export const PROGRESSION_TIER_NAMES = [
+  'Basic',
+  'Intermediate',
+  'Advanced',
+  'Expert',
+  'Specialist',
+  'Professional',
+  'Elite',
+  'Master',
+  'Grandmaster',
+  'Legendary',
+] as const;
+
+export type ProgressionTierName = typeof PROGRESSION_TIER_NAMES[number];
+
+export function getProgressionTierName(step: number): ProgressionTierName {
+  const normalizedStep = clamp(Math.floor(step), 1, PROGRESSION_TIER_NAMES.length);
+  return PROGRESSION_TIER_NAMES[normalizedStep - 1];
+}
+
+export function getProgressionStageLabel(step: number, subject: string): string {
+  const normalizedSubject = subject.trim();
+  if (!normalizedSubject) {
+    return getProgressionTierName(step);
+  }
+
+  return `${getProgressionTierName(step)} ${normalizedSubject}`;
+}
+
 export function formatSigned(value: number): string {
   return `${value >= 0 ? '+' : ''}${formatNumber(value, { smartDecimals: true })}`;
 }

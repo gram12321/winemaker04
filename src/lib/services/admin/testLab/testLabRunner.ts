@@ -154,8 +154,17 @@ async function runSalesContractScenario(
   scenarioId: string,
   warnings: string[]
 ): Promise<TestLabScenarioResult> {
-  const { adminGenerateTestContract } = await import('@/lib/services/admin/adminService');
-  const data = await adminGenerateTestContract();
+  const {
+    adminGenerateTestContract,
+    adminGenerateTestBottlePresaleContract,
+    adminGenerateTestForwardPresaleContract
+  } = await import('@/lib/services/admin/adminService');
+
+  const data = scenarioId === 'sales.generate-bottle-presale-contract'
+    ? await adminGenerateTestBottlePresaleContract()
+    : scenarioId === 'sales.generate-grape-forward-contract'
+      ? await adminGenerateTestForwardPresaleContract()
+      : await adminGenerateTestContract();
 
   return {
     runId,
@@ -379,6 +388,14 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
     }
 
     if (scenario.id === 'sales.generate-contract') {
+      return await runSalesContractScenario(runId, scenario.id, warnings);
+    }
+
+    if (scenario.id === 'sales.generate-bottle-presale-contract') {
+      return await runSalesContractScenario(runId, scenario.id, warnings);
+    }
+
+    if (scenario.id === 'sales.generate-grape-forward-contract') {
       return await runSalesContractScenario(runId, scenario.id, warnings);
     }
 

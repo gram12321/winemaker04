@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason, processYearlyFounderDistributions } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
@@ -262,12 +262,30 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
+    // Generate forward (grape/must) contract offers
+    (async () => {
+      try {
+        await generateForwardContracts();
+      } catch (error) {
+        console.warn('Error during forward contract generation:', error);
+      }
+    })(),
+
     // Expire old pending contracts that have passed their expiration date
     (async () => {
       try {
         await expireOldContracts();
       } catch (error) {
         console.warn('Error during contract expiration check:', error);
+      }
+    })(),
+
+    // Expire/default forward contracts based on due date and acceptance state
+    (async () => {
+      try {
+        await expireAndDefaultForwardContracts();
+      } catch (error) {
+        console.warn('Error during forward contract expiration/default check:', error);
       }
     })(),
 

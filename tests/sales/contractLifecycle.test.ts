@@ -246,6 +246,38 @@ describe('contract lifecycle', () => {
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('contracts');
   });
 
+  it('accepts an offered bottle pre-sale contract, records accepted date, and books upfront revenue', async () => {
+    mocks.getContractById.mockResolvedValue(contract({
+      status: 'offered',
+      contractMode: 'wine_presale',
+      upfrontPercent: 0.25,
+      upfrontPaidAmount: 27.5,
+      finalPaymentAmount: 82.5,
+      defaultPenaltyAmount: 5.5,
+    }));
+
+    const { acceptWinePresaleContract } = await import('@/lib/services/sales/contractService');
+
+    await expect(acceptWinePresaleContract('contract-1')).resolves.toEqual({
+      success: true,
+      message: 'Pre-sale accepted'
+    });
+
+    expect(mocks.addTransaction).toHaveBeenCalledWith(
+      27.5,
+      'Pre-sale advance accepted: Nordic Importer (5 bottles)',
+      'Contract Advance In',
+      false
+    );
+    expect(mocks.updateContractStatus).toHaveBeenCalledWith('contract-1', 'pending', {
+      acceptedWeek: 3,
+      acceptedSeason: 'Fall',
+      acceptedYear: 2026,
+    });
+    expect(mocks.triggerGameUpdate).toHaveBeenCalledOnce();
+    expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('contracts');
+  });
+
   it('expires only pending contracts older than the current game date', async () => {
     mocks.getPendingContracts.mockResolvedValue([
       contract({ id: 'expired-contract', expiresWeek: 12, expiresSeason: 'Summer', expiresYear: 2026 }),

@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../../database/core/supabase';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '../index';
 import { insertPrestigeEvent } from '../../database';
-import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray } from '@/lib/utils';
+import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
 import { setPlayerBalance } from '../user/userBalanceService';
@@ -412,6 +412,141 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
   return {
     success: true,
     message: `Contract generated for ${customer.name}: ${contract.requestedQuantity} bottles @ ${formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}/bottle`
+  };
+}
+
+export async function adminGenerateTestBottlePresaleContract(): Promise<{ success: boolean; message: string }> {
+  const { getAvailableBuyers } = await import('../sales/sellGrapesService');
+  const { saveForwardContract } = await import('../../database/sales/forwardContractDB');
+  const { FORWARD_CONTRACT_CONFIG } = await import('../../constants/contractConstants');
+
+  const buyers = await getAvailableBuyers();
+  if (buyers.length === 0) {
+    return { success: false, message: 'No bulk buyers available' };
+  }
+
+  const buyer = getRandomFromArray(buyers);
+  const gameState = getGameState();
+  const createdWeek = gameState.week || 1;
+  const createdSeason = (gameState.season || 'Spring') as Season;
+  const createdYear = gameState.currentYear || 2024;
+
+  const nextSeasonMap: Record<Season, Season> = {
+    Spring: 'Summer',
+    Summer: 'Fall',
+    Fall: 'Winter',
+    Winter: 'Spring'
+  };
+
+  const dueSeason = nextSeasonMap[createdSeason];
+  const dueYear = createdSeason === 'Winter' ? createdYear + 1 : createdYear;
+
+  const quantityBottles = randomInt(
+    Math.max(FORWARD_CONTRACT_CONFIG.minQuantityKg, 120),
+    Math.min(FORWARD_CONTRACT_CONFIG.maxQuantityKg, 1200)
+  );
+  const unitPricePerBottle = Math.round((4.5 + Math.random() * 4.5) * Math.max(0.8, buyer.priceMultiplier || 1) * 100) / 100;
+  const totalValue = Math.round(quantityBottles * unitPricePerBottle * 100) / 100;
+  const upfrontPaidAmount = Math.round(totalValue * FORWARD_CONTRACT_CONFIG.upfrontPercent * 100) / 100;
+  const finalPaymentAmount = Math.round((totalValue - upfrontPaidAmount) * 100) / 100;
+  const defaultPenaltyAmount = Math.round(upfrontPaidAmount * FORWARD_CONTRACT_CONFIG.defaultPenaltyPercentOnAdvance * 100) / 100;
+
+  await saveForwardContract({
+    id: uuidv4(),
+    companyId: '',
+    buyerId: buyer.id,
+    buyerName: buyer.name,
+    targetState: 'bottled',
+    targetGrape: Math.random() < 0.5 ? undefined : getRandomFromArray(['Chardonnay', 'Pinot Noir', 'Sauvignon Blanc', 'Sangiovese', 'Tempranillo', 'Barbera', 'Primitivo']),
+    quantityKg: quantityBottles,
+    deliveredKg: 0,
+    unitPricePerKg: unitPricePerBottle,
+    totalValue,
+    upfrontPercent: FORWARD_CONTRACT_CONFIG.upfrontPercent,
+    upfrontPaidAmount,
+    finalPaymentAmount,
+    defaultPenaltyAmount,
+    status: 'offered',
+    createdWeek,
+    createdSeason,
+    createdYear,
+    dueWeek: 1,
+    dueSeason,
+    dueYear,
+  });
+
+  return {
+    success: true,
+    message: `Bottle pre-sale offer generated for ${buyer.name}: ${quantityBottles.toLocaleString()} bottles @ ${formatNumber(unitPricePerBottle, { currency: true, decimals: 2 })}/bottle`
+  };
+}
+
+export async function adminGenerateTestForwardPresaleContract(): Promise<{ success: boolean; message: string }> {
+  const { getAvailableBuyers } = await import('../sales/sellGrapesService');
+  const { saveForwardContract } = await import('../../database/sales/forwardContractDB');
+  const { FORWARD_CONTRACT_CONFIG } = await import('../../constants/contractConstants');
+
+  const buyers = await getAvailableBuyers();
+  if (buyers.length === 0) {
+    return { success: false, message: 'No grape buyers available' };
+  }
+
+  const buyer = getRandomFromArray(buyers);
+  const gameState = getGameState();
+  const createdWeek = gameState.week || 1;
+  const createdSeason = (gameState.season || 'Spring') as Season;
+  const createdYear = gameState.currentYear || 2024;
+
+  const nextSeasonMap: Record<Season, Season> = {
+    Spring: 'Summer',
+    Summer: 'Fall',
+    Fall: 'Winter',
+    Winter: 'Spring'
+  };
+
+  const dueSeason = nextSeasonMap[createdSeason];
+  const dueYear = createdSeason === 'Winter' ? createdYear + 1 : createdYear;
+
+  const quantityKg = randomInt(
+    Math.max(FORWARD_CONTRACT_CONFIG.minQuantityKg, 250),
+    Math.min(FORWARD_CONTRACT_CONFIG.maxQuantityKg, 1500)
+  );
+  const unitPricePerKg = Math.round((2.1 + Math.random() * 1.6) * Math.max(0.8, buyer.priceMultiplier || 1) * 100) / 100;
+  const totalValue = Math.round(quantityKg * unitPricePerKg * 100) / 100;
+  const upfrontPaidAmount = Math.round(totalValue * FORWARD_CONTRACT_CONFIG.upfrontPercent * 100) / 100;
+  const finalPaymentAmount = Math.round((totalValue - upfrontPaidAmount) * 100) / 100;
+  const defaultPenaltyAmount = Math.round(upfrontPaidAmount * FORWARD_CONTRACT_CONFIG.defaultPenaltyPercentOnAdvance * 100) / 100;
+
+  const targetStates = ['grapes', 'must_ready', 'must_fermenting', 'bottled', 'any'] as const;
+  const targetState = getRandomFromArray(targetStates);
+
+  await saveForwardContract({
+    id: uuidv4(),
+    companyId: '',
+    buyerId: buyer.id,
+    buyerName: buyer.name,
+    targetState,
+    targetGrape: Math.random() < 0.5 ? undefined : getRandomFromArray(['Chardonnay', 'Pinot Noir', 'Sauvignon Blanc', 'Sangiovese', 'Tempranillo', 'Barbera', 'Primitivo']),
+    quantityKg,
+    deliveredKg: 0,
+    unitPricePerKg,
+    totalValue,
+    upfrontPercent: FORWARD_CONTRACT_CONFIG.upfrontPercent,
+    upfrontPaidAmount,
+    finalPaymentAmount,
+    defaultPenaltyAmount,
+    status: 'offered',
+    createdWeek,
+    createdSeason,
+    createdYear,
+    dueWeek: 1,
+    dueSeason,
+    dueYear,
+  });
+
+  return {
+    success: true,
+    message: `Grape forward pre-sale offer generated for ${buyer.name}: ${quantityKg.toLocaleString()} kg @ ${formatNumber(unitPricePerKg, { currency: true, decimals: 2 })}/kg`
   };
 }
 

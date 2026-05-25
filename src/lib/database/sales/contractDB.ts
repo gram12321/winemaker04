@@ -18,6 +18,11 @@ function mapRowToContract(row: any): WineContract {
     offeredPrice: row.offered_price,
     totalValue: row.total_value,
     status: row.status,
+    contractMode: row.contract_mode || 'spot',
+    upfrontPercent: row.upfront_percent || undefined,
+    upfrontPaidAmount: row.upfront_paid_amount || undefined,
+    finalPaymentAmount: row.final_payment_amount || undefined,
+    defaultPenaltyAmount: row.default_penalty_amount || undefined,
     createdWeek: row.created_week,
     createdSeason: row.created_season,
     createdYear: row.created_year,
@@ -31,6 +36,12 @@ function mapRowToContract(row: any): WineContract {
     rejectedWeek: row.rejected_week || undefined,
     rejectedSeason: row.rejected_season || undefined,
     rejectedYear: row.rejected_year || undefined,
+    defaultedWeek: row.defaulted_week || undefined,
+    defaultedSeason: row.defaulted_season || undefined,
+    defaultedYear: row.defaulted_year || undefined,
+    acceptedWeek: row.accepted_week || undefined,
+    acceptedSeason: row.accepted_season || undefined,
+    acceptedYear: row.accepted_year || undefined,
     fulfilledWineBatchIds: row.fulfilled_wine_batch_ids || undefined,
     relationshipAtCreation: row.relationship_at_creation,
     createdAt: toOptionalDate(row.created_at),
@@ -58,6 +69,11 @@ export async function saveWineContract(contract: WineContract): Promise<void> {
       offered_price: contract.offeredPrice,
       total_value: contract.totalValue,
       status: contract.status,
+      contract_mode: contract.contractMode || 'spot',
+      upfront_percent: contract.upfrontPercent || null,
+      upfront_paid_amount: contract.upfrontPaidAmount || null,
+      final_payment_amount: contract.finalPaymentAmount || null,
+      default_penalty_amount: contract.defaultPenaltyAmount || null,
       created_week: contract.createdWeek,
       created_season: contract.createdSeason,
       created_year: contract.createdYear,
@@ -71,6 +87,12 @@ export async function saveWineContract(contract: WineContract): Promise<void> {
       rejected_week: contract.rejectedWeek || null,
       rejected_season: contract.rejectedSeason || null,
       rejected_year: contract.rejectedYear || null,
+      defaulted_week: contract.defaultedWeek || null,
+      defaulted_season: contract.defaultedSeason || null,
+      defaulted_year: contract.defaultedYear || null,
+      accepted_week: contract.acceptedWeek || null,
+      accepted_season: contract.acceptedSeason || null,
+      accepted_year: contract.acceptedYear || null,
       fulfilled_wine_batch_ids: contract.fulfilledWineBatchIds || null,
       relationship_at_creation: contract.relationshipAtCreation
     });
@@ -105,7 +127,7 @@ export async function loadWineContracts(): Promise<WineContract[]> {
  */
 export async function getPendingContracts(): Promise<WineContract[]> {
   const { data, error} = await getCompanyQuery('wine_contracts')
-    .eq('status', 'pending')
+    .in('status', ['offered', 'pending'])
     .order('created_year', { ascending: false })
     .order('created_season', { ascending: false })
     .order('created_week', { ascending: false });
@@ -143,7 +165,7 @@ export async function getContractById(contractId: string): Promise<WineContract 
  */
 export async function updateContractStatus(
   contractId: string,
-  status: 'fulfilled' | 'rejected' | 'expired',
+  status: 'offered' | 'pending' | 'fulfilled' | 'defaulted' | 'rejected' | 'expired',
   additionalData?: {
     fulfilledWeek?: number;
     fulfilledSeason?: 'Spring' | 'Summer' | 'Fall' | 'Winter';
@@ -151,6 +173,12 @@ export async function updateContractStatus(
     rejectedWeek?: number;
     rejectedSeason?: 'Spring' | 'Summer' | 'Fall' | 'Winter';
     rejectedYear?: number;
+    defaultedWeek?: number;
+    defaultedSeason?: 'Spring' | 'Summer' | 'Fall' | 'Winter';
+    defaultedYear?: number;
+    acceptedWeek?: number;
+    acceptedSeason?: 'Spring' | 'Summer' | 'Fall' | 'Winter';
+    acceptedYear?: number;
     fulfilledWineBatchIds?: string[];
   }
 ): Promise<void> {
@@ -166,6 +194,16 @@ export async function updateContractStatus(
     updateData.rejected_season = additionalData.rejectedSeason;
     updateData.rejected_year = additionalData.rejectedYear;
   }
+  if (additionalData?.defaultedWeek !== undefined) {
+    updateData.defaulted_week = additionalData.defaultedWeek;
+    updateData.defaulted_season = additionalData.defaultedSeason;
+    updateData.defaulted_year = additionalData.defaultedYear;
+  }
+  if (additionalData?.acceptedWeek !== undefined) {
+    updateData.accepted_week = additionalData.acceptedWeek;
+    updateData.accepted_season = additionalData.acceptedSeason;
+    updateData.accepted_year = additionalData.acceptedYear;
+  }
   if (additionalData?.fulfilledWineBatchIds) {
     updateData.fulfilled_wine_batch_ids = additionalData.fulfilledWineBatchIds;
   }
@@ -178,6 +216,19 @@ export async function updateContractStatus(
 
   if (error) {
     console.error('Error updating contract status:', error);
+    throw error;
+  }
+}
+
+export async function updateWineContract(contractId: string, patch: Record<string, any>): Promise<void> {
+  const { error } = await supabase
+    .from('wine_contracts')
+    .update(patch)
+    .eq('id', contractId)
+    .eq('company_id', getCurrentCompanyId());
+
+  if (error) {
+    console.error('Error updating wine contract:', error);
     throw error;
   }
 }
@@ -203,7 +254,7 @@ export async function updateContractProgress(contractId: string, terms: any): Pr
  */
 export async function getCompletedContracts(): Promise<WineContract[]> {
   const { data, error } = await getCompanyQuery('wine_contracts')
-    .in('status', ['fulfilled', 'rejected', 'expired'])
+    .in('status', ['fulfilled', 'defaulted', 'rejected', 'expired'])
     .order('created_year', { ascending: false })
     .order('created_season', { ascending: false })
     .order('created_week', { ascending: false });

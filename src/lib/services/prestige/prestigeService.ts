@@ -555,6 +555,32 @@ export async function addSalePrestigeEvent(
   triggerGameUpdate();
 }
 
+export async function addContractOutcomePrestigeEvent(params: {
+  outcome: 'presale_fulfilled' | 'presale_defaulted' | 'forward_fulfilled' | 'forward_defaulted';
+  baseAmount: number;
+  description: string;
+  sourceId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const gameState = getGameState();
+
+  await insertPrestigeEvent({
+    id: uuidv4(),
+    type: params.baseAmount < 0 ? 'penalty' : 'sale',
+    amount_base: params.baseAmount,
+    created_game_week: calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!),
+    decay_rate: 0.95,
+    source_id: params.sourceId || null,
+    payload: {
+      outcome: params.outcome,
+      description: params.description,
+      ...(params.metadata || {}),
+    },
+  });
+
+  triggerGameUpdate();
+}
+
 export async function addVineyardSalePrestigeEvent(
   saleValue: number,
   customerName: string,
@@ -942,15 +968,6 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
     let title = '';
     let amountText = '';
-  if (event.type === 'achievement' || event.type === 'vineyard_achievement') {
-    console.warn(`Prestige event ${event.id} (${event.type}) is missing metadata; using fallback display.`);
-  }
-
-  return {
-    title: fallbackTitle,
-    titleBase: fallbackTitleBase,
-    amountText: `${event.amount >= 0 ? '+' : ''}${event.amount.toFixed(2)} prestige`,
-  };
     if (eventType === 'manifestation') {
       title = `${featureName} Manifestation: ${wineName}`;
       amountText = `${featureName} fault detected`;

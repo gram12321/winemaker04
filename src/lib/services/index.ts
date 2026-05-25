@@ -61,6 +61,7 @@ export * from './sales/grapeSupplierMarketService';
 export * from './sales/relationshipService';
 export * from './sales/contractGenerationService';
 export * from './sales/contractService';
+export * from './sales/forwardContractService';
 export * from './sales/expirationService';
 export * from './sales/buyGrapeMarketService';
 

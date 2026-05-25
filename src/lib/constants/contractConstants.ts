@@ -16,6 +16,32 @@ export const CONTRACT_CONFIG: ContractGenerationConfig = {
   // With 1 eligible customer: 0.5% chance per tick, ~6% chance per season
 };
 
+export const PRESALE_CONTRACT_CONFIG = {
+  baseOfferChance: 0.2,
+  upfrontPercent: 0.25,
+  defaultPenaltyPercentOnAdvance: 0.2,
+  prestigeOfferChanceMultiplierCap: 1.8,
+  prestigeSizeMultiplierCap: 1.6,
+} as const;
+
+export const FORWARD_CONTRACT_CONFIG = {
+  maxActiveOpenContracts: 3,
+  baseGenerationChance: 0.25,
+  upfrontPercent: 0.3,
+  defaultPenaltyPercentOnAdvance: 0.2,
+  prestigeOfferCountMultiplierCap: 1.8,
+  prestigeSizeMultiplierCap: 1.8,
+  minQuantityKg: 120,
+  maxQuantityKg: 3200,
+} as const;
+
+export const CONTRACT_PRESTIGE_CONFIG = {
+  presaleFulfillBase: 1.0,
+  presaleDefaultBase: -12,
+  forwardFulfillBase: 0.8,
+  forwardDefaultBase: -10,
+} as const;
+
 // ===== CUSTOMER CONTRACT REQUIREMENTS =====
 
 export interface CustomerContractRequirements {
