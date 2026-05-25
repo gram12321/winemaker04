@@ -10,7 +10,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getResearchUpgradeFeature } from '../../..';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
-import { getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/services';
+import { getResearchPermanentEffects, getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/services';
 import { formatNumber } from '@/lib/utils/utils';
 
 /**
@@ -27,10 +27,13 @@ export async function startResearch(projectId: string): Promise<string | null> {
 
             const gameState = getGameState();
             const researchCost = calculateResearchCost(projectId);
-            const { totalWork } = calculateResearchWork(projectId);
+            const companyId = getCurrentCompanyId();
+            const permanentEffects = await getResearchPermanentEffects(companyId || undefined);
+            const { totalWork } = calculateResearchWork(projectId, {
+                  workMultiplier: permanentEffects.administrationAndResearchWorkMultiplier
+            });
 
             const prestige = await getCurrentPrestige();
-            const companyId = getCurrentCompanyId();
             const unlockedIds = new Set(await getUnlockedResearchIds(companyId || undefined));
             const eligibilityContext = await loadResearchEligibilityContext(prestige, unlockedIds, companyId || undefined);
             const rawLockReasons = getResearchRequirementReasons(project, eligibilityContext);

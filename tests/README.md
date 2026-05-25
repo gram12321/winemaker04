@@ -11,7 +11,7 @@ This folder hosts the executable automated Vitest suites for Winemaker04. Tests 
 - `research/` - Research eligibility and permanent-effect tests.
 - `sales/` - Contract, customer/order, and grape buyer market tests.
 - `user/` - Company creation, starting conditions, staff/team, wine log, achievements.
-- `vineyard/` - Yield calculations, lifecycle progression, vineyard creation, grape suitability.
+- `vineyard/` - Yield calculations, lifecycle progression, vineyard creation, grape suitability, weather impact, and Weather Center behavior.
 - `wine/` - Fermentation, anchors, aging, pricing, taste quality, and wine characteristic tests.
 
 Vitest discovers files matching `tests/**/*.test.ts`. Prefer the live CLI summary over hand-maintained test counts in this README.
@@ -31,6 +31,8 @@ npm test -- tests/wine/tasteQualityIndexService.test.ts
 ```
 
 The Admin UI also exposes these same automated tests through the development-only `/api/test-run` endpoint using Vitest's JSON reporter. The CLI remains the source of truth.
+
+Current known caveat from the 2026-05-25 documentation audit: the full suite has two active failing expectations in `tests/user/researchPanelVisibility.test.ts`, both tied to the research UI visibility backlog.
 
 ## Conventions
 

@@ -1,7 +1,7 @@
 import { Transaction, Season, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
-import { getGameState, getCurrentPrestige, getTransactions, notificationService } from '@/lib/services';
+import { getGameState, getCurrentPrestige, getResearchPermanentEffects, getTransactions, notificationService } from '@/lib/services';
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { NotificationCategory } from '@/lib/types/types';
 import { SEASON_ORDER } from '@/lib/constants';
@@ -58,6 +58,7 @@ export async function calculateBookkeepingWork(): Promise<{
   const category = WorkCategory.ADMINISTRATION_AND_RESEARCH;
   const rate = TASK_RATES[category];
   const initialWork = INITIAL_WORK[category];
+  const researchEffects = await getResearchPermanentEffects();
 
   // Use generic calculator again
   const baseWork = calculateTotalWork(transactionCount, {
@@ -68,7 +69,8 @@ export async function calculateBookkeepingWork(): Promise<{
 
   // Add loan penalty work
   const loanPenaltyWork = gameState.loanPenaltyWork || 0;
-  const totalWork = baseWork + loanPenaltyWork;
+  const rawWork = baseWork + loanPenaltyWork;
+  const totalWork = Math.max(1, Math.ceil(rawWork * researchEffects.administrationAndResearchWorkMultiplier));
 
   const factors: WorkFactor[] = [
     { label: 'Previous Season', value: `${prevSeason} ${prevYear}`, isPrimary: true },
@@ -76,6 +78,13 @@ export async function calculateBookkeepingWork(): Promise<{
     { label: 'Processing Rate', value: rate, unit: 'tasks/week' },
     { label: 'Initial Setup Work', value: initialWork, unit: 'work units' }
   ];
+
+  if (researchEffects.administrationAndResearchWorkMultiplier !== 1) {
+    factors.push({
+      label: 'Administrative Overhead',
+      value: `${Math.round((1 - researchEffects.administrationAndResearchWorkMultiplier) * 100)}% less work`
+    });
+  }
 
   // Add loan penalty factor if applicable
   if (loanPenaltyWork > 0) {

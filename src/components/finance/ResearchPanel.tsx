@@ -313,9 +313,11 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
   const [hideCompleted, setHideCompleted] = useState(false);
   const [permanentEffectsSummary, setPermanentEffectsSummary] = useState<{
     vineyardHealthDecayMultiplier: number;
+    administrationAndResearchWorkMultiplier: number;
     activeEffects: Array<{ projectId: string; projectTitle: string; description: string; kind: string }>;
   }>({
     vineyardHealthDecayMultiplier: 1,
+    administrationAndResearchWorkMultiplier: 1,
     activeEffects: [],
   });
 
@@ -435,7 +437,9 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
     const models = RESEARCH_PROJECTS.map((project) => {
       const status = getResearchStatus(project);
       const lockReason = status === 'locked' ? getLockReason(project) : '';
-      const { totalWork } = calculateResearchWork(project.id);
+      const { totalWork } = calculateResearchWork(project.id, {
+        workMultiplier: permanentEffectsSummary.administrationAndResearchWorkMultiplier,
+      });
       const totalCost = calculateResearchCost(project.id);
 
       return {
@@ -451,7 +455,7 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
 
     return models;
     // Computed each render from current state; safe due moderate catalog size.
-  }, [activeResearch, completedResearch, currentPrestige, eligibilityContext, bypassGates]);
+  }, [activeResearch, completedResearch, currentPrestige, eligibilityContext, bypassGates, permanentEffectsSummary.administrationAndResearchWorkMultiplier]);
 
   const unlockFootprint = useMemo(() => {
     const counts = new Map<string, number>();

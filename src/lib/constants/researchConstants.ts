@@ -60,6 +60,11 @@ export type ResearchPermanentEffect =
             kind: 'research_skill_multiplier';
             multiplier: number;
             description?: string;
+      }
+      | {
+            kind: 'administration_and_research_work_multiplier';
+            multiplier: number;
+            description?: string;
       };
 
 export interface ResearchProject {
@@ -841,13 +846,17 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             description: 'Improve administrative processes and documentation',
             complexity: 2,
             benefits: [
-                  'Reduced administrative overhead',
-                  'Better record keeping',
+                  'Administration and research tasks require 12% less work',
                   `+${calculateResearchPrestigeFromComplexity(2)} Prestige points`
             ],
             category: 'administration',
             icon: '📋',
-            prestigeReward: calculateResearchPrestigeFromComplexity(2)
+            prestigeReward: calculateResearchPrestigeFromComplexity(2),
+            permanentEffects: [{
+                  kind: 'administration_and_research_work_multiplier',
+                  multiplier: 0.88,
+                  description: 'Administration and research tasks require 12% less work'
+            }]
       },
       ...RESEARCH_SPEED_RESEARCH_PROJECTS,
       

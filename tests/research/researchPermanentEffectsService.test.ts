@@ -26,6 +26,7 @@ describe('research permanent effects', () => {
     await expect(getResearchPermanentEffects()).resolves.toEqual({
       vineyardHealthDecayMultiplier: 1,
       researchSkillMultiplier: 1,
+      administrationAndResearchWorkMultiplier: 1,
       activeEffects: []
     });
     expect(mocks.getUnlockedResearchIds).toHaveBeenCalledWith('company-1');
@@ -61,6 +62,20 @@ describe('research permanent effects', () => {
       expect.objectContaining({
         projectId: 'admin_research_office',
         kind: 'research_skill_multiplier'
+      })
+    ]));
+  });
+
+  it('applies admin overhead work reduction from basic administration', async () => {
+    mocks.getUnlockedResearchIds.mockResolvedValue(['admin_basic']);
+
+    const summary = await getResearchPermanentEffects('company-2');
+
+    expect(summary.administrationAndResearchWorkMultiplier).toBeCloseTo(0.88);
+    expect(summary.activeEffects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        projectId: 'admin_basic',
+        kind: 'administration_and_research_work_multiplier'
       })
     ]));
   });

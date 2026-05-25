@@ -13,6 +13,7 @@ export function ResearchPage() {
   const [activeBonuses, setActiveBonuses] = useState<ResearchPermanentEffectsSummary>({
     vineyardHealthDecayMultiplier: 1,
     researchSkillMultiplier: 1,
+    administrationAndResearchWorkMultiplier: 1,
     activeEffects: []
   });
 

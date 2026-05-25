@@ -114,7 +114,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       payload: { origin: 'starting_conditions', family: 'Latosha' }
     },
     startingUnlockedGrape: 'Pinot Noir', // Classic Burgundy grape
-    startingResearch: ['admin_basic', 'tech_fermentation'] // Burgundy fermentation mastery; bypasses prestige gate
+    startingResearch: ['tech_fermentation'] // Burgundy fermentation mastery; bypasses prestige gate
   },
 
   'Italy': {
@@ -171,7 +171,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       payload: { origin: 'starting_conditions', family: 'De Luca' }
     },
     startingUnlockedGrape: 'Sangiovese', // Classic Tuscan grape
-    startingResearch: ['admin_basic', 'mkt_research'] // Mediterranean export culture
+    startingResearch: ['mkt_research'] // Mediterranean export culture
   },
 
   'Germany': {
@@ -235,7 +235,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       payload: { origin: 'starting_conditions', family: 'Weissburg' }
     },
     startingUnlockedGrape: 'Sauvignon Blanc', // White wine grape suitable for Mosel region
-    startingResearch: ['admin_basic', 'tech_soil_analysis'] // Mosel terroir precision heritage; bypasses prestige gate
+    startingResearch: ['tech_soil_analysis'] // Mosel terroir precision heritage; bypasses prestige gate
   },
 
   'Spain': {
@@ -277,7 +277,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       interestRate: 0.017
     },
     startingUnlockedGrape: 'Tempranillo', // Classic Ribera del Duero grape
-    startingResearch: ['admin_basic', 'mkt_research'] // Spanish bodega marketing tradition
+    startingResearch: ['mkt_research'] // Spanish bodega marketing tradition
   },
 
   'United States': {
@@ -318,7 +318,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       startingVineAge: 3 // Young Chardonnay vines in Napa
     },
     startingUnlockedGrape: 'Chardonnay', // Common in Napa Valley
-    startingResearch: ['admin_basic', 'project_grant_basic'] // US research grant culture
+    startingResearch: ['project_grant_basic'] // US research grant culture
   }
 };
 

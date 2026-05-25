@@ -29,11 +29,14 @@ function getProjectAndEconomics(projectId: string): {
  * Research economics are explicit balance constants; they are not recalculated
  * from the planning model that was used to derive the current values.
  */
-export function calculateResearchWork(projectId: string): {
+export function calculateResearchWork(projectId: string, options?: { workMultiplier?: number }): {
       totalWork: number;
       factors: WorkFactor[];
 } {
       const { project, economics } = getProjectAndEconomics(projectId);
+      const workMultiplier = options?.workMultiplier ?? 1;
+      const normalizedMultiplier = Number.isFinite(workMultiplier) ? Math.max(0.5, workMultiplier) : 1;
+      const adjustedWork = Math.max(1, Math.ceil(economics.workAmount * normalizedMultiplier));
 
       const factors: WorkFactor[] = [
             { label: 'Research Project', value: project.title, isPrimary: true },
@@ -45,7 +48,14 @@ export function calculateResearchWork(projectId: string): {
             }
       ];
 
-      return { totalWork: economics.workAmount, factors };
+      if (normalizedMultiplier !== 1) {
+            factors.push({
+                  label: 'Administrative Overhead',
+                  value: `${Math.round((1 - normalizedMultiplier) * 100)}% less work`
+            });
+      }
+
+      return { totalWork: adjustedWork, factors };
 }
 
 /**
