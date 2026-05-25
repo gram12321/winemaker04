@@ -97,8 +97,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
         </svg>
       </div>
 
-      {/* Pause button - shown when active and cancellable */}
-      {activity.isCancellable && !isPaused && onPause && (
+      {/* Pause button - shown when active */}
+      {!isPaused && onPause && (
         <Button
           variant="ghost"
           size="sm"

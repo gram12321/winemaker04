@@ -153,6 +153,9 @@ export const ActivityPanel: React.FC = () => {
       .filter(Boolean) as Activity[];
   };
 
+  const activeActivitiesCount = activities.filter(activity => activity.status === 'active').length;
+  const pausedActivitiesCount = activities.filter(activity => activity.status === 'paused').length;
+
   return (
     <>
       {/* Mobile floating button */}
@@ -179,6 +182,12 @@ export const ActivityPanel: React.FC = () => {
               <Button variant="ghost" size="icon" onClick={() => setMobileState('closed')}>
                 <X className="h-6 w-6 text-white" />
               </Button>
+            </div>
+
+            <div className="mb-4 text-xs text-gray-400">
+              <span>{activeActivitiesCount} active</span>
+              <span className="mx-2">•</span>
+              <span>{pausedActivitiesCount} paused</span>
             </div>
             
             <div className="flex-1 overflow-y-auto scrollbar-styled">
@@ -233,7 +242,12 @@ export const ActivityPanel: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between p-2.5 border-b border-gray-700">
               {panelState === 'full' && (
-                <h2 className="text-white font-semibold">Activity Panel</h2>
+                <div>
+                  <h2 className="text-white font-semibold">Activity Panel</h2>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {activeActivitiesCount} active • {pausedActivitiesCount} paused
+                  </p>
+                </div>
               )}
               <Button
                 variant="ghost"
