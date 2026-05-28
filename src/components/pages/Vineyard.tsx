@@ -26,11 +26,23 @@ const getExpectedYieldProgressPercent = (yieldKg: number): number => {
   return Math.max(0, Math.min(100, (yieldKg / 10000) * 100));
 };
 
-const formatSignedPercentPoints = (value: number): string => `${formatSigned(value * 100)}%`;
+const formatPercentValue = (value: number): string => `${formatNumber(value * 100, { decimals: 2, forceDecimals: true })}%`;
+const formatSignedPercentPoints = (value: number): string => `${value >= 0 ? '+' : ''}${formatNumber(value * 100, { decimals: 2, forceDecimals: true })}%`;
 
 // Consolidated tooltip content builder
 const buildTooltipContent = (type: string, data: any) => {
-  const { vineyard, value, label, description, weatherImpact, projectedValue, weatherBreakdown, siteResponse } = data;
+  const {
+    vineyard,
+    value,
+    label,
+    description,
+    weatherImpact,
+    projectedValue,
+    weatherBreakdown,
+    siteResponse,
+    normalProgressionImpact,
+    weatherOnlyImpact
+  } = data;
   
   switch (type) {
     case 'health':
@@ -42,12 +54,12 @@ const buildTooltipContent = (type: string, data: any) => {
         return (
           <div className={tooltipStyles.text}>
             <TooltipSection>
-              <p className={tooltipStyles.title}>Vineyard Health: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</p>
+              <p className={tooltipStyles.title}>Vineyard Health: {formatPercentValue(vineyard.vineyardHealth)}</p>
               <p className={tooltipStyles.muted}>No major season-to-date health drift is recorded.</p>
             </TooltipSection>
             {hasWeatherProjection && (
-              <TooltipSection title="Next Week Forecast (Weather-Only)">
-                <TooltipRow label="Current" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}%`} monospaced />
+              <TooltipSection title="Next Week Forecast (Normal + Weather)">
+                <TooltipRow label="Current" value={formatPercentValue(value || 0)} monospaced />
                 {hasWeatherBreakdown && (
                   <>
                     <TooltipRow label="Weather" value={`${weatherBreakdown.weatherState} (${weatherBreakdown.weatherIntensity})`} />
@@ -57,10 +69,12 @@ const buildTooltipContent = (type: string, data: any) => {
                     <TooltipRow label="Site response" value={`x${formatNumber(siteResponse || 1, { smartDecimals: true })}`} monospaced />
                   </>
                 )}
+                <TooltipRow label="Normal progression" value={formatSignedPercentPoints(normalProgressionImpact || 0)} monospaced valueRating={(normalProgressionImpact || 0) >= 0 ? 0.9 : 0.1} />
+                <TooltipRow label="Weather delta" value={formatSignedPercentPoints(weatherOnlyImpact || 0)} monospaced valueRating={(weatherOnlyImpact || 0) >= 0 ? 0.9 : 0.1} />
                 <TooltipRow label="Net expected change next week" value={formatSignedPercentPoints(weatherImpact)} monospaced valueRating={weatherImpact >= 0 ? 0.9 : 0.1} />
-                <TooltipRow label="Projected level (next week)" value={`${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
-                <TooltipRow label="Formula" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}% + ${formatSignedPercentPoints(weatherImpact)} = ${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
-                <p className={tooltipStyles.muted}>Projected level is the forecasted health after one week from weather effects only.</p>
+                <TooltipRow label="Projected level (next week)" value={formatPercentValue(projectedValue)} monospaced />
+                <TooltipRow label="Formula" value={`${formatPercentValue(value || 0)} + ${formatSignedPercentPoints(normalProgressionImpact || 0)} + ${formatSignedPercentPoints(weatherOnlyImpact || 0)} = ${formatPercentValue(projectedValue)}`} monospaced />
+                <p className={tooltipStyles.muted}>Projected level combines baseline weekly progression and weather impact.</p>
               </TooltipSection>
             )}
           </div>
@@ -70,7 +84,7 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Vineyard Health: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</p>
+            <p className={tooltipStyles.title}>Vineyard Health: {formatPercentValue(vineyard.vineyardHealth)}</p>
             <p className={tooltipStyles.muted}>Season context and weekly weather forecast are separated below.</p>
           </TooltipSection>
           <TooltipSection title="Season-to-Date Context (Not Next Week)">
@@ -86,8 +100,8 @@ const buildTooltipContent = (type: string, data: any) => {
             <p className={tooltipStyles.muted}>These values are season-to-date context and are not the one-week weather delta.</p>
           </TooltipSection>
           {hasWeatherProjection && (
-            <TooltipSection title="Next Week Forecast (Weather-Only)">
-              <TooltipRow label="Current" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}%`} monospaced />
+            <TooltipSection title="Next Week Forecast (Normal + Weather)">
+              <TooltipRow label="Current" value={formatPercentValue(value || 0)} monospaced />
               {hasWeatherBreakdown && (
                 <>
                   <TooltipRow label="Weather" value={`${weatherBreakdown.weatherState} (${weatherBreakdown.weatherIntensity})`} />
@@ -97,15 +111,17 @@ const buildTooltipContent = (type: string, data: any) => {
                   <TooltipRow label="Site response" value={`x${formatNumber(siteResponse || 1, { smartDecimals: true })}`} monospaced />
                 </>
               )}
+              <TooltipRow label="Normal progression" value={formatSignedPercentPoints(normalProgressionImpact || 0)} monospaced valueRating={(normalProgressionImpact || 0) >= 0 ? 0.9 : 0.1} />
+              <TooltipRow label="Weather delta" value={formatSignedPercentPoints(weatherOnlyImpact || 0)} monospaced valueRating={(weatherOnlyImpact || 0) >= 0 ? 0.9 : 0.1} />
               <TooltipRow label="Net expected change next week" value={formatSignedPercentPoints(weatherImpact)} monospaced valueRating={weatherImpact >= 0 ? 0.9 : 0.1} />
-              <TooltipRow label="Projected level (next week)" value={`${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
-              <TooltipRow label="Formula" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}% + ${formatSignedPercentPoints(weatherImpact)} = ${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
-              <p className={tooltipStyles.muted}>Projected level is the forecasted health after one week from weather effects only.</p>
+              <TooltipRow label="Projected level (next week)" value={formatPercentValue(projectedValue)} monospaced />
+              <TooltipRow label="Formula" value={`${formatPercentValue(value || 0)} + ${formatSignedPercentPoints(normalProgressionImpact || 0)} + ${formatSignedPercentPoints(weatherOnlyImpact || 0)} = ${formatPercentValue(projectedValue)}`} monospaced />
+              <p className={tooltipStyles.muted}>Projected level combines baseline weekly progression and weather impact.</p>
             </TooltipSection>
           )}
           {(vineyard.plantingHealthBonus ?? 0) > 0 && (
             <TooltipSection>
-              <p className={tooltipStyles.muted}>Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { smartDecimals: true })}% remaining</p>
+              <p className={tooltipStyles.muted}>Gradual improvement: +{formatPercentValue(vineyard.plantingHealthBonus)} remaining</p>
             </TooltipSection>
           )}
         </div>
@@ -115,7 +131,7 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Ripeness: {formatNumber(value * 100, { smartDecimals: true })}%</p>
+            <p className={tooltipStyles.title}>Ripeness: {formatPercentValue(value)}</p>
             <p className={tooltipStyles.muted}>Ripeness affects taste quality baseline and harvest yield. Higher ripeness produces better grapes.</p>
           </TooltipSection>
           <TooltipSection title="Quality Impact">
@@ -127,8 +143,8 @@ const buildTooltipContent = (type: string, data: any) => {
             </p>
           </TooltipSection>
           {typeof weatherImpact === 'number' && typeof projectedValue === 'number' && (
-            <TooltipSection title="Next Week Forecast (Weather-Only)">
-              <TooltipRow label="Current" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}%`} monospaced />
+            <TooltipSection title="Next Week Forecast (Normal + Weather)">
+              <TooltipRow label="Current" value={formatPercentValue(value || 0)} monospaced />
               {weatherBreakdown && (
                 <>
                   <TooltipRow label="Weather" value={`${weatherBreakdown.weatherState} (${weatherBreakdown.weatherIntensity})`} />
@@ -137,10 +153,12 @@ const buildTooltipContent = (type: string, data: any) => {
                   <TooltipRow label="Site response" value={`x${formatNumber(siteResponse || 1, { smartDecimals: true })}`} monospaced />
                 </>
               )}
+              <TooltipRow label="Normal progression" value={formatSignedPercentPoints(normalProgressionImpact || 0)} monospaced valueRating={(normalProgressionImpact || 0) >= 0 ? 0.9 : 0.1} />
+              <TooltipRow label="Weather delta" value={formatSignedPercentPoints(weatherOnlyImpact || 0)} monospaced valueRating={(weatherOnlyImpact || 0) >= 0 ? 0.9 : 0.1} />
               <TooltipRow label="Net expected change next week" value={formatSignedPercentPoints(weatherImpact)} monospaced valueRating={weatherImpact >= 0 ? 0.9 : 0.1} />
-              <TooltipRow label="Projected level (next week)" value={`${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
-              <TooltipRow label="Formula" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}% + ${formatSignedPercentPoints(weatherImpact)} = ${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
-              <p className={tooltipStyles.muted}>Projected level is the forecasted ripeness after one week from weather effects only.</p>
+              <TooltipRow label="Projected level (next week)" value={formatPercentValue(projectedValue)} monospaced />
+              <TooltipRow label="Formula" value={`${formatPercentValue(value || 0)} + ${formatSignedPercentPoints(normalProgressionImpact || 0)} + ${formatSignedPercentPoints(weatherOnlyImpact || 0)} = ${formatPercentValue(projectedValue)}`} monospaced />
+              <p className={tooltipStyles.muted}>Projected level combines baseline weekly progression and weather impact.</p>
             </TooltipSection>
           )}
         </div>
@@ -988,9 +1006,13 @@ const Vineyard: React.FC = () => {
                                           <TooltipRow label="Terroir" value={`x${formatNumber(weatherRow.breakdown.terroirResponse, { smartDecimals: true })}`} monospaced />
                                           <TooltipRow label="Soil" value={`x${formatNumber(weatherRow.breakdown.soilResponse, { smartDecimals: true })}`} monospaced />
                                         </TooltipSection>
-                                        <TooltipSection title="Weather Deltas">
-                                          <TooltipRow label="Ripeness" value={formatSigned(weatherRow.ripenessDelta)} monospaced />
-                                          <TooltipRow label="Health" value={formatSigned(weatherRow.healthDelta)} monospaced />
+                                        <TooltipSection title="Next-Week Deltas">
+                                          <TooltipRow label="Ripeness normal" value={formatSigned(weatherRow.ripenessNormalDelta)} monospaced />
+                                          <TooltipRow label="Ripeness weather" value={formatSigned(weatherRow.ripenessWeatherDelta)} monospaced />
+                                          <TooltipRow label="Ripeness net" value={formatSigned(weatherRow.ripenessDelta)} monospaced />
+                                          <TooltipRow label="Health normal" value={formatSigned(weatherRow.healthNormalDelta)} monospaced />
+                                          <TooltipRow label="Health weather" value={formatSigned(weatherRow.healthWeatherDelta)} monospaced />
+                                          <TooltipRow label="Health net" value={formatSigned(weatherRow.healthDelta)} monospaced />
                                         </TooltipSection>
                                       </div>
                                     }
@@ -1007,13 +1029,15 @@ const Vineyard: React.FC = () => {
                               <div>
                                 <div className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1.5">
                                   <HeartPulse className="h-3.5 w-3.5" />
-                                  <span>Health: {formatNumber(currentHealth * 100, { smartDecimals: true })}%</span>
+                                  <span>Health: {formatPercentValue(currentHealth)}</span>
                                 </div>
                                 <UnifiedTooltip
                                   content={buildTooltipContent('health', {
                                     vineyard,
                                     value: currentHealth,
                                     weatherImpact: weatherRow?.healthDelta,
+                                    normalProgressionImpact: weatherRow?.healthNormalDelta,
+                                    weatherOnlyImpact: weatherRow?.healthWeatherDelta,
                                     projectedValue: weatherRow?.healthProjected,
                                     weatherBreakdown: weatherRow?.breakdown,
                                     siteResponse: weatherRow?.siteResponse
@@ -1042,12 +1066,14 @@ const Vineyard: React.FC = () => {
                                   <div>
                                     <div className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1.5">
                                       <Grape className="h-3.5 w-3.5" />
-                                      <span>Ripeness: {formatNumber(currentRipeness * 100, { smartDecimals: true })}%</span>
+                                      <span>Ripeness: {formatPercentValue(currentRipeness)}</span>
                                     </div>
                                     <UnifiedTooltip
                                       content={buildTooltipContent('ripeness', {
                                         value: currentRipeness,
                                         weatherImpact: weatherRow?.ripenessDelta,
+                                        normalProgressionImpact: weatherRow?.ripenessNormalDelta,
+                                        weatherOnlyImpact: weatherRow?.ripenessWeatherDelta,
                                         projectedValue: weatherRow?.ripenessProjected,
                                         weatherBreakdown: weatherRow?.breakdown,
                                         siteResponse: weatherRow?.siteResponse
@@ -1294,7 +1320,7 @@ const Vineyard: React.FC = () => {
                           <div>
                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                               <span>Health</span>
-                              <span>{formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%</span>
+                              <span>{formatPercentValue(vineyard.vineyardHealth || 1.0)}</span>
                             </div>
                             <UnifiedTooltip
                               content={buildTooltipContent('health', { vineyard })}
@@ -1321,7 +1347,7 @@ const Vineyard: React.FC = () => {
                           <div>
                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                               <span>Ripeness</span>
-                              <span>{formatNumber((vineyard.ripeness || 0) * 100, { smartDecimals: true })}%</span>
+                              <span>{formatPercentValue(vineyard.ripeness || 0)}</span>
                             </div>
                             <UnifiedTooltip
                               content={buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })}

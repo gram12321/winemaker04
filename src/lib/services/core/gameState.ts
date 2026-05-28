@@ -1,6 +1,7 @@
 // Enhanced game state service that integrates with the new company system
-import { GameState } from '../../types/types';
+import { GameState, Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { CREDIT_RATING } from '../../constants/loanConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
 import { companyService } from '../user/companyService';
@@ -57,6 +58,31 @@ const PRESTIGE_CACHE_TTL = 5000; // 5 seconds cache
 export const getGameState = (): Partial<GameState> => {
   return { ...gameState };
 };
+
+export function getNextTickDate(state: Partial<GameState>): { week: number; season: Season; year: number } {
+  const currentWeek = state.week || GAME_INITIALIZATION.STARTING_WEEK;
+  const currentSeason = (state.season || GAME_INITIALIZATION.STARTING_SEASON) as Season;
+  const currentYear = state.currentYear || GAME_INITIALIZATION.STARTING_YEAR;
+
+  const incrementedWeek = currentWeek + 1;
+  if (incrementedWeek <= WEEKS_PER_SEASON) {
+    return {
+      week: incrementedWeek,
+      season: currentSeason,
+      year: currentYear,
+    };
+  }
+
+  const currentSeasonIndex = SEASON_ORDER.indexOf(currentSeason);
+  const safeSeasonIndex = currentSeasonIndex >= 0 ? currentSeasonIndex : 0;
+  const nextSeason = SEASON_ORDER[(safeSeasonIndex + 1) % SEASON_ORDER.length] as Season;
+
+  return {
+    week: GAME_INITIALIZATION.STARTING_WEEK,
+    season: nextSeason,
+    year: nextSeason === 'Spring' ? currentYear + 1 : currentYear,
+  };
+}
 
 export const getCurrentCompany = (): Company | null => {
   return currentCompany;

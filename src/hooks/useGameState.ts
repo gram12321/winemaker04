@@ -25,7 +25,7 @@ export const useGameState = () => {
 /**
  * Enhanced useGameState with async data loading capabilities
  * Replaces useAsyncData by combining game state with async data loading
- * Now includes request deduplication and caching to prevent spam
+ * Includes request deduplication so refreshes are coalesced, not dropped.
  */
 export function useGameStateWithData<T>(
   loadData: () => Promise<T>,
@@ -34,49 +34,45 @@ export function useGameStateWithData<T>(
 ): T {
   const [data, setData] = useState<T>(initialValue);
   const { subscribe, subscribeTopic } = useGameUpdates();
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
 
-  // Request deduplication - prevent multiple simultaneous requests
+  // Request deduplication - prevent overlapping requests without dropping refreshes.
   const isLoadingRef = useRef(false);
-  const lastLoadTime = useRef(0);
-  const CACHE_DURATION = 100; // 100ms cache to reduce egress while keeping UI responsive
+  const pendingRefreshRef = useRef(false);
 
   const refreshData = useCallback(async () => {
-    try {
-      // Check if we have an active company before loading data
-      const currentCompany = getCurrentCompany();
-      if (!currentCompany?.id) {
-        return;
-      }
-
-      // Prevent duplicate requests
-      if (isLoadingRef.current) {
-        return;
-      }
-
-      // Use cache if data was loaded recently
-      const now = Date.now();
-      if (now - lastLoadTime.current < CACHE_DURATION) {
-        return;
-      }
-
-      isLoadingRef.current = true;
-      lastLoadTime.current = now;
-
-      const newData = await loadData();
-      setData(newData);
-    } catch (error) {
-      console.error('Error loading async data:', error);
-      // Keep existing data on error
-    } finally {
-      isLoadingRef.current = false;
+    if (isLoadingRef.current) {
+      pendingRefreshRef.current = true;
+      return;
     }
-  }, [loadData]);
+
+    do {
+      pendingRefreshRef.current = false;
+      isLoadingRef.current = true;
+
+      try {
+        // Check if we have an active company before loading data
+        const currentCompany = getCurrentCompany();
+        if (!currentCompany?.id) {
+          return;
+        }
+
+        const newData = await loadDataRef.current();
+        setData(newData);
+      } catch (error) {
+        console.error('Error loading async data:', error);
+        // Keep existing data on error
+      } finally {
+        isLoadingRef.current = false;
+      }
+    } while (pendingRefreshRef.current);
+  }, []);
 
   useEffect(() => {
     // Initial load
     refreshData();
 
-    // Subscribe either to topic-scoped updates or global updates
     const unsubscribe = options?.topic
       ? subscribeTopic(options.topic, () => {
           refreshData();

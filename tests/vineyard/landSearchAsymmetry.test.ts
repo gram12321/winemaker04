@@ -12,12 +12,16 @@ import {
   getAsymmetricHectareMassRemoved
 } from '@/lib/utils/calculator';
 
-function createOptions(hectareRange: [number, number]): LandSearchOptions {
+function createOptions(
+  hectareRange: [number, number],
+  hectarePenaltyReferenceRange?: [number, number]
+): LandSearchOptions {
   return {
     numberOfOptions: 3,
     regions: [],
     selectedCountries: [],
     hectareRange,
+    hectarePenaltyReferenceRange,
     altitudeRange: [0, 1],
     soilTypes: [...ALL_SOIL_TYPES],
     aspectPreferences: [...ASPECTS],
@@ -70,5 +74,24 @@ describe('land search asymmetric hectare penalty', () => {
     expect(effectiveRemovedMass).toBe(0);
     expect(fullRangeCost).toBeGreaterThan(0);
     expect(fullRangeWork).toBeGreaterThan(0);
+  });
+
+  it('does not penalize full coverage inside a research-limited reference range', () => {
+    const globalBaseline = createOptions([0.05, 0.5]);
+    const referenceAware = createOptions([0.05, 0.5], [0.05, 0.5]);
+    const narrowedWithinReference = createOptions([0.05, 0.3], [0.05, 0.5]);
+
+    const globalCost = calculateLandSearchCost(globalBaseline, 0);
+    const referenceAwareCost = calculateLandSearchCost(referenceAware, 0);
+    const narrowedWithinReferenceCost = calculateLandSearchCost(narrowedWithinReference, 0);
+
+    const globalWork = calculateLandSearchWork(globalBaseline, 0).totalWork;
+    const referenceAwareWork = calculateLandSearchWork(referenceAware, 0).totalWork;
+    const narrowedWithinReferenceWork = calculateLandSearchWork(narrowedWithinReference, 0).totalWork;
+
+    expect(referenceAwareCost).toBeLessThan(globalCost);
+    expect(referenceAwareWork).toBeLessThan(globalWork);
+    expect(narrowedWithinReferenceCost).toBeGreaterThan(referenceAwareCost);
+    expect(narrowedWithinReferenceWork).toBeGreaterThan(referenceAwareWork);
   });
 });

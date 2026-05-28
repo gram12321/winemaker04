@@ -11,6 +11,7 @@ const WEATHER_CENTER_HEALTH_CLAMP_LABEL = '[-0.0120, +0.0040]';
 const WEATHER_CENTER_SITE_RESPONSE_MIN = 0.8;
 const WEATHER_CENTER_SITE_RESPONSE_MAX = 1.2;
 const WEATHER_CENTER_SITE_RESPONSE_NEUTRAL = 1.0;
+const formatPercentValue = (value: number): string => `${formatNumber(value * 100, { decimals: 2, forceDecimals: true })}%`;
 
 function getDeltaTextClass(value: number): string {
   if (value > 0) return 'text-emerald-700';
@@ -63,8 +64,8 @@ type SortKey = 'name' | 'state' | 'ripenessDelta' | 'healthDelta' | 'siteRespons
 
 const SORTABLE_COLUMNS: Array<{ key: SortKey; label: string; description: string }> = [
   { key: 'state', label: 'Status', description: 'Sort by vineyard lifecycle state: Growing, Dormant, Harvested, and so on.' },
-  { key: 'ripenessDelta', label: 'Ripeness', description: 'Sort by weather-driven ripeness movement for the current forecast window. Also shows current-to-projected movement.' },
-  { key: 'healthDelta', label: 'Health', description: 'Sort by how strongly weather is improving or stressing vine health. Also shows current-to-projected movement.' },
+  { key: 'ripenessDelta', label: 'Ripeness', description: 'Sort by net next-week ripeness movement (normal progression + weather) and current-to-projected movement.' },
+  { key: 'healthDelta', label: 'Health', description: 'Sort by net next-week health movement (normal progression + weather) and current-to-projected movement.' },
   { key: 'siteResponse', label: 'Site Response', description: 'Sort by site multiplier from aspect, altitude, terroir, and soil. 1.0 is neutral, above amplifies weather impact, below buffers it.' },
   { key: 'reason', label: 'Reason', description: 'Sort by the summary sentence explaining the weather pressure on this vineyard.' },
 ];
@@ -94,7 +95,7 @@ function getModifierAverage(rows: VineyardWeatherRow[], key: 'aspectResponse' | 
 
 export function WeatherCenterPage() {
   const gameState = useGameState();
-  const vineyards = useGameStateWithData(getAllVineyards, [], { topic: 'vineyard' });
+  const vineyards = useGameStateWithData(getAllVineyards, []);
   const currentCompany = getCurrentCompany();
   const [sortKey, setSortKey] = useState<SortKey>('siteResponse');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -182,7 +183,7 @@ export function WeatherCenterPage() {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Avg Ripeness Delta</p>
+                <p className="text-xs text-muted-foreground">Avg Ripeness Net Δ</p>
                 <p className={`text-lg font-semibold ${getDeltaTextClass(impactSummary.avgRipenessDelta)}`}>{formatSigned(impactSummary.avgRipenessDelta)}</p>
               </div>
               <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
@@ -195,7 +196,7 @@ export function WeatherCenterPage() {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Avg Health Delta</p>
+                <p className="text-xs text-muted-foreground">Avg Health Net Δ</p>
                 <p className={`text-lg font-semibold ${getDeltaTextClass(impactSummary.avgHealthDelta)}`}>{formatSigned(impactSummary.avgHealthDelta)}</p>
               </div>
               <div className="rounded-lg bg-rose-50 p-2 text-rose-700">
@@ -262,7 +263,7 @@ export function WeatherCenterPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Vineyard Weather Impact Preview</CardTitle>
-            <CardDescription>Net weather deltas from the current week context. Site factors (aspect, altitude, terroir, soil) are included as bounded response modifiers.</CardDescription>
+            <CardDescription>Net next-week deltas from baseline progression plus weather. Site factors (aspect, altitude, terroir, soil) are included as bounded response modifiers.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 overflow-hidden">
             <Table>
@@ -352,10 +353,12 @@ export function WeatherCenterPage() {
                               <TooltipRow label="Combined site response" value={`x${formatNumber(row.siteResponse, { smartDecimals: true })}`} monospaced />
                             </TooltipSection>
                             <TooltipSection title="Result">
-                              <TooltipRow label="Current" value={`${formatNumber(row.ripenessCurrent * 100, { smartDecimals: true })}%`} monospaced />
-                              <TooltipRow label="Raw delta" value={formatSigned(row.breakdown.ripenessRawDelta)} monospaced />
-                              <TooltipRow label="Final delta" value={formatSigned(row.ripenessDelta)} monospaced valueRating={row.ripenessDelta >= 0 ? 1 : 0} />
-                              <TooltipRow label="Projected" value={`${formatNumber(row.ripenessProjected * 100, { smartDecimals: true })}%`} monospaced />
+                              <TooltipRow label="Current" value={formatPercentValue(row.ripenessCurrent)} monospaced />
+                              <TooltipRow label="Weather raw delta" value={formatSigned(row.breakdown.ripenessRawDelta)} monospaced />
+                              <TooltipRow label="Weather final delta" value={formatSigned(row.ripenessWeatherDelta)} monospaced valueRating={row.ripenessWeatherDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Normal progression" value={formatSigned(row.ripenessNormalDelta)} monospaced valueRating={row.ripenessNormalDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Net delta" value={formatSigned(row.ripenessDelta)} monospaced valueRating={row.ripenessDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Projected" value={formatPercentValue(row.ripenessProjected)} monospaced />
                               <TooltipRow label="Clamp range" value={WEATHER_CENTER_RIPENESS_CLAMP_LABEL} monospaced />
                               {row.breakdown.ripenessClamped && <p className="text-[11px] text-amber-400">Value was clamped to keep simulation stable.</p>}
                             </TooltipSection>
@@ -368,7 +371,7 @@ export function WeatherCenterPage() {
                             <Grape className="h-3.5 w-3.5 text-violet-600" />
                             Ripeness
                           </span>
-                          <span>{formatNumber(row.ripenessCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.ripenessProjected * 100, { smartDecimals: true })}%</span>
+                          <span>{formatPercentValue(row.ripenessCurrent)}{' -> '}{formatPercentValue(row.ripenessProjected)}</span>
                           <span className={`inline-flex items-center gap-1 ${getDeltaTextClass(row.ripenessDelta)}`}>
                             {formatSigned(row.ripenessDelta)}
                             <Info className="h-3 w-3 text-slate-500" />
@@ -392,10 +395,12 @@ export function WeatherCenterPage() {
                               {row.breakdown.siteResponseClamped && <p className="text-[11px] text-amber-400">Raw site response was clamped to [0.8, 1.2].</p>}
                             </TooltipSection>
                             <TooltipSection title="Result">
-                              <TooltipRow label="Current" value={`${formatNumber(row.healthCurrent * 100, { smartDecimals: true })}%`} monospaced />
-                              <TooltipRow label="Raw delta" value={formatSigned(row.breakdown.healthRawDelta)} monospaced />
-                              <TooltipRow label="Final delta" value={formatSigned(row.healthDelta)} monospaced valueRating={row.healthDelta >= 0 ? 1 : 0} />
-                              <TooltipRow label="Projected" value={`${formatNumber(row.healthProjected * 100, { smartDecimals: true })}%`} monospaced />
+                              <TooltipRow label="Current" value={formatPercentValue(row.healthCurrent)} monospaced />
+                              <TooltipRow label="Weather raw delta" value={formatSigned(row.breakdown.healthRawDelta)} monospaced />
+                              <TooltipRow label="Weather final delta" value={formatSigned(row.healthWeatherDelta)} monospaced valueRating={row.healthWeatherDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Normal progression" value={formatSigned(row.healthNormalDelta)} monospaced valueRating={row.healthNormalDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Net delta" value={formatSigned(row.healthDelta)} monospaced valueRating={row.healthDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Projected" value={formatPercentValue(row.healthProjected)} monospaced />
                               <TooltipRow label="Clamp range" value={WEATHER_CENTER_HEALTH_CLAMP_LABEL} monospaced />
                               {row.breakdown.healthClamped && <p className="text-[11px] text-amber-400">Value was clamped to keep simulation stable.</p>}
                             </TooltipSection>
@@ -408,7 +413,7 @@ export function WeatherCenterPage() {
                             <Leaf className="h-3.5 w-3.5 text-emerald-700" />
                             Health
                           </span>
-                          <span>{formatNumber(row.healthCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.healthProjected * 100, { smartDecimals: true })}%</span>
+                          <span>{formatPercentValue(row.healthCurrent)}{' -> '}{formatPercentValue(row.healthProjected)}</span>
                           <span className={`inline-flex items-center gap-1 ${getDeltaTextClass(row.healthDelta)}`}>
                             {formatSigned(row.healthDelta)}
                             <Info className="h-3 w-3 text-slate-500" />

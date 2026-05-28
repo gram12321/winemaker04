@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Vineyard } from '@/lib/types/types';
 
+vi.mock('@/lib/utils', () => ({
+  clamp: (value: number, min: number, max: number) => Math.max(min, Math.min(max, value)),
+  clamp01: (value: number) => Math.max(0, Math.min(1, value)),
+  deterministicSeasonalVariation: vi.fn((_seed: string, min: number, _max: number) => (min < 0 ? 0 : 1)),
+}));
+
 vi.mock('@/lib/services/vineyard/weatherImpactService', () => ({
   calculateVineyardWeatherImpact: vi.fn((vineyard: Vineyard) => {
     if (vineyard.id === 'v2') {
@@ -98,16 +104,16 @@ describe('weather center service', () => {
     expect(context.companyId).toBe('company-1');
     expect(context.year).toBe(2024);
     expect(context.season).toBe('Spring');
-    expect(context.week).toBe(1);
+    expect(context.week).toBe(2);
     expect(context.weatherState).toBeUndefined();
     expect(context.weatherIntensity).toBeUndefined();
   });
 
-  it('builds rows only for planted vineyards, applies clamping, and sorts by combined delta', () => {
+  it('builds rows with net progression (normal + weather), applies clamping, and sorts by combined delta', () => {
     const rows = buildVineyardWeatherRows(
       [
         vineyard({ id: 'v1', name: 'Top Row' }),
-        vineyard({ id: 'v2', name: 'Bottom Row', ripeness: 0.01, vineyardHealth: 0.01 }),
+        vineyard({ id: 'v2', name: 'Bottom Row', ripeness: 0.01, vineyardHealth: 0.2 }),
         vineyard({ id: 'v3', name: 'No Grapes', grape: null }),
       ],
       {
@@ -122,9 +128,33 @@ describe('weather center service', () => {
 
     expect(rows).toHaveLength(2);
     expect(rows.map(row => row.id)).toEqual(['v1', 'v2']);
+    expect(rows[0].ripenessDelta).toBeCloseTo(0.02, 6);
+    expect(rows[0].healthDelta).toBeCloseTo(-0.009, 6);
+    expect(rows[1].ripenessDelta).toBeCloseTo(0, 6);
+    expect(rows[1].healthDelta).toBeCloseTo(-0.02, 6);
     expect(rows[0].ripenessProjected).toBe(1);
-    expect(rows[1].ripenessProjected).toBe(0);
-    expect(rows[1].healthProjected).toBe(0);
+    expect(rows[1].ripenessProjected).toBeCloseTo(0.01, 6);
+    expect(rows[1].healthProjected).toBeCloseTo(0.18, 6);
+  });
+
+  it('does not project ripeness growth for inactive vineyard statuses outside winter', () => {
+    const rows = buildVineyardWeatherRows(
+      [vineyard({ id: 'v-inactive', status: 'Dormant', ripeness: 0.06, vineyardHealth: 0.6 })],
+      {
+        companyId: 'company-1',
+        year: 2026,
+        season: 'Summer',
+        week: 4,
+        weatherState: 'Heat',
+        weatherIntensity: 'Moderate',
+      }
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].ripenessNormalDelta).toBeCloseTo(0, 6);
+    expect(rows[0].ripenessWeatherDelta).toBeCloseTo(0, 6);
+    expect(rows[0].ripenessDelta).toBeCloseTo(0, 6);
+    expect(rows[0].ripenessProjected).toBeCloseTo(0.06, 6);
   });
 
   it('summarizes weather impact and counts high-stress vineyards', () => {
@@ -135,9 +165,13 @@ describe('weather center service', () => {
         state: 'Growing',
         ripenessCurrent: 0.5,
         ripenessProjected: 0.51,
+        ripenessNormalDelta: 0.01,
+        ripenessWeatherDelta: 0,
         ripenessDelta: 0.01,
         healthCurrent: 0.8,
         healthProjected: 0.797,
+        healthNormalDelta: -0.002,
+        healthWeatherDelta: -0.001,
         healthDelta: -0.003,
         siteResponse: 1.1,
         reason: 'A',
@@ -149,9 +183,13 @@ describe('weather center service', () => {
         state: 'Growing',
         ripenessCurrent: 0.5,
         ripenessProjected: 0.49,
+        ripenessNormalDelta: -0.005,
+        ripenessWeatherDelta: -0.005,
         ripenessDelta: -0.01,
         healthCurrent: 0.8,
         healthProjected: 0.799,
+        healthNormalDelta: -0.0005,
+        healthWeatherDelta: -0.0005,
         healthDelta: -0.001,
         siteResponse: 0.9,
         reason: 'B',

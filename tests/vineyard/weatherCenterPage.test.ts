@@ -90,8 +90,8 @@ describe('WeatherCenterPage', () => {
     const html = renderToStaticMarkup(React.createElement(WeatherCenterPage));
 
     expect(html).toContain('Weather Center');
-    expect(html).toContain('Avg Ripeness Delta');
-    expect(html).toContain('Avg Health Delta');
+    expect(html).toContain('Avg Ripeness Net Δ');
+    expect(html).toContain('Avg Health Net Δ');
     expect(html).toContain('High Stress Vineyards');
     expect(html).toContain('No planted vineyards available for weather preview.');
   });

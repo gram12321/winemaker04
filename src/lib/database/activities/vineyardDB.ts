@@ -4,6 +4,11 @@ import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 
 const VINEYARDS_TABLE = 'vineyards';
 
+const numberOrDefault = (value: unknown, fallback: number): number => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
 /**
  * Vineyard Database Operations
  * Pure CRUD operations for vineyard data persistence
@@ -26,15 +31,15 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         altitude: vineyard.altitude,
         aspect: vineyard.aspect,
         density: vineyard.density,
-        vineyard_health: vineyard.vineyardHealth || 1.0,
+        vineyard_health: numberOrDefault(vineyard.vineyardHealth, 1.0),
         land_value: vineyard.landValue,
         vineyard_total_value: vineyard.vineyardTotalValue,
         status: vineyard.status,
-        ripeness: vineyard.ripeness || 0,
+        ripeness: numberOrDefault(vineyard.ripeness, 0),
         vineyard_prestige: vineyard.vineyardPrestige,
-        vine_yield: vineyard.vineYield || 0.02, // Default to 0.02 if not set
+        vine_yield: numberOrDefault(vineyard.vineYield, 0.02), // Default to 0.02 if not set
         overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
-        planting_health_bonus: vineyard.plantingHealthBonus || 0, // Default to 0 (no gradual improvement)
+        planting_health_bonus: numberOrDefault(vineyard.plantingHealthBonus, 0), // Default to 0 (no gradual improvement)
         health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null, // Store health trend as JSON
         pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null // Store pending features as JSON
       });
@@ -65,15 +70,15 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       altitude: row.altitude,
       aspect: row.aspect,
       density: row.density ?? 0,
-      vineyardHealth: row.vineyard_health ?? 1.0, // Default to perfect health
+      vineyardHealth: numberOrDefault(row.vineyard_health, 1.0), // Default to perfect health
       landValue: row.land_value || 50000,
       vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)),
       status: row.status,
-      ripeness: row.ripeness ?? 0, // Default to 0 ripeness
+      ripeness: numberOrDefault(row.ripeness, 0), // Default to 0 ripeness
       vineyardPrestige: row.vineyard_prestige || 0,
-      vineYield: row.vine_yield ?? 0.02, // Default to 0.02 if not set (will be 0.02 for existing records)
+      vineYield: numberOrDefault(row.vine_yield, 0.02), // Default to 0.02 if not set (will be 0.02 for existing records)
       overgrowth: row.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
-      plantingHealthBonus: row.planting_health_bonus ?? 0, // Default to 0 (no gradual improvement)
+      plantingHealthBonus: numberOrDefault(row.planting_health_bonus, 0), // Default to 0 (no gradual improvement)
       healthTrend: row.health_trend ? JSON.parse(row.health_trend) : undefined, // Parse health trend from JSON
       pendingFeatures: row.pending_features ? JSON.parse(row.pending_features) : undefined // Parse pending features from JSON
     }));
@@ -105,15 +110,15 @@ export const bulkUpdateVineyards = async (vineyards: Vineyard[]): Promise<void> 
       altitude: vineyard.altitude,
       aspect: vineyard.aspect,
       density: vineyard.density,
-      vineyard_health: vineyard.vineyardHealth || 1.0,
+      vineyard_health: numberOrDefault(vineyard.vineyardHealth, 1.0),
       land_value: vineyard.landValue,
       vineyard_total_value: vineyard.vineyardTotalValue,
       status: vineyard.status,
-      ripeness: vineyard.ripeness || 0,
+      ripeness: numberOrDefault(vineyard.ripeness, 0),
       vineyard_prestige: vineyard.vineyardPrestige,
-      vine_yield: vineyard.vineYield || 0.02,
+      vine_yield: numberOrDefault(vineyard.vineYield, 0.02),
       overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
-      planting_health_bonus: vineyard.plantingHealthBonus || 0,
+      planting_health_bonus: numberOrDefault(vineyard.plantingHealthBonus, 0),
       health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null,
       pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null,
       updated_at: new Date().toISOString()

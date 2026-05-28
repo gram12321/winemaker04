@@ -1,7 +1,7 @@
-import { GAME_INITIALIZATION } from '@/lib/constants';
 import { type GameState, type Vineyard } from '@/lib/types/types';
-import { clamp01 } from '@/lib/utils';
-import { calculateVineyardWeatherImpact, type VineyardWeatherContext, type VineyardWeatherImpactBreakdown } from './weatherImpactService';
+import { getNextTickDate } from '../core/gameState';
+import { type VineyardWeatherContext, type VineyardWeatherImpactBreakdown } from './weatherImpactService';
+import { calculateVineyardWeeklyProjection } from './vineyardProgressionService';
 
 const WEATHER_CENTER_HEALTH_STRESS_THRESHOLD = -0.0025;
 const WEATHER_CENTER_IMPACT_METER_SCALE = 12000;
@@ -12,9 +12,13 @@ export interface VineyardWeatherRow {
   state: string;
   ripenessCurrent: number;
   ripenessProjected: number;
+  ripenessNormalDelta: number;
+  ripenessWeatherDelta: number;
   ripenessDelta: number;
   healthCurrent: number;
   healthProjected: number;
+  healthNormalDelta: number;
+  healthWeatherDelta: number;
   healthDelta: number;
   siteResponse: number;
   reason: string;
@@ -29,13 +33,15 @@ export interface WeatherImpactSummary {
 }
 
 export function buildWeatherContext(gameState: Partial<GameState>, companyId: string): VineyardWeatherContext {
+  const nextTickDate = getNextTickDate(gameState);
+
   return {
     companyId,
-    year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR,
-    season: gameState.season || GAME_INITIALIZATION.STARTING_SEASON,
-    week: gameState.week || GAME_INITIALIZATION.STARTING_WEEK,
-    weatherState: gameState.weatherState,
-    weatherIntensity: gameState.weatherIntensity,
+    year: nextTickDate.year,
+    season: nextTickDate.season,
+    week: nextTickDate.week,
+    weatherState: gameState.nextWeekForecastState || gameState.weatherState,
+    weatherIntensity: gameState.nextWeekForecastIntensity || gameState.weatherIntensity,
   };
 }
 
@@ -43,22 +49,25 @@ export function buildVineyardWeatherRows(vineyards: Vineyard[], weatherContext: 
   return vineyards
     .filter((vineyard) => vineyard.grape)
     .map((vineyard) => {
-      const impact = calculateVineyardWeatherImpact(vineyard, weatherContext);
-      const ripenessCurrent = vineyard.ripeness || 0;
-      const healthCurrent = vineyard.vineyardHealth || 0;
+      const projection = calculateVineyardWeeklyProjection(vineyard, weatherContext);
+
       return {
         id: vineyard.id,
         name: vineyard.name,
         state: vineyard.status,
-        ripenessCurrent,
-        ripenessProjected: clamp01(ripenessCurrent + impact.ripenessDelta),
-        ripenessDelta: impact.ripenessDelta,
-        healthCurrent,
-        healthProjected: clamp01(healthCurrent + impact.healthDelta),
-        healthDelta: impact.healthDelta,
-        siteResponse: impact.siteResponse,
-        reason: impact.reason,
-        breakdown: impact.breakdown,
+        ripenessCurrent: projection.ripeness.current,
+        ripenessProjected: projection.ripeness.projected,
+        ripenessNormalDelta: projection.ripeness.normalDelta,
+        ripenessWeatherDelta: projection.ripeness.weatherDelta,
+        ripenessDelta: projection.ripeness.totalDelta,
+        healthCurrent: projection.health.current,
+        healthProjected: projection.health.projected,
+        healthNormalDelta: projection.health.normalDelta,
+        healthWeatherDelta: projection.health.weatherDelta,
+        healthDelta: projection.health.totalDelta,
+        siteResponse: projection.siteResponse,
+        reason: projection.reason,
+        breakdown: projection.breakdown,
       };
     })
     .sort((left, right) => (right.ripenessDelta + right.healthDelta) - (left.ripenessDelta + left.healthDelta));

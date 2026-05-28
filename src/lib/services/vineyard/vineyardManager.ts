@@ -1,7 +1,6 @@
 import { Vineyard, Activity, GameDate, Season, WeatherIntensity, WeatherState } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution, calculateAdjustedLandValue, calculateLandValue } from './vineyardValueCalc';
-import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
 import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '../../database/activities/vineyardDB';
 import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '../../database/activities/activityDB';
 import { WorkCategory } from '../../services/activity';
@@ -11,8 +10,20 @@ import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
 import { getResearchPermanentEffects } from '../research/researchPermanentEffectsService';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { deterministicSeasonalVariation } from '../../utils';
-import { calculateVineyardWeatherImpact, type VineyardWeatherContext } from './weatherImpactService';
+import { type VineyardWeatherContext } from './weatherImpactService';
+import {
+  calculateVineyardWeeklyProjection,
+  isRipenessGrowthActiveForWeek,
+  calculateWinterRipenessDegradation
+} from './vineyardProgressionService';
+
+export {
+  calculateDynamicRipenessIncrease,
+  calculateWeeklyBaselineHealthDelta,
+  calculateWeeklyBaselineRipenessDelta,
+  calculateWinterRipenessDegradation,
+  getSeasonalWeeklyHealthDegradation
+} from './vineyardProgressionService';
  
  
 /**
@@ -87,43 +98,6 @@ export function calculateVineyardYield(vineyard: Vineyard): number {
   const quantity = Math.round(totalVines * baseYieldPerVine * yieldMultiplier);
   
   return quantity;
-}
-
-/**
- * Calculate dynamic ripeness increase for a vineyard based on season, aspect, and randomness
- * @param vineyard The vineyard to calculate ripeness for
- * @param season Current game season
- * @returns The calculated ripeness increase for this week
- */
-export function calculateDynamicRipenessIncrease(vineyard: Vineyard, season: string, deterministicMultiplier?: number): number {
-  // Get base ripeness increase for the season
-  const baseIncrease = RIPENESS_INCREASE[season as keyof typeof RIPENESS_INCREASE] || 0;
-  
-  if (baseIncrease <= 0) {
-    return 0; // No ripening in winter or invalid seasons
-  }
-  
-  // Apply seasonal randomness
-  const randomnessRange = SEASONAL_RIPENESS_RANDOMNESS[season as keyof typeof SEASONAL_RIPENESS_RANDOMNESS];
-  if (!randomnessRange || randomnessRange.min === randomnessRange.max) {
-    return baseIncrease; // No randomness for winter
-  }
-  
-  const resolvedMultiplier = deterministicMultiplier
-    ?? deterministicSeasonalVariation(
-      `${vineyard.id}:${season}:ripeness-randomness:default`,
-      randomnessRange.min,
-      randomnessRange.max
-    );
-  
-  // Apply aspect modifier
-  const aspectModifier = ASPECT_RIPENESS_MODIFIERS[vineyard.aspect as keyof typeof ASPECT_RIPENESS_MODIFIERS] || 0;
-  const aspectMultiplier = 1 + aspectModifier;
-  
-  // Calculate final ripeness increase
-  const finalIncrease = baseIncrease * resolvedMultiplier * aspectMultiplier;
-  
-  return Math.max(0, finalIncrease); // Ensure non-negative
 }
 
 /**
@@ -231,46 +205,39 @@ export async function updateVineyardRipeness(
       
       // Handle ripeness progression for growing vineyards (including partial planting)
       if (newStatus === 'Growing' || vineyard.status === 'Growing' || vineyard.status === 'Planting') {
-        const randomnessRange = SEASONAL_RIPENESS_RANDOMNESS[season as keyof typeof SEASONAL_RIPENESS_RANDOMNESS] || { min: 1, max: 1 };
-        const ripenessMultiplier = deterministicSeasonalVariation(
-          `${companyId}:${currentYear}:${season}:${week}:${vineyard.id}:ripeness-randomness`,
-          randomnessRange.min,
-          randomnessRange.max
+        const plantingActivity = activities.find(
+          (a) => a.category === WorkCategory.PLANTING &&
+                 a.status === 'active' &&
+                 a.targetId === vineyard.id
         );
-        const ripenessIncrease = calculateDynamicRipenessIncrease(vineyard, season, ripenessMultiplier);
-        if (ripenessIncrease > 0) {
-          isRipenessDeclining = false;
-          // Check if vineyard is currently being planted (partial planting)
-          const plantingActivity = activities.find(
-            (a) => a.category === WorkCategory.PLANTING && 
-                   a.status === 'active' && 
-                   a.targetId === vineyard.id
-          );
-          
-          let plantingProgressRatio = 1.0; // Default: fully planted
-          
-          if (plantingActivity && plantingActivity.params.density) {
-            // Calculate planting progress: current density / target density
-            const targetDensity = plantingActivity.params.density;
-            const currentDensity = vineyard.density || 0;
-            plantingProgressRatio = Math.min(1.0, currentDensity / targetDensity);
-          }
-          
-          // Scale ripeness increase by planting progress
-          // If only 50% planted, only 50% of the vineyard should ripen
-          const scaledRipenessIncrease = ripenessIncrease * plantingProgressRatio;
-          newRipeness = Math.min(1.0, newRipeness + scaledRipenessIncrease);
 
-          const weatherImpact = calculateVineyardWeatherImpact(vineyard, {
+        let plantingProgressRatio = 1.0; // Default: fully planted
+
+        if (plantingActivity && plantingActivity.params.density) {
+          const targetDensity = plantingActivity.params.density;
+          const currentDensity = vineyard.density || 0;
+          plantingProgressRatio = Math.min(1.0, currentDensity / targetDensity);
+        }
+
+        const ripenessProjection = calculateVineyardWeeklyProjection(
+          { ...vineyard, status: newStatus, ripeness: newRipeness },
+          {
             companyId,
             year: currentYear,
             season: season as Season,
             week,
             weatherState: currentWeatherState,
             weatherIntensity: currentWeatherIntensity,
-          });
+          },
+          {
+            plantingProgressRatio,
+            ripenessGrowthActive: isRipenessGrowthActiveForWeek(newStatus, season as Season, week),
+          }
+        );
 
-          newRipeness = Math.min(1.0, Math.max(0, newRipeness + weatherImpact.ripenessDelta));
+        if (ripenessProjection.ripeness.totalDelta > 0) {
+          isRipenessDeclining = false;
+          newRipeness = ripenessProjection.ripeness.projected;
         }
       }
       
@@ -279,16 +246,26 @@ export async function updateVineyardRipeness(
         isRipenessDeclining = true;
         // Calculate winter ripeness degradation using calibrated base + acceleration factors
         // Base degradation: ~3% per week, increasing by ~1% each week (week 12 ≈ -14%)
-        const weeksIntoWinter = week;
-        const baseDegradation = 0.03; // 3% base degradation
-        const accelerationFactor = 0.01; // Additional 1% per week
-        const weeklyDegradation = baseDegradation + (accelerationFactor * (weeksIntoWinter - 1));
-        const ripenessLoss = Math.min(newRipeness, weeklyDegradation);
-        newRipeness = Math.max(0, newRipeness - ripenessLoss);
+        const ripenessProjection = calculateVineyardWeeklyProjection(
+          { ...vineyard, status: newStatus, ripeness: newRipeness },
+          {
+            companyId,
+            year: currentYear,
+            season: season as Season,
+            week,
+            weatherState: currentWeatherState,
+            weatherIntensity: currentWeatherIntensity,
+          },
+          {
+            ripenessGrowthActive: false,
+          }
+        );
+        const weeklyDegradation = calculateWinterRipenessDegradation(week);
+        const ripenessLoss = newRipeness - ripenessProjection.ripeness.projected;
+        newRipeness = ripenessProjection.ripeness.projected;
         
         // Add notification for significant ripeness loss
         if (weeklyDegradation > 0.1 && newRipeness < vineyard.ripeness) {
-          const ripenessLoss = vineyard.ripeness - newRipeness;
           if (ripenessLoss > 0.05) { // Only notify for significant loss
             await notificationService.addMessage(
               `Winter is taking its toll! ${vineyard.name} lost ${Math.round(ripenessLoss * 100)}% ripeness due to winter conditions.`,
@@ -514,36 +491,7 @@ export async function updateVineyardHealthDegradation(
     for (const vineyard of vineyards) {
       // Skip vineyards that are already at minimum health (0.1 = 10%)
       if (vineyard.vineyardHealth <= 0.1) continue;
-      
-      // Base degradation rate per week (from v1 system)
-      let weeklyDegradation = 0;
-      
-      // Seasonal degradation rates (from v1 endDay.js)
-      switch (season) {
-        case 'Spring':
-          weeklyDegradation = 0.002; // 0.2% per week
-          break;
-        case 'Summer':
-          weeklyDegradation = 0.006; // 0.6% per week
-          break;
-        case 'Fall':
-          weeklyDegradation = 0.01; // 1.0% per week
-          break;
-        case 'Winter':
-          weeklyDegradation = 0.001; // 0.1% per week (reduced degradation in winter)
-          break;
-        default:
-          weeklyDegradation = 0.005; // 0.5% per week default
-      }
-      
-      // Apply deterministic small variation (±20%)
-      const variationSeed = `${companyId || 'default-company'}:${contextYear}:${season}:${_week}:${vineyard.id}:health-variation`;
-      const variation = deterministicSeasonalVariation(variationSeed, -0.2, 0.2);
-      weeklyDegradation *= (1 + variation);
 
-      // Apply research-based permanent effects (minimum slice: vineyard health decay reductions).
-      weeklyDegradation *= permanentEffects.vineyardHealthDecayMultiplier;
-      
       const weatherImpactContext: VineyardWeatherContext = {
         companyId: companyId || 'default-company',
         year: contextYear,
@@ -552,13 +500,16 @@ export async function updateVineyardHealthDegradation(
         weatherState: (weatherContext?.weatherState || currentState.weatherState) as WeatherState | undefined,
         weatherIntensity: (weatherContext?.weatherIntensity || currentState.weatherIntensity) as WeatherIntensity | undefined,
       };
-      const weatherImpact = calculateVineyardWeatherImpact(vineyard, weatherImpactContext);
-
       // Calculate new health
       const oldHealth = vineyard.vineyardHealth;
-      const baselineHealthDelta = -weeklyDegradation;
-      const finalHealthDelta = Math.max(-0.02, Math.min(0.01, baselineHealthDelta + weatherImpact.healthDelta));
-      const newHealth = Math.max(0.1, Math.min(1.0, oldHealth + finalHealthDelta));
+      const healthProjection = calculateVineyardWeeklyProjection(
+        vineyard,
+        weatherImpactContext,
+        {
+          healthDecayMultiplier: permanentEffects.vineyardHealthDecayMultiplier,
+        }
+      );
+      const newHealth = healthProjection.health.projected;
       const healthChange = newHealth - oldHealth;
       const actualDegradation = Math.max(0, oldHealth - newHealth);
       
