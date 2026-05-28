@@ -1,10 +1,17 @@
 ﻿import { Activity, WorkCategory, NotificationCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../../core/gameState';
 import { createActivity } from './activityManager';
-import { notificationService, addTransaction, calculateLandSearchCost, generateVineyardSearchResults, LandSearchOptions } from '@/lib/services';
+import { notificationService, addTransaction, calculateLandSearchCost, generateVineyardSearchResults, LandSearchOptions, getAllVineyards } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateLandSearchWork } from '../workcalculators/landSearchWorkCalculator';
 import { formatNumber } from '@/lib/utils/utils';
+import {
+  buildVineyardCapacityState,
+  getLandSearchPenaltyReferenceRangeFromCapacity,
+  getMaxSearchableHectares,
+  MIN_SEARCHABLE_HECTARES
+} from '@/lib/services/vineyard/vineyardCapacityService';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 /**
  * Start a land search activity
@@ -12,8 +19,36 @@ import { formatNumber } from '@/lib/utils/utils';
 export async function startLandSearch(options: LandSearchOptions): Promise<string | null> {
   try {
     const gameState = getGameState();
-    const searchCost = calculateLandSearchCost(options, gameState.prestige || 0);
-    const { totalWork } = calculateLandSearchWork(options, gameState.prestige || 0);
+    const [vineyards, unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
+      getAllVineyards(),
+      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
+      getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
+      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
+    ]);
+
+    const vineyardCapacity = buildVineyardCapacityState({
+      currentTotalHectares: vineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0),
+      currentVineyardCount: vineyards.length,
+      unlockedPerVineyardValues,
+      unlockedTotalHectareValues,
+      unlockedVineyardCountValues
+    });
+
+    const safeMaxSearchableHectares = Math.max(MIN_SEARCHABLE_HECTARES, getMaxSearchableHectares(vineyardCapacity));
+    const normalizedMinHectares = Math.min(options.hectareRange[0], safeMaxSearchableHectares);
+    const normalizedMaxHectares = Math.min(options.hectareRange[1], safeMaxSearchableHectares);
+
+    const normalizedOptions: LandSearchOptions = {
+      ...options,
+      hectareRange: [
+        Math.min(normalizedMinHectares, normalizedMaxHectares),
+        Math.max(normalizedMinHectares, normalizedMaxHectares)
+      ],
+      hectarePenaltyReferenceRange: getLandSearchPenaltyReferenceRangeFromCapacity(vineyardCapacity)
+    };
+
+    const searchCost = calculateLandSearchCost(normalizedOptions, gameState.prestige || 0);
+    const { totalWork } = calculateLandSearchWork(normalizedOptions, gameState.prestige || 0);
 
     // Check if we have enough money
     const currentMoney = gameState.money || 0;
@@ -30,7 +65,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
     // Deduct search cost immediately
     await addTransaction(
       -searchCost,
-      `Land search for ${options.numberOfOptions} propert${options.numberOfOptions > 1 ? 'ies' : 'y'} (${options.regions.length > 0 ? options.regions.join(', ') : 'all regions'})`,
+      `Land search for ${normalizedOptions.numberOfOptions} propert${normalizedOptions.numberOfOptions > 1 ? 'ies' : 'y'} (${normalizedOptions.regions.length > 0 ? normalizedOptions.regions.join(', ') : 'all regions'})`,
       TRANSACTION_CATEGORIES.LAND_SEARCH,
       false
     );
@@ -44,7 +79,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
       totalWork,
       activityDetails: `Cost: ${formatNumber(searchCost, { currency: true, decimals: 2 })}`,
       params: {
-        searchOptions: options,
+        searchOptions: normalizedOptions,
         searchCost,
         companyPrestige: gameState.prestige
       },

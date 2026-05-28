@@ -206,7 +206,23 @@ async function runFinanceScenario(
   }
 
   if (scenarioId === 'finance.set-player-balance') {
-    const data = await adminSetPlayerBalance(amount);
+    const { authService } = await import('@/lib/services/user/authService');
+    const currentUser = authService.getCurrentUser();
+
+    if (!currentUser) {
+      return {
+        runId,
+        scenarioId,
+        status: 'blocked',
+        summary: 'No signed-in user found for player balance update',
+        assertions: [{ name: 'Signed-in user available', passed: false }],
+        createdEntities: [],
+        warnings,
+        data: { amount }
+      };
+    }
+
+    const data = await adminSetPlayerBalance(amount, currentUser.id);
     return {
       runId,
       scenarioId,

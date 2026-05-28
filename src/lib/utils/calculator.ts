@@ -343,11 +343,29 @@ export function probabilityMassInRange(minHa: number, maxHa: number): number {
  * Very small maximum hectare ranges get a relief factor so early-game
  * cap-constrained searches are not punished as hard as broad high-end filters.
  */
-export function getAsymmetricHectareMassRemoved(minHa: number, maxHa: number): number {
-  const massKept = probabilityMassInRange(minHa, maxHa);
-  const massRemoved = 1 - massKept;
+export function getAsymmetricHectareMassRemoved(
+  minHa: number,
+  maxHa: number,
+  referenceRange: [number, number] = [0.05, 2000]
+): number {
+  const [rawReferenceMin, rawReferenceMax] = referenceRange;
+  const referenceMin = Math.max(0.05, Math.min(rawReferenceMin, 2000));
+  const referenceMax = Math.max(referenceMin, Math.min(rawReferenceMax, 2000));
 
-  const cappedMaxHa = Math.max(0.05, Math.min(maxHa, 2000));
+  const availableMass = probabilityMassInRange(referenceMin, referenceMax);
+  if (availableMass <= 0) {
+    return 0;
+  }
+
+  const effectiveMin = Math.max(referenceMin, Math.min(minHa, maxHa));
+  const effectiveMax = Math.min(referenceMax, Math.max(minHa, maxHa));
+  const selectedMass = effectiveMax > effectiveMin
+    ? probabilityMassInRange(effectiveMin, effectiveMax)
+    : 0;
+  const normalizedMassKept = Math.max(0, Math.min(1, selectedMass / availableMass));
+  const massRemoved = 1 - normalizedMassKept;
+
+  const cappedMaxHa = Math.max(0.05, Math.min(effectiveMax, 2000));
   const reliefWindowMaxHa = 1;
   const normalizedSmallRange = Math.max(0, Math.min(1, (cappedMaxHa - 0.05) / (reliefWindowMaxHa - 0.05)));
   const reliefFactor = 0.2 + 0.8 * Math.pow(normalizedSmallRange, 0.6);

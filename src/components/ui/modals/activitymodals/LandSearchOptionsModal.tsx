@@ -15,14 +15,15 @@ import {
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   buildVineyardCapacityState,
+  getLandSearchPenaltyReferenceRangeFromCapacity,
+  getMaxSearchableHectares,
+  MIN_SEARCHABLE_HECTARES,
   getNextVineyardCapacityHint,
   getNextVineyardCapacityResearch,
   getRemainingTotalHectares,
   getRemainingVineyardSlots,
   type VineyardCapacityState
 } from '@/lib/services/vineyard/vineyardCapacityService';
-
-const MIN_SEARCHABLE_HECTARES = 0.05;
 const CAPACITY_EPSILON = 0.0001;
 
 // Two-thumb slider built on Radix Slider primitives
@@ -70,6 +71,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
     regions: [],
     selectedCountries: [],
     hectareRange: [0.05, 2000],
+    hectarePenaltyReferenceRange: [0.05, 2000],
     soilTypes: [...ALL_SOIL_TYPES],
     aspectPreferences: [...ASPECTS],
     minGrapeSuitability: 0,
@@ -146,10 +148,9 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
   const remainingTotalHectares = getRemainingTotalHectares(vineyardCapacity);
   const remainingVineyardSlots = getRemainingVineyardSlots(vineyardCapacity);
-  const maxSearchableHectares = Math.max(
-    MIN_SEARCHABLE_HECTARES,
-    Math.min(vineyardCapacity.maxHectaresPerVineyard, Math.max(remainingTotalHectares, 0))
-  );
+  const maxSearchableHectares = getMaxSearchableHectares(vineyardCapacity);
+  const penaltyReferenceRange = getLandSearchPenaltyReferenceRangeFromCapacity(vineyardCapacity);
+  const [penaltyReferenceMin, penaltyReferenceMax] = penaltyReferenceRange;
   const isAtTotalHectareLimit = remainingTotalHectares <= CAPACITY_EPSILON;
   const isAtVineyardCountLimit = remainingVineyardSlots <= 0;
   const hasSearchableAreaCapacity = remainingTotalHectares + CAPACITY_EPSILON >= MIN_SEARCHABLE_HECTARES;
@@ -165,17 +166,24 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
       const nextMax = Math.min(previous.hectareRange[1], maxSearchableHectares);
       const normalizedMin = Math.min(nextMin, nextMax);
       const normalizedMax = Math.max(nextMin, nextMax);
+      const [previousPenaltyMin, previousPenaltyMax] = previous.hectarePenaltyReferenceRange || [0.05, 2000];
 
-      if (normalizedMin === previous.hectareRange[0] && normalizedMax === previous.hectareRange[1]) {
+      if (
+        normalizedMin === previous.hectareRange[0] &&
+        normalizedMax === previous.hectareRange[1] &&
+        penaltyReferenceMin === previousPenaltyMin &&
+        penaltyReferenceMax === previousPenaltyMax
+      ) {
         return previous;
       }
 
       return {
         ...previous,
-        hectareRange: [normalizedMin, normalizedMax]
+        hectareRange: [normalizedMin, normalizedMax],
+        hectarePenaltyReferenceRange: [penaltyReferenceMin, penaltyReferenceMax]
       };
     });
-  }, [maxSearchableHectares]);
+  }, [maxSearchableHectares, penaltyReferenceMin, penaltyReferenceMax]);
 
   // Calculate preview stats whenever options change
   useEffect(() => {
@@ -233,7 +241,8 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
       hectareRange: [
         Math.min(options.hectareRange[0], clampedSearchLimit),
         Math.min(options.hectareRange[1], clampedSearchLimit)
-      ]
+      ],
+      hectarePenaltyReferenceRange: [MIN_SEARCHABLE_HECTARES, clampedSearchLimit]
     };
 
     const { startLandSearch } = await import('@/lib/services');

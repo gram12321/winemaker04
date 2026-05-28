@@ -1,8 +1,9 @@
 import { type ComponentType, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import { Progress } from '@/components/ui/shadCN/progress';
 import { Beaker, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
-import { RESEARCH_PROJECTS, type ResearchProject, type ResearchUnlock } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchProject, type ResearchUnlock, type UnlockType } from '@/lib/constants/researchConstants';
 import { getAllActivities } from '@/lib/services';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { calculateResearchCost, calculateResearchWork } from '@/lib/services';
@@ -16,6 +17,7 @@ import {
   loadResearchEligibilityContext,
 } from '@/lib/services';
 import { formatNumber } from '@/lib/utils/utils';
+import { buildResearchFootprintSummary } from '@/lib/services/research/researchPresentationService';
 import {
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
   getChainedVineyardResearchUnlockType,
@@ -59,6 +61,13 @@ interface ResearchCardModel {
     primary: string;
     additionalCount: number;
   };
+}
+
+interface ChainStepMetadata {
+  chainType: UnlockType;
+  step: number;
+  totalSteps: number;
+  isFrontier: boolean;
 }
 
 const GROUPS: GroupDefinition[] = [
@@ -241,6 +250,13 @@ function readableChainType(chainType: string | null): string {
 
 function toReadableProjectReference(projectId: string): string {
   return toReadableToken(projectId);
+}
+
+function getNumericUnlockValue(project: ResearchProject, chainType: string): number | null {
+  const unlock = project.unlocks?.find(
+    (candidate) => candidate.type === chainType && typeof candidate.value === 'number'
+  );
+  return unlock && typeof unlock.value === 'number' ? unlock.value : null;
 }
 
 function buildImpactSummary(project: ResearchProject): { primary: string; additionalCount: number } {
@@ -650,10 +666,56 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
     return map;
   }, [groupedModels]);
 
+  const footprintSummary = useMemo(
+    () =>
+      buildResearchFootprintSummary({
+        projects: RESEARCH_PROJECTS,
+        completedResearch,
+        activeResearch,
+      }),
+    [completedResearch, activeResearch]
+  );
+
+  const chainStepByProjectId = useMemo(() => {
+    const byId = new Map<string, ChainStepMetadata>();
+    const chainBuckets = new Map<UnlockType, Array<{ projectId: string; value: number; status: ResearchStatus }>>();
+
+    for (const model of projectModels) {
+      if (!model.chainType) continue;
+      const value = getNumericUnlockValue(model.project, model.chainType);
+      if (value === null) continue;
+
+      const typedChain = model.chainType as UnlockType;
+      const bucket = chainBuckets.get(typedChain) || [];
+      bucket.push({ projectId: model.project.id, value, status: model.status });
+      chainBuckets.set(typedChain, bucket);
+    }
+
+    for (const [chainType, entries] of chainBuckets.entries()) {
+      const sorted = [...entries].sort((left, right) => left.value - right.value);
+      const frontierProjectId =
+        sorted.find((entry) => entry.status === 'in-progress')?.projectId ??
+        sorted.find((entry) => entry.status === 'available')?.projectId ??
+        null;
+
+      sorted.forEach((entry, index) => {
+        byId.set(entry.projectId, {
+          chainType,
+          step: index + 1,
+          totalSteps: sorted.length,
+          isFrontier: frontierProjectId === entry.projectId,
+        });
+      });
+    }
+
+    return byId;
+  }, [projectModels]);
+
   const renderRow = (model: ResearchCardModel) => {
     const isSelected = selectedProjectId === model.project.id;
     const isExpanded = expandedProjectId === model.project.id;
     const isDisabled = model.status === 'completed' || model.status === 'in-progress' || model.status === 'locked';
+    const chainStep = chainStepByProjectId.get(model.project.id);
     const group = groupById.get(projectGroup(model.project));
     const GroupIcon = group?.icon || Beaker;
 
@@ -699,7 +761,20 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
                 <Badge variant="outline" className="text-[10px]">Loyalty gate</Badge>
               ) : null}
               {model.chainType ? (
-                <Badge variant="secondary" className="text-[10px]">{readableChainType(model.chainType)}</Badge>
+                <>
+                  <Badge variant="secondary" className="text-[10px] bg-indigo-100 text-indigo-800">Chain</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{readableChainType(model.chainType)}</Badge>
+                </>
+              ) : null}
+              {chainStep ? (
+                <Badge variant="outline" className="text-[10px]">
+                  Step {chainStep.step}/{chainStep.totalSteps}
+                </Badge>
+              ) : null}
+              {chainStep?.isFrontier ? (
+                <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                  Frontier
+                </Badge>
               ) : null}
             </div>
           </div>
@@ -814,6 +889,39 @@ export function ResearchPanel({ bypassGates = false, view = 'both' }: ResearchPa
                 </div>
               ) : (
                 <div className="rounded border border-dashed border-slate-300 px-2 py-1 text-slate-500">No unlocks completed yet.</div>
+              )}
+
+              <p className="mb-1 mt-3 font-semibold text-slate-800">Chain Progress</p>
+              {footprintSummary.ladderSummaries.length ? (
+                <div className="space-y-2">
+                  {footprintSummary.ladderSummaries.map((ladder) => {
+                    const progress =
+                      ladder.totalSteps > 0 ? (ladder.completedSteps / ladder.totalSteps) * 100 : 0;
+                    return (
+                      <div key={`ladder-${ladder.chainType}`} className="rounded border border-slate-200 px-2 py-1">
+                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[11px] font-semibold text-slate-800">{ladder.label}</p>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-[10px]">
+                              {ladder.completedSteps}/{ladder.totalSteps}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">{ladder.currentLabel}</Badge>
+                          </div>
+                        </div>
+                        <Progress value={progress} className="h-1.5" />
+                        <div className="mt-1 text-[10px] text-slate-600">
+                          {ladder.activeProjectTitle
+                            ? `Active: ${ladder.activeProjectTitle}`
+                            : ladder.nextProjectTitle
+                            ? `Next: ${ladder.nextProjectTitle}`
+                            : 'Chain completed'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded border border-dashed border-slate-300 px-2 py-1 text-slate-500">No chain progression data yet.</div>
               )}
 
               <p className="mb-1 mt-3 font-semibold text-slate-800">Recent Impact Feed</p>

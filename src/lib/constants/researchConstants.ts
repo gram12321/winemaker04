@@ -190,10 +190,10 @@ export const RESEARCH_PROJECT_ECONOMICS: Record<string, ResearchProjectEconomics
 };
 
 // Generic prestige scaling from research complexity, shared by all research types.
-const RESEARCH_PRESTIGE_PER_COMPLEXITY = 2;
-const RESEARCH_PRESTIGE_COMPLEXITY_OFFSET = -2;
-const RESEARCH_MIN_PRESTIGE_REWARD = 1;
-const RESEARCH_MAX_PRESTIGE_REWARD = 15;
+const RESEARCH_PRESTIGE_PER_COMPLEXITY = 0.2;
+const RESEARCH_PRESTIGE_COMPLEXITY_OFFSET = 0;
+const RESEARCH_MIN_PRESTIGE_REWARD = 0.5;
+const RESEARCH_MAX_PRESTIGE_REWARD = 2;
 
 // Grape-specific difficulty-to-research mappings.
 // These convert grape domain difficulty (0-1) into standard research attributes.
@@ -248,11 +248,8 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
   // Create project ID from grape name (e.g., "Pinot Noir" -> "agri_pinot_noir")
   const projectId = `agri_${grape.toLowerCase().replace(/\s+/g, '_')}`;
   
-  // Prestige gate based on complexity: rare/difficult grapes require an established winery
-  // complexity 2-4: always available (0), 5-7: established winery (10), 8-10: known winery (25)
-  let requiredPrestige: number | undefined;
-  if (complexity >= 8) requiredPrestige = 25;
-  else if (complexity >= 5) requiredPrestige = 10;
+  // First-tier grape research is available from game start.
+  const requiredPrestige: number | undefined = undefined;
   
   return {
     id: projectId,
@@ -352,8 +349,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Establish operating discipline for very small vineyard parcels.',
             complexity: 2,
             icon: '🌱',
-            requiredPrestige: 2,
-            prerequisites: ['foundation_admin_baseline'],
+            requiredPrestige: 0,
             unlockType: 'vineyard_size',
             unlockValue: 0.25,
             benefits: ['Raises max size per vineyard to 0.25 hectares'],
@@ -365,7 +361,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Standardize small-estate routines for reliable half-hectare operations.',
             complexity: 3,
             icon: '🧺',
-            requiredPrestige: 5,
+            requiredPrestige: 1,
             prerequisites: ['eff_microplot_management'],
             unlockType: 'vineyard_size',
             unlockValue: 0.5,
@@ -378,7 +374,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Build foundational workflows for full one-hectare estate management.',
             complexity: 4,
             icon: '🏡',
-            requiredPrestige: 9,
+            requiredPrestige: 1,
             prerequisites: ['eff_smallholding_operations'],
             unlockType: 'vineyard_size',
             unlockValue: 1,
@@ -391,7 +387,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Research methods to improve overall operational efficiency across the winery.',
             complexity: 6,
             icon: '⚡',
-            requiredPrestige: 20,
+            requiredPrestige: 2,
             prerequisites: ['eff_estate_foundations'],
             unlockType: 'vineyard_size',
             unlockValue: 2,
@@ -404,7 +400,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Professionalize expansion planning and utility layout to support larger individual vineyard sites.',
             complexity: 7,
             icon: '🗺️',
-            requiredPrestige: 28,
+            requiredPrestige: 3,
             requiredCompanyValue: 900000,
             prerequisites: ['eff_operational'],
             unlockType: 'vineyard_size',
@@ -418,7 +414,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Coordinate roads, storage, and utility scaling to support full estate-size vineyards.',
             complexity: 9,
             icon: '🏗️',
-            requiredPrestige: 42,
+            requiredPrestige: 4,
             requiredCompanyValue: 2400000,
             prerequisites: ['eff_site_expansion'],
             unlockType: 'vineyard_size',
@@ -432,7 +428,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Standardize planning for managing very large vineyard parcels within the same region.',
             complexity: 9,
             icon: '🧭',
-            requiredPrestige: 52,
+            requiredPrestige: 5,
             requiredCompanyValue: 4500000,
             prerequisites: ['eff_estate_scale'],
             unlockType: 'vineyard_size',
@@ -446,7 +442,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Integrate logistics, storage, and staffing for distributed mega-sites.',
             complexity: 10,
             icon: '🔗',
-            requiredPrestige: 62,
+            requiredPrestige: 6,
             requiredCompanyValue: 7000000,
             prerequisites: ['eff_regional_holdings'],
             unlockType: 'vineyard_size',
@@ -460,7 +456,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Build tractor, transport, and intake fleet planning for very large vineyard sites.',
             complexity: 10,
             icon: '🚜',
-            requiredPrestige: 72,
+            requiredPrestige: 7,
             requiredCompanyValue: 10000000,
             prerequisites: ['eff_networked_estates'],
             unlockType: 'vineyard_size',
@@ -474,7 +470,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Coordinate capital deployment and operating systems for massive individual vineyard assets.',
             complexity: 10,
             icon: '📈',
-            requiredPrestige: 84,
+            requiredPrestige: 8,
             requiredCompanyValue: 16000000,
             prerequisites: ['eff_industrial_fleet_management'],
             unlockType: 'vineyard_size',
@@ -488,7 +484,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Deploy robust operating systems for monitoring and controlling immense vineyard footprints.',
             complexity: 10,
             icon: '🛰️',
-            requiredPrestige: 96,
+            requiredPrestige: 10,
             requiredCompanyValue: 25000000,
             prerequisites: ['eff_land_portfolio_management'],
             unlockType: 'vineyard_size',
@@ -502,7 +498,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Formalize enterprise-level planning for ultra-large vineyard sites.',
             complexity: 10,
             icon: '🏢',
-            requiredPrestige: 110,
+            requiredPrestige: 11,
             requiredCompanyValue: 40000000,
             prerequisites: ['eff_megavineyard_control'],
             unlockType: 'vineyard_size',
@@ -516,7 +512,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Structure governance and resource control for global-scale flagship vineyard estates.',
             complexity: 10,
             icon: '🌐',
-            requiredPrestige: 125,
+            requiredPrestige: 12,
             requiredCompanyValue: 65000000,
             prerequisites: ['eff_agri_enterprise_planning'],
             unlockType: 'vineyard_size',
@@ -530,7 +526,7 @@ const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
             description: 'Coordinate governance, logistics, and financial planning for ultra-large single vineyard holdings.',
             complexity: 10,
             icon: '🏛️',
-            requiredPrestige: 140,
+            requiredPrestige: 14,
             requiredCompanyValue: 100000000,
             prerequisites: ['eff_global_land_network'],
             unlockType: 'vineyard_size',
@@ -549,39 +545,38 @@ const TOTAL_VINEYARD_HECTARE_RESEARCH_PROJECTS: ResearchProject[] = [
             description: 'Track and allocate land budget across your entire vineyard footprint.',
             complexity: 3,
             icon: '📏',
-            requiredPrestige: 5,
-            prerequisites: ['foundation_admin_baseline'],
+            requiredPrestige: 0,
             unlockType: 'total_vineyard_hectares',
             unlockValue: 1,
             benefits: ['Raises max total vineyard area to 1 hectare'],
             workProfile: { scopeWorkAmount: 60, complexityCurve: { kind: 'linear', multiplier: 0.13 }, categoryModifier: 0.1, extraInitialWork: 12 }
       }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_2', title: 'Total Estate Area 2 ha', description: 'Expand oversight tools for multi-parcel land use.', complexity: 6, icon: '🗂️', requiredPrestige: 18, prerequisites: ['eff_total_land_budgeting'], unlockType: 'total_vineyard_hectares', unlockValue: 2, benefits: ['Raises max total vineyard area to 2 hectares'], workProfile: { scopeWorkAmount: 118, complexityCurve: { kind: 'linear', multiplier: 0.18 }, categoryModifier: 0.15, extraInitialWork: 30 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_4', title: 'Total Estate Area 4 ha', description: 'Manage planning and maintenance for a broader estate footprint.', complexity: 7, icon: '🧭', requiredPrestige: 26, requiredCompanyValue: 800000, prerequisites: ['eff_total_estate_area_2'], unlockType: 'total_vineyard_hectares', unlockValue: 4, benefits: ['Raises max total vineyard area to 4 hectares'], workProfile: { scopeWorkAmount: 168, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.18, extraInitialWork: 42 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_8', title: 'Total Estate Area 8 ha', description: 'Scale land planning for a full estate network.', complexity: 8, icon: '🗺️', requiredPrestige: 36, requiredCompanyValue: 1800000, prerequisites: ['eff_total_estate_area_4'], unlockType: 'total_vineyard_hectares', unlockValue: 8, benefits: ['Raises max total vineyard area to 8 hectares'], workProfile: { scopeWorkAmount: 220, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.2, extraInitialWork: 55 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_16', title: 'Total Estate Area 16 ha', description: 'Create governance systems for regional-scale vineyard land.', complexity: 9, icon: '🏞️', requiredPrestige: 48, requiredCompanyValue: 3200000, prerequisites: ['eff_total_estate_area_8'], unlockType: 'total_vineyard_hectares', unlockValue: 16, benefits: ['Raises max total vineyard area to 16 hectares'], workProfile: { scopeWorkAmount: 290, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 70 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_32', title: 'Total Estate Area 32 ha', description: 'Coordinate operations for a distributed land portfolio.', complexity: 9, icon: '🏘️', requiredPrestige: 58, requiredCompanyValue: 5000000, prerequisites: ['eff_total_estate_area_16'], unlockType: 'total_vineyard_hectares', unlockValue: 32, benefits: ['Raises max total vineyard area to 32 hectares'], workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.23, extraInitialWork: 86 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_64', title: 'Total Estate Area 64 ha', description: 'Centralize oversight for large vineyard holdings.', complexity: 10, icon: '🏗️', requiredPrestige: 68, requiredCompanyValue: 7600000, prerequisites: ['eff_total_estate_area_32'], unlockType: 'total_vineyard_hectares', unlockValue: 64, benefits: ['Raises max total vineyard area to 64 hectares'], workProfile: { scopeWorkAmount: 440, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 102 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_128', title: 'Total Estate Area 128 ha', description: 'Professionalize governance for a major vineyard estate group.', complexity: 10, icon: '🏢', requiredPrestige: 80, requiredCompanyValue: 12000000, prerequisites: ['eff_total_estate_area_64'], unlockType: 'total_vineyard_hectares', unlockValue: 128, benefits: ['Raises max total vineyard area to 128 hectares'], workProfile: { scopeWorkAmount: 530, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 120 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_256', title: 'Total Estate Area 256 ha', description: 'Build systems for massive regional vineyard portfolios.', complexity: 10, icon: '📈', requiredPrestige: 92, requiredCompanyValue: 18000000, prerequisites: ['eff_total_estate_area_128'], unlockType: 'total_vineyard_hectares', unlockValue: 256, benefits: ['Raises max total vineyard area to 256 hectares'], workProfile: { scopeWorkAmount: 635, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 138 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_512', title: 'Total Estate Area 512 ha', description: 'Extend planning into multi-region vineyard land management.', complexity: 10, icon: '🛰️', requiredPrestige: 106, requiredCompanyValue: 28000000, prerequisites: ['eff_total_estate_area_256'], unlockType: 'total_vineyard_hectares', unlockValue: 512, benefits: ['Raises max total vineyard area to 512 hectares'], workProfile: { scopeWorkAmount: 760, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.28, extraInitialWork: 160 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_1000', title: 'Total Estate Area 1000 ha', description: 'Coordinate global-scale vineyard area planning.', complexity: 10, icon: '🌐', requiredPrestige: 122, requiredCompanyValue: 45000000, prerequisites: ['eff_total_estate_area_512'], unlockType: 'total_vineyard_hectares', unlockValue: 1000, benefits: ['Raises max total vineyard area to 1000 hectares'], workProfile: { scopeWorkAmount: 900, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.29, extraInitialWork: 184 } }),
-      createCapacityResearchProject({ id: 'eff_total_estate_area_2000', title: 'Total Estate Area 2000 ha', description: 'Formalize super-estate governance across your entire land portfolio.', complexity: 10, icon: '🏛️', requiredPrestige: 138, requiredCompanyValue: 70000000, prerequisites: ['eff_total_estate_area_1000'], unlockType: 'total_vineyard_hectares', unlockValue: 2000, benefits: ['Raises max total vineyard area to 2000 hectares'], workProfile: { scopeWorkAmount: 1060, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.3, extraInitialWork: 210 } })
+      createCapacityResearchProject({ id: 'eff_total_estate_area_2', title: 'Total Estate Area 2 ha', description: 'Expand oversight tools for multi-parcel land use.', complexity: 6, icon: '🗂️', requiredPrestige: 2, prerequisites: ['eff_total_land_budgeting'], unlockType: 'total_vineyard_hectares', unlockValue: 2, benefits: ['Raises max total vineyard area to 2 hectares'], workProfile: { scopeWorkAmount: 118, complexityCurve: { kind: 'linear', multiplier: 0.18 }, categoryModifier: 0.15, extraInitialWork: 30 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_4', title: 'Total Estate Area 4 ha', description: 'Manage planning and maintenance for a broader estate footprint.', complexity: 7, icon: '🧭', requiredPrestige: 3, requiredCompanyValue: 800000, prerequisites: ['eff_total_estate_area_2'], unlockType: 'total_vineyard_hectares', unlockValue: 4, benefits: ['Raises max total vineyard area to 4 hectares'], workProfile: { scopeWorkAmount: 168, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.18, extraInitialWork: 42 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_8', title: 'Total Estate Area 8 ha', description: 'Scale land planning for a full estate network.', complexity: 8, icon: '🗺️', requiredPrestige: 4, requiredCompanyValue: 1800000, prerequisites: ['eff_total_estate_area_4'], unlockType: 'total_vineyard_hectares', unlockValue: 8, benefits: ['Raises max total vineyard area to 8 hectares'], workProfile: { scopeWorkAmount: 220, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.2, extraInitialWork: 55 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_16', title: 'Total Estate Area 16 ha', description: 'Create governance systems for regional-scale vineyard land.', complexity: 9, icon: '🏞️', requiredPrestige: 5, requiredCompanyValue: 3200000, prerequisites: ['eff_total_estate_area_8'], unlockType: 'total_vineyard_hectares', unlockValue: 16, benefits: ['Raises max total vineyard area to 16 hectares'], workProfile: { scopeWorkAmount: 290, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 70 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_32', title: 'Total Estate Area 32 ha', description: 'Coordinate operations for a distributed land portfolio.', complexity: 9, icon: '🏘️', requiredPrestige: 6, requiredCompanyValue: 5000000, prerequisites: ['eff_total_estate_area_16'], unlockType: 'total_vineyard_hectares', unlockValue: 32, benefits: ['Raises max total vineyard area to 32 hectares'], workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.23, extraInitialWork: 86 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_64', title: 'Total Estate Area 64 ha', description: 'Centralize oversight for large vineyard holdings.', complexity: 10, icon: '🏗️', requiredPrestige: 7, requiredCompanyValue: 7600000, prerequisites: ['eff_total_estate_area_32'], unlockType: 'total_vineyard_hectares', unlockValue: 64, benefits: ['Raises max total vineyard area to 64 hectares'], workProfile: { scopeWorkAmount: 440, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 102 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_128', title: 'Total Estate Area 128 ha', description: 'Professionalize governance for a major vineyard estate group.', complexity: 10, icon: '🏢', requiredPrestige: 8, requiredCompanyValue: 12000000, prerequisites: ['eff_total_estate_area_64'], unlockType: 'total_vineyard_hectares', unlockValue: 128, benefits: ['Raises max total vineyard area to 128 hectares'], workProfile: { scopeWorkAmount: 530, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 120 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_256', title: 'Total Estate Area 256 ha', description: 'Build systems for massive regional vineyard portfolios.', complexity: 10, icon: '📈', requiredPrestige: 9, requiredCompanyValue: 18000000, prerequisites: ['eff_total_estate_area_128'], unlockType: 'total_vineyard_hectares', unlockValue: 256, benefits: ['Raises max total vineyard area to 256 hectares'], workProfile: { scopeWorkAmount: 635, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 138 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_512', title: 'Total Estate Area 512 ha', description: 'Extend planning into multi-region vineyard land management.', complexity: 10, icon: '🛰️', requiredPrestige: 11, requiredCompanyValue: 28000000, prerequisites: ['eff_total_estate_area_256'], unlockType: 'total_vineyard_hectares', unlockValue: 512, benefits: ['Raises max total vineyard area to 512 hectares'], workProfile: { scopeWorkAmount: 760, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.28, extraInitialWork: 160 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_1000', title: 'Total Estate Area 1000 ha', description: 'Coordinate global-scale vineyard area planning.', complexity: 10, icon: '🌐', requiredPrestige: 12, requiredCompanyValue: 45000000, prerequisites: ['eff_total_estate_area_512'], unlockType: 'total_vineyard_hectares', unlockValue: 1000, benefits: ['Raises max total vineyard area to 1000 hectares'], workProfile: { scopeWorkAmount: 900, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.29, extraInitialWork: 184 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_2000', title: 'Total Estate Area 2000 ha', description: 'Formalize super-estate governance across your entire land portfolio.', complexity: 10, icon: '🏛️', requiredPrestige: 14, requiredCompanyValue: 70000000, prerequisites: ['eff_total_estate_area_1000'], unlockType: 'total_vineyard_hectares', unlockValue: 2000, benefits: ['Raises max total vineyard area to 2000 hectares'], workProfile: { scopeWorkAmount: 1060, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.3, extraInitialWork: 210 } })
 ];
 
 const VINEYARD_COUNT_RESEARCH_PROJECTS: ResearchProject[] = [
-      createCapacityResearchProject({ id: 'eff_vineyard_registry', title: 'Vineyard Registry', description: 'Introduce formal registry and oversight for more than one vineyard.', complexity: 3, icon: '📚', requiredPrestige: 6, prerequisites: ['foundation_admin_baseline'], unlockType: 'vineyard_count', unlockValue: 2, benefits: ['Raises max vineyard count to 2'], workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.08, extraInitialWork: 14 } }),
-      createCapacityResearchProject({ id: 'eff_dual_estate_management', title: 'Dual Estate Management', description: 'Coordinate planning for a three-vineyard operation.', complexity: 4, icon: '🏷️', requiredPrestige: 10, prerequisites: ['eff_vineyard_registry'], unlockType: 'vineyard_count', unlockValue: 3, benefits: ['Raises max vineyard count to 3'], workProfile: { scopeWorkAmount: 92, complexityCurve: { kind: 'linear', multiplier: 0.15 }, categoryModifier: 0.1, extraInitialWork: 20 } }),
-      createCapacityResearchProject({ id: 'eff_vineyard_cluster_ops', title: 'Vineyard Cluster Operations', description: 'Run a small network of separate vineyard sites.', complexity: 5, icon: '🪴', requiredPrestige: 16, prerequisites: ['eff_dual_estate_management'], unlockType: 'vineyard_count', unlockValue: 5, benefits: ['Raises max vineyard count to 5'], workProfile: { scopeWorkAmount: 128, complexityCurve: { kind: 'linear', multiplier: 0.17 }, categoryModifier: 0.12, extraInitialWork: 28 } }),
-      createCapacityResearchProject({ id: 'eff_vineyard_dispatch', title: 'Multi-Vineyard Dispatch', description: 'Dispatch labor and logistics across a wider site network.', complexity: 6, icon: '🚚', requiredPrestige: 24, requiredCompanyValue: 900000, prerequisites: ['eff_vineyard_cluster_ops'], unlockType: 'vineyard_count', unlockValue: 8, benefits: ['Raises max vineyard count to 8'], workProfile: { scopeWorkAmount: 176, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.15, extraInitialWork: 40 } }),
-      createCapacityResearchProject({ id: 'eff_vineyard_support_grid', title: 'Vineyard Support Grid', description: 'Establish support teams for a 12-vineyard portfolio.', complexity: 7, icon: '🧰', requiredPrestige: 34, requiredCompanyValue: 1600000, prerequisites: ['eff_vineyard_dispatch'], unlockType: 'vineyard_count', unlockValue: 12, benefits: ['Raises max vineyard count to 12'], workProfile: { scopeWorkAmount: 226, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.17, extraInitialWork: 54 } }),
-      createCapacityResearchProject({ id: 'eff_regional_site_supervision', title: 'Regional Site Supervision', description: 'Supervise a 16-vineyard regional footprint.', complexity: 8, icon: '🧭', requiredPrestige: 44, requiredCompanyValue: 2600000, prerequisites: ['eff_vineyard_support_grid'], unlockType: 'vineyard_count', unlockValue: 16, benefits: ['Raises max vineyard count to 16'], workProfile: { scopeWorkAmount: 286, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.19, extraInitialWork: 66 } }),
-      createCapacityResearchProject({ id: 'eff_vineyard_network_coordination', title: 'Vineyard Network Coordination', description: 'Coordinate work across 24 separate vineyard sites.', complexity: 9, icon: '🔗', requiredPrestige: 56, requiredCompanyValue: 4200000, prerequisites: ['eff_regional_site_supervision'], unlockType: 'vineyard_count', unlockValue: 24, benefits: ['Raises max vineyard count to 24'], workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.21, extraInitialWork: 80 } }),
-      createCapacityResearchProject({ id: 'eff_estate_grid_management', title: 'Estate Grid Management', description: 'Maintain governance over a 32-vineyard operating grid.', complexity: 9, icon: '🕸️', requiredPrestige: 68, requiredCompanyValue: 6200000, prerequisites: ['eff_vineyard_network_coordination'], unlockType: 'vineyard_count', unlockValue: 32, benefits: ['Raises max vineyard count to 32'], workProfile: { scopeWorkAmount: 438, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 96 } }),
-      createCapacityResearchProject({ id: 'eff_holdings_command', title: 'Holdings Command', description: 'Run a 48-vineyard estate command structure.', complexity: 10, icon: '🏭', requiredPrestige: 80, requiredCompanyValue: 9000000, prerequisites: ['eff_estate_grid_management'], unlockType: 'vineyard_count', unlockValue: 48, benefits: ['Raises max vineyard count to 48'], workProfile: { scopeWorkAmount: 530, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 118 } }),
-      createCapacityResearchProject({ id: 'eff_regional_hub_admin', title: 'Regional Hub Administration', description: 'Govern a 64-vineyard network through regional hubs.', complexity: 10, icon: '🏢', requiredPrestige: 94, requiredCompanyValue: 14000000, prerequisites: ['eff_holdings_command'], unlockType: 'vineyard_count', unlockValue: 64, benefits: ['Raises max vineyard count to 64'], workProfile: { scopeWorkAmount: 630, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 138 } }),
-      createCapacityResearchProject({ id: 'eff_multi_region_estate_control', title: 'Multi-Region Estate Control', description: 'Scale supervision to a 96-vineyard multi-region portfolio.', complexity: 10, icon: '🌍', requiredPrestige: 110, requiredCompanyValue: 22000000, prerequisites: ['eff_regional_hub_admin'], unlockType: 'vineyard_count', unlockValue: 96, benefits: ['Raises max vineyard count to 96'], workProfile: { scopeWorkAmount: 748, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 162 } }),
-      createCapacityResearchProject({ id: 'eff_global_vineyard_registry', title: 'Global Vineyard Registry', description: 'Maintain a controlled register for 128 vineyard sites.', complexity: 10, icon: '🌐', requiredPrestige: 126, requiredCompanyValue: 36000000, prerequisites: ['eff_multi_region_estate_control'], unlockType: 'vineyard_count', unlockValue: 128, benefits: ['Raises max vineyard count to 128'], workProfile: { scopeWorkAmount: 884, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.28, extraInitialWork: 188 } })
+      createCapacityResearchProject({ id: 'eff_vineyard_registry', title: 'Vineyard Registry', description: 'Introduce formal registry and oversight for more than one vineyard.', complexity: 3, icon: '📚', requiredPrestige: 0, unlockType: 'vineyard_count', unlockValue: 2, benefits: ['Raises max vineyard count to 2'], workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.08, extraInitialWork: 14 } }),
+      createCapacityResearchProject({ id: 'eff_dual_estate_management', title: 'Dual Estate Management', description: 'Coordinate planning for a three-vineyard operation.', complexity: 4, icon: '🏷️', requiredPrestige: 1, prerequisites: ['eff_vineyard_registry'], unlockType: 'vineyard_count', unlockValue: 3, benefits: ['Raises max vineyard count to 3'], workProfile: { scopeWorkAmount: 92, complexityCurve: { kind: 'linear', multiplier: 0.15 }, categoryModifier: 0.1, extraInitialWork: 20 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_cluster_ops', title: 'Vineyard Cluster Operations', description: 'Run a small network of separate vineyard sites.', complexity: 5, icon: '🪴', requiredPrestige: 2, prerequisites: ['eff_dual_estate_management'], unlockType: 'vineyard_count', unlockValue: 5, benefits: ['Raises max vineyard count to 5'], workProfile: { scopeWorkAmount: 128, complexityCurve: { kind: 'linear', multiplier: 0.17 }, categoryModifier: 0.12, extraInitialWork: 28 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_dispatch', title: 'Multi-Vineyard Dispatch', description: 'Dispatch labor and logistics across a wider site network.', complexity: 6, icon: '🚚', requiredPrestige: 2, requiredCompanyValue: 900000, prerequisites: ['eff_vineyard_cluster_ops'], unlockType: 'vineyard_count', unlockValue: 8, benefits: ['Raises max vineyard count to 8'], workProfile: { scopeWorkAmount: 176, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.15, extraInitialWork: 40 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_support_grid', title: 'Vineyard Support Grid', description: 'Establish support teams for a 12-vineyard portfolio.', complexity: 7, icon: '🧰', requiredPrestige: 3, requiredCompanyValue: 1600000, prerequisites: ['eff_vineyard_dispatch'], unlockType: 'vineyard_count', unlockValue: 12, benefits: ['Raises max vineyard count to 12'], workProfile: { scopeWorkAmount: 226, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.17, extraInitialWork: 54 } }),
+      createCapacityResearchProject({ id: 'eff_regional_site_supervision', title: 'Regional Site Supervision', description: 'Supervise a 16-vineyard regional footprint.', complexity: 8, icon: '🧭', requiredPrestige: 4, requiredCompanyValue: 2600000, prerequisites: ['eff_vineyard_support_grid'], unlockType: 'vineyard_count', unlockValue: 16, benefits: ['Raises max vineyard count to 16'], workProfile: { scopeWorkAmount: 286, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.19, extraInitialWork: 66 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_network_coordination', title: 'Vineyard Network Coordination', description: 'Coordinate work across 24 separate vineyard sites.', complexity: 9, icon: '🔗', requiredPrestige: 6, requiredCompanyValue: 4200000, prerequisites: ['eff_regional_site_supervision'], unlockType: 'vineyard_count', unlockValue: 24, benefits: ['Raises max vineyard count to 24'], workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.21, extraInitialWork: 80 } }),
+      createCapacityResearchProject({ id: 'eff_estate_grid_management', title: 'Estate Grid Management', description: 'Maintain governance over a 32-vineyard operating grid.', complexity: 9, icon: '🕸️', requiredPrestige: 7, requiredCompanyValue: 6200000, prerequisites: ['eff_vineyard_network_coordination'], unlockType: 'vineyard_count', unlockValue: 32, benefits: ['Raises max vineyard count to 32'], workProfile: { scopeWorkAmount: 438, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 96 } }),
+      createCapacityResearchProject({ id: 'eff_holdings_command', title: 'Holdings Command', description: 'Run a 48-vineyard estate command structure.', complexity: 10, icon: '🏭', requiredPrestige: 8, requiredCompanyValue: 9000000, prerequisites: ['eff_estate_grid_management'], unlockType: 'vineyard_count', unlockValue: 48, benefits: ['Raises max vineyard count to 48'], workProfile: { scopeWorkAmount: 530, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 118 } }),
+      createCapacityResearchProject({ id: 'eff_regional_hub_admin', title: 'Regional Hub Administration', description: 'Govern a 64-vineyard network through regional hubs.', complexity: 10, icon: '🏢', requiredPrestige: 9, requiredCompanyValue: 14000000, prerequisites: ['eff_holdings_command'], unlockType: 'vineyard_count', unlockValue: 64, benefits: ['Raises max vineyard count to 64'], workProfile: { scopeWorkAmount: 630, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 138 } }),
+      createCapacityResearchProject({ id: 'eff_multi_region_estate_control', title: 'Multi-Region Estate Control', description: 'Scale supervision to a 96-vineyard multi-region portfolio.', complexity: 10, icon: '🌍', requiredPrestige: 11, requiredCompanyValue: 22000000, prerequisites: ['eff_regional_hub_admin'], unlockType: 'vineyard_count', unlockValue: 96, benefits: ['Raises max vineyard count to 96'], workProfile: { scopeWorkAmount: 748, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 162 } }),
+      createCapacityResearchProject({ id: 'eff_global_vineyard_registry', title: 'Global Vineyard Registry', description: 'Maintain a controlled register for 128 vineyard sites.', complexity: 10, icon: '🌐', requiredPrestige: 13, requiredCompanyValue: 36000000, prerequisites: ['eff_multi_region_estate_control'], unlockType: 'vineyard_count', unlockValue: 128, benefits: ['Raises max vineyard count to 128'], workProfile: { scopeWorkAmount: 884, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.28, extraInitialWork: 188 } })
 ];
 
 const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
@@ -591,8 +586,6 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Establish the Basic Staff Program with hiring playbooks and onboarding standards.',
             complexity: 3,
             icon: '🧾',
-            requiredCompanyValue: 180000,
-            requiredAchievementIds: ['sales_count_tier_1'],
             unlockValue: 3,
             benefits: ['Raises staff capacity to 3 employees', 'All staff complete work 5% faster'],
             permanentEffects: [{
@@ -644,7 +637,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Run the Expert Staff Program to formalize shift ownership and operating cadence.',
             complexity: 8,
             icon: '📋',
-            requiredPrestige: 34,
+            requiredPrestige: 3,
             requiredCompanyValue: 2200000,
             prerequisites: ['foundation_staff_leadership'],
             unlockValue: 10,
@@ -657,7 +650,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Adopt the Specialist Staff Program with dedicated teams and reporting structure.',
             complexity: 8,
             icon: '🗂️',
-            requiredPrestige: 44,
+            requiredPrestige: 4,
             requiredCompanyValue: 3500000,
             prerequisites: ['staff_operational_management'],
             unlockValue: 15,
@@ -670,7 +663,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Scale the Professional Staff Program with centralized staffing and season planning.',
             complexity: 9,
             icon: '🏭',
-            requiredPrestige: 56,
+            requiredPrestige: 6,
             requiredCompanyValue: 5500000,
             prerequisites: ['staff_department_structure'],
             unlockValue: 25,
@@ -683,7 +676,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Coordinate large workforce pools under the Elite Staff Program governance model.',
             complexity: 9,
             icon: '🏢',
-            requiredPrestige: 68,
+            requiredPrestige: 7,
             requiredCompanyValue: 8500000,
             prerequisites: ['staff_operations_hub'],
             unlockValue: 40,
@@ -696,7 +689,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Deploy multi-site hiring, retention, and role planning in the Master Staff Program.',
             complexity: 10,
             icon: '🌍',
-            requiredPrestige: 84,
+            requiredPrestige: 8,
             requiredCompanyValue: 13000000,
             prerequisites: ['staff_enterprise_coordination'],
             unlockValue: 60,
@@ -709,7 +702,7 @@ const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
             description: 'Complete the Grandmaster Staff Program with corporation-scale workforce governance.',
             complexity: 10,
             icon: '🏛️',
-            requiredPrestige: 102,
+            requiredPrestige: 10,
             requiredCompanyValue: 22000000,
             prerequisites: ['staff_multiestate_hr'],
             unlockValue: 100,
@@ -790,7 +783,7 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🧪',
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 28,
+            requiredPrestige: 3,
             prerequisites: ['foundation_admin_office', 'tech_fermentation'],
             requiredAchievementIds: ['wine_score_tier_1'],
             permanentEffects: [{
@@ -818,7 +811,7 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '💡',
             prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 44,
+            requiredPrestige: 4,
             requiredCompanyValue: 2000000,
             prerequisites: ['tech_experimental_cellar_lab', 'tech_fermentation_extended'],
             requiredAchievementIds: ['wine_score_tier_1', 'single_contract_value_tier_2'],
@@ -847,7 +840,7 @@ const RESEARCH_SPEED_RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🏛️',
             prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 75,
+            requiredPrestige: 8,
             requiredCompanyValue: 8000000,
             prerequisites: ['tech_innovation_program', 'tech_market_signal_engine'],
             requiredAchievementIds: ['prestige_master_tier_1', 'wine_score_tier_2'],
@@ -884,8 +877,6 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'administration',
             icon: '📋',
             prestigeReward: calculateResearchPrestigeFromComplexity(2),
-            requiredCompanyValue: 120000,
-            requiredCompanyAgeWeeks: 8,
             permanentEffects: [{
                   kind: 'administration_and_research_work_multiplier',
                   multiplier: 0.88,
@@ -909,8 +900,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '💰',
             rewardAmount: 15000,
             prestigeReward: calculateResearchPrestigeFromComplexity(3),
-            requiredPrestige: 8,
-            requiredAchievementIds: ['revenue_generation_tier_1']
+            requiredPrestige: 0
       },
       {
             id: 'foundation_grant_programmatic',
@@ -926,7 +916,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '🗃️',
             rewardAmount: 25000,
             prestigeReward: calculateResearchPrestigeFromComplexity(5),
-            requiredPrestige: 16,
+            requiredPrestige: 2,
             requiredAchievementIds: ['revenue_generation_tier_2'],
             prerequisites: ['foundation_grant_basic']
       },
@@ -944,7 +934,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             icon: '🏆',
             rewardAmount: 40000,
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 28,
+            requiredPrestige: 3,
             requiredAchievementIds: ['revenue_generation_tier_3'],
             prerequisites: ['foundation_grant_programmatic']
       },
@@ -963,7 +953,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🔬',
             prestigeReward: calculateResearchPrestigeFromComplexity(5),
-            requiredPrestige: 15,
+            requiredPrestige: 0,
             workProfile: {
                   scopeWorkAmount: 100,
                   complexityCurve: { kind: 'linear', multiplier: 0.18 },
@@ -984,8 +974,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🧪',
             prestigeReward: calculateResearchPrestigeFromComplexity(6),
-            requiredPrestige: 15,
-            prerequisites: ['foundation_admin_baseline'],
+            requiredPrestige: 0,
             unlocks: [{ type: 'fermentation_technology', value: 'Temperature Controlled', displayName: 'Temperature Controlled fermentation' }],
             workProfile: {
                   scopeWorkAmount: 130,
@@ -1007,7 +996,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🍷',
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 24,
+            requiredPrestige: 2,
             prerequisites: ['tech_fermentation'],
             unlocks: [{ type: 'fermentation_technology', value: 'Extended Maceration', displayName: 'Extended Maceration fermentation' }],
             workProfile: {
@@ -1030,7 +1019,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🩺',
             prestigeReward: calculateResearchPrestigeFromComplexity(6),
-            requiredPrestige: 20,
+            requiredPrestige: 2,
             prerequisites: ['tech_soil_analysis'],
             permanentEffects: [{
                   kind: 'vineyard_health_decay_multiplier',
@@ -1068,7 +1057,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '📊',
             prestigeReward: calculateResearchPrestigeFromComplexity(4),
-            requiredPrestige: 10
+            requiredPrestige: 0
       },
       {
             id: 'mkt_restaurant_program',
@@ -1082,7 +1071,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🍽️',
             prestigeReward: calculateResearchPrestigeFromComplexity(5),
-            requiredPrestige: 14,
+            requiredPrestige: 1,
             prerequisites: ['mkt_research'],
             unlocks: [{ type: 'contract_type', value: 'Restaurant', displayName: 'Restaurant contracts' }],
             workProfile: {
@@ -1104,7 +1093,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🕯️',
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 28,
+            requiredPrestige: 3,
             requiredCompanyValue: 1100000,
             prerequisites: ['mkt_restaurant_program'],
             unlocks: [{ type: 'contract_type', value: 'Private Collector', displayName: 'Private Collector contracts' }],
@@ -1127,7 +1116,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🏪',
             prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 36,
+            requiredPrestige: 4,
             requiredCompanyValue: 2000000,
             prerequisites: ['mkt_collector_relations', 'foundation_grant_programmatic'],
             unlocks: [{ type: 'contract_type', value: 'Chain Store', displayName: 'Chain Store contracts' }],
@@ -1150,7 +1139,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🛰️',
             prestigeReward: calculateResearchPrestigeFromComplexity(6),
-            requiredPrestige: 20,
+            requiredPrestige: 2,
             requiredBuyerLoyaltyLevel: 1,
             requiredAchievementIds: ['bulk_grape_kg_sold_tier_1'],
             prerequisites: ['mkt_research'],
@@ -1168,7 +1157,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🌍',
             prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 35,
+            requiredPrestige: 4,
             requiredCompanyValue: 1200000,
             requiredBuyerLoyaltyLevel: 2,
             requiredAchievementIds: ['bulk_grape_kg_sold_tier_2'],
@@ -1188,7 +1177,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🧭',
             prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 34,
+            requiredPrestige: 3,
             requiredCompanyValue: 1200000,
             requiredBuyerLoyaltyLevel: 2,
             prerequisites: ['mkt_export_alliances'],
@@ -1215,7 +1204,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🗽',
             prestigeReward: calculateResearchPrestigeFromComplexity(9),
-            requiredPrestige: 44,
+            requiredPrestige: 4,
             requiredCompanyValue: 2600000,
             requiredBuyerLoyaltyLevel: 3,
             requiredAchievementIds: ['bulk_grape_sales_tier_2'],
@@ -1243,7 +1232,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'marketing',
             icon: '🏛️',
             prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 58,
+            requiredPrestige: 6,
             requiredCompanyValue: 4500000,
             requiredBuyerLoyaltyLevel: 4,
             requiredAchievementIds: ['bulk_grape_sales_tier_3'],
@@ -1271,7 +1260,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'efficiency',
             icon: '🚚',
             prestigeReward: calculateResearchPrestigeFromComplexity(6),
-            requiredPrestige: 22,
+            requiredPrestige: 2,
             prerequisites: ['eff_operational'],
             unlocks: [{ type: 'grape_buyer_limit_multiplier', value: 0.15, displayName: '+15% buyer seasonal limit' }],
             workProfile: {
@@ -1293,7 +1282,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'efficiency',
             icon: '🧩',
             prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 35,
+            requiredPrestige: 4,
             requiredCompanyValue: 2000000,
             requiredBuyerLoyaltyLevel: 2,
             requiredAchievementIds: ['bulk_grape_sales_tier_2'],
@@ -1318,7 +1307,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '📡',
             prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 28,
+            requiredPrestige: 3,
             requiredAchievementIds: ['bulk_grape_kg_sold_tier_1'],
             prerequisites: ['tech_soil_analysis', 'foundation_grant_programmatic'],
             unlocks: [{ type: 'grape_buyer_multiplier_bonus', value: 0.04, displayName: '+0.04 buyer multiplier' }],
@@ -1341,7 +1330,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             category: 'technology',
             icon: '🤖',
             prestigeReward: calculateResearchPrestigeFromComplexity(9),
-            requiredPrestige: 45,
+            requiredPrestige: 4,
             requiredCompanyValue: 3000000,
             requiredBuyerLoyaltyLevel: 3,
             requiredAchievementIds: ['bulk_grape_sales_tier_3'],
@@ -1374,3 +1363,4 @@ export function getResearchProject(id: string): ResearchProject | undefined {
 export function getResearchProjectsByCategory(category: ResearchProject['category']): ResearchProject[] {
       return RESEARCH_PROJECTS.filter(project => project.category === category);
 }
+

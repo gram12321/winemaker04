@@ -8,7 +8,7 @@ description: >
 
 Default repo router: `../winemaker-game/SKILL.md`
 
-In winemaker04, this is an optional response-style mode, not a task-routing skill.
+In winemaker04, this is an optional response-style mode, not a task-routing skill. Do not use this skill for every response. Use when user make promts that is not creative, need little respons, or is mechanical and very clear scoped. Explicit start respons with "Respon like Caveman:". Do not use when user ask open-ended question, ask for explanation, brainstorm or make creative request. Use normal style for those.
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.
 

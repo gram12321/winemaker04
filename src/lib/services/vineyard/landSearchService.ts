@@ -37,6 +37,7 @@ export interface LandSearchOptions {
   altitudeRange?: [number, number];
   aspectPreferences?: Aspect[];
   hectareRange: [number, number];
+  hectarePenaltyReferenceRange?: [number, number]; // Effective searchable range for penalty baseline
   soilTypes?: string[];
   minGrapeSuitability?: number;
   grapeVarieties?: string[]; // Selected grape varieties for suitability filtering
@@ -49,6 +50,21 @@ export interface LandSearchEstimate {
   totalWork: number;
   timeEstimate: string;
   cost: number;
+}
+
+const MIN_HECTARE_BOUND = 0.05;
+const MAX_HECTARE_BOUND = 2000;
+
+export function getLandSearchPenaltyReferenceRange(options: LandSearchOptions): [number, number] {
+  const fallbackRange: [number, number] = [MIN_HECTARE_BOUND, MAX_HECTARE_BOUND];
+  if (!options.hectarePenaltyReferenceRange) {
+    return fallbackRange;
+  }
+
+  const [rawMin, rawMax] = options.hectarePenaltyReferenceRange;
+  const normalizedMin = Math.max(MIN_HECTARE_BOUND, Math.min(rawMin, MAX_HECTARE_BOUND));
+  const normalizedMax = Math.max(normalizedMin, Math.min(rawMax, MAX_HECTARE_BOUND));
+  return [normalizedMin, normalizedMax];
 }
 
 /**
@@ -101,7 +117,11 @@ export function calculateLandSearchCost(options: LandSearchOptions, _companyPres
   // Hectare range constraint - asymmetric to reduce punishment for tiny-cap searches
   {
     const [minHa, maxHa] = options.hectareRange;
-    const massRemoved = getAsymmetricHectareMassRemoved(minHa, maxHa);
+    const massRemoved = getAsymmetricHectareMassRemoved(
+      minHa,
+      maxHa,
+      getLandSearchPenaltyReferenceRange(options)
+    );
     if (massRemoved > 0) {
       const hectareModifier = 1.8; // Strong base since this filter is impactful
       const hectareIntensity = 1 + Math.pow(massRemoved, 0.75) * 2.5; // 1.0-3.5

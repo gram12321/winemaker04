@@ -114,6 +114,7 @@ The following are optional mode skills (never mandatory by default):
 - Do not start `npm run dev` unless explicitly asked.
 - Do not run `npm run build` by default; use only when asked or when change risk justifies it.
 - After major updates, ask whether `readme.md` should be updated.
+- Do not run test, `ESLint`, or `typecheck` or  `npm test` and `git diff --check` after every change. Only use when delivering a finished feature. Use only for complex chanes or when user explicitly requests it.
 - For schema changes, update SQL under `migrations/` after validating intended DB changes.
 - Keep `docs/AIdocs/AIpromt_codecleaning.md` as the detailed cleanup playbook. The completion sanitary gate below runs in parallel and does not supersede it.
 

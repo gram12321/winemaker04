@@ -116,7 +116,10 @@ export async function adminSetGoldToCompany(amount: number): Promise<void> {
 /**
  * Set player cash balance for the user associated with the active company
  */
-export async function adminSetPlayerBalance(amount: number): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function adminSetPlayerBalance(
+  amount: number,
+  userIdOverride?: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const targetAmount = amount || 10000;
 
@@ -132,17 +135,18 @@ export async function adminSetPlayerBalance(amount: number): Promise<{ success: 
       return { success: false, error: 'Company not found' };
     }
 
-    if (!company.userId) {
+    const targetUserId = userIdOverride || company.userId;
+    if (!targetUserId) {
       return { success: false, error: 'Company is not associated with a user' };
     }
 
     // Set the player balance
-    const result = await setPlayerBalance(targetAmount, company.userId);
+    const result = await setPlayerBalance(targetAmount, targetUserId);
 
     if (result.success) {
       return {
         success: true,
-        message: `Player balance set to ${formatNumber(targetAmount, { currency: true })} for user ${company.userId}`
+        message: `Player balance set to ${formatNumber(targetAmount, { currency: true })} for user ${targetUserId}`
       };
     } else {
       return {

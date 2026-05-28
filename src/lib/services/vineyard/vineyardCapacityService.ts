@@ -23,6 +23,8 @@ export interface VineyardCapacityState {
   currentVineyardCount: number;
 }
 
+export const MIN_SEARCHABLE_HECTARES = 0.05;
+
 export function getHighestUnlockedNumericLimit(unlockedValues: string[], baseValue: number): number {
   const numericValues = unlockedValues
     .map((value) => Number(value))
@@ -53,6 +55,17 @@ export function getRemainingTotalHectares(capacity: VineyardCapacityState): numb
 
 export function getRemainingVineyardSlots(capacity: VineyardCapacityState): number {
   return Math.max(0, capacity.maxVineyardCount - capacity.currentVineyardCount);
+}
+
+export function getMaxSearchableHectares(capacity: VineyardCapacityState): number {
+  return Math.max(
+    MIN_SEARCHABLE_HECTARES,
+    Math.min(capacity.maxHectaresPerVineyard, Math.max(getRemainingTotalHectares(capacity), 0))
+  );
+}
+
+export function getLandSearchPenaltyReferenceRangeFromCapacity(capacity: VineyardCapacityState): [number, number] {
+  return [MIN_SEARCHABLE_HECTARES, getMaxSearchableHectares(capacity)];
 }
 
 export function getChainedVineyardResearchUnlockType(project: ResearchProject): VineyardCapUnlockType | null {
