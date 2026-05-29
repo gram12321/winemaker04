@@ -109,7 +109,7 @@ describe('weather center service', () => {
     expect(context.weatherIntensity).toBeUndefined();
   });
 
-  it('builds rows with net progression (normal + weather), applies clamping, and sorts by combined delta', () => {
+  it('builds rows with multiplier-scaled progression, applies clamping, and sorts by combined delta', () => {
     const rows = buildVineyardWeatherRows(
       [
         vineyard({ id: 'v1', name: 'Top Row' }),
@@ -129,12 +129,12 @@ describe('weather center service', () => {
     expect(rows).toHaveLength(2);
     expect(rows.map(row => row.id)).toEqual(['v1', 'v2']);
     expect(rows[0].ripenessDelta).toBeCloseTo(0.02, 6);
-    expect(rows[0].healthDelta).toBeCloseTo(-0.009, 6);
-    expect(rows[1].ripenessDelta).toBeCloseTo(0, 6);
-    expect(rows[1].healthDelta).toBeCloseTo(-0.02, 6);
+    expect(rows[0].healthDelta).toBeCloseTo(-0.0078, 6);
+    expect(rows[1].ripenessDelta).toBeCloseTo(0.005, 6);
+    expect(rows[1].healthDelta).toBeCloseTo(-0.015, 6);
     expect(rows[0].ripenessProjected).toBe(1);
-    expect(rows[1].ripenessProjected).toBeCloseTo(0.01, 6);
-    expect(rows[1].healthProjected).toBeCloseTo(0.18, 6);
+    expect(rows[1].ripenessProjected).toBeCloseTo(0.015, 6);
+    expect(rows[1].healthProjected).toBeCloseTo(0.185, 6);
   });
 
   it('does not project ripeness growth for inactive vineyard statuses outside winter', () => {

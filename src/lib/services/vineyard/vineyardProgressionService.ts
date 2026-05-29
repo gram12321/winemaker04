@@ -7,6 +7,9 @@ const MIN_VINEYARD_HEALTH = 0.1;
 const MAX_VINEYARD_HEALTH = 1.0;
 const MIN_WEEKLY_HEALTH_DELTA = -0.02;
 const MAX_WEEKLY_HEALTH_DELTA = 0.01;
+const WEATHER_MULTIPLIER_BASELINE_SCALE = 0.01;
+const MIN_WEATHER_MULTIPLIER = 0.25;
+const MAX_WEATHER_MULTIPLIER = 2.5;
 
 export interface VineyardMetricProjection {
   current: number;
@@ -28,6 +31,30 @@ export interface VineyardWeeklyProjectionOptions {
   plantingProgressRatio?: number;
   healthDecayMultiplier?: number;
   ripenessGrowthActive?: boolean;
+}
+
+function calculateWeatherScaledDelta(
+  normalDelta: number,
+  weatherDelta: number,
+  baselineScale: number = WEATHER_MULTIPLIER_BASELINE_SCALE
+): { totalDelta: number; weatherContribution: number } {
+  if (normalDelta === 0 || weatherDelta === 0) {
+    return {
+      totalDelta: normalDelta,
+      weatherContribution: 0,
+    };
+  }
+
+  const direction = Math.sign(normalDelta);
+  const normalizedWeather = weatherDelta / Math.max(0.0001, baselineScale);
+  const rawMultiplier = 1 + (direction * normalizedWeather);
+  const weatherMultiplier = clamp(rawMultiplier, MIN_WEATHER_MULTIPLIER, MAX_WEATHER_MULTIPLIER);
+  const totalDelta = normalDelta * weatherMultiplier;
+
+  return {
+    totalDelta,
+    weatherContribution: totalDelta - normalDelta,
+  };
 }
 
 /**
@@ -197,7 +224,13 @@ export function calculateVineyardWeeklyProjection(
     }
   }
 
-  const ripenessTotalDelta = ripenessNormalDelta + ripenessWeatherDelta;
+  let ripenessTotalDelta = ripenessNormalDelta;
+  if (ripenessNormalDelta > 0 && ripenessWeatherDelta !== 0) {
+    const ripenessWeatherScaling = calculateWeatherScaledDelta(ripenessNormalDelta, ripenessWeatherDelta);
+    ripenessTotalDelta = ripenessWeatherScaling.totalDelta;
+    ripenessWeatherDelta = ripenessWeatherScaling.weatherContribution;
+  }
+
   const healthNormalDelta = calculateWeeklyBaselineHealthDelta(
     vineyard,
     weatherContext.season,
@@ -206,9 +239,12 @@ export function calculateVineyardWeeklyProjection(
     weatherContext.year,
     healthDecayMultiplier
   );
-  const healthWeatherDelta = impact.healthDelta;
+  const healthWeatherBaseDelta = impact.healthDelta;
+  const healthWeatherScaling = calculateWeatherScaledDelta(healthNormalDelta, healthWeatherBaseDelta);
+  const healthWeatherDelta = healthWeatherScaling.weatherContribution;
+  const healthUnclampedTotalDelta = healthWeatherScaling.totalDelta;
   const healthTotalDelta = clamp(
-    healthNormalDelta + healthWeatherDelta,
+    healthUnclampedTotalDelta,
     MIN_WEEKLY_HEALTH_DELTA,
     MAX_WEEKLY_HEALTH_DELTA
   );

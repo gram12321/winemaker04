@@ -54,6 +54,7 @@ const mocks = vi.hoisted(() => {
     expireAndDefaultForwardContracts: vi.fn(async () => undefined),
     expireOldOrders: vi.fn(async () => undefined),
     triggerGameUpdate: vi.fn(() => undefined),
+    triggerTopicUpdate: vi.fn(() => undefined),
     hasMinimizedModals: vi.fn(() => false),
     restoreAllMinimizedModals: vi.fn(() => undefined),
     calculateAbsoluteWeeks: vi.fn(() => 1000),
@@ -124,7 +125,8 @@ vi.mock('@/lib/services/sales/salesOrderService', () => ({
 }));
 
 vi.mock('@/hooks/useGameUpdates', () => ({
-  triggerGameUpdate: mocks.triggerGameUpdate
+  triggerGameUpdate: mocks.triggerGameUpdate,
+  triggerTopicUpdate: mocks.triggerTopicUpdate
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -188,6 +190,7 @@ describe('processGameTick', () => {
     expect(mocks.updateGameState).not.toHaveBeenCalled();
     expect(mocks.progressActivities).not.toHaveBeenCalled();
     expect(mocks.triggerGameUpdate).not.toHaveBeenCalled();
+    expect(mocks.triggerTopicUpdate).not.toHaveBeenCalled();
   });
 
   it('runs yearly, seasonal, weekly, vineyard, loan, and highscore hooks on a new-year tick', async () => {
@@ -251,9 +254,38 @@ describe('processGameTick', () => {
       250000,
       expect.any(Number)
     );
+    expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
     expect(mocks.triggerGameUpdate).toHaveBeenCalledTimes(2);
     expect(mocks.calls.indexOf('updateGameState')).toBeLessThan(mocks.calls.indexOf('progressActivities'));
     expect(mocks.calls.indexOf('progressActivities')).toBeLessThan(mocks.calls.indexOf('checkAndTriggerBookkeeping'));
     expect(mocks.calls.indexOf('checkAndTriggerBookkeeping')).toBeLessThan(mocks.calls.indexOf('updateVineyardRipeness'));
+  });
+
+  it('defers bottled aging persistence until feature-risk processing completes', async () => {
+    let resolveFeatureRisks: (() => void) | null = null;
+    mocks.processWeeklyFeatureRisks.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFeatureRisks = resolve;
+        })
+    );
+
+    const { processGameTick } = await import('@/lib/services/core/gameTick');
+    const tickPromise = processGameTick();
+
+    // Wait until the feature-risk task is actually queued.
+    for (let i = 0; i < 20 && !resolveFeatureRisks; i += 1) {
+      await Promise.resolve();
+    }
+    expect(resolveFeatureRisks).toBeTypeOf('function');
+
+    // If bottled aging runs in parallel, inventory loads happen before feature risks finish.
+    expect(mocks.loadWineBatches).not.toHaveBeenCalled();
+
+    resolveFeatureRisks!();
+    await tickPromise;
+
+    expect(mocks.loadWineBatches).toHaveBeenCalled();
+    expect(mocks.processWeeklyFeatureRisks).toHaveBeenCalledOnce();
   });
 });

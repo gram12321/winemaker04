@@ -64,8 +64,8 @@ type SortKey = 'name' | 'state' | 'ripenessDelta' | 'healthDelta' | 'siteRespons
 
 const SORTABLE_COLUMNS: Array<{ key: SortKey; label: string; description: string }> = [
   { key: 'state', label: 'Status', description: 'Sort by vineyard lifecycle state: Growing, Dormant, Harvested, and so on.' },
-  { key: 'ripenessDelta', label: 'Ripeness', description: 'Sort by net next-week ripeness movement (normal progression + weather) and current-to-projected movement.' },
-  { key: 'healthDelta', label: 'Health', description: 'Sort by net next-week health movement (normal progression + weather) and current-to-projected movement.' },
+  { key: 'ripenessDelta', label: 'Ripeness', description: 'Sort by net next-week ripeness movement (normal progression scaled by weather multiplier) and current-to-projected movement.' },
+  { key: 'healthDelta', label: 'Health', description: 'Sort by net next-week health movement (normal progression scaled by weather multiplier) and current-to-projected movement.' },
   { key: 'siteResponse', label: 'Site Response', description: 'Sort by site multiplier from aspect, altitude, terroir, and soil. 1.0 is neutral, above amplifies weather impact, below buffers it.' },
   { key: 'reason', label: 'Reason', description: 'Sort by the summary sentence explaining the weather pressure on this vineyard.' },
 ];
@@ -263,7 +263,7 @@ export function WeatherCenterPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Vineyard Weather Impact Preview</CardTitle>
-            <CardDescription>Net next-week deltas from baseline progression plus weather. Site factors (aspect, altitude, terroir, soil) are included as bounded response modifiers.</CardDescription>
+            <CardDescription>Net next-week deltas from baseline progression scaled by weather multipliers. Site factors (aspect, altitude, terroir, soil) are included as bounded response modifiers.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 overflow-hidden">
             <Table>

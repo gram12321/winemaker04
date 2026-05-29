@@ -5,7 +5,7 @@ import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchor
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
-import { triggerGameUpdate } from '@/hooks/useGameUpdates';
+import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
@@ -162,6 +162,7 @@ const executeGameTick = async (): Promise<void> => {
   const isNewYearTick = newSeason === 'Spring' && week === 1;
 
   if (isNewYearTick) {
+    triggerTopicUpdate('wine_batches');
     triggerGameUpdate();
     await getLoanLenderFeature().ticks.restructureForcedLoansIfNeeded();
   }
@@ -169,6 +170,7 @@ const executeGameTick = async (): Promise<void> => {
   // Trigger final UI refresh after all weekly effects are processed
   // This ensures components reload data that was updated during processWeeklyEffects()
   // (e.g., wine batch feature risks, fermentation progress, etc.)
+  triggerTopicUpdate('wine_batches');
   triggerGameUpdate();
 };
 
@@ -317,15 +319,6 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Update aging progress for all bottled wines
-    (async () => {
-      try {
-        await updateBottledWineAging();
-      } catch (error) {
-        console.warn('Error during wine aging progress update:', error);
-      }
-    })(),
-
     // Update cellar collection prestige (permanent event recalculation)
     (async () => {
       try {
@@ -433,6 +426,14 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     await applyWeeklyFeatureEffects();
   } catch (error) {
     console.warn('Error during weekly feature effect application:', error);
+  }
+
+  // Run bottled aging updates after other batch-level writers complete.
+  // This avoids race conditions where concurrent upserts can overwrite agingProgress.
+  try {
+    await updateBottledWineAging();
+  } catch (error) {
+    console.warn('Error during wine aging progress update:', error);
   }
 
   try {
