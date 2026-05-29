@@ -60,6 +60,28 @@ function getIntensityBadgeClass(intensity?: string): string {
   return 'border-emerald-700/70 bg-emerald-900/30 text-emerald-200';
 }
 
+function getWeatherSignalClass(signal: 'Supportive' | 'Mixed' | 'Stressful'): string {
+  if (signal === 'Supportive') return 'text-emerald-700';
+  if (signal === 'Stressful') return 'text-red-700';
+  return 'text-amber-700';
+}
+
+function isHeatColdResponseWeather(state?: string): boolean {
+  return state === 'Heat' || state === 'Frost' || state === 'Snow';
+}
+
+function getSoilWeatherMode(state?: string): 'Water Retention' | 'Thermal Swing' | 'Neutral' {
+  if (state === 'Rain' || state === 'Snow') return 'Water Retention';
+  if (state === 'Heat' || state === 'Frost') return 'Thermal Swing';
+  return 'Neutral';
+}
+
+function getModifierInterpretation(value: number): string {
+  if (value > 1.01) return 'amplifies weather impact';
+  if (value < 0.99) return 'buffers weather impact';
+  return 'is effectively neutral';
+}
+
 type SortKey = 'name' | 'state' | 'ripenessDelta' | 'healthDelta' | 'siteResponse' | 'reason';
 
 const SORTABLE_COLUMNS: Array<{ key: SortKey; label: string; description: string }> = [
@@ -134,6 +156,26 @@ export function WeatherCenterPage() {
     soil: getModifierAverage(vineyardRows, 'soilResponse'),
   }), [vineyardRows]);
 
+  const weatherDriverContext = useMemo(() => {
+    const activeState = weatherContext?.weatherState || gameState.nextWeekForecastState || gameState.weatherState;
+    const activeIntensity = weatherContext?.weatherIntensity || gameState.nextWeekForecastIntensity || gameState.weatherIntensity;
+    const activeSeason = weatherContext?.season || gameState.season;
+    const heatColdActive = isHeatColdResponseWeather(activeState);
+    const soilMode = getSoilWeatherMode(activeState);
+
+    return {
+      activeState,
+      activeIntensity,
+      activeSeason,
+      heatColdActive,
+      soilMode,
+      seasonNote: activeState === 'Snow' && activeSeason === 'Winter'
+        ? 'Winter reduces snow health pressure after site response.'
+        : 'Season drives baseline progression; site multipliers are weather-type driven.',
+      intensityNote: 'Intensity scales base weather pressure before site multipliers are applied.',
+    };
+  }, [weatherContext, gameState.nextWeekForecastState, gameState.nextWeekForecastIntensity, gameState.weatherState, gameState.weatherIntensity, gameState.season]);
+
   function handleSort(nextKey: SortKey) {
     if (sortKey === nextKey) {
       setSortDirection((currentDirection) => (currentDirection === 'asc' ? 'desc' : 'asc'));
@@ -164,21 +206,45 @@ export function WeatherCenterPage() {
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-md bg-white/10 p-2.5 backdrop-blur-sm">
               <p className="text-[11px] text-white/80">Current</p>
-              <p className="text-sm font-semibold">{getWeatherIcon(gameState.weatherState)} {gameState.weatherState || 'Clear'} ({gameState.weatherIntensity || 'Mild'})</p>
+              <UnifiedTooltip
+                title="Current Weather"
+                content={<p className="text-xs text-slate-200">Current weather state and intensity set base weather pressure before site response is applied.</p>}
+                side="top"
+                variant="panel"
+                density="compact"
+              >
+                <p className="text-sm font-semibold">{getWeatherIcon(gameState.weatherState)} {gameState.weatherState || 'Clear'} ({gameState.weatherIntensity || 'Mild'})</p>
+              </UnifiedTooltip>
             </div>
             <div className="rounded-md bg-white/10 p-2.5 backdrop-blur-sm">
               <p className="text-[11px] text-white/80">Next Week</p>
-              <p className="text-sm font-semibold">{getWeatherIcon(gameState.nextWeekForecastState)} {gameState.nextWeekForecastState || 'Clear'} ({gameState.nextWeekForecastIntensity || 'Mild'})</p>
+              <UnifiedTooltip
+                title="Next Week Forecast"
+                content={<p className="text-xs text-slate-200">Forecasted weather used for planning; realized weather can differ by confidence level.</p>}
+                side="top"
+                variant="panel"
+                density="compact"
+              >
+                <p className="text-sm font-semibold">{getWeatherIcon(gameState.nextWeekForecastState)} {gameState.nextWeekForecastState || 'Clear'} ({gameState.nextWeekForecastIntensity || 'Mild'})</p>
+              </UnifiedTooltip>
             </div>
             <div className="rounded-md bg-white/10 p-2.5 backdrop-blur-sm">
               <p className="text-[11px] text-white/80">Seasonal Pattern</p>
-              <p className="text-sm font-semibold">{gameState.weatherForecastPattern || 'Stable'} / {gameState.weatherForecastConfidence || 'Medium'} confidence</p>
+              <UnifiedTooltip
+                title="Seasonal Pattern"
+                content={<p className="text-xs text-slate-200">Pattern biases weather type odds this season. Confidence controls forecast hit-rate.</p>}
+                side="top"
+                variant="panel"
+                density="compact"
+              >
+                <p className="text-sm font-semibold">{gameState.weatherForecastPattern || 'Stable'} / {gameState.weatherForecastConfidence || 'Medium'} confidence</p>
+              </UnifiedTooltip>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
@@ -231,25 +297,91 @@ export function WeatherCenterPage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground">Weather Signal</p>
+                <UnifiedTooltip
+                  title="Weather Signal"
+                  content={<p className="text-xs text-slate-200">{impactSummary.weatherSignalDetail}</p>}
+                  side="top"
+                  variant="panel"
+                  density="compact"
+                >
+                  <p className={`text-lg font-semibold ${getWeatherSignalClass(impactSummary.weatherSignalLabel)}`}>{impactSummary.weatherSignalLabel}</p>
+                </UnifiedTooltip>
+                <p className="text-[11px] text-muted-foreground">
+                  Wx Î” Ripeness {formatSigned(impactSummary.avgWeatherRipenessDelta)} / Wx Î” Health {formatSigned(impactSummary.avgWeatherHealthDelta)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-100 p-2 text-slate-700">
+                <ThermometerSun className="h-4 w-4" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="border-slate-200 bg-white/90 backdrop-blur">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Site Modifier Forecast</CardTitle>
           <CardDescription>These are the actual site multipliers shaping each vineyard forecast. They are surfaced here so the table reads like a weather page, not a math sheet.</CardDescription>
+          <div className="pt-1 text-xs text-muted-foreground space-y-1">
+            <p>
+              Driver now: <span className="font-medium text-slate-700">{weatherDriverContext.activeState || 'Clear'} ({weatherDriverContext.activeIntensity || 'Mild'})</span> in <span className="font-medium text-slate-700">{weatherDriverContext.activeSeason || gameState.season || 'Spring'}</span>.
+            </p>
+            <p>{weatherDriverContext.intensityNote} {weatherDriverContext.seasonNote}</p>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-4">
           {[
-            { label: 'Aspect', value: modifierSummary.aspect, icon: <Compass className="h-4 w-4" />, detail: 'Slope orientation and sun exposure' },
-            { label: 'Altitude', value: modifierSummary.altitude, icon: <Mountain className="h-4 w-4" />, detail: 'Elevation pressure on heat and frost' },
-            { label: 'Terroir', value: modifierSummary.terroir, icon: <Wind className="h-4 w-4" />, detail: 'Grape + region suitability response' },
-            { label: 'Soil', value: modifierSummary.soil, icon: <Droplets className="h-4 w-4" />, detail: 'Water retention / thermal swing response' },
+            {
+              label: 'Aspect',
+              value: modifierSummary.aspect,
+              icon: <Compass className="h-4 w-4" />,
+              detail: weatherDriverContext.heatColdActive
+                ? `Active for ${weatherDriverContext.activeState} weather.`
+                : `x1 because ${weatherDriverContext.activeState || 'current weather'} does not trigger heat/cold aspect response.`,
+              tooltip: 'Aspect applies on Heat, Frost, and Snow. Other weather states keep aspect near neutral for weather response.',
+            },
+            {
+              label: 'Altitude',
+              value: modifierSummary.altitude,
+              icon: <Mountain className="h-4 w-4" />,
+              detail: weatherDriverContext.heatColdActive
+                ? `Active for ${weatherDriverContext.activeState} weather.`
+                : `x1 because ${weatherDriverContext.activeState || 'current weather'} does not trigger heat/cold altitude response.`,
+              tooltip: 'Altitude modifies Heat/Frost/Snow weather pressure. On non-thermal states it usually remains neutral.',
+            },
+            {
+              label: 'Terroir',
+              value: modifierSummary.terroir,
+              icon: <Wind className="h-4 w-4" />,
+              detail: `${getModifierInterpretation(modifierSummary.terroir)} from grape-region suitability.`,
+              tooltip: 'Terroir is derived from grape suitability. Lower suitability usually increases weather sensitivity; higher suitability buffers it.',
+            },
+            {
+              label: 'Soil',
+              value: modifierSummary.soil,
+              icon: <Droplets className="h-4 w-4" />,
+              detail: `${weatherDriverContext.soilMode} mode for ${weatherDriverContext.activeState || 'current weather'}.`,
+              tooltip: 'Soil mode switches by weather: Rain/Snow use water retention, Heat/Frost use thermal swing, Clear/Storm stay neutral.',
+            },
           ].map((modifier) => (
             <div key={modifier.label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-xs text-muted-foreground">{modifier.label}</p>
-                  <p className={`text-base font-semibold ${getSiteResponseColorClass(modifier.value)}`}>x{formatNumber(modifier.value, { smartDecimals: true })}</p>
+                  <UnifiedTooltip
+                    title={`${modifier.label} Multiplier`}
+                    content={<p className="text-xs text-slate-200">{modifier.tooltip}</p>}
+                    side="top"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <p className={`text-base font-semibold ${getSiteResponseColorClass(modifier.value)}`}>x{formatNumber(modifier.value, { smartDecimals: true })}</p>
+                  </UnifiedTooltip>
                 </div>
                 <div className="rounded-full bg-white p-2 text-slate-700 shadow-sm">{modifier.icon}</div>
               </div>
@@ -314,14 +446,30 @@ export function WeatherCenterPage() {
                           <p className="truncate max-w-[220px]">{row.name}</p>
                         </UnifiedTooltip>
                         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getWeatherBadgeClass(row.breakdown.weatherState)}`}>
-                            <span>{getWeatherIcon(row.breakdown.weatherState as any)}</span>
-                            {row.breakdown.weatherState}
-                          </span>
-                          <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getIntensityBadgeClass(row.breakdown.weatherIntensity)}`}>
-                            <ThermometerSun className="h-3 w-3" />
-                            {row.breakdown.weatherIntensity}
-                          </span>
+                          <UnifiedTooltip
+                            title={`${row.weatherState} Weather`}
+                            content={<p className="text-xs text-slate-200">{row.weatherStateImpact}</p>}
+                            side="top"
+                            variant="panel"
+                            density="compact"
+                          >
+                            <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getWeatherBadgeClass(row.weatherState)}`}>
+                              <span>{getWeatherIcon(row.weatherState as any)}</span>
+                              {row.weatherState}
+                            </span>
+                          </UnifiedTooltip>
+                          <UnifiedTooltip
+                            title={`${row.weatherIntensity} Intensity`}
+                            content={<p className="text-xs text-slate-200">{row.weatherIntensityImpact}</p>}
+                            side="top"
+                            variant="panel"
+                            density="compact"
+                          >
+                            <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getIntensityBadgeClass(row.weatherIntensity)}`}>
+                              <ThermometerSun className="h-3 w-3" />
+                              {row.weatherIntensity}
+                            </span>
+                          </UnifiedTooltip>
                         </div>
                       </div>
                     </TableCell>

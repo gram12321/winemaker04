@@ -1,5 +1,5 @@
 # Wine System Variable Relationship Map
-Date: 2026-05-29
+Date: 2026-05-20
 Status: Current variable relationship map
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](../CONTEXT.md). This document focuses on how the main wine-system variables depend on each other through the gameflow.
@@ -51,7 +51,7 @@ flowchart LR
 | Structure Layer | Characteristics plus anchor-adjusted ideal ranges | `structureIndex` |
 | Taste Layer | Anchors, characteristics, grape color, features, aging | Taste families, descriptors, `tasteQualityIndex` |
 | Lifecycle Modifiers | Features, bottle aging, oxidation, prestige | Current taste, price, cellar value, risk |
-| Weather Layer | Weekly weather state, intensity, forecast, season, site response | Vineyard baseline health/ripeness deltas scaled by weather multipliers, grape market pressure, Weather Center rows |
+| Weather Layer | Weekly weather state, intensity, forecast, season, site response | Vineyard health/ripeness deviations, grape market pressure, Weather Center rows |
 | Market Layer | Wine variables, grapes/must, economy phase, weather, relationships, research | Orders, contracts, grape sales, grape purchases, revenue, loyalty |
 | Ownership Layer | Staff founder flag, yearly profit, company value, board/share feature seam | Founder Returns, buyouts, optional future board/share constraints |
 | Outcome Metrics | Structure, taste quality, land value, lifecycle modifiers, markets | Wine score, price, contract validity, historical records, sales, prestige |
@@ -63,7 +63,7 @@ flowchart LR
 - Structure and taste are different layers: structure scores physical balance; taste quality scores family balance.
 - Land value affects price and contracts as site/static quality; it is not taste quality.
 - Sales-channel research affects customer/contract access and pricing opportunities; it is not a structure or taste variable.
-- Weather affects vineyard health/ripeness and market pressure through explicit weather math: bounded base deviations from state/intensity and site response, then multiplier scaling on baseline vineyard progression; it should not be hidden inside wine score formulas.
+- Weather affects vineyard health/ripeness and market pressure as explicit deviations; it should not be hidden inside wine score formulas.
 - Grape buyer/supplier markets are market overlays. They can use wine/grape state and quality, economy, weather, loyalty, and research unlocks, but they should not mutate historical wine snapshots.
 - Founder economy is a finance/staff ownership layer. It affects wages, yearly distributions, buyout, and cash flow; it does not replace the archived public-company/share-market design.
 - The current `boardShare` feature seam is no-op in mainline. Share/board constants and database scaffolding are not active share-market runtime.
@@ -81,7 +81,6 @@ flowchart LR
 - Unlock-based gates currently affect grape planting, fermentation method availability, staff cap, vineyard size cap, contract channel eligibility, and grape buyer market access/scaling.
 - Permanent research effects are aggregated from completed research and applied through explicit domain services.
 - Current permanent-effect slice modifies vineyard health decay; additional effect kinds should follow the same explicit, auditable service pattern.
-- Current weather scaling converts weather base deltas into directional multipliers (`normalDelta * weatherMultiplier`) with clamp boundaries for stability; weather does not bypass baseline vineyard progression services.
 
 ## 6) Subsystem Diagrams
 
@@ -293,7 +292,7 @@ flowchart LR
 | Wine log snapshots | Wine log and wine highscores use bottling snapshots for taste quality, structure, land value, and wine score. |
 | Achievement wine score | `wine_score_threshold` achievements use finite persisted `WineLogEntry.wineScore`; missing or non-finite scores do not derive a fallback. |
 | Contract quality split | `tasteQuality` and `landValue` are separate requirements. |
-| Weather vineyard integration | Weather state/intensity create bounded base health and ripeness deviations through `weatherImpactService`; `vineyardProgressionService` converts them into bounded multipliers that scale baseline weekly deltas, and Weather Center exposes the full breakdown. |
+| Weather vineyard integration | Weather state/intensity create bounded health and ripeness deviations through `weatherImpactService`; Weather Center exposes the breakdown. |
 | Grape markets | Sell-side buyers and buy-side suppliers are active, including bulk fallback channels, seasonal rows, loyalty, economy/weather volatility, and research unlock scaling. |
 | Founder economy | Founders are staff with `isFounder`, zero wages, yearly positive-profit Founder Returns, and buyout conversion to salaried employees. |
 | Board/share runtime | Current mainline has a no-op `boardShare` seam and share/board scaffolding only; public-company docs are reintroduction references, not active runtime. |
@@ -307,7 +306,7 @@ This table follows the practical gameflow from land purchase through sales and p
 | Game phase | Player/state inputs | Main variables produced | Main downstream consumers | Player-visible effect |
 |---|---|---|---|---|
 | Land search and vineyard ownership | Country, region, soil, altitude, aspect, hectares, land value | Site Factors | Suitability, land value modifier, contracts | Land choice changes crop fit, site quality, and future market eligibility. |
-| Weather tick | Season, year, previous weather, forecast pattern/confidence | Weather state, intensity, next-week forecast | Vineyard health/ripeness, grape markets, Weather Center | Weather scales baseline vineyard progression with bounded multipliers and changes market pressure without changing historical snapshots. |
+| Weather tick | Season, year, previous weather, forecast pattern/confidence | Weather state, intensity, next-week forecast | Vineyard health/ripeness, grape markets, Weather Center | Weather changes vineyard outlook and market pressure without changing historical snapshots. |
 | Vineyard maintenance | Health, overgrowth, density, vine age, grape planted | Updated Site Factors and yield conditions | Harvest yield, anchors, land value modifier | Good maintenance improves harvest potential and reduces penalties. |
 | Grape identity | Grape constants and planted variety | Intrinsic Grape Traits | Anchors, base characteristics, taste color rules, yield, risk | Variety changes wine style, risks, and customer fit. |
 | Harvest | Ripeness, site factors, grape traits | Harvest anchors, harvest snapshots, initial wine batch | Winery processing, structure, taste, lifecycle | Harvest timing freezes the starting identity of the wine. |

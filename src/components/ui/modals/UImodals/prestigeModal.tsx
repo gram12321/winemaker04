@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, getRatingForRange, getRangeColor } from '@/lib/utils';
+import { STATUS_EMOJIS } from '@/lib/utils/icons';
 import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
@@ -114,7 +115,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     admin_cheat: { icon: Star, label: 'Admin Prestige', color: 'bg-slate-100 text-slate-800' },
     sale: { icon: TrendingUp, label: 'Company Sales', color: 'bg-emerald-100 text-emerald-800' },
     cellar_collection: { icon: TrendingUp, label: 'Cellar Collection', color: 'bg-amber-100 text-amber-800' },
-    achievement: { icon: Star, label: 'Achievements', color: 'bg-yellow-100 text-yellow-800' },
+    achievement: { icon: Star, label: 'Achievements & Milestones', color: 'bg-yellow-100 text-yellow-800' },
     vineyard_sale: { icon: Grape, label: 'Vineyard Sales', color: 'bg-green-100 text-green-800' },
     vineyard_achievement: { icon: Star, label: 'Vineyard Achievements', color: 'bg-yellow-100 text-yellow-800' },
     vineyard_age: { icon: Star, label: 'Vine Age', color: 'bg-orange-100 text-orange-800' },
@@ -150,6 +151,63 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const formatAmount = (amount: number | null | undefined) => {
     const safeAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
     return formatNumber(safeAmount, { decimals: 2, forceDecimals: true });
+  };
+
+  const formatProjectionAmount = (value: number, sourceCurrentValue: number) => {
+    const safeValue = Number.isFinite(value) ? value : 0;
+    const safeCurrent = Number.isFinite(sourceCurrentValue) ? sourceCurrentValue : 0;
+    const hasDirection = safeCurrent !== 0;
+    const isTiny = Math.abs(safeValue) < 0.01;
+    if (isTiny && hasDirection) {
+      return safeCurrent > 0 ? '<0,01' : '>-0,01';
+    }
+    return formatAmount(safeValue);
+  };
+
+  const formatProjectionHorizonLabel = (weeks: number) => {
+    if (weeks >= 52) {
+      const years = weeks / 52;
+      return `${formatNumber(years, { decimals: 2, forceDecimals: true })} years`;
+    }
+    if (weeks >= 4) {
+      const months = weeks / 4;
+      return `${formatNumber(months, { decimals: 2, forceDecimals: true })} months`;
+    }
+    return `${formatNumber(weeks, { decimals: 0 })} week${weeks === 1 ? '' : 's'}`;
+  };
+
+  const getEventMetadata = (event: PrestigeEvent): any =>
+    (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+
+  const getAchievementCategoryKey = (event: PrestigeEvent): string => {
+    const metadata = getEventMetadata(event);
+    if (typeof metadata.achievementCategory === 'string' && metadata.achievementCategory.trim()) {
+      return metadata.achievementCategory.trim().toLowerCase();
+    }
+    if (
+      (typeof metadata.category === 'string' && metadata.category.trim().toLowerCase() === 'research') ||
+      metadata.projectId ||
+      metadata.projectTitle
+    ) {
+      return 'research';
+    }
+    return 'other';
+  };
+
+  const getAchievementCategoryLabel = (categoryKey: string): string => {
+    const labels: Record<string, string> = {
+      research: 'Research Milestones',
+      financial: 'Financial Achievements',
+      production: 'Production Achievements',
+      time: 'Time Achievements',
+      prestige: 'Prestige Achievements',
+      sales: 'Sales Achievements',
+      vineyard: 'Vineyard Achievements',
+      special: 'Special Achievements',
+      other: 'Other Milestones',
+    };
+
+    return labels[categoryKey] ?? `${categoryKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Achievements`;
   };
 
   // Memoized CalculationTooltip component
@@ -451,9 +509,106 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     return Math.round(weeks);
   };
 
+  type DecayProjectionPoint = {
+    label: string;
+    weeks: number;
+    value: number;
+    retentionPercent: number;
+  };
+
+  const projectionCandidates = [
+    { label: '1 week', weeks: 1 },
+    { label: '2 weeks', weeks: 2 },
+    { label: '1 month', weeks: 4 },
+    { label: '3 months', weeks: 13 },
+    { label: '6 months', weeks: 26 },
+    { label: '1 year', weeks: 52 },
+    { label: '2 years', weeks: 104 },
+    { label: '5 years', weeks: 260 },
+    { label: '10 years', weeks: 520 },
+    { label: '25 years', weeks: 1300 },
+    { label: '50 years', weeks: 2600 },
+    { label: '100 years', weeks: 5200 },
+  ];
+
+  const selectProjectionHorizons = (decayRate: number): Array<{ label: string; weeks: number }> => {
+    if (!Number.isFinite(decayRate) || decayRate <= 0 || decayRate >= 1) return [];
+
+    const halfLifeWeeks = Math.log(0.5) / Math.log(decayRate);
+    const onePercentWeeks = Math.log(0.01) / Math.log(decayRate);
+
+    let preferredWeeks: number[];
+    if (halfLifeWeeks < 8) {
+      preferredWeeks = [1, 4, 13, 26, 52];
+    } else if (halfLifeWeeks < 52) {
+      preferredWeeks = [4, 13, 26, 52, 104];
+    } else if (halfLifeWeeks < 260) {
+      preferredWeeks = [26, 52, 104, 260, 520];
+    } else if (halfLifeWeeks < 1300) {
+      preferredWeeks = [52, 104, 260, 520, 1300];
+    } else {
+      preferredWeeks = [260, 520, 1300, 2600, 5200];
+    }
+
+    // Avoid showing extremely long horizons for quickly vanishing sources.
+    const maxRelevantWeeks = onePercentWeeks < 104 ? Math.max(26, Math.ceil(onePercentWeeks * 1.25)) : Infinity;
+
+    const preferred = projectionCandidates.filter(candidate =>
+      preferredWeeks.includes(candidate.weeks) && candidate.weeks <= maxRelevantWeeks
+    );
+
+    if (preferred.length >= 3) {
+      return preferred;
+    }
+
+    // Fallback: add closest candidate horizons around quarter/half/full/double half-life.
+    const targets = [0.25, 0.5, 1, 2, 4].map(multiplier => Math.max(1, Math.round(halfLifeWeeks * multiplier)));
+    const augmented: Array<{ label: string; weeks: number }> = [...preferred];
+    const used = new Set(augmented.map(item => item.weeks));
+
+    for (const target of targets) {
+      let best = null as { label: string; weeks: number } | null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      for (const candidate of projectionCandidates) {
+        if (used.has(candidate.weeks) || candidate.weeks > maxRelevantWeeks) continue;
+        const distance = Math.abs(candidate.weeks - target);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = candidate;
+        }
+      }
+      if (best) {
+        augmented.push(best);
+        used.add(best.weeks);
+      }
+      if (augmented.length >= 4) break;
+    }
+
+    return augmented.sort((a, b) => a.weeks - b.weeks);
+  };
+
+  const buildDecayProjection = (currentValue: number, decayRate: number): DecayProjectionPoint[] => {
+    if (!Number.isFinite(currentValue) || !Number.isFinite(decayRate) || decayRate <= 0 || decayRate >= 1) {
+      return [];
+    }
+
+    return selectProjectionHorizons(decayRate).map(horizon => {
+      const retention = Math.pow(decayRate, horizon.weeks);
+      return {
+        label: horizon.label,
+        weeks: horizon.weeks,
+        value: currentValue * retention,
+        retentionPercent: retention * 100,
+      };
+    });
+  };
+
   const EventDisplay = ({ event }: { event: PrestigeEvent }) => {
     const displayData = getEventDisplayData(event);
     const isAchievement = event.type === 'achievement' || event.type === 'vineyard_achievement';
+    const currentValue = event.currentAmount ?? event.amount;
+    const hasDecay = Number.isFinite(event.decayRate) && event.decayRate > 0 && event.decayRate < 1;
+    const decayProjection = hasDecay ? buildDecayProjection(currentValue, event.decayRate) : [];
 
     return (
       <div className="flex items-center justify-between">
@@ -497,7 +652,44 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               </UnifiedTooltip>
             )}
           </div>
-          <p className={`${tooltipStyles.text} text-muted-foreground`}>{formatDecayRate(event.decayRate)}</p>
+          {hasDecay && decayProjection.length > 0 ? (
+            <UnifiedTooltip
+              content={
+                <div className={tooltipStyles.text}>
+                  <TooltipSection title="Decay Projection">
+                    <TooltipRow
+                      label="Prestige now:"
+                      value={formatAmount(currentValue)}
+                      monospaced={true}
+                    />
+                    {decayProjection.map((projection) => (
+                      <TooltipRow
+                        key={projection.weeks}
+                        label={`In ${formatProjectionHorizonLabel(projection.weeks)}:`}
+                        value={`${formatProjectionAmount(projection.value, currentValue)} (${formatNumber(projection.retentionPercent, { decimals: 1, forceDecimals: true })}% retained)`}
+                        monospaced={true}
+                      />
+                    ))}
+                  </TooltipSection>
+                </div>
+              }
+              title="Decay Projection"
+              className="max-w-sm"
+              variant="panel"
+              density="compact"
+              scrollable
+              maxHeight="max-h-60"
+              triggerClassName="inline-block"
+              showMobileHint
+              mobileHintVariant="corner-dot"
+            >
+              <p className={`${tooltipStyles.text} text-muted-foreground cursor-help`}>
+                {formatDecayRate(event.decayRate)} {STATUS_EMOJIS.time}
+              </p>
+            </UnifiedTooltip>
+          ) : (
+            <p className={`${tooltipStyles.text} text-muted-foreground`}>{formatDecayRate(event.decayRate)}</p>
+          )}
         </div>
         <div className="text-right">
           <UnifiedTooltip
@@ -1111,17 +1303,16 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           // Group achievements by category
                           (() => {
                             const achievementsByCategory = events.reduce((acc, event) => {
-                              const metadata: any = event.metadata ?? {};
-                              const category = metadata.achievementCategory || 'other';
-                              if (!acc[category]) acc[category] = [];
-                              acc[category].push(event);
+                              const categoryKey = getAchievementCategoryKey(event);
+                              if (!acc[categoryKey]) acc[categoryKey] = [];
+                              acc[categoryKey].push(event);
                               return acc;
                             }, {} as Record<string, PrestigeEvent[]>);
 
-                            return Object.entries(achievementsByCategory).map(([category, categoryEvents]) => (
-                              <div key={category}>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2 capitalize">
-                                  {category} achievements:
+                            return Object.entries(achievementsByCategory).map(([categoryKey, categoryEvents], categoryIndex, allCategories) => (
+                              <div key={categoryKey}>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                                  {getAchievementCategoryLabel(categoryKey)}:
                                 </h4>
                                 <div className="ml-2 space-y-3">
                                   {categoryEvents.map((event, index) => (
@@ -1131,7 +1322,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                                     </div>
                                   ))}
                                 </div>
-                                {Object.keys(achievementsByCategory).indexOf(category) < Object.keys(achievementsByCategory).length - 1 && (
+                                {categoryIndex < allCategories.length - 1 && (
                                   <Separator className="mt-4 mb-4" />
                                 )}
                               </div>

@@ -248,6 +248,11 @@ export interface WineBatch {
       modifier: number;
       description: string; // Shows effect name (e.g., "Ripeness", "Altitude") not source
     }>;
+    anchorEffects?: Array<{
+      anchor: keyof WineAnchorValues;
+      modifier: number;
+      description: string;
+    }>;
   };
 
   // Fermentation options (stored when fermentation starts)

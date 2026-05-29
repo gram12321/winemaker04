@@ -21,6 +21,7 @@ import {
   resolveWineAnchors
 } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
+import { buildAnchorEffectsFromNeutral } from '../debug/wineAnchorEffectUtils';
 
 const DEFAULT_TASTE_QUALITY_INDEX = 0.5;
 
@@ -108,18 +109,19 @@ function combineWineBatches(
     };
   });
   
-  // Create new breakdown with only the combined harvest effects
-  // This replaces all individual partial harvest effects
-  const combinedBreakdown = {
-    effects: harvestEffects
-  };
-
   const mergedAnchors = combineWineAnchorSets(
     existingBatch.wineAnchors,
     newWineAnchors,
     existingBatch.quantity,
     newQuantity
   );
+
+  // Create new breakdown with only the combined harvest effects
+  // This replaces all individual partial harvest effects
+  const combinedBreakdown = {
+    effects: harvestEffects,
+    anchorEffects: buildAnchorEffectsFromNeutral(mergedAnchors, 'Harvest identity (combined)')
+  };
   const structureRanges = getAnchorAdjustedStructureRanges(
     BASE_BALANCED_RANGES,
     resolveWineAnchors(mergedAnchors)
@@ -259,6 +261,7 @@ export async function createWineBatchFromHarvest(
     return combinedBatch;
   } else {
     // Create new wine batch
+    const harvestAnchorEffects = buildAnchorEffectsFromNeutral(wineAnchors, 'Harvest identity');
     const wineBatch: WineBatch = {
       id: uuidv4(),
       vineyardId,
@@ -276,7 +279,10 @@ export async function createWineBatchFromHarvest(
       tasteQualityIndex: DEFAULT_TASTE_QUALITY_INDEX,
       structureIndex: structureIndexResult.score,
       characteristics,
-      breakdown, // Store breakdown data
+      breakdown: {
+        effects: breakdown.effects,
+        anchorEffects: harvestAnchorEffects
+      }, // Store breakdown data
       estimatedPrice: 0, // Will be calculated below
       grapeColor: grapeMetadata.grapeColor,
       naturalYield: grapeMetadata.naturalYield,

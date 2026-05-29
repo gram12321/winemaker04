@@ -13,6 +13,7 @@ import { applyCrushingToWineAnchors } from '@/lib/services/wine/anchors/wineAnch
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
+import { appendAnchorEffects, diffAnchorEffects } from '@/lib/services/wine/debug/wineAnchorEffectUtils';
 
 /**
  * Calculate work required for crushing wine batches
@@ -189,7 +190,13 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     );
 
     const opts = crushingOptions as CrushingOptions;
-    const wineAnchors = applyCrushingToWineAnchors(resolveWineAnchors(batchWithEventFeatures.wineAnchors), opts);
+    const anchorsBeforeCrushing = resolveWineAnchors(batchWithEventFeatures.wineAnchors);
+    const wineAnchors = applyCrushingToWineAnchors(anchorsBeforeCrushing, opts);
+    const crushingAnchorEffects = diffAnchorEffects(
+      anchorsBeforeCrushing,
+      wineAnchors,
+      `Crushing (${opts.method})`
+    );
 
     const charsAfterCrush = batchWithEventFeatures.characteristics || modifiedCharacteristics;
     const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
@@ -204,7 +211,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       ...batchWithEventFeatures,
       state: 'must_ready',
       characteristics: charsAfterCrush,
-      breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
+      breakdown: appendAnchorEffects(batchWithEventFeatures.breakdown || combinedBreakdown, crushingAnchorEffects),
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
       structureIndex: structureIndexResult.score,

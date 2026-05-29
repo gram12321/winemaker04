@@ -948,6 +948,25 @@ export function getEventDisplayData(event: PrestigeEvent): {
       };
     }
 
+    if (
+      event.type === 'achievement' &&
+      (
+        (typeof metadata.category === 'string' && metadata.category.toLowerCase() === 'research') ||
+        metadata.projectId ||
+        metadata.projectTitle
+      )
+    ) {
+      const projectTitle = metadata.projectTitle || metadata.projectId || 'Research Project';
+      return {
+        title: `Research Completed: ${projectTitle}`,
+        titleBase: 'Research Milestone',
+        amountText: projectTitle,
+        displayInfo: metadata.projectId
+          ? `Project ID: ${metadata.projectId}`
+          : 'Research completion prestige reward'
+      };
+    }
+
     if (event.type === 'vineyard_achievement' && metadata.achievementName) {
       return {
         title: `${metadata.achievementIcon} ${metadata.achievementName}`,

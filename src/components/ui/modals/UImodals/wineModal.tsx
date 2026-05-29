@@ -19,6 +19,8 @@ import { WineTasteProfilePanel } from '../../components/WineTasteProfilePanel';
 import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBatchStructureIndex, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
+import { analyzeWineAnchorDownstreamImpact } from '@/lib/services/wine/debug/wineAnchorImpactDebugService';
 
 interface WineModalProps extends DialogProps {
   wineBatch: WineBatch | null;
@@ -75,6 +77,16 @@ export const WineModal: React.FC<WineModalProps> = ({
     },
     [wineBatch, vineyard, prestige]
   );
+  const showDevAnchorDebug = isDevAdminSurfaceAvailable();
+  const anchorDebug = useMemo(() => {
+    if (!wineBatch) return null;
+    return analyzeWineAnchorDownstreamImpact(
+      wineBatch,
+      vineyard || undefined,
+      prestige,
+      vineyard?.vineyardPrestige
+    );
+  }, [wineBatch, vineyard, prestige]);
 
   // Early return AFTER all hooks are called
   if (!wineBatch || !estimatedPriceBreakdown) return null;
@@ -120,6 +132,46 @@ export const WineModal: React.FC<WineModalProps> = ({
     typeof value === 'number' && Number.isFinite(value)
       ? formatNumber(value, { decimals: 2, forceDecimals: true })
       : 'n/a';
+  const getDeltaTextClass = (value: number): string => {
+    if (value > 0) return 'text-emerald-700';
+    if (value < 0) return 'text-red-700';
+    return 'text-muted-foreground';
+  };
+  const formatSigned = (value: number, currency: boolean = false): string => {
+    const formatted = formatNumber(Math.abs(value), currency ? { currency: true, decimals: 2 } : { decimals: 3, forceDecimals: true });
+    if (value > 0) return `+${formatted}`;
+    if (value < 0) return `-${formatted}`;
+    return currency ? formatNumber(0, { currency: true, decimals: 2 }) : formatNumber(0, { decimals: 3, forceDecimals: true });
+  };
+  const formatAnchorLabel = (key: string): string =>
+    key
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/^./, (value) => value.toUpperCase());
+  const anchorOrigins = anchorDebug
+    ? Object.keys(anchorDebug.currentAnchors).map((anchorKey) => {
+        const key = anchorKey as keyof typeof anchorDebug.currentAnchors;
+        const rawEffects = anchorDebug.anchorEffects.filter((entry) => entry.anchor === key);
+        const groupedEffects = rawEffects.reduce((acc, effect) => {
+          const existing = acc.find((entry) => entry.description === effect.description);
+          if (existing) {
+            existing.modifier += effect.modifier;
+            existing.count += 1;
+          } else {
+            acc.push({ description: effect.description, modifier: effect.modifier, count: 1 });
+          }
+          return acc;
+        }, [] as Array<{ description: string; modifier: number; count: number }>);
+        const totalEffect = groupedEffects.reduce((sum, effect) => sum + effect.modifier, 0);
+        const baseValue = anchorDebug.currentAnchors[key] - totalEffect;
+        return {
+          key: anchorKey,
+          current: anchorDebug.currentAnchors[key],
+          baseValue,
+          totalEffect,
+          groupedEffects
+        };
+      })
+    : [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -484,6 +536,150 @@ export const WineModal: React.FC<WineModalProps> = ({
                     </div>
                   </CardContent>
                 </Card>
+
+                {showDevAnchorDebug && anchorDebug && (
+                  <Card className="border-amber-300 bg-amber-50/60">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4" />
+                          Anchor Impact Trace
+                        </span>
+                        <Badge variant="outline" className="bg-white text-amber-900 border-amber-300">DEV</Badge>
+                      </CardTitle>
+                      <p className="text-[11px] text-amber-900/80">
+                        Counterfactual trace: current anchors vs neutral anchors, with all other batch state unchanged.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="py-3 space-y-3">
+                      {!anchorDebug.hasRecordedAnchorHistory && (
+                        <div className="rounded border border-amber-300 bg-amber-100/70 px-2.5 py-2 text-[11px] text-amber-900">
+                          This batch has no persisted anchor history. Origins below are shown as a single legacy snapshot from neutral.
+                        </div>
+                      )}
+                      <div className="overflow-x-auto scrollbar-styled">
+                        <div className="grid min-w-[34rem] grid-cols-[minmax(10rem,1fr)_repeat(3,minmax(5rem,7rem))] gap-2 text-[11px]">
+                          <div className="font-medium text-amber-900/90">Anchor</div>
+                          <div className="text-right font-medium text-amber-900/90">Current</div>
+                          <div className="text-right font-medium text-amber-900/90">Neutral</div>
+                          <div className="text-right font-medium text-amber-900/90">Delta</div>
+                          {Object.keys(anchorDebug.currentAnchors).map((anchorKey) => {
+                            const key = anchorKey as keyof typeof anchorDebug.currentAnchors;
+                            const delta = anchorDebug.anchorDeltaFromNeutral[key];
+                            return (
+                              <React.Fragment key={anchorKey}>
+                                <div className="rounded bg-white px-2 py-1 font-medium text-foreground">
+                                  {formatAnchorLabel(anchorKey)}
+                                </div>
+                                <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">
+                                  {formatNumber(anchorDebug.currentAnchors[key], { decimals: 3, forceDecimals: true })}
+                                </div>
+                                <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">
+                                  {formatNumber(anchorDebug.neutralAnchors[key], { decimals: 3, forceDecimals: true })}
+                                </div>
+                                <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(delta)}`}>
+                                  {formatSigned(delta)}
+                                </div>
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto scrollbar-styled">
+                        <div className="grid min-w-[34rem] grid-cols-[minmax(10rem,1fr)_repeat(3,minmax(6rem,8rem))] gap-2 text-[11px]">
+                          <div className="font-medium text-amber-900/90">Downstream</div>
+                          <div className="text-right font-medium text-amber-900/90">Current</div>
+                          <div className="text-right font-medium text-amber-900/90">Neutral</div>
+                          <div className="text-right font-medium text-amber-900/90">Delta</div>
+
+                          <div className="rounded bg-white px-2 py-1 font-medium text-foreground">Structure Index</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.current.structureIndex, { decimals: 3, forceDecimals: true })}</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.neutralBaseline.structureIndex, { decimals: 3, forceDecimals: true })}</div>
+                          <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(anchorDebug.delta.structureIndex)}`}>{formatSigned(anchorDebug.delta.structureIndex)}</div>
+
+                          <div className="rounded bg-white px-2 py-1 font-medium text-foreground">Taste Quality</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.current.tasteQualityIndex, { decimals: 3, forceDecimals: true })}</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.neutralBaseline.tasteQualityIndex, { decimals: 3, forceDecimals: true })}</div>
+                          <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(anchorDebug.delta.tasteQualityIndex)}`}>{formatSigned(anchorDebug.delta.tasteQualityIndex)}</div>
+
+                          <div className="rounded bg-white px-2 py-1 font-medium text-foreground">Wine Score</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.current.wineScore, { decimals: 3, forceDecimals: true })}</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.neutralBaseline.wineScore, { decimals: 3, forceDecimals: true })}</div>
+                          <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(anchorDebug.delta.wineScore)}`}>{formatSigned(anchorDebug.delta.wineScore)}</div>
+
+                          <div className="rounded bg-white px-2 py-1 font-medium text-foreground">Estimated Price</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.current.estimatedPrice, { currency: true, decimals: 2 })}</div>
+                          <div className="rounded bg-white px-2 py-1 text-right font-mono tabular-nums">{formatNumber(anchorDebug.neutralBaseline.estimatedPrice, { currency: true, decimals: 2 })}</div>
+                          <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(anchorDebug.delta.estimatedPrice)}`}>{formatSigned(anchorDebug.delta.estimatedPrice, true)}</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-medium text-amber-900/90">Anchor Origins</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {anchorOrigins.map((origin) => (
+                            <div key={origin.key} className="rounded border bg-white p-2.5 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs font-medium">{formatAnchorLabel(origin.key)}</div>
+                                <div className="text-xs font-mono tabular-nums">
+                                  {formatNumber(origin.current, { decimals: 3, forceDecimals: true })}
+                                </div>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                Base: <span className="font-mono">{formatNumber(origin.baseValue, { decimals: 3, forceDecimals: true })}</span>
+                                {' · '}
+                                Total effects: <span className={`font-mono ${getDeltaTextClass(origin.totalEffect)}`}>{formatSigned(origin.totalEffect)}</span>
+                              </div>
+                              <div className="space-y-1">
+                                {origin.groupedEffects.map((effect) => (
+                                  <div key={effect.description} className="flex items-center justify-between rounded bg-muted/40 px-2 py-1 text-[11px]">
+                                    <div className="truncate pr-2">
+                                      {effect.description}
+                                      {effect.count > 1 && <span className="text-muted-foreground"> ({effect.count}x)</span>}
+                                    </div>
+                                    <div className={`font-mono tabular-nums ${getDeltaTextClass(effect.modifier)}`}>
+                                      {formatSigned(effect.modifier)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto scrollbar-styled">
+                        <div className="grid min-w-[48rem] grid-cols-[minmax(10rem,1fr)_repeat(4,minmax(5.5rem,7rem))] gap-2 text-[11px]">
+                          <div className="font-medium text-amber-900/90">Isolated Anchor Impact</div>
+                          <div className="text-right font-medium text-amber-900/90">Structure Δ</div>
+                          <div className="text-right font-medium text-amber-900/90">Taste Δ</div>
+                          <div className="text-right font-medium text-amber-900/90">Score Δ</div>
+                          <div className="text-right font-medium text-amber-900/90">Price Δ</div>
+                          {anchorDebug.isolatedAnchorImpacts.map((impact) => (
+                            <React.Fragment key={`isolated-${impact.anchor}`}>
+                              <div className="rounded bg-white px-2 py-1 font-medium text-foreground">
+                                {formatAnchorLabel(String(impact.anchor))}
+                              </div>
+                              <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.structureIndex)}`}>
+                                {formatSigned(impact.delta.structureIndex)}
+                              </div>
+                              <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.tasteQualityIndex)}`}>
+                                {formatSigned(impact.delta.tasteQualityIndex)}
+                              </div>
+                              <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.wineScore)}`}>
+                                {formatSigned(impact.delta.wineScore)}
+                              </div>
+                              <div className={`rounded bg-white px-2 py-1 text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.estimatedPrice)}`}>
+                                {formatSigned(impact.delta.estimatedPrice, true)}
+                              </div>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Grape Information */}
                 <Card>

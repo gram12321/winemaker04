@@ -16,6 +16,7 @@ import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStr
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { appendAnchorEffects, diffAnchorEffects } from '@/lib/services/wine/debug/wineAnchorEffectUtils';
 
 /**
  * Calculate work required for fermentation setup
@@ -150,9 +151,15 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
     );
 
     const opts = fermentationOptions as FermentationOptions;
+    const anchorsBeforeSetup = resolveWineAnchors(batchWithEventFeatures.wineAnchors);
     const wineAnchors = applyFermentationSetupToWineAnchors(
-      resolveWineAnchors(batchWithEventFeatures.wineAnchors),
+      anchorsBeforeSetup,
       opts
+    );
+    const setupAnchorEffects = diffAnchorEffects(
+      anchorsBeforeSetup,
+      wineAnchors,
+      `Fermentation setup (${opts.method}, ${opts.temperature})`
     );
 
     const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
@@ -169,7 +176,7 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       fermentationOptions: opts,
       features: batchWithEventFeatures.features,
       characteristics: batchWithEventFeatures.characteristics,
-      breakdown: batchWithEventFeatures.breakdown,
+      breakdown: appendAnchorEffects(batchWithEventFeatures.breakdown, setupAnchorEffects),
       structureIndex: structureIndexResult.score,
       wineAnchors
     };

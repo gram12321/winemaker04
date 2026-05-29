@@ -128,6 +128,10 @@ describe('weather center service', () => {
 
     expect(rows).toHaveLength(2);
     expect(rows.map(row => row.id)).toEqual(['v1', 'v2']);
+    expect(rows[0].weatherState).toBe('Heat');
+    expect(rows[0].weatherIntensity).toBe('Moderate');
+    expect(rows[0].weatherStateImpact).toContain('supports ripening');
+    expect(rows[0].weatherIntensityImpact).toContain('meaningful weather pressure');
     expect(rows[0].ripenessDelta).toBeCloseTo(0.02, 6);
     expect(rows[0].healthDelta).toBeCloseTo(-0.0078, 6);
     expect(rows[1].ripenessDelta).toBeCloseTo(0.005, 6);
@@ -163,6 +167,10 @@ describe('weather center service', () => {
         id: 'v1',
         name: 'A',
         state: 'Growing',
+        weatherState: 'Heat',
+        weatherIntensity: 'Moderate',
+        weatherStateImpact: 'Heat supports ripening and adds vine stress before site modifiers.',
+        weatherIntensityImpact: 'Moderate intensity applies a meaningful weather pressure this week.',
         ripenessCurrent: 0.5,
         ripenessProjected: 0.51,
         ripenessNormalDelta: 0.01,
@@ -181,6 +189,10 @@ describe('weather center service', () => {
         id: 'v2',
         name: 'B',
         state: 'Growing',
+        weatherState: 'Storm',
+        weatherIntensity: 'Severe',
+        weatherStateImpact: 'Storm slows ripening and adds vine stress before site modifiers.',
+        weatherIntensityImpact: 'Severe intensity applies the strongest weather pressure this week.',
         ripenessCurrent: 0.5,
         ripenessProjected: 0.49,
         ripenessNormalDelta: -0.005,
@@ -199,8 +211,11 @@ describe('weather center service', () => {
 
     expect(summary.avgRipenessDelta).toBeCloseTo(0, 6);
     expect(summary.avgHealthDelta).toBeCloseTo(-0.002, 6);
+    expect(summary.avgWeatherRipenessDelta).toBeCloseTo(-0.0025, 6);
+    expect(summary.avgWeatherHealthDelta).toBeCloseTo(-0.00075, 6);
     expect(summary.highStressCount).toBe(1);
     expect(summary.avgSiteResponse).toBeCloseTo(1, 6);
+    expect(summary.weatherSignalLabel).toBe('Stressful');
   });
 
   it('exposes helper labels and impact meter scaling boundaries', () => {

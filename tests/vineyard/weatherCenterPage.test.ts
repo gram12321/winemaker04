@@ -7,8 +7,12 @@ const mocks = vi.hoisted(() => ({
   summary: {
     avgRipenessDelta: 0,
     avgHealthDelta: 0,
+    avgWeatherRipenessDelta: 0,
+    avgWeatherHealthDelta: 0,
     highStressCount: 0,
     avgSiteResponse: 1,
+    weatherSignalLabel: 'Mixed' as const,
+    weatherSignalDetail: 'No planted vineyards available for weather signal.',
   },
   gameState: {
     week: 5,
@@ -80,8 +84,12 @@ describe('WeatherCenterPage', () => {
     mocks.summary = {
       avgRipenessDelta: 0,
       avgHealthDelta: 0,
+      avgWeatherRipenessDelta: 0,
+      avgWeatherHealthDelta: 0,
       highStressCount: 0,
       avgSiteResponse: 1,
+      weatherSignalLabel: 'Mixed',
+      weatherSignalDetail: 'No planted vineyards available for weather signal.',
     };
     mocks.company.id = 'company-1';
   });
@@ -102,11 +110,19 @@ describe('WeatherCenterPage', () => {
         id: 'v-1',
         name: 'Cote South Block',
         state: 'Growing',
+        weatherState: 'Heat',
+        weatherIntensity: 'Moderate',
+        weatherStateImpact: 'Heat supports ripening and adds vine stress before site modifiers.',
+        weatherIntensityImpact: 'Moderate intensity applies a meaningful weather pressure this week.',
         ripenessCurrent: 0.66,
         ripenessProjected: 0.67,
+        ripenessNormalDelta: 0.01,
+        ripenessWeatherDelta: 0,
         ripenessDelta: 0.01,
         healthCurrent: 0.83,
         healthProjected: 0.82,
+        healthNormalDelta: -0.01,
+        healthWeatherDelta: 0,
         healthDelta: -0.01,
         siteResponse: 1.08,
         reason: 'Heat (Moderate) with site amplified impact',
@@ -134,8 +150,12 @@ describe('WeatherCenterPage', () => {
     mocks.summary = {
       avgRipenessDelta: 0.01,
       avgHealthDelta: -0.01,
+      avgWeatherRipenessDelta: 0.002,
+      avgWeatherHealthDelta: -0.001,
       highStressCount: 1,
       avgSiteResponse: 1.08,
+      weatherSignalLabel: 'Mixed',
+      weatherSignalDetail: 'Weather helps one side of progression while pressuring the other.',
     };
 
     const html = renderToStaticMarkup(React.createElement(WeatherCenterPage));

@@ -20,6 +20,7 @@ import {
   getAnchorAdjustedStructureRanges,
   scaleCharacteristicModifierByAnchors
 } from '../anchors/wineAnchorCharacteristicBridge';
+import { diffAnchorEffects } from '../debug/wineAnchorEffectUtils';
 
 // ===== CORE INTERFACES =====
 
@@ -423,8 +424,13 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     }
   }
 
-  let wineAnchors = resolveWineAnchors(batch.wineAnchors);
-  wineAnchors = applyFeatureLayerAnchors(batch, wineAnchors);
+  const anchorsBeforeFeatureLayer = resolveWineAnchors(batch.wineAnchors);
+  let wineAnchors = applyFeatureLayerAnchors(batch, anchorsBeforeFeatureLayer);
+  const featureLayerAnchorEffects = diffAnchorEffects(
+    anchorsBeforeFeatureLayer,
+    wineAnchors,
+    'Feature layer'
+  );
 
   const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
   const structureIndexResult = calculateStructureIndex(
@@ -439,7 +445,11 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     characteristics: modifiedCharacteristics,
     structureIndex: structureIndexResult.score,
     breakdown: {
-      effects: breakdownEffects
+      effects: breakdownEffects,
+      anchorEffects: [
+        ...(batch.breakdown?.anchorEffects || []),
+        ...featureLayerAnchorEffects
+      ]
     },
     wineAnchors
   };

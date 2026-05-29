@@ -14,6 +14,7 @@ import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wine
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
 import { applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
+import { diffAnchorEffects } from '../debug/wineAnchorEffectUtils';
 
 /**
  * Fermentation Manager
@@ -187,9 +188,15 @@ export async function processWeeklyFermentation(): Promise<void> {
         wineAnchors: resolveWineAnchors(batch.wineAnchors)
       });
 
+      const anchorsBeforeWeeklyContact = resolveWineAnchors(batch.wineAnchors);
       const wineAnchors = applyWeeklyFermentationContactToWineAnchors(
-        resolveWineAnchors(batch.wineAnchors),
+        anchorsBeforeWeeklyContact,
         batch.fermentationOptions
+      );
+      const weeklyAnchorEffects = diffAnchorEffects(
+        anchorsBeforeWeeklyContact,
+        wineAnchors,
+        'Weekly fermentation contact'
       );
 
       const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
@@ -212,6 +219,10 @@ export async function processWeeklyFermentation(): Promise<void> {
         effects: [
           ...(batch.breakdown?.effects || []),
           ...breakdown.effects
+        ],
+        anchorEffects: [
+          ...(batch.breakdown?.anchorEffects || []),
+          ...weeklyAnchorEffects
         ]
       };
 

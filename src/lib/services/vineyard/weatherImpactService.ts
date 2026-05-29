@@ -39,7 +39,7 @@ export interface VineyardWeatherImpactBreakdown {
   healthClamped: boolean;
 }
 
-const WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record<WeatherIntensity, number>> = {
+export const WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record<WeatherIntensity, number>> = {
   Clear: { Mild: 0.001, Moderate: 0.0015, Severe: 0.0005 },
   Rain: { Mild: 0.0005, Moderate: 0.0001, Severe: -0.0015 },
   Heat: { Mild: 0.0015, Moderate: 0.0022, Severe: 0.0008 },
@@ -48,7 +48,7 @@ const WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record
   Snow: { Mild: -0.001, Moderate: -0.0025, Severe: -0.0045 },
 };
 
-const WEATHER_HEALTH_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record<WeatherIntensity, number>> = {
+export const WEATHER_HEALTH_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record<WeatherIntensity, number>> = {
   Clear: { Mild: 0.0003, Moderate: 0.0002, Severe: -0.0008 },
   Rain: { Mild: 0.0005, Moderate: 0.0002, Severe: -0.0016 },
   Heat: { Mild: -0.0008, Moderate: -0.0022, Severe: -0.0048 },

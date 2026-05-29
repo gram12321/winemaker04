@@ -272,4 +272,24 @@ describe('prestige service', () => {
       amountText: '+1.50 prestige'
     }));
   });
+
+  it('shows research-completion achievements as research milestones', async () => {
+    const { getEventDisplayData } = await import('@/lib/services/prestige/prestigeService');
+
+    const displayData = getEventDisplayData(prestigeEvent({
+      type: 'achievement',
+      amount: 4,
+      metadata: {
+        category: 'research',
+        projectId: 'fermentation_temp_control',
+        projectTitle: 'Temperature Controlled Fermentation'
+      } as any
+    }));
+
+    expect(displayData).toEqual(expect.objectContaining({
+      title: 'Research Completed: Temperature Controlled Fermentation',
+      titleBase: 'Research Milestone',
+      amountText: 'Temperature Controlled Fermentation'
+    }));
+  });
 });
