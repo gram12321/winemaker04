@@ -33,6 +33,7 @@ WHEN receiving code review feedback:
 ## Forbidden Responses
 
 **NEVER:**
+Mindless agreement with user:
 - "You're absolutely right!" (explicit CLAUDE.md violation)
 - "Great point!" / "Excellent feedback!" (performative)
 - "Let me implement that now" (before verification)
@@ -58,8 +59,8 @@ WHY: Items may be related. Partial understanding = wrong implementation.
 your human partner: "Fix 1-6"
 You understand 1,2,3,6. Unclear on 4,5.
 
-❌ WRONG: Implement 1,2,3,6 now, ask about 4,5 later
-✅ RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
+WRONG: Implement 1,2,3,6 now, ask about 4,5 later
+RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
 ```
 
 ## Source-Specific Handling
@@ -70,38 +71,6 @@ You understand 1,2,3,6. Unclear on 4,5.
 - **No performative agreement**
 - **Skip to action** or technical acknowledgment
 
-### From External Reviewers
-```
-BEFORE implementing:
-  1. Check: Technically correct for THIS codebase?
-  2. Check: Breaks existing functionality?
-  3. Check: Reason for current implementation?
-  4. Check: Works on all platforms/versions?
-  5. Check: Does reviewer understand full context?
-
-IF suggestion seems wrong:
-  Push back with technical reasoning
-
-IF can't easily verify:
-  Say so: "I can't verify this without [X]. Should I [investigate/ask/proceed]?"
-
-IF conflicts with your human partner's prior decisions:
-  Stop and discuss with your human partner first
-```
-
-**your human partner's rule:** "External feedback - be skeptical, but check carefully"
-
-## YAGNI Check for "Professional" Features
-
-```
-IF reviewer suggests "implementing properly":
-  grep codebase for actual usage
-
-  IF unused: "This endpoint isn't called. Remove it (YAGNI)?"
-  IF used: Then implement properly
-```
-
-**your human partner's rule:** "You and reviewer both report to me. If we don't need this feature, don't add it."
 
 ## Implementation Order
 
@@ -121,7 +90,6 @@ FOR multi-item feedback:
 Push back when:
 - Suggestion breaks existing functionality
 - Reviewer lacks full context
-- Violates YAGNI (unused feature)
 - Technically incorrect for this stack
 - Legacy/compatibility reasons exist
 - Conflicts with your human partner's architectural decisions
@@ -147,9 +115,6 @@ When feedback IS correct:
 ❌ ANY gratitude expression
 ```
 
-**Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
-
-**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
 
 ## Gracefully Correcting Your Pushback
 
@@ -191,11 +156,6 @@ Reviewer: "Remove legacy code"
 ✅ "Checking... build target is 10.15+, this API needs 13+. Need legacy for backward compat. Current impl has wrong bundle ID - fix it or drop pre-13 support?"
 ```
 
-**YAGNI (Good):**
-```
-Reviewer: "Implement proper metrics tracking with database, date filters, CSV export"
-✅ "Grepped codebase - nothing calls this endpoint. Remove it (YAGNI)? Or is there usage I'm missing?"
-```
 
 **Unclear Item (Good):**
 ```
@@ -209,8 +169,6 @@ You understand 1,2,3,6. Unclear on 4,5.
 When replying to inline review comments on GitHub, reply in the comment thread (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a top-level PR comment.
 
 ## The Bottom Line
-
-**External feedback = suggestions to evaluate, not orders to follow.**
 
 Verify. Question. Then implement.
 
