@@ -1,0 +1,3 @@
+interface:
+  display_name: "Write Skills Gram"
+  short_description: "Create and verify concise reusable agent skills"

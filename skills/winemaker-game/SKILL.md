@@ -14,6 +14,8 @@ This is the default repo skill for Winemaker. It is both:
 
 Do not use generic 2D or 3D game-stack routing as a default in this repo.
 
+Route directly to a specialist skill when the task is already clear. Use the `superpowers` umbrella only when you want the broader governance layer first, or when the task needs explicit skill-selection discipline before picking the subskill.
+
 ## Session Start
 
 Start user-facing work with a short AI check message:
@@ -38,53 +40,47 @@ After classifying the user request, route to the matching specialist skills.
 
 | Task type | Primary skill(s) | Secondary skill(s) |
 |---|---|---|
-| User asks for ideation, option analysis, or design-first discussion | `../brainstorming/SKILL.md` | `../writing-plans/SKILL.md` |
-| Feature design, option exploration, unclear requirements | `../brainstorming/SKILL.md` | `../writing-plans/SKILL.md` |
-| Multi-step implementation from an approved plan | `../executing-plans/SKILL.md` | `../subagent-driven-development/SKILL.md` |
+| User asks for ideation, option analysis, or design-first discussion | `../superpowers/brainstorming/SKILL.md` | `../superpowers/writing-plans/SKILL.md` |
+| Feature design, option exploration, unclear requirements | `../superpowers/brainstorming/SKILL.md` | `../superpowers/writing-plans/SKILL.md` |
+| Multi-step implementation from an approved plan | `../superpowers/executing-plans/SKILL.md` | `../superpowers/dispatching-parallel-agents/SKILL.md` |
 | React or TypeScript implementation details | `../javascript-typescript/SKILL.md` | `../react-best-practices/SKILL.md` |
 | ShadCN component composition and UI consistency | `../shadcn-best-practices/SKILL.md` | `../react-best-practices/SKILL.md` |
-| Rendered frontend QA, UI regression reproduction, interaction checks | `../frontend-testing-debugging/SKILL.md` | `../systematic-debugging/SKILL.md` |
-| Bug reports, regressions, failing tests, unexpected behavior | `../systematic-debugging/SKILL.md` | `../diagnose/SKILL.md` |
+| Rendered frontend QA, UI regression reproduction, interaction checks | `../superpowers/systematic-debugging/SKILL.md` | none |
+| Bug reports, regressions, failing tests, unexpected behavior | `../superpowers/systematic-debugging/SKILL.md` | `../superpowers/diagnose/SKILL.md` |
 | Database query, schema, index, or RLS performance concerns | `../supabase-best-practices/SKILL.md` | repo migration/database tooling guidance |
-| About to claim completion or fixed status | `../verification-before-completion/SKILL.md` | `../requesting-code-review/SKILL.md` |
-| Writing or fixing skills | `../writing-skills/SKILL.md` | `../write-a-skill/SKILL.md` |
-| Architecture-level refactor opportunities | `../improve-codebase-architecture/SKILL.md` | `../zoom-out/SKILL.md` |
-| User explicitly asks for a grill/interview challenge | `../grill-me/SKILL.md` | `../grill-with-docs/SKILL.md` |
+| About to claim completion or fixed status | `../superpowers/verification-before-completion/SKILL.md` | `../superpowers/requesting-code-review/SKILL.md` |
+| Writing or fixing skills | `../writeskills-gram/SKILL.md` | none |
+| Architecture-level refactor opportunities | `../superpowers/improve-codebase-architecture/SKILL.md` | none |
+| User explicitly asks for a grill/interview challenge | `../grill-me/SKILL.md` | none |
 | User explicitly asks for compressed/terse style | `../caveman/SKILL.md` | none |
-| User explicitly asks to discover/install external skills | `../find-skills/SKILL.md` | `../write-a-skill/SKILL.md` |
-| User explicitly asks for full frontend redesign/new UI from scratch | `../frontend-app-builder/SKILL.md` | `../frontend-testing-debugging/SKILL.md` |
-| User explicitly asks to break spec into issue tickets | `../to-issues/SKILL.md` | `../triage/SKILL.md` |
-| User explicitly asks for PRD publication to tracker | `../to-prd/SKILL.md` | `../to-issues/SKILL.md` |
-| User explicitly asks for issue triage/state management | `../triage/SKILL.md` | `../grill-with-docs/SKILL.md` |
-| User explicitly asks for isolated worktree setup | `../using-git-worktrees/SKILL.md` | none |
-| User explicitly asks to wrap up merge or PR branch flow | `../finishing-a-development-branch/SKILL.md` | `../requesting-code-review/SKILL.md` |
-| User explicitly asks for agent-skill tracker bootstrap | `../setup-matt-pocock-skills/SKILL.md` | none |
-| Agent is about to claim task completion | `../improve-codebase-architecture/SKILL.md` (sanitary sweep mode) | `../verification-before-completion/SKILL.md` |
+| User explicitly asks to wrap up merge or PR branch flow | `../superpowers/finishing-a-development-branch/SKILL.md` | `../superpowers/requesting-code-review/SKILL.md` |
+| Agent is about to claim task completion | `../superpowers/improve-codebase-architecture/SKILL.md` (sanitary sweep mode) | `../superpowers/verification-before-completion/SKILL.md` |
 
 ## Non-Default Skills In This Repo
 
 The following are non-default here and should only be used when explicitly requested by the user or clearly required by task context:
 
-- `../game-studio/SKILL.md`
-- `../phaser-2d-game/SKILL.md`
-- `../three-webgl-game/SKILL.md`
-- `../react-three-fiber-game/SKILL.md`
-- `../sprite-pipeline/SKILL.md`
-- `../web-3d-asset-pipeline/SKILL.md`
-- `../web-game-foundations/SKILL.md`
-- `../game-ui-frontend/SKILL.md`
-- `../game-playtest/SKILL.md`
-- `../frontend-app-builder/SKILL.md`
-- `../find-skills/SKILL.md`
+- `../superpowers/brainstorming/SKILL.md`
+- `../superpowers/dispatching-parallel-agents/SKILL.md`
+- `../superpowers/diagnose/SKILL.md`
+- `../superpowers/executing-plans/SKILL.md`
+- `../superpowers/finishing-a-development-branch/SKILL.md`
+- `../superpowers/improve-codebase-architecture/SKILL.md`
+- `../superpowers/receiving-code-review/SKILL.md`
+- `../superpowers/requesting-code-review/SKILL.md`
+- `../superpowers/systematic-debugging/SKILL.md`
+- `../superpowers/tdd-gram/SKILL.md`
+- `../superpowers/using-superpowers/SKILL.md`
+- `../superpowers/verification-before-completion/SKILL.md`
+- `../superpowers/writing-plans/SKILL.md`
 - `../grill-me/SKILL.md`
-- `../grill-with-docs/SKILL.md`
-- `../to-issues/SKILL.md`
-- `../to-prd/SKILL.md`
-- `../triage/SKILL.md`
-- `../using-superpowers/SKILL.md`
-- `../using-git-worktrees/SKILL.md`
-- `../finishing-a-development-branch/SKILL.md`
-- `../setup-matt-pocock-skills/SKILL.md`
+- `../javascript-typescript/SKILL.md`
+- `../react-best-practices/SKILL.md`
+- `../shadcn-best-practices/SKILL.md`
+- `../supabase-best-practices/SKILL.md`
+- `../caveman/SKILL.md`
+- `../handoff/SKILL.md`
+- `../writeskills-gram/SKILL.md`
 
 The following are optional mode skills (never mandatory by default):
 
