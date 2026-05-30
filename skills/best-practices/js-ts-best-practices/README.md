@@ -1,9 +1,9 @@
-# JavaScript and TypeScript Best Practices
+# JS and TS Best Practices
 
 ## Structure
 
 ```text
-javascript-typescript/
+best-practices/js-ts-best-practices/
   SKILL.md             # Agent-facing instructions
   README.md            # This package guide
   AGENTS.md            # Lightweight navigation for agents

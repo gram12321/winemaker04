@@ -12,8 +12,6 @@ This is the default repo skill for Winemaker. It is both:
 1. The project-convention guardrail skill.
 2. The router skill that selects other local skills based on the task.
 
-Do not use generic 2D or 3D game-stack routing as a default in this repo.
-
 Route directly to a specialist skill when the task is already clear. Use the `superpowers` umbrella only when you want the broader governance layer first, or when the task needs explicit skill-selection discipline before picking the subskill.
 
 ## Session Start
@@ -43,22 +41,26 @@ After classifying the user request, route to the matching specialist skills.
 | User asks for ideation, option analysis, or design-first discussion | `../superpowers/brainstorming/SKILL.md` | `../superpowers/writing-plans/SKILL.md` |
 | Feature design, option exploration, unclear requirements | `../superpowers/brainstorming/SKILL.md` | `../superpowers/writing-plans/SKILL.md` |
 | Multi-step implementation from an approved plan | `../superpowers/executing-plans/SKILL.md` | `../superpowers/dispatching-parallel-agents/SKILL.md` |
-| React or TypeScript implementation details | `../javascript-typescript/SKILL.md` | `../react-best-practices/SKILL.md` |
-| ShadCN component composition and UI consistency | `../shadcn-best-practices/SKILL.md` | `../react-best-practices/SKILL.md` |
+| React or TypeScript implementation details | `../best-practices/js-ts-best-practices/SKILL.md` | `../best-practices/react-best-practices/SKILL.md` |
+| ShadCN component composition and UI consistency | `../best-practices/shadcn-best-practices/SKILL.md` | `../best-practices/react-best-practices/SKILL.md` |
 | Rendered frontend QA, UI regression reproduction, interaction checks | `../superpowers/systematic-debugging/SKILL.md` | none |
 | Bug reports, regressions, failing tests, unexpected behavior | `../superpowers/systematic-debugging/SKILL.md` | `../superpowers/diagnose/SKILL.md` |
-| Database query, schema, index, or RLS performance concerns | `../supabase-best-practices/SKILL.md` | repo migration/database tooling guidance |
+| Database query, schema, index, or RLS performance concerns | `../best-practices/supabase-best-practices/SKILL.md` | repo migration/database tooling guidance |
 | About to claim completion or fixed status | `../superpowers/verification-before-completion/SKILL.md` | `../superpowers/requesting-code-review/SKILL.md` |
-| Writing or fixing skills | `../writeskills-gram/SKILL.md` | none |
+| Writing or fixing skills | `../toolsskills/writeskills-gram/SKILL.md` | none |
 | Architecture-level refactor opportunities | `../superpowers/improve-codebase-architecture/SKILL.md` | none |
-| User explicitly asks for a grill/interview challenge | `../grill-me/SKILL.md` | none |
-| User explicitly asks for compressed/terse style | `../caveman/SKILL.md` | none |
+| User explicitly asks for a grill/interview challenge | `../toolsskills/grill-me/SKILL.md` | none |
+| User explicitly asks for compressed/terse style | `../toolsskills/caveman/SKILL.md` | none |
 | User explicitly asks to wrap up merge or PR branch flow | `../superpowers/finishing-a-development-branch/SKILL.md` | `../superpowers/requesting-code-review/SKILL.md` |
 | Agent is about to claim task completion | `../superpowers/improve-codebase-architecture/SKILL.md` (sanitary sweep mode) | `../superpowers/verification-before-completion/SKILL.md` |
 
+- `../best-practices/js-ts-best-practices/SKILL.md`
+- `../best-practices/react-best-practices/SKILL.md`
+- `../toolsskills/handoff/SKILL.md`
+
 ## Non-Default Skills In This Repo
 
-The following are non-default here and should only be used when explicitly requested by the user or clearly required by task context:
+The following are non-default here and should primarily be used via the superpowers umbrella.
 
 - `../superpowers/brainstorming/SKILL.md`
 - `../superpowers/dispatching-parallel-agents/SKILL.md`
@@ -73,18 +75,6 @@ The following are non-default here and should only be used when explicitly reque
 - `../superpowers/using-superpowers/SKILL.md`
 - `../superpowers/verification-before-completion/SKILL.md`
 - `../superpowers/writing-plans/SKILL.md`
-- `../grill-me/SKILL.md`
-- `../javascript-typescript/SKILL.md`
-- `../react-best-practices/SKILL.md`
-- `../shadcn-best-practices/SKILL.md`
-- `../supabase-best-practices/SKILL.md`
-- `../caveman/SKILL.md`
-- `../handoff/SKILL.md`
-- `../writeskills-gram/SKILL.md`
-
-The following are optional mode skills (never mandatory by default):
-
-- `../caveman/SKILL.md` (only when the user requests terse mode)
 
 ## Core Winemaker Rules
 

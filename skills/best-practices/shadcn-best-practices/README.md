@@ -3,7 +3,7 @@
 ## Structure
 
 ```text
-shadcn-best-practices/
+best-practices/shadcn-best-practices/
   SKILL.md             # Agent-facing instructions
   README.md            # This package guide
   AGENTS.md            # Lightweight navigation for agents
@@ -20,7 +20,7 @@ shadcn-best-practices/
 
 Use this skill for UI composition after `../winemaker-game/SKILL.md` establishes repo boundaries. It complements:
 
-- `../javascript-typescript/SKILL.md` for TypeScript and module organization.
+- `../js-ts-best-practices/SKILL.md` for TypeScript and module organization.
 - `../react-best-practices/SKILL.md` for render behavior and hooks.
 
 ## Current Project Context

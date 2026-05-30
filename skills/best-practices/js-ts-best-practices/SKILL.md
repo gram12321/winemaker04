@@ -1,11 +1,11 @@
 ---
-name: javascript-typescript
+name: js-ts-best-practices
 description: Use for day-to-day JavaScript and TypeScript implementation in winemaker04, including React component code, service logic, shared typing, module organization, and safe refactors aligned to repo conventions.
 source: wshobson/agents
 license: MIT
 ---
 
-# JavaScript and TypeScript Best Practices
+# JS and TS Best Practices
 
 ## Purpose
 

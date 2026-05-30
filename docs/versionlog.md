@@ -134,7 +134,7 @@ Use this structure for every new entry:
 - **NEW FILE:** `tests/sales/buyGrapeMarketDecay.test.ts` (115 lines), **NEW FILE:** `tests/sales/contractGenerationUnlocks.test.ts` (86 lines), **NEW FILE:** `tests/vineyard/weatherCenterPage.test.ts` (147 lines), **NEW FILE:** `tests/vineyard/weatherCenterService.test.ts` (177 lines), **NEW FILE:** `tests/vineyard/weatherImpactService.test.ts` (114 lines) - new regression coverage for recent market and weather mechanics.
 - `tests/sales/buyGrapeMarketService.test.ts` (+210/-1) and `tests/sales/grapeBuyerMarket.test.ts` (+109) - deeper buy-market and buyer behavior verification.
 - `skills/winemaker-game/SKILL.md` (+134/-5 in `6f2c682`, +27/-120 in `9c3ecaf`) - substantial update/rewrite of repo-specific workflow guidance.
-- Broad skill maintenance across `skills/javascript-typescript/SKILL.md`, `skills/game-studio/SKILL.md`, `skills/supabase-best-practices/SKILL.md`, and many other `skills/*.md` files - refines agent routing and instruction quality.
+- Broad skill maintenance across `skills/best-practices/js-ts-best-practices/SKILL.md`, `skills/game-studio/SKILL.md`, `skills/best-practices/supabase-best-practices/SKILL.md`, and many other `skills/*.md` files - refines agent routing and instruction quality.
 - `src/components/pages/winepedia/WeatherTab.tsx` (+3/-2) and `docs/AIdocs/AIDescriptions_coregame.md` (+1/-1) - small alignment updates around shipped weather/test coverage.
 
 ### Notes
@@ -386,9 +386,9 @@ Use this structure for every new entry:
 - Established model/agent metadata files to route tasks through specific skill contexts.
 
 ### Changes
-- **NEW FILE:** `skills/react-best-practices/AGENTS.md` (3,373 lines) - extensive React/Next performance and architecture guidance corpus.
+- **NEW FILE:** `skills/best-practices/react-best-practices/AGENTS.md` (3,373 lines) - extensive React/Next performance and architecture guidance corpus.
 - **NEW FILE:** `skills/brainstorming/scripts/server.cjs` (354 lines) and **NEW FILE:** `skills/brainstorming/scripts/frame-template.html` (214 lines) - local brainstorming support runtime and templates.
-- **NEW FILE:** `skills/frontend-app-builder/SKILL.md` (185 lines), **NEW FILE:** `skills/dispatching-parallel-agents/SKILL.md` (182 lines), **NEW FILE:** `skills/find-skills/SKILL.md` (142 lines), **NEW FILE:** `skills/javascript-typescript/SKILL.md` (142 lines) - core workflow skills for implementation and orchestration.
+- **NEW FILE:** `skills/frontend-app-builder/SKILL.md` (185 lines), **NEW FILE:** `skills/dispatching-parallel-agents/SKILL.md` (182 lines), **NEW FILE:** `skills/find-skills/SKILL.md` (142 lines), **NEW FILE:** `skills/best-practices/js-ts-best-practices/SKILL.md` (142 lines) - core workflow skills for implementation and orchestration.
 - **NEW FILE:** `skills/game-ui-frontend/SKILL.md` (112 lines), **NEW FILE:** `skills/game-studio/SKILL.md` (94 lines), **NEW FILE:** `skills/game-playtest/SKILL.md` (76 lines) - game-specific design and playtest workflows.
 - **NEW FILE:** multiple `skills/*/agents/openai.yaml` files - model-routing metadata for skill execution.
 

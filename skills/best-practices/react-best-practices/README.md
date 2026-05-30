@@ -3,7 +3,7 @@
 ## Structure
 
 ```text
-react-best-practices/
+best-practices/react-best-practices/
   SKILL.md             # Agent-facing instructions
   README.md            # This package guide
   AGENTS.md            # Preserved compiled Vercel guide with all rules expanded

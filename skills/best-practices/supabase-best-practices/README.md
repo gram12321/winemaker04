@@ -3,7 +3,7 @@
 ## Structure
 
 ```text
-supabase-best-practices/
+best-practices/supabase-best-practices/
   SKILL.md             # Agent-facing instructions
   README.md            # This package guide
   AGENTS.md            # Lightweight navigation for agents

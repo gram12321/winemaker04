@@ -1,4 +1,4 @@
-# JavaScript and TypeScript Best Practices
+# JS and TS Best Practices
 
 Read `SKILL.md` first. This directory is intentionally small: it provides language-level guidance for Winemaker implementation work and delegates specialized guidance to sibling skills.
 
