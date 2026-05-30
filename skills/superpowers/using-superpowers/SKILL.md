@@ -5,7 +5,7 @@ description: Use when user ask difficault or extensive task. Use for tasks that 
 
 ## Winemaker Routing Note
 
-Default repo router: `../winemaker-game/SKILL.md`
+Default repo router: `../../winemaker-game/SKILL.md`
 
 In winemaker04, this is non-default. Do not auto-route to this skill for ordinary feature work.
 
