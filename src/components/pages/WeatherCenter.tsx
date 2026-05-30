@@ -8,10 +8,11 @@ import { formatNumber, formatSigned } from '@/lib/utils';
 const WEATHER_CENTER_HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1400&h=500&fit=crop';
 const WEATHER_CENTER_RIPENESS_CLAMP_LABEL = '[-0.0100, +0.0100]';
 const WEATHER_CENTER_HEALTH_CLAMP_LABEL = '[-0.0120, +0.0040]';
-const WEATHER_CENTER_SITE_RESPONSE_MIN = 0.8;
-const WEATHER_CENTER_SITE_RESPONSE_MAX = 1.2;
+const WEATHER_CENTER_SITE_RESPONSE_MIN = 0.7;
+const WEATHER_CENTER_SITE_RESPONSE_MAX = 1.3;
 const WEATHER_CENTER_SITE_RESPONSE_NEUTRAL = 1.0;
 const formatPercentValue = (value: number): string => `${formatNumber(value * 100, { decimals: 2, forceDecimals: true })}%`;
+const formatPercentPoints = (value: number): string => `${formatSigned(value * 100)} pp`;
 
 function getDeltaTextClass(value: number): string {
   if (value > 0) return 'text-emerald-700';
@@ -55,8 +56,10 @@ function getWeatherBadgeClass(state?: string): string {
 }
 
 function getIntensityBadgeClass(intensity?: string): string {
+  if (intensity === 'Extreme') return 'border-fuchsia-700/70 bg-fuchsia-900/30 text-fuchsia-200';
   if (intensity === 'Severe') return 'border-red-700/70 bg-red-900/30 text-red-200';
   if (intensity === 'Moderate') return 'border-amber-700/70 bg-amber-900/30 text-amber-200';
+  if (intensity === 'VeryMild') return 'border-teal-700/70 bg-teal-900/30 text-teal-200';
   return 'border-emerald-700/70 bg-emerald-900/30 text-emerald-200';
 }
 
@@ -80,6 +83,84 @@ function getModifierInterpretation(value: number): string {
   if (value > 1.01) return 'amplifies weather impact';
   if (value < 0.99) return 'buffers weather impact';
   return 'is effectively neutral';
+}
+
+function getProgressionMultiplier(normalDelta: number, totalDelta: number): number {
+  if (Math.abs(normalDelta) < 0.000001) return 1;
+  return totalDelta / normalDelta;
+}
+
+function formatPressure(value: number): string {
+  return formatSigned(value);
+}
+
+function formatPercentFromMultiplier(multiplier: number): string {
+  return `${formatSigned((multiplier - 1) * 100)}%`;
+}
+
+function getWeatherChainText(
+  state: string,
+  intensity: string,
+  stateFactor: number,
+  intensityFactor: number,
+  siteResponse: number
+): string {
+  return `${state} ${intensity}: ${formatSigned(stateFactor)} × ${formatNumber(intensityFactor, { smartDecimals: true })} × ${formatNumber(siteResponse, { smartDecimals: true })}`;
+}
+
+type SiteFactorKey = 'aspect' | 'altitude' | 'terroir' | 'soil';
+
+interface SiteFactorStep {
+  key: SiteFactorKey;
+  label: string;
+  value: number;
+}
+
+interface SitePressureStep extends SiteFactorStep {
+  pressure: number;
+  delta: number;
+}
+
+function getSiteFactorSteps(row: VineyardWeatherRow): SiteFactorStep[] {
+  return [
+    { key: 'aspect', label: 'Aspect', value: row.breakdown.aspectResponse },
+    { key: 'altitude', label: 'Altitude', value: row.breakdown.altitudeResponse },
+    { key: 'terroir', label: 'Terroir', value: row.breakdown.terroirResponse },
+    { key: 'soil', label: 'Soil', value: row.breakdown.soilResponse },
+  ];
+}
+
+function buildSitePressureSteps(basePressure: number, factors: SiteFactorStep[]): SitePressureStep[] {
+  let running = basePressure;
+  return factors.map((factor) => {
+    const nextPressure = running * factor.value;
+    const delta = nextPressure - running;
+    running = nextPressure;
+    return {
+      ...factor,
+      pressure: nextPressure,
+      delta,
+    };
+  });
+}
+
+function formatPressureShift(baseValue: number, finalValue: number): string {
+  const delta = finalValue - baseValue;
+  if (Math.abs(baseValue) < 0.000001) {
+    return `${formatSigned(delta)} (n/a)`;
+  }
+  const relativePct = (delta / baseValue) * 100;
+  return `${formatSigned(delta)} (${formatSigned(relativePct)}%)`;
+}
+
+function getModifierImpactText(multiplier: number): string {
+  const impactPct = (multiplier - 1) * 100;
+  if (Math.abs(impactPct) < 0.1) {
+    return 'Neutral in current formula (~0% pressure shift).';
+  }
+  return impactPct > 0
+    ? `Amplifies weather pressure by ${formatNumber(impactPct, { decimals: 1, forceDecimals: true })}% in this step.`
+    : `Buffers weather pressure by ${formatNumber(Math.abs(impactPct), { decimals: 1, forceDecimals: true })}% in this step.`;
 }
 
 type SortKey = 'name' | 'state' | 'ripenessDelta' | 'healthDelta' | 'siteResponse' | 'reason';
@@ -149,12 +230,63 @@ export function WeatherCenterPage() {
     return rows;
   }, [vineyardRows, sortDirection, sortKey]);
 
+  const formulaExampleRow = sortedRows.length > 0 ? sortedRows[0] : null;
+
+  const formulaSiteFactors = useMemo<SiteFactorStep[]>(() => (
+    formulaExampleRow ? getSiteFactorSteps(formulaExampleRow) : []
+  ), [formulaExampleRow]);
+
+  const formulaPressureBreakdown = useMemo(() => {
+    if (!formulaExampleRow) {
+      return null;
+    }
+
+    const ripenessNoSitePressure = formulaExampleRow.breakdown.weatherStateFactorRipeness
+      * formulaExampleRow.breakdown.weatherIntensityFactor;
+    const healthNoSitePressure = formulaExampleRow.breakdown.weatherStateFactorHealth
+      * formulaExampleRow.breakdown.weatherIntensityFactor
+      * formulaExampleRow.breakdown.seasonAdjustmentMultiplier;
+
+    return {
+      ripenessNoSitePressure,
+      healthNoSitePressure,
+      ripenessSiteSteps: buildSitePressureSteps(ripenessNoSitePressure, formulaSiteFactors),
+      healthSiteSteps: buildSitePressureSteps(healthNoSitePressure, formulaSiteFactors),
+      ripenessWithSitePressureRaw: formulaExampleRow.breakdown.ripenessWeatherPressureRaw,
+      healthWithSitePressureRaw: formulaExampleRow.breakdown.healthWeatherPressureRaw,
+      ripenessWithSitePressureFinal: formulaExampleRow.breakdown.ripenessWeatherPressure,
+      healthWithSitePressureFinal: formulaExampleRow.breakdown.healthWeatherPressure,
+    };
+  }, [formulaExampleRow, formulaSiteFactors]);
+
+  const formulaSiteStackText = useMemo(() => {
+    if (formulaSiteFactors.length === 0) {
+      return 'n/a';
+    }
+    return formulaSiteFactors
+      .map((factor) => `${factor.label} x${formatNumber(factor.value, { smartDecimals: true })}`)
+      .join(' x ');
+  }, [formulaSiteFactors]);
+
   const modifierSummary = useMemo(() => ({
     aspect: getModifierAverage(vineyardRows, 'aspectResponse'),
     altitude: getModifierAverage(vineyardRows, 'altitudeResponse'),
     terroir: getModifierAverage(vineyardRows, 'terroirResponse'),
     soil: getModifierAverage(vineyardRows, 'soilResponse'),
   }), [vineyardRows]);
+
+  const compareRows = useMemo(() => {
+    if (sortedRows.length < 2) {
+      return null;
+    }
+    const bySite = [...sortedRows].sort((a, b) => b.siteResponse - a.siteResponse);
+    const amplified = bySite[0];
+    const buffered = bySite[bySite.length - 1];
+    if (!amplified || !buffered || amplified.id === buffered.id) {
+      return null;
+    }
+    return { amplified, buffered };
+  }, [sortedRows]);
 
   const weatherDriverContext = useMemo(() => {
     const activeState = weatherContext?.weatherState || gameState.nextWeekForecastState || gameState.weatherState;
@@ -312,7 +444,7 @@ export function WeatherCenterPage() {
                   <p className={`text-lg font-semibold ${getWeatherSignalClass(impactSummary.weatherSignalLabel)}`}>{impactSummary.weatherSignalLabel}</p>
                 </UnifiedTooltip>
                 <p className="text-[11px] text-muted-foreground">
-                  Wx Î” Ripeness {formatSigned(impactSummary.avgWeatherRipenessDelta)} / Wx Î” Health {formatSigned(impactSummary.avgWeatherHealthDelta)}
+                  Weather Delta: Ripeness {formatPercentPoints(impactSummary.avgWeatherRipenessDelta)} / Health {formatPercentPoints(impactSummary.avgWeatherHealthDelta)}
                 </p>
               </div>
               <div className="rounded-lg bg-slate-100 p-2 text-slate-700">
@@ -322,6 +454,65 @@ export function WeatherCenterPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-slate-200 bg-white/90 backdrop-blur">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Model Legend</CardTitle>
+          <CardDescription>Definitions and units used in the weather model so every number has context.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 md:grid-cols-2 text-xs">
+          <div className="rounded border border-slate-200 bg-slate-50 p-2.5">
+            <p><span className="font-semibold text-slate-700">Weather pressure:</span> Unitless weather force index. + means supports baseline direction, - means opposes baseline direction.</p>
+            <p className="mt-1"><span className="font-semibold text-slate-700">No-site pressure:</span> `stateFactor x intensityFactor` (health also multiplies `seasonAdjustment`).</p>
+            <p className="mt-1"><span className="font-semibold text-slate-700">Site response:</span> `aspect x altitude x terroir x soil`, clamped to [0.7, 1.3].</p>
+          </div>
+          <div className="rounded border border-slate-200 bg-slate-50 p-2.5">
+            <p><span className="font-semibold text-slate-700">Weather multiplier:</span> `1 + sign(normalDelta) x weatherPressure`.</p>
+            <p className="mt-1"><span className="font-semibold text-slate-700">Projected delta:</span> `normalDelta x weatherMultiplier` (shown in `pp`).</p>
+            <p className="mt-1"><span className="font-semibold text-slate-700">Quick scale:</span> pressure `+0.10` is about `+10%` multiplier shift, pressure `-0.20` is about `-20%` shift (before clamps).</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 bg-white/90 backdrop-blur">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Trigger Matrix</CardTitle>
+          <CardDescription>Which weather states activate each site modifier family.</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Modifier</TableHead>
+                <TableHead>Activated By</TableHead>
+                <TableHead>Current Driver</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>Aspect</TableCell>
+                <TableCell>Heat, Frost, Snow</TableCell>
+                <TableCell>{weatherDriverContext.heatColdActive ? 'Active now' : 'Neutral now (x1)'}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Altitude</TableCell>
+                <TableCell>Heat, Frost, Snow</TableCell>
+                <TableCell>{weatherDriverContext.heatColdActive ? 'Active now' : 'Neutral now (x1)'}</TableCell>
+              </TableRow>
+                <TableRow>
+                  <TableCell>Soil</TableCell>
+                  <TableCell>Rain/Snow {'->'} Water Retention, Heat/Frost {'->'} Thermal Swing</TableCell>
+                  <TableCell>{weatherDriverContext.soilMode}</TableCell>
+                </TableRow>
+              <TableRow>
+                <TableCell>Terroir</TableCell>
+                <TableCell>Always (grape-region suitability response)</TableCell>
+                <TableCell>Always active</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Card className="border-slate-200 bg-white/90 backdrop-blur">
         <CardHeader className="pb-3">
@@ -334,8 +525,9 @@ export function WeatherCenterPage() {
             <p>{weatherDriverContext.intensityNote} {weatherDriverContext.seasonNote}</p>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-4">
-          {[
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-4">
+            {[
             {
               label: 'Aspect',
               value: modifierSummary.aspect,
@@ -368,28 +560,153 @@ export function WeatherCenterPage() {
               detail: `${weatherDriverContext.soilMode} mode for ${weatherDriverContext.activeState || 'current weather'}.`,
               tooltip: 'Soil mode switches by weather: Rain/Snow use water retention, Heat/Frost use thermal swing, Clear/Storm stay neutral.',
             },
-          ].map((modifier) => (
-            <div key={modifier.label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">{modifier.label}</p>
-                  <UnifiedTooltip
-                    title={`${modifier.label} Multiplier`}
-                    content={<p className="text-xs text-slate-200">{modifier.tooltip}</p>}
-                    side="top"
-                    variant="panel"
-                    density="compact"
-                  >
-                    <p className={`text-base font-semibold ${getSiteResponseColorClass(modifier.value)}`}>x{formatNumber(modifier.value, { smartDecimals: true })}</p>
-                  </UnifiedTooltip>
+            ].map((modifier) => (
+              <div key={modifier.label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{modifier.label}</p>
+                    <UnifiedTooltip
+                      title={`${modifier.label} Multiplier`}
+                      content={<p className="text-xs text-slate-200">{modifier.tooltip}</p>}
+                      side="top"
+                      variant="panel"
+                      density="compact"
+                    >
+                      <p className={`text-base font-semibold ${getSiteResponseColorClass(modifier.value)}`}>x{formatNumber(modifier.value, { smartDecimals: true })}</p>
+                    </UnifiedTooltip>
+                  </div>
+                  <div className="rounded-full bg-white p-2 text-slate-700 shadow-sm">{modifier.icon}</div>
                 </div>
-                <div className="rounded-full bg-white p-2 text-slate-700 shadow-sm">{modifier.icon}</div>
+                <p className="mt-2 text-xs text-muted-foreground">{modifier.detail}</p>
+                <p className="mt-1 text-[11px] text-slate-600">{getModifierImpactText(modifier.value)}</p>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">{modifier.detail}</p>
+            ))}
+          </div>
+
+          {formulaExampleRow && formulaPressureBreakdown && (
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold text-slate-700">How Site Modifiers Change Weather Pressure</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Example vineyard: <span className="font-medium text-slate-700">{formulaExampleRow.name}</span>. Start from weather-only pressure, then multiply aspect, altitude, terroir, and soil to get the final site-adjusted pressure used by the formula.
+              </p>
+              <div className="mt-2 grid gap-3 md:grid-cols-2 text-[11px]">
+                <div className="rounded border border-violet-200 bg-violet-50/30 p-2.5">
+                  <p className="font-semibold text-violet-700">Ripeness Pressure Walkthrough</p>
+                  <p className="mt-1">Equation: `noSite = stateFactor x intensityFactor`</p>
+                  <p className="mt-1">No-site pressure: <span className="font-medium">{formatPressure(formulaPressureBreakdown.ripenessNoSitePressure)}</span> (state x intensity)</p>
+                  <div className="mt-1 space-y-0.5">
+                    {formulaPressureBreakdown.ripenessSiteSteps.map((step) => (
+                      <p key={step.key}>
+                        x{step.label} x{formatNumber(step.value, { smartDecimals: true })}{' -> '}{formatPressure(step.pressure)} ({formatSigned(step.delta)})
+                      </p>
+                    ))}
+                  </div>
+                  <p className="mt-1">Site-adjusted (raw): <span className="font-medium">{formatPressure(formulaPressureBreakdown.ripenessWithSitePressureRaw)}</span></p>
+                  <p>Net site impact: <span className="font-medium">{formatPressureShift(formulaPressureBreakdown.ripenessNoSitePressure, formulaPressureBreakdown.ripenessWithSitePressureRaw)}</span></p>
+                  <p>Formula pressure used: <span className="font-medium">{formatPressure(formulaPressureBreakdown.ripenessWithSitePressureFinal)}</span></p>
+                </div>
+                <div className="rounded border border-emerald-200 bg-emerald-50/30 p-2.5">
+                  <p className="font-semibold text-emerald-700">Health Pressure Walkthrough</p>
+                  <p className="mt-1">Equation: `noSite = stateFactor x intensityFactor x seasonAdj`</p>
+                  <p className="mt-1">No-site pressure: <span className="font-medium">{formatPressure(formulaPressureBreakdown.healthNoSitePressure)}</span> (state x intensity x season adj)</p>
+                  <div className="mt-1 space-y-0.5">
+                    {formulaPressureBreakdown.healthSiteSteps.map((step) => (
+                      <p key={step.key}>
+                        x{step.label} x{formatNumber(step.value, { smartDecimals: true })}{' -> '}{formatPressure(step.pressure)} ({formatSigned(step.delta)})
+                      </p>
+                    ))}
+                  </div>
+                  <p className="mt-1">Site-adjusted (raw): <span className="font-medium">{formatPressure(formulaPressureBreakdown.healthWithSitePressureRaw)}</span></p>
+                  <p>Net site impact: <span className="font-medium">{formatPressureShift(formulaPressureBreakdown.healthNoSitePressure, formulaPressureBreakdown.healthWithSitePressureRaw)}</span></p>
+                  <p>Formula pressure used: <span className="font-medium">{formatPressure(formulaPressureBreakdown.healthWithSitePressureFinal)}</span></p>
+                </div>
+              </div>
             </div>
-          ))}
+          )}
         </CardContent>
       </Card>
+
+      {formulaExampleRow && formulaPressureBreakdown && (
+        <Card className="border-slate-200 bg-slate-50/70">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Weather Effect Formula (Visible Model)</CardTitle>
+            <CardDescription>
+              Example using <span className="font-medium text-slate-700">{formulaExampleRow.name}</span>. This is the exact chain from season progression to projected effect.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 text-xs">
+            <div className="rounded border border-violet-200 bg-white p-3 space-y-1.5">
+              <p className="font-semibold text-violet-700">Ripeness Chain</p>
+              <p>Season progression: <span className="font-medium">{formatPercentPoints(formulaExampleRow.ripenessNormalDelta)}</span></p>
+              <p>
+                Weather chain: <span className="font-medium">{getWeatherChainText(
+                  formulaExampleRow.weatherState,
+                  formulaExampleRow.weatherIntensity,
+                  formulaExampleRow.breakdown.weatherStateFactorRipeness,
+                  formulaExampleRow.breakdown.weatherIntensityFactor,
+                  formulaExampleRow.siteResponse
+                )}</span>
+              </p>
+              <p>Site stack: <span className="font-medium">{formulaSiteStackText} = x{formatNumber(formulaExampleRow.siteResponse, { smartDecimals: true })}</span></p>
+              <p>No-site pressure: <span className="font-medium">{formatPressure(formulaPressureBreakdown.ripenessNoSitePressure)}</span></p>
+              <p>Site impact on pressure: <span className="font-medium">{formatPressureShift(formulaPressureBreakdown.ripenessNoSitePressure, formulaPressureBreakdown.ripenessWithSitePressureRaw)}</span></p>
+              <p>Weather pressure: <span className="font-medium">{formatPressure(formulaExampleRow.breakdown.ripenessWeatherPressure)}</span></p>
+              <p>Equation: <span className="font-medium">`multiplier = 1 + sign(normalDelta) x weatherPressure`</span></p>
+              <p>Projected multiplier: <span className="font-medium">x{formatNumber(getProgressionMultiplier(formulaExampleRow.ripenessNormalDelta, formulaExampleRow.ripenessDelta), { smartDecimals: true })}</span></p>
+              <p>Multiplier shift: <span className="font-medium">{formatPercentFromMultiplier(getProgressionMultiplier(formulaExampleRow.ripenessNormalDelta, formulaExampleRow.ripenessDelta))}</span></p>
+              <p>Weather contribution: <span className={`font-medium ${getDeltaTextClass(formulaExampleRow.ripenessWeatherDelta)}`}>{formatPercentPoints(formulaExampleRow.ripenessWeatherDelta)}</span></p>
+              <p>Projected effect: <span className={`font-semibold ${getDeltaTextClass(formulaExampleRow.ripenessDelta)}`}>{formatPercentPoints(formulaExampleRow.ripenessDelta)}</span> ({formatPercentValue(formulaExampleRow.ripenessCurrent)}{' -> '}{formatPercentValue(formulaExampleRow.ripenessProjected)})</p>
+            </div>
+            <div className="rounded border border-emerald-200 bg-white p-3 space-y-1.5">
+              <p className="font-semibold text-emerald-700">Health Chain</p>
+              <p>Season progression: <span className="font-medium">{formatPercentPoints(formulaExampleRow.healthNormalDelta)}</span></p>
+              <p>
+                Weather chain: <span className="font-medium">{getWeatherChainText(
+                  formulaExampleRow.weatherState,
+                  formulaExampleRow.weatherIntensity,
+                  formulaExampleRow.breakdown.weatherStateFactorHealth,
+                  formulaExampleRow.breakdown.weatherIntensityFactor,
+                  formulaExampleRow.siteResponse
+                )}</span>
+              </p>
+              <p>Season adjustment: <span className="font-medium">x{formatNumber(formulaExampleRow.breakdown.seasonAdjustmentMultiplier, { smartDecimals: true })}</span></p>
+              <p>Site stack: <span className="font-medium">{formulaSiteStackText} = x{formatNumber(formulaExampleRow.siteResponse, { smartDecimals: true })}</span></p>
+              <p>No-site pressure: <span className="font-medium">{formatPressure(formulaPressureBreakdown.healthNoSitePressure)}</span></p>
+              <p>Site impact on pressure: <span className="font-medium">{formatPressureShift(formulaPressureBreakdown.healthNoSitePressure, formulaPressureBreakdown.healthWithSitePressureRaw)}</span></p>
+              <p>Weather pressure: <span className="font-medium">{formatPressure(formulaExampleRow.breakdown.healthWeatherPressure)}</span></p>
+              <p>Equation: <span className="font-medium">`multiplier = 1 + sign(normalDelta) x weatherPressure`</span></p>
+              <p>Projected multiplier: <span className="font-medium">x{formatNumber(getProgressionMultiplier(formulaExampleRow.healthNormalDelta, formulaExampleRow.healthDelta), { smartDecimals: true })}</span></p>
+              <p>Multiplier shift: <span className="font-medium">{formatPercentFromMultiplier(getProgressionMultiplier(formulaExampleRow.healthNormalDelta, formulaExampleRow.healthDelta))}</span></p>
+              <p>Weather contribution: <span className={`font-medium ${getDeltaTextClass(formulaExampleRow.healthWeatherDelta)}`}>{formatPercentPoints(formulaExampleRow.healthWeatherDelta)}</span></p>
+              <p>Projected effect: <span className={`font-semibold ${getDeltaTextClass(formulaExampleRow.healthDelta)}`}>{formatPercentPoints(formulaExampleRow.healthDelta)}</span> ({formatPercentValue(formulaExampleRow.healthCurrent)}{' -> '}{formatPercentValue(formulaExampleRow.healthProjected)})</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {compareRows && (
+        <Card className="border-slate-200 bg-white/90 backdrop-blur">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Why Vineyards Differ</CardTitle>
+            <CardDescription>Same weather driver, different site stack leads to different pressure and projected effect.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 text-xs">
+            {[
+              { title: 'Higher Site Response', row: compareRows.amplified, tone: 'emerald' },
+              { title: 'Lower Site Response', row: compareRows.buffered, tone: 'sky' },
+            ].map((entry) => (
+              <div key={entry.row.id} className={`rounded border ${entry.tone === 'emerald' ? 'border-emerald-200 bg-emerald-50/30' : 'border-sky-200 bg-sky-50/30'} p-3 space-y-1`}>
+                <p className={`font-semibold ${entry.tone === 'emerald' ? 'text-emerald-700' : 'text-sky-700'}`}>{entry.title}</p>
+                <p className="font-medium text-slate-700">{entry.row.name}</p>
+                <p>Site response: <span className="font-medium">x{formatNumber(entry.row.siteResponse, { smartDecimals: true })}</span></p>
+                <p>Weather pressure (ripeness/health): <span className="font-medium">{formatPressure(entry.row.breakdown.ripenessWeatherPressure)} / {formatPressure(entry.row.breakdown.healthWeatherPressure)}</span></p>
+                <p>Projected multiplier (ripeness/health): <span className="font-medium">x{formatNumber(getProgressionMultiplier(entry.row.ripenessNormalDelta, entry.row.ripenessDelta), { smartDecimals: true })} / x{formatNumber(getProgressionMultiplier(entry.row.healthNormalDelta, entry.row.healthDelta), { smartDecimals: true })}</span></p>
+                <p>Projected delta (ripeness/health): <span className="font-medium">{formatPercentPoints(entry.row.ripenessDelta)} / {formatPercentPoints(entry.row.healthDelta)}</span></p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         <Card>
@@ -491,7 +808,10 @@ export function WeatherCenterPage() {
                           <div className="space-y-2">
                             <TooltipSection title="Base Weather Value">
                               <TooltipRow label="State" value={`${row.breakdown.weatherState} (${row.breakdown.weatherIntensity})`} />
-                              <TooltipRow label="Base ripeness delta" value={formatSigned(row.breakdown.baseRipenessDeviation)} monospaced />
+                              <TooltipRow label="State factor" value={formatSigned(row.breakdown.weatherStateFactorRipeness)} monospaced />
+                              <TooltipRow label="Intensity factor" value={`x${formatNumber(row.breakdown.weatherIntensityFactor, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label="Weather pressure" value={formatSigned(row.breakdown.ripenessWeatherPressure)} monospaced />
+                              <TooltipRow label="Reference base delta" value={formatSigned(row.breakdown.baseRipenessDeviation)} monospaced />
                             </TooltipSection>
                             <TooltipSection title="Site Modifiers">
                               <TooltipRow label="Aspect" value={`x${formatNumber(row.breakdown.aspectResponse, { smartDecimals: true })}`} monospaced />
@@ -505,6 +825,7 @@ export function WeatherCenterPage() {
                               <TooltipRow label="Weather raw delta" value={formatSigned(row.breakdown.ripenessRawDelta)} monospaced />
                               <TooltipRow label="Weather final delta" value={formatSigned(row.ripenessWeatherDelta)} monospaced valueRating={row.ripenessWeatherDelta >= 0 ? 1 : 0} />
                               <TooltipRow label="Normal progression" value={formatSigned(row.ripenessNormalDelta)} monospaced valueRating={row.ripenessNormalDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Projected multiplier" value={`x${formatNumber(getProgressionMultiplier(row.ripenessNormalDelta, row.ripenessDelta), { smartDecimals: true })}`} monospaced />
                               <TooltipRow label="Net delta" value={formatSigned(row.ripenessDelta)} monospaced valueRating={row.ripenessDelta >= 0 ? 1 : 0} />
                               <TooltipRow label="Projected" value={formatPercentValue(row.ripenessProjected)} monospaced />
                               <TooltipRow label="Clamp range" value={WEATHER_CENTER_RIPENESS_CLAMP_LABEL} monospaced />
@@ -514,14 +835,17 @@ export function WeatherCenterPage() {
                         )}
                         triggerClassName="inline-flex justify-end"
                       >
-                        <button type="button" className="inline-flex flex-col items-end gap-0.5 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 min-w-[116px]">
+                        <button type="button" className="inline-flex flex-col items-end gap-0.5 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 min-w-[188px]">
                           <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
                             <Grape className="h-3.5 w-3.5 text-violet-600" />
                             Ripeness
                           </span>
+                          <span className="text-[11px] text-slate-600">Season progression {formatPercentPoints(row.ripenessNormalDelta)}</span>
+                          <span className="text-[11px] text-slate-600">{row.weatherState} {row.weatherIntensity}{' -> '}x{formatNumber(getProgressionMultiplier(row.ripenessNormalDelta, row.ripenessDelta), { smartDecimals: true })}</span>
+                          <span className={`text-[11px] ${getDeltaTextClass(row.ripenessWeatherDelta)}`}>Weather contribution {formatPercentPoints(row.ripenessWeatherDelta)}</span>
                           <span>{formatPercentValue(row.ripenessCurrent)}{' -> '}{formatPercentValue(row.ripenessProjected)}</span>
                           <span className={`inline-flex items-center gap-1 ${getDeltaTextClass(row.ripenessDelta)}`}>
-                            {formatSigned(row.ripenessDelta)}
+                            Projected {formatPercentPoints(row.ripenessDelta)}
                             <Info className="h-3 w-3 text-slate-500" />
                           </span>
                         </button>
@@ -534,19 +858,23 @@ export function WeatherCenterPage() {
                           <div className="space-y-2">
                             <TooltipSection title="Base Weather Value">
                               <TooltipRow label="State" value={`${row.breakdown.weatherState} (${row.breakdown.weatherIntensity})`} />
-                              <TooltipRow label="Base health delta" value={formatSigned(row.breakdown.baseHealthDeviation)} monospaced />
+                              <TooltipRow label="State factor" value={formatSigned(row.breakdown.weatherStateFactorHealth)} monospaced />
+                              <TooltipRow label="Intensity factor" value={`x${formatNumber(row.breakdown.weatherIntensityFactor, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label="Weather pressure" value={formatSigned(row.breakdown.healthWeatherPressure)} monospaced />
+                              <TooltipRow label="Reference base delta" value={formatSigned(row.breakdown.baseHealthDeviation)} monospaced />
                               <TooltipRow label="Seasonal adjustment" value={`x${formatNumber(row.breakdown.seasonAdjustmentMultiplier, { smartDecimals: true })}`} monospaced />
                               <TooltipRow label="Adjusted health base" value={formatSigned(row.breakdown.adjustedBaseHealthDeviation)} monospaced />
                             </TooltipSection>
                             <TooltipSection title="Site Modifiers">
                               <TooltipRow label="Combined site response" value={`x${formatNumber(row.siteResponse, { smartDecimals: true })}`} monospaced />
-                              {row.breakdown.siteResponseClamped && <p className="text-[11px] text-amber-400">Raw site response was clamped to [0.8, 1.2].</p>}
+                              {row.breakdown.siteResponseClamped && <p className="text-[11px] text-amber-400">Raw site response was clamped to [0.7, 1.3].</p>}
                             </TooltipSection>
                             <TooltipSection title="Result">
                               <TooltipRow label="Current" value={formatPercentValue(row.healthCurrent)} monospaced />
                               <TooltipRow label="Weather raw delta" value={formatSigned(row.breakdown.healthRawDelta)} monospaced />
                               <TooltipRow label="Weather final delta" value={formatSigned(row.healthWeatherDelta)} monospaced valueRating={row.healthWeatherDelta >= 0 ? 1 : 0} />
                               <TooltipRow label="Normal progression" value={formatSigned(row.healthNormalDelta)} monospaced valueRating={row.healthNormalDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Projected multiplier" value={`x${formatNumber(getProgressionMultiplier(row.healthNormalDelta, row.healthDelta), { smartDecimals: true })}`} monospaced />
                               <TooltipRow label="Net delta" value={formatSigned(row.healthDelta)} monospaced valueRating={row.healthDelta >= 0 ? 1 : 0} />
                               <TooltipRow label="Projected" value={formatPercentValue(row.healthProjected)} monospaced />
                               <TooltipRow label="Clamp range" value={WEATHER_CENTER_HEALTH_CLAMP_LABEL} monospaced />
@@ -556,14 +884,17 @@ export function WeatherCenterPage() {
                         )}
                         triggerClassName="inline-flex justify-end"
                       >
-                        <button type="button" className="inline-flex flex-col items-end gap-0.5 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 min-w-[116px]">
+                        <button type="button" className="inline-flex flex-col items-end gap-0.5 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 min-w-[188px]">
                           <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
                             <Leaf className="h-3.5 w-3.5 text-emerald-700" />
                             Health
                           </span>
+                          <span className="text-[11px] text-slate-600">Season progression {formatPercentPoints(row.healthNormalDelta)}</span>
+                          <span className="text-[11px] text-slate-600">{row.weatherState} {row.weatherIntensity}{' -> '}x{formatNumber(getProgressionMultiplier(row.healthNormalDelta, row.healthDelta), { smartDecimals: true })}</span>
+                          <span className={`text-[11px] ${getDeltaTextClass(row.healthWeatherDelta)}`}>Weather contribution {formatPercentPoints(row.healthWeatherDelta)}</span>
                           <span>{formatPercentValue(row.healthCurrent)}{' -> '}{formatPercentValue(row.healthProjected)}</span>
                           <span className={`inline-flex items-center gap-1 ${getDeltaTextClass(row.healthDelta)}`}>
-                            {formatSigned(row.healthDelta)}
+                            Projected {formatPercentPoints(row.healthDelta)}
                             <Info className="h-3 w-3 text-slate-500" />
                           </span>
                         </button>

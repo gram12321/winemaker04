@@ -34,14 +34,16 @@ function buildContext(overrides: Partial<VineyardWeatherContext> = {}): Vineyard
 }
 
 describe('weatherImpactService', () => {
-  it('uses clear/mild defaults when weather fields are missing', () => {
+  it('uses clear/moderate defaults when weather fields are missing', () => {
     const impact = calculateVineyardWeatherImpact(baseVineyard, buildContext());
 
     expect(impact.breakdown.weatherState).toBe('Clear');
-    expect(impact.breakdown.weatherIntensity).toBe('Mild');
+    expect(impact.breakdown.weatherIntensity).toBe('Moderate');
     expect(impact.siteResponse).toBeCloseTo(1, 6);
-    expect(impact.ripenessDelta).toBeCloseTo(0.001, 6);
-    expect(impact.healthDelta).toBeCloseTo(0.0003, 6);
+    expect(impact.ripenessDelta).toBeCloseTo(0.0016, 6);
+    expect(impact.healthDelta).toBeCloseTo(0.002, 6);
+    expect(impact.ripenessWeatherPressure).toBeCloseTo(0.16, 6);
+    expect(impact.healthWeatherPressure).toBeCloseTo(0.2, 6);
     expect(impact.reason).toContain('site-neutral impact');
   });
 

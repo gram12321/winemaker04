@@ -42,24 +42,34 @@ export interface WeatherImpactSummary {
 
 function describeWeatherStateImpact(
   weatherState: VineyardWeatherImpactBreakdown['weatherState'],
-  baseRipenessDeviation: number,
-  adjustedBaseHealthDeviation: number
+  weatherStateFactorRipeness: number,
+  weatherStateFactorHealth: number
 ): string {
-  const ripenessDirection = baseRipenessDeviation > 0 ? 'supports ripening' : baseRipenessDeviation < 0 ? 'slows ripening' : 'neutral for ripening';
-  const healthDirection = adjustedBaseHealthDeviation > 0 ? 'supports vine health' : adjustedBaseHealthDeviation < 0 ? 'adds vine stress' : 'neutral for vine health';
+  const ripenessDirection = weatherStateFactorRipeness > 0 ? 'supports ripening' : weatherStateFactorRipeness < 0 ? 'slows ripening' : 'neutral for ripening';
+  const healthDirection = weatherStateFactorHealth > 0 ? 'supports vine health' : weatherStateFactorHealth < 0 ? 'adds vine stress' : 'neutral for vine health';
   return `${weatherState} ${ripenessDirection} and ${healthDirection} before site modifiers.`;
 }
 
 function describeWeatherIntensityImpact(
-  weatherIntensity: VineyardWeatherImpactBreakdown['weatherIntensity']
+  weatherIntensity: VineyardWeatherImpactBreakdown['weatherIntensity'],
+  weatherIntensityFactor: number
 ): string {
+  if (weatherIntensity === 'Extreme') {
+    return `Extreme intensity applies the highest weather pressure (${weatherIntensityFactor.toFixed(2)}x).`;
+  }
   if (weatherIntensity === 'Severe') {
-    return 'Severe intensity applies the strongest weather pressure this week.';
+    return `Severe intensity applies the strongest weather pressure (${weatherIntensityFactor.toFixed(2)}x).`;
   }
   if (weatherIntensity === 'Moderate') {
-    return 'Moderate intensity applies a meaningful weather pressure this week.';
+    return `Moderate intensity is the baseline weather pressure (${weatherIntensityFactor.toFixed(2)}x).`;
   }
-  return 'Mild intensity applies a lighter weather pressure this week.';
+  if (weatherIntensity === 'Mild') {
+    return `Mild intensity applies lighter weather pressure (${weatherIntensityFactor.toFixed(2)}x).`;
+  }
+  if (weatherIntensity === 'VeryMild') {
+    return `Very mild intensity applies the lightest weather pressure (${weatherIntensityFactor.toFixed(2)}x).`;
+  }
+  return `Mild intensity applies a lighter weather pressure (${weatherIntensityFactor.toFixed(2)}x).`;
 }
 
 function getWeatherSignal(
@@ -118,10 +128,13 @@ export function buildVineyardWeatherRows(vineyards: Vineyard[], weatherContext: 
         weatherIntensity: projection.breakdown.weatherIntensity,
         weatherStateImpact: describeWeatherStateImpact(
           projection.breakdown.weatherState,
-          projection.breakdown.baseRipenessDeviation,
-          projection.breakdown.adjustedBaseHealthDeviation
+          projection.breakdown.weatherStateFactorRipeness,
+          projection.breakdown.weatherStateFactorHealth
         ),
-        weatherIntensityImpact: describeWeatherIntensityImpact(projection.breakdown.weatherIntensity),
+        weatherIntensityImpact: describeWeatherIntensityImpact(
+          projection.breakdown.weatherIntensity,
+          projection.breakdown.weatherIntensityFactor
+        ),
         ripenessCurrent: projection.ripeness.current,
         ripenessProjected: projection.ripeness.projected,
         ripenessNormalDelta: projection.ripeness.normalDelta,

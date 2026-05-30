@@ -93,34 +93,46 @@ const BASE_WEATHER_STATE_BY_SEASON: Record<Season, ReadonlyArray<WeightedChoice<
 
 const INTENSITY_BY_STATE: Record<WeatherState, ReadonlyArray<WeightedChoice<WeatherIntensity>>> = {
   Clear: [
+    { value: 'VeryMild', weight: 0.32 },
     { value: 'Mild', weight: 0.72 },
     { value: 'Moderate', weight: 0.26 },
     { value: 'Severe', weight: 0.02 },
+    { value: 'Extreme', weight: 0.0 },
   ],
   Rain: [
+    { value: 'VeryMild', weight: 0.12 },
     { value: 'Mild', weight: 0.55 },
     { value: 'Moderate', weight: 0.35 },
     { value: 'Severe', weight: 0.1 },
+    { value: 'Extreme', weight: 0.02 },
   ],
   Heat: [
+    { value: 'VeryMild', weight: 0.08 },
     { value: 'Mild', weight: 0.44 },
     { value: 'Moderate', weight: 0.4 },
     { value: 'Severe', weight: 0.16 },
+    { value: 'Extreme', weight: 0.06 },
   ],
   Frost: [
+    { value: 'VeryMild', weight: 0.1 },
     { value: 'Mild', weight: 0.5 },
     { value: 'Moderate', weight: 0.35 },
     { value: 'Severe', weight: 0.15 },
+    { value: 'Extreme', weight: 0.04 },
   ],
   Storm: [
+    { value: 'VeryMild', weight: 0.06 },
     { value: 'Mild', weight: 0.35 },
     { value: 'Moderate', weight: 0.45 },
     { value: 'Severe', weight: 0.2 },
+    { value: 'Extreme', weight: 0.1 },
   ],
   Snow: [
+    { value: 'VeryMild', weight: 0.08 },
     { value: 'Mild', weight: 0.38 },
     { value: 'Moderate', weight: 0.43 },
     { value: 'Severe', weight: 0.19 },
+    { value: 'Extreme', weight: 0.06 },
   ],
 };
 
@@ -231,11 +243,14 @@ function rollForecastState(
 
   const intensityDriftRoll = seededUnit(`${seedBase}:intensity-drift`);
   if (intensityDriftRoll <= 0.55) {
-    const nextIntensity: WeatherIntensity = actualNext.intensity === 'Mild'
-      ? 'Moderate'
-      : actualNext.intensity === 'Moderate'
-        ? 'Mild'
-        : 'Moderate';
+    const intensityOrder: WeatherIntensity[] = ['VeryMild', 'Mild', 'Moderate', 'Severe', 'Extreme'];
+    const currentIndex = intensityOrder.indexOf(actualNext.intensity);
+    const fallbackIndex = currentIndex >= 0 ? currentIndex : 2;
+    const downIndex = Math.max(0, fallbackIndex - 1);
+    const upIndex = Math.min(intensityOrder.length - 1, fallbackIndex + 1);
+    const nextIntensity = seededUnit(`${seedBase}:intensity-direction`) <= 0.5
+      ? intensityOrder[downIndex]
+      : intensityOrder[upIndex];
 
     return {
       state: actualNext.state,

@@ -22,7 +22,7 @@ const FORECAST_HIT_RATE_BY_CONFIDENCE: Record<WeatherForecastConfidence, string>
 };
 
 const WEATHER_STATES: WeatherState[] = ['Clear', 'Rain', 'Heat', 'Frost', 'Storm', 'Snow'];
-const WEATHER_INTENSITIES: WeatherIntensity[] = ['Mild', 'Moderate', 'Severe'];
+const WEATHER_INTENSITIES: WeatherIntensity[] = ['VeryMild', 'Mild', 'Moderate', 'Severe', 'Extreme'];
 
 function getAspectAltitudeTrigger(state: WeatherState): string {
   if (state === 'Heat' || state === 'Frost' || state === 'Snow') {

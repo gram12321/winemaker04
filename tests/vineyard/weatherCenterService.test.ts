@@ -13,11 +13,20 @@ vi.mock('@/lib/services/vineyard/weatherImpactService', () => ({
       return {
         ripenessDelta: -0.02,
         healthDelta: -0.02,
+        ripenessWeatherPressure: -0.1,
+        healthWeatherPressure: -0.1,
         siteResponse: 0.9,
         reason: 'Storm (Severe) with site buffered impact',
         breakdown: {
           weatherState: 'Storm',
           weatherIntensity: 'Severe',
+          weatherStateFactorRipeness: -0.12,
+          weatherStateFactorHealth: -0.14,
+          weatherIntensityFactor: 1.3,
+          ripenessWeatherPressureRaw: -0.1,
+          healthWeatherPressureRaw: -0.1,
+          ripenessWeatherPressure: -0.1,
+          healthWeatherPressure: -0.1,
           baseRipenessDeviation: -0.001,
           baseHealthDeviation: -0.001,
           adjustedBaseHealthDeviation: -0.001,
@@ -40,11 +49,20 @@ vi.mock('@/lib/services/vineyard/weatherImpactService', () => ({
     return {
       ripenessDelta: 0.01,
       healthDelta: -0.003,
+      ripenessWeatherPressure: 0.1,
+      healthWeatherPressure: -0.08,
       siteResponse: 1.1,
       reason: 'Heat (Moderate) with site amplified impact',
       breakdown: {
         weatherState: 'Heat',
         weatherIntensity: 'Moderate',
+        weatherStateFactorRipeness: 0.11,
+        weatherStateFactorHealth: -0.08,
+        weatherIntensityFactor: 1.0,
+        ripenessWeatherPressureRaw: 0.1,
+        healthWeatherPressureRaw: -0.08,
+        ripenessWeatherPressure: 0.1,
+        healthWeatherPressure: -0.08,
         baseRipenessDeviation: 0.001,
         baseHealthDeviation: -0.001,
         adjustedBaseHealthDeviation: -0.001,
@@ -127,18 +145,24 @@ describe('weather center service', () => {
     );
 
     expect(rows).toHaveLength(2);
-    expect(rows.map(row => row.id)).toEqual(['v1', 'v2']);
-    expect(rows[0].weatherState).toBe('Heat');
-    expect(rows[0].weatherIntensity).toBe('Moderate');
-    expect(rows[0].weatherStateImpact).toContain('supports ripening');
-    expect(rows[0].weatherIntensityImpact).toContain('meaningful weather pressure');
-    expect(rows[0].ripenessDelta).toBeCloseTo(0.02, 6);
-    expect(rows[0].healthDelta).toBeCloseTo(-0.0078, 6);
-    expect(rows[1].ripenessDelta).toBeCloseTo(0.005, 6);
-    expect(rows[1].healthDelta).toBeCloseTo(-0.015, 6);
-    expect(rows[0].ripenessProjected).toBe(1);
-    expect(rows[1].ripenessProjected).toBeCloseTo(0.015, 6);
-    expect(rows[1].healthProjected).toBeCloseTo(0.185, 6);
+    expect(rows.map(row => row.id)).toEqual(['v2', 'v1']);
+
+    const rowById = Object.fromEntries(rows.map((row) => [row.id, row]));
+    const rowV1 = rowById.v1;
+    const rowV2 = rowById.v2;
+
+    expect(rowV1.weatherState).toBe('Heat');
+    expect(rowV1.weatherIntensity).toBe('Moderate');
+    expect(rowV1.weatherStateImpact).toContain('supports ripening');
+    expect(rowV1.weatherIntensityImpact).toContain('baseline weather pressure');
+    expect(rowV1.ripenessDelta).toBeCloseTo(0.011, 6);
+    expect(rowV1.healthDelta).toBeCloseTo(-0.00648, 6);
+    expect(rowV1.ripenessProjected).toBe(1);
+
+    expect(rowV2.ripenessDelta).toBeCloseTo(0.018, 6);
+    expect(rowV2.healthDelta).toBeCloseTo(-0.0066, 6);
+    expect(rowV2.ripenessProjected).toBeCloseTo(0.028, 6);
+    expect(rowV2.healthProjected).toBeCloseTo(0.1934, 6);
   });
 
   it('does not project ripeness growth for inactive vineyard statuses outside winter', () => {

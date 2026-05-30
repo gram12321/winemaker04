@@ -14,6 +14,8 @@ export interface VineyardWeatherContext {
 export interface VineyardWeatherImpact {
   ripenessDelta: number;
   healthDelta: number;
+  ripenessWeatherPressure: number;
+  healthWeatherPressure: number;
   siteResponse: number;
   reason: string;
   breakdown: VineyardWeatherImpactBreakdown;
@@ -22,6 +24,13 @@ export interface VineyardWeatherImpact {
 export interface VineyardWeatherImpactBreakdown {
   weatherState: WeatherState;
   weatherIntensity: WeatherIntensity;
+  weatherStateFactorRipeness: number;
+  weatherStateFactorHealth: number;
+  weatherIntensityFactor: number;
+  ripenessWeatherPressureRaw: number;
+  healthWeatherPressureRaw: number;
+  ripenessWeatherPressure: number;
+  healthWeatherPressure: number;
   baseRipenessDeviation: number;
   baseHealthDeviation: number;
   adjustedBaseHealthDeviation: number;
@@ -38,24 +47,50 @@ export interface VineyardWeatherImpactBreakdown {
   healthRawDelta: number;
   healthClamped: boolean;
 }
-
-export const WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record<WeatherIntensity, number>> = {
-  Clear: { Mild: 0.001, Moderate: 0.0015, Severe: 0.0005 },
-  Rain: { Mild: 0.0005, Moderate: 0.0001, Severe: -0.0015 },
-  Heat: { Mild: 0.0015, Moderate: 0.0022, Severe: 0.0008 },
-  Frost: { Mild: -0.002, Moderate: -0.004, Severe: -0.007 },
-  Storm: { Mild: -0.0018, Moderate: -0.0035, Severe: -0.006 },
-  Snow: { Mild: -0.001, Moderate: -0.0025, Severe: -0.0045 },
+export const WEATHER_STATE_FACTOR_BY_STATE: Record<WeatherState, { ripeness: number; health: number }> = {
+  Clear: { ripeness: 0.16, health: 0.2 },
+  Rain: { ripeness: 0.06, health: 0.16 },
+  Heat: { ripeness: 0.44, health: -0.32 },
+  Frost: { ripeness: -0.64, health: -0.44 },
+  Storm: { ripeness: -0.48, health: -0.56 },
+  Snow: { ripeness: -0.36, health: -0.36 },
 };
 
-export const WEATHER_HEALTH_DEVIATION_BY_STATE_INTENSITY: Record<WeatherState, Record<WeatherIntensity, number>> = {
-  Clear: { Mild: 0.0003, Moderate: 0.0002, Severe: -0.0008 },
-  Rain: { Mild: 0.0005, Moderate: 0.0002, Severe: -0.0016 },
-  Heat: { Mild: -0.0008, Moderate: -0.0022, Severe: -0.0048 },
-  Frost: { Mild: -0.0015, Moderate: -0.003, Severe: -0.0055 },
-  Storm: { Mild: -0.0018, Moderate: -0.0035, Severe: -0.0065 },
-  Snow: { Mild: -0.001, Moderate: -0.0024, Severe: -0.004 },
+export const WEATHER_INTENSITY_FACTOR: Record<WeatherIntensity, number> = {
+  VeryMild: 0.6,
+  Mild: 0.8,
+  Moderate: 1.0,
+  Severe: 1.8,
+  Extreme: 2.4,
 };
+
+const WEATHER_DEVIATION_REFERENCE_SCALE = 0.01;
+
+function buildWeatherDeviationTables(
+  metric: 'ripeness' | 'health'
+): Record<WeatherState, Record<WeatherIntensity, number>> {
+  const table: Record<WeatherState, Record<WeatherIntensity, number>> = {
+    Clear: { VeryMild: 0, Mild: 0, Moderate: 0, Severe: 0, Extreme: 0 },
+    Rain: { VeryMild: 0, Mild: 0, Moderate: 0, Severe: 0, Extreme: 0 },
+    Heat: { VeryMild: 0, Mild: 0, Moderate: 0, Severe: 0, Extreme: 0 },
+    Frost: { VeryMild: 0, Mild: 0, Moderate: 0, Severe: 0, Extreme: 0 },
+    Storm: { VeryMild: 0, Mild: 0, Moderate: 0, Severe: 0, Extreme: 0 },
+    Snow: { VeryMild: 0, Mild: 0, Moderate: 0, Severe: 0, Extreme: 0 },
+  };
+
+  for (const state of Object.keys(WEATHER_STATE_FACTOR_BY_STATE) as WeatherState[]) {
+    for (const intensity of Object.keys(WEATHER_INTENSITY_FACTOR) as WeatherIntensity[]) {
+      const stateFactor = WEATHER_STATE_FACTOR_BY_STATE[state][metric];
+      const intensityFactor = WEATHER_INTENSITY_FACTOR[intensity];
+      table[state][intensity] = stateFactor * intensityFactor * WEATHER_DEVIATION_REFERENCE_SCALE;
+    }
+  }
+
+  return table;
+}
+
+export const WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY = buildWeatherDeviationTables('ripeness');
+export const WEATHER_HEALTH_DEVIATION_BY_STATE_INTENSITY = buildWeatherDeviationTables('health');
 
 const ASPECT_WEATHER_RESPONSE: Record<string, { heat: number; cold: number }> = {
   North: { heat: -0.08, cold: 0.1 },
@@ -139,7 +174,7 @@ function getWeatherState(context: VineyardWeatherContext): WeatherState {
 }
 
 function getWeatherIntensity(context: VineyardWeatherContext): WeatherIntensity {
-  return context.weatherIntensity || 'Mild';
+  return context.weatherIntensity || 'Moderate';
 }
 
 function getWeatherReason(weatherState: WeatherState, weatherIntensity: WeatherIntensity, siteResponse: number): string {
@@ -156,8 +191,11 @@ export function calculateVineyardWeatherImpact(vineyard: Vineyard, context: Vine
   const weatherState = getWeatherState(context);
   const weatherIntensity = getWeatherIntensity(context);
 
-  const baseRipenessDeviation = WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY[weatherState][weatherIntensity];
-  const baseHealthDeviation = WEATHER_HEALTH_DEVIATION_BY_STATE_INTENSITY[weatherState][weatherIntensity];
+  const weatherStateFactor = WEATHER_STATE_FACTOR_BY_STATE[weatherState];
+  const weatherIntensityFactor = WEATHER_INTENSITY_FACTOR[weatherIntensity];
+
+  const baseRipenessDeviation = weatherStateFactor.ripeness * weatherIntensityFactor * WEATHER_DEVIATION_REFERENCE_SCALE;
+  const baseHealthDeviation = weatherStateFactor.health * weatherIntensityFactor * WEATHER_DEVIATION_REFERENCE_SCALE;
   const seasonAdjustmentMultiplier = weatherState === 'Snow' && context.season === 'Winter' ? 0.6 : 1;
   const adjustedBaseHealthDeviation = baseHealthDeviation * seasonAdjustmentMultiplier;
 
@@ -178,8 +216,13 @@ export function calculateVineyardWeatherImpact(vineyard: Vineyard, context: Vine
   }
 
   const siteResponseRaw = aspectResponse * altitudeResponse * terroirResponse * soilWeatherResponse;
-  const siteResponse = clamp(siteResponseRaw, 0.8, 1.2);
+  const siteResponse = clamp(siteResponseRaw, 0.7, 1.3);
   const siteResponseClamped = siteResponse !== siteResponseRaw;
+
+  const ripenessWeatherPressureRaw = weatherStateFactor.ripeness * weatherIntensityFactor * siteResponse;
+  const healthWeatherPressureRaw = weatherStateFactor.health * weatherIntensityFactor * seasonAdjustmentMultiplier * siteResponse;
+  const ripenessWeatherPressure = ripenessWeatherPressureRaw;
+  const healthWeatherPressure = healthWeatherPressureRaw;
 
   const ripenessRawDelta = baseRipenessDeviation * siteResponse;
   const healthRawDelta = adjustedBaseHealthDeviation * siteResponse;
@@ -191,11 +234,20 @@ export function calculateVineyardWeatherImpact(vineyard: Vineyard, context: Vine
   return {
     ripenessDelta,
     healthDelta,
+    ripenessWeatherPressure,
+    healthWeatherPressure,
     siteResponse,
     reason: getWeatherReason(weatherState, weatherIntensity, siteResponse),
     breakdown: {
       weatherState,
       weatherIntensity,
+      weatherStateFactorRipeness: weatherStateFactor.ripeness,
+      weatherStateFactorHealth: weatherStateFactor.health,
+      weatherIntensityFactor,
+      ripenessWeatherPressureRaw,
+      healthWeatherPressureRaw,
+      ripenessWeatherPressure,
+      healthWeatherPressure,
       baseRipenessDeviation,
       baseHealthDeviation,
       adjustedBaseHealthDeviation,

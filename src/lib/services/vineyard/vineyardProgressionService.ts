@@ -7,9 +7,11 @@ const MIN_VINEYARD_HEALTH = 0.1;
 const MAX_VINEYARD_HEALTH = 1.0;
 const MIN_WEEKLY_HEALTH_DELTA = -0.02;
 const MAX_WEEKLY_HEALTH_DELTA = 0.01;
-const WEATHER_MULTIPLIER_BASELINE_SCALE = 0.01;
-const MIN_WEATHER_MULTIPLIER = 0.25;
-const MAX_WEATHER_MULTIPLIER = 2.5;
+const DEFAULT_WEATHER_PRESSURE_SCALE = 0.01;
+const MIN_RIPENESS_WEATHER_MULTIPLIER = 0.4;
+const MAX_RIPENESS_WEATHER_MULTIPLIER = 1.6;
+const MIN_HEALTH_WEATHER_MULTIPLIER = 0.5;
+const MAX_HEALTH_WEATHER_MULTIPLIER = 1.5;
 
 export interface VineyardMetricProjection {
   current: number;
@@ -35,10 +37,11 @@ export interface VineyardWeeklyProjectionOptions {
 
 function calculateWeatherScaledDelta(
   normalDelta: number,
-  weatherDelta: number,
-  baselineScale: number = WEATHER_MULTIPLIER_BASELINE_SCALE
+  weatherPressure: number,
+  minMultiplier: number,
+  maxMultiplier: number
 ): { totalDelta: number; weatherContribution: number } {
-  if (normalDelta === 0 || weatherDelta === 0) {
+  if (normalDelta === 0 || weatherPressure === 0) {
     return {
       totalDelta: normalDelta,
       weatherContribution: 0,
@@ -46,9 +49,8 @@ function calculateWeatherScaledDelta(
   }
 
   const direction = Math.sign(normalDelta);
-  const normalizedWeather = weatherDelta / Math.max(0.0001, baselineScale);
-  const rawMultiplier = 1 + (direction * normalizedWeather);
-  const weatherMultiplier = clamp(rawMultiplier, MIN_WEATHER_MULTIPLIER, MAX_WEATHER_MULTIPLIER);
+  const rawMultiplier = 1 + (direction * weatherPressure);
+  const weatherMultiplier = clamp(rawMultiplier, minMultiplier, maxMultiplier);
   const totalDelta = normalDelta * weatherMultiplier;
 
   return {
@@ -226,7 +228,14 @@ export function calculateVineyardWeeklyProjection(
 
   let ripenessTotalDelta = ripenessNormalDelta;
   if (ripenessNormalDelta > 0 && ripenessWeatherDelta !== 0) {
-    const ripenessWeatherScaling = calculateWeatherScaledDelta(ripenessNormalDelta, ripenessWeatherDelta);
+    const fallbackRipenessPressure = ripenessWeatherDelta / DEFAULT_WEATHER_PRESSURE_SCALE;
+    const ripenessWeatherPressure = impact.ripenessWeatherPressure ?? fallbackRipenessPressure;
+    const ripenessWeatherScaling = calculateWeatherScaledDelta(
+      ripenessNormalDelta,
+      ripenessWeatherPressure,
+      MIN_RIPENESS_WEATHER_MULTIPLIER,
+      MAX_RIPENESS_WEATHER_MULTIPLIER
+    );
     ripenessTotalDelta = ripenessWeatherScaling.totalDelta;
     ripenessWeatherDelta = ripenessWeatherScaling.weatherContribution;
   }
@@ -240,7 +249,14 @@ export function calculateVineyardWeeklyProjection(
     healthDecayMultiplier
   );
   const healthWeatherBaseDelta = impact.healthDelta;
-  const healthWeatherScaling = calculateWeatherScaledDelta(healthNormalDelta, healthWeatherBaseDelta);
+  const fallbackHealthPressure = healthWeatherBaseDelta / DEFAULT_WEATHER_PRESSURE_SCALE;
+  const healthWeatherPressure = impact.healthWeatherPressure ?? fallbackHealthPressure;
+  const healthWeatherScaling = calculateWeatherScaledDelta(
+    healthNormalDelta,
+    healthWeatherPressure,
+    MIN_HEALTH_WEATHER_MULTIPLIER,
+    MAX_HEALTH_WEATHER_MULTIPLIER
+  );
   const healthWeatherDelta = healthWeatherScaling.weatherContribution;
   const healthUnclampedTotalDelta = healthWeatherScaling.totalDelta;
   const healthTotalDelta = clamp(
