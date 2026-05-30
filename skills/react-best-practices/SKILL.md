@@ -1,46 +1,58 @@
 ---
 name: react-best-practices
-description: Use for React performance and refactor guidance in winemaker04 when improving component behavior, render performance, and data-flow efficiency.
+description: Use for React performance and refactor guidance in winemaker04 when improving component behavior, render performance, async data flow, bundle size, and UI responsiveness.
 metadata:
   author: vercel
   version: "1.0.0"
 ---
 
-# Vercel React Best Practices
+# React Best Practices
 
-## Winemaker Routing Note
+## Purpose
 
-Default repo router: `../winemaker-game/SKILL.md`
+Apply React performance and data-flow guidance to Winemaker UI work. Use `../winemaker-game/SKILL.md` as the default repo router; this skill is advisory and repo conventions win when there is a conflict.
 
-These guidelines are advisory. If any rule conflicts with repo conventions in `winemaker-game`, repo conventions win.
+## Use When
 
-Specific override for this repo: do not replace established barrel import patterns (`@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`) solely to satisfy generic bundle-import rules.
+- Writing or refactoring React components, hooks, page orchestration, or UI state.
+- Investigating slow renders, expensive derived values, unnecessary effects, or unstable callbacks.
+- Improving async data flow, request parallelism, or client-side fetch behavior.
+- Reviewing bundle-size concerns, heavy conditional UI, or third-party component loading.
+- Checking a React change before claiming completion.
 
-Comprehensive performance optimization guide for React and Next.js applications, maintained by Vercel. Contains 64 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.
+## Repo Fit
 
-## When to Apply
+Current stack: React 19, Vite 7, TypeScript 5, Tailwind 3, ShadCN/Radix UI, Supabase JS 2, and Vitest.
 
-Reference these guidelines when:
-- Writing new React components or Next.js pages
-- Implementing data fetching (client or server-side)
-- Reviewing code for performance issues
-- Refactoring existing React/Next.js code
-- Optimizing bundle size or load times
+- Winemaker is a Vite SPA, not a Next.js App Router project. Next.js/RSC/server-action rules are reference material unless a future task introduces those surfaces.
+- Do not replace established barrel import patterns (`@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`) solely to satisfy generic bundle-import rules.
+- Keep page components orchestration-focused. Business logic belongs in `src/lib/services/`; Supabase access belongs in `src/lib/database/`.
+- Prefer existing hooks such as `useLoadingState()`, `useGameStateWithData()`, and `useGameState()` where they match the local pattern.
+- Coordinate ShadCN/Radix composition with `../shadcn-best-practices/SKILL.md`.
+
+## Workflow
+
+1. Identify the user-visible interaction, data source, and state owner.
+2. Read the component plus the hook/service/database modules it calls.
+3. Remove incorrect effects first: derive during render, move interaction work to events, and keep async flow explicit.
+4. Optimize only after correctness is clear: memoize expensive work, split state subscriptions, defer non-urgent updates, and parallelize independent async work.
+5. Keep repo import and ownership conventions intact.
+6. Verify with targeted tests or a focused UI check when behavior changes.
 
 ## Rule Categories by Priority
 
-| Priority | Category | Impact | Prefix |
-|----------|----------|--------|--------|
-| 1 | Eliminating Waterfalls | CRITICAL | `async-` |
-| 2 | Bundle Size Optimization | CRITICAL | `bundle-` |
-| 3 | Server-Side Performance | HIGH | `server-` |
-| 4 | Client-Side Data Fetching | MEDIUM-HIGH | `client-` |
-| 5 | Re-render Optimization | MEDIUM | `rerender-` |
-| 6 | Rendering Performance | MEDIUM | `rendering-` |
-| 7 | JavaScript Performance | LOW-MEDIUM | `js-` |
-| 8 | Advanced Patterns | LOW | `advanced-` |
+| Priority | Category | Impact | Prefix | Winemaker note |
+|---|---|---|---|---|
+| 1 | Eliminating Waterfalls | CRITICAL | `async-` | Applies to independent service/database calls and UI loaders. |
+| 2 | Bundle Size Optimization | CRITICAL | `bundle-` | Preserve repo barrel imports unless a measured issue needs direct imports. |
+| 3 | Server-Side Performance | HIGH | `server-` | Reference only for current Vite SPA unless server helpers are touched. |
+| 4 | Client-Side Data Fetching | MEDIUM-HIGH | `client-` | Applies to browser event listeners, local storage, and request deduping. |
+| 5 | Re-render Optimization | MEDIUM | `rerender-` | Primary category for most component refactors. |
+| 6 | Rendering Performance | MEDIUM | `rendering-` | Applies to large lists, SVGs, hydration-like flicker, and loading UX. |
+| 7 | JavaScript Performance | LOW-MEDIUM | `js-` | Use for hot paths after simpler clarity fixes. |
+| 8 | Advanced Patterns | LOW | `advanced-` | Use sparingly and document why. |
 
-## Quick Reference
+## Core Rules
 
 ### 1. Eliminating Waterfalls (CRITICAL)
 
@@ -130,13 +142,16 @@ Reference these guidelines when:
 - `advanced-init-once` - Initialize app once per app load
 - `advanced-use-latest` - useLatest for stable callback refs
 
-## How to Use
+## Reference Map
 
 Read individual rule files for detailed explanations and code examples:
 
-```
+```text
 rules/async-parallel.md
 rules/bundle-barrel-imports.md
+rules/rerender-derived-state-no-effect.md
+rules/rerender-functional-setstate.md
+rules/rendering-content-visibility.md
 ```
 
 Each rule file contains:
@@ -145,6 +160,15 @@ Each rule file contains:
 - Correct code example with explanation
 - Additional context and references
 
-## Full Compiled Document
+The full compiled guide is preserved in `AGENTS.md`.
 
-For the complete guide with all rules expanded: `AGENTS.md`
+## Verification
+
+Use the smallest useful checks for the change. For finished code work, default to:
+
+```bash
+npm test
+git diff --check
+```
+
+For UI behavior changes, add a focused browser/manual check when tests do not cover the interaction.

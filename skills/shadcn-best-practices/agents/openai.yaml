@@ -1,5 +1,5 @@
 interface:
-  display_name: "shadcn/ui"
-  short_description: "Manages shadcn/ui components — adding, searching, fixing, debugging, styling, and composing UI."
+  display_name: "ShadCN Best Practices"
+  short_description: "Manage ShadCN/Radix components, styling, forms, overlays, icons, and local UI composition."
   icon_small: "./assets/shadcn-small.png"
   icon_large: "./assets/shadcn.png"

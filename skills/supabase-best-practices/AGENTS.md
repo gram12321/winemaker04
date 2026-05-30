@@ -1,67 +1,23 @@
-# Supabase Postgres Best Practices
+# Supabase Best Practices
 
-## Structure
+Read `SKILL.md` first. This directory contains Supabase/Postgres performance, schema, security, and data-access guidance adapted to Winemaker's database layer.
 
-```
-supabase-postgres-best-practices/
-  SKILL.md       # Main skill file - read this first
-  AGENTS.md      # This navigation guide
-  references/    # Detailed reference files
-```
+## Quick Navigation
 
-## Usage
+| Task | Use |
+|---|---|
+| Agent-facing workflow and repo boundaries | `SKILL.md` |
+| Category order and impact levels | `references/_sections.md` |
+| New reference template | `references/_template.md` |
+| Reference writing guidance | `references/_contributing.md` |
+| Missing or poor indexes | `references/query-missing-indexes.md`, `references/query-composite-indexes.md`, `references/query-partial-indexes.md` |
+| Foreign keys, constraints, identifiers, data types | `references/schema-*.md` |
+| RLS and privileges | `references/security-*.md` |
+| N+1 queries, batching, pagination, upsert | `references/data-*.md` |
+| Locking and transactions | `references/lock-*.md` |
+| Explain plans, statistics, vacuum/analyze | `references/monitor-*.md` |
+| JSONB and full-text search | `references/advanced-*.md` |
 
-1. Read `SKILL.md` for the main skill instructions
-2. Browse `references/` for detailed documentation on specific topics
-3. Reference files are loaded on-demand - read only what you need
+## Current Repo Bias
 
-Comprehensive performance optimization guide for Postgres, maintained by Supabase. Contains rules across 8 categories, prioritized by impact to guide automated query optimization and schema design.
-
-## When to Apply
-
-Reference these guidelines when:
-- Writing SQL queries or designing schemas
-- Implementing indexes or query optimization
-- Reviewing database performance issues
-- Configuring connection pooling or scaling
-- Optimizing for Postgres-specific features
-- Working with Row-Level Security (RLS)
-
-## Rule Categories by Priority
-
-| Priority | Category | Impact | Prefix |
-|----------|----------|--------|--------|
-| 1 | Query Performance | CRITICAL | `query-` |
-| 2 | Connection Management | CRITICAL | `conn-` |
-| 3 | Security & RLS | CRITICAL | `security-` |
-| 4 | Schema Design | HIGH | `schema-` |
-| 5 | Concurrency & Locking | MEDIUM-HIGH | `lock-` |
-| 6 | Data Access Patterns | MEDIUM | `data-` |
-| 7 | Monitoring & Diagnostics | LOW-MEDIUM | `monitor-` |
-| 8 | Advanced Features | LOW | `advanced-` |
-
-## How to Use
-
-Read individual rule files for detailed explanations and SQL examples:
-
-```
-references/query-missing-indexes.md
-references/schema-partial-indexes.md
-references/_sections.md
-```
-
-Each rule file contains:
-- Brief explanation of why it matters
-- Incorrect SQL example with explanation
-- Correct SQL example with explanation
-- Optional EXPLAIN output or metrics
-- Additional context and references
-- Supabase-specific notes (when applicable)
-
-## References
-
-- https://www.postgresql.org/docs/current/
-- https://supabase.com/docs
-- https://wiki.postgresql.org/wiki/Performance_Optimization
-- https://supabase.com/docs/guides/database/overview
-- https://supabase.com/docs/guides/auth/row-level-security
+Keep Supabase access in `src/lib/database/`, business logic in `src/lib/services/`, schema changes in `migrations/`, and all persisted gameplay reads/writes company-scoped.

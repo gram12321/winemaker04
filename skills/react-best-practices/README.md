@@ -1,123 +1,47 @@
 # React Best Practices
 
-A structured repository for creating and maintaining React Best Practices optimized for agents and LLMs.
-
 ## Structure
 
-- `rules/` - Individual rule files (one per rule)
-  - `_sections.md` - Section metadata (titles, impacts, descriptions)
-  - `_template.md` - Template for creating new rules
-  - `area-description.md` - Individual rule files
-- `src/` - Build scripts and utilities
-- `metadata.json` - Document metadata (version, organization, abstract)
-- __`AGENTS.md`__ - Compiled output (generated)
-- __`test-cases.json`__ - Test cases for LLM evaluation (generated)
-
-## Getting Started
-
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-
-2. Build AGENTS.md from rules:
-   ```bash
-   pnpm build
-   ```
-
-3. Validate rule files:
-   ```bash
-   pnpm validate
-   ```
-
-4. Extract test cases:
-   ```bash
-   pnpm extract-tests
-   ```
-
-## Creating a New Rule
-
-1. Copy `rules/_template.md` to `rules/area-description.md`
-2. Choose the appropriate area prefix:
-   - `async-` for Eliminating Waterfalls (Section 1)
-   - `bundle-` for Bundle Size Optimization (Section 2)
-   - `server-` for Server-Side Performance (Section 3)
-   - `client-` for Client-Side Data Fetching (Section 4)
-   - `rerender-` for Re-render Optimization (Section 5)
-   - `rendering-` for Rendering Performance (Section 6)
-   - `js-` for JavaScript Performance (Section 7)
-   - `advanced-` for Advanced Patterns (Section 8)
-3. Fill in the frontmatter and content
-4. Ensure you have clear examples with explanations
-5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
-
-## Rule File Structure
-
-Each rule file should follow this structure:
-
-```markdown
----
-title: Rule Title Here
-impact: MEDIUM
-impactDescription: Optional description
-tags: tag1, tag2, tag3
----
-
-## Rule Title Here
-
-Brief explanation of the rule and why it matters.
-
-**Incorrect (description of what's wrong):**
-
-```typescript
-// Bad code example
+```text
+react-best-practices/
+  SKILL.md             # Agent-facing instructions
+  README.md            # This package guide
+  AGENTS.md            # Preserved compiled Vercel guide with all rules expanded
+  metadata.json        # Source metadata
+  agents/openai.yaml   # Display metadata
+  rules/               # Individual rule files
+    _sections.md       # Category ordering and impact definitions
+    _template.md       # Rule authoring template
+    *.md               # Detailed rules with incorrect/correct examples
 ```
 
-**Correct (description of what's right):**
+## Role In Winemaker
 
-```typescript
-// Good code example
-```
+Use this skill after `../winemaker-game/SKILL.md` establishes repo boundaries. The rules are performance guidance for React and Next.js, adapted here for a Vite SPA. Next.js-specific rules remain preserved as reference material, but current Winemaker work should prioritize React component behavior, hooks, async flow, bundle impact, and UI responsiveness.
 
-Optional explanatory text after examples.
+## Rule Categories
 
-Reference: [Link](https://example.com)
+| Prefix | Category |
+|---|---|
+| `async-` | Eliminating waterfalls |
+| `bundle-` | Bundle size optimization |
+| `server-` | Server-side performance |
+| `client-` | Client-side data fetching |
+| `rerender-` | Re-render optimization |
+| `rendering-` | Rendering performance |
+| `js-` | JavaScript performance |
+| `advanced-` | Advanced patterns |
 
-## File Naming Convention
+## Maintenance Notes
 
-- Files starting with `_` are special (excluded from build)
-- Rule files: `area-description.md` (e.g., `async-parallel.md`)
-- Section is automatically inferred from filename prefix
-- Rules are sorted alphabetically by title within each section
-- IDs (e.g., 1.1, 1.2) are auto-generated during build
+1. Keep `SKILL.md` concise and repo-aware.
+2. Keep detailed examples in `rules/`.
+3. Preserve `AGENTS.md` as the full compiled source guide.
+4. When adding a rule, copy `rules/_template.md` to `rules/<prefix>-<name>.md`.
+5. Use impact levels from `rules/_sections.md`.
+6. If build scripts are restored later, use the original source-package flow: `pnpm validate`, `pnpm build`, and `pnpm extract-tests`.
+7. Regenerate `AGENTS.md` from rule files instead of hand-editing the compiled document.
 
-## Impact Levels
+## Original Source
 
-- `CRITICAL` - Highest priority, major performance gains
-- `HIGH` - Significant performance improvements
-- `MEDIUM-HIGH` - Moderate-high gains
-- `MEDIUM` - Moderate performance improvements
-- `LOW-MEDIUM` - Low-medium gains
-- `LOW` - Incremental improvements
-
-## Scripts
-
-- `pnpm build` - Compile rules into AGENTS.md
-- `pnpm validate` - Validate all rule files
-- `pnpm extract-tests` - Extract test cases for LLM evaluation
-- `pnpm dev` - Build and validate
-
-## Contributing
-
-When adding or modifying rules:
-
-1. Use the correct filename prefix for your section
-2. Follow the `_template.md` structure
-3. Include clear bad/good examples with explanations
-4. Add appropriate tags
-5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
-6. Rules are automatically sorted by title - no need to manage numbers!
-
-## Acknowledgments
-
-Originally created by [@shuding](https://x.com/shuding) at [Vercel](https://vercel.com).
+Originally created by Vercel Engineering. Source metadata and references are retained in `metadata.json`.

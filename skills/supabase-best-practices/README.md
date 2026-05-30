@@ -1,116 +1,53 @@
-# Supabase Postgres Best Practices - Contributor Guide
+# Supabase Best Practices
 
-This skill contains Postgres performance optimization references optimized for
-AI agents and LLMs. It follows the [Agent Skills Open Standard](https://agentskills.io/).
+## Structure
 
-## Quick Start
-
-```bash
-# From repository root
-npm install
-
-# Validate existing references
-npm run validate
-
-# Build AGENTS.md
-npm run build
+```text
+supabase-best-practices/
+  SKILL.md             # Agent-facing instructions
+  README.md            # This package guide
+  AGENTS.md            # Lightweight navigation for agents
+  agents/openai.yaml   # Display metadata
+  references/          # Detailed Supabase/Postgres reference files
+    _sections.md       # Category ordering and impact definitions
+    _template.md       # Reference authoring template
+    _contributing.md   # Writing guidelines
+    *.md               # Detailed rules with incorrect/correct SQL
 ```
 
-## Creating a New Reference
+## Role In Winemaker
 
-1. **Choose a section prefix** based on the category:
-   - `query-` Query Performance (CRITICAL)
-   - `conn-` Connection Management (CRITICAL)
-   - `security-` Security & RLS (CRITICAL)
-   - `schema-` Schema Design (HIGH)
-   - `lock-` Concurrency & Locking (MEDIUM-HIGH)
-   - `data-` Data Access Patterns (MEDIUM)
-   - `monitor-` Monitoring & Diagnostics (LOW-MEDIUM)
-   - `advanced-` Advanced Features (LOW)
+Use this skill after `../winemaker-game/SKILL.md` establishes repo boundaries. It applies Supabase/Postgres guidance to Winemaker's company-scoped persistence model, database modules, SQL migrations, and service/database ownership split.
 
-2. **Copy the template**:
-   ```bash
-   cp references/_template.md references/query-your-reference-name.md
-   ```
+## Rule Categories
 
-3. **Fill in the content** following the template structure
+| Prefix | Category |
+|---|---|
+| `query-` | Query performance |
+| `conn-` | Connection management |
+| `security-` | Security and RLS |
+| `schema-` | Schema design |
+| `lock-` | Concurrency and locking |
+| `data-` | Data access patterns |
+| `monitor-` | Monitoring and diagnostics |
+| `advanced-` | Advanced features |
 
-4. **Validate and build**:
-   ```bash
-   npm run validate
-   npm run build
-   ```
+## Maintenance Notes
 
-5. **Review** the generated `AGENTS.md`
+1. Keep `SKILL.md` concise and repo-aware.
+2. Keep detailed SQL examples in `references/`.
+3. When adding a reference, copy `references/_template.md` to `references/<prefix>-<name>.md`.
+4. Use impact levels from `references/_sections.md`.
+5. Keep `README.md` and `AGENTS.md` as navigation files, not duplicated rule bodies.
+6. Preserve Supabase/Postgres source guidance and adapt repo-specific workflow in `SKILL.md`.
+7. If package build tooling is present, use the original source-package flow: `npm run validate` and `npm run build`.
 
-## Skill Structure
+## Original References
 
-```
-skills/supabase-postgres-best-practices/
-├── SKILL.md           # Agent-facing skill manifest (Agent Skills spec)
-├── AGENTS.md          # [GENERATED] Compiled references document
-├── README.md          # This file
-└── references/
-    ├── _template.md      # Reference template
-    ├── _sections.md      # Section definitions
-    ├── _contributing.md  # Writing guidelines
-    └── *.md              # Individual references
+Core reference sources remain:
 
-packages/skills-build/
-├── src/               # Generic build system source
-└── package.json       # NPM scripts
-```
-
-## Reference File Structure
-
-See `references/_template.md` for the complete template. Key elements:
-
-````markdown
----
-title: Clear, Action-Oriented Title
-impact: CRITICAL|HIGH|MEDIUM-HIGH|MEDIUM|LOW-MEDIUM|LOW
-impactDescription: Quantified benefit (e.g., "10-100x faster")
-tags: relevant, keywords
----
-
-## [Title]
-
-[1-2 sentence explanation]
-
-**Incorrect (description):**
-
-```sql
--- Comment explaining what's wrong
-[Bad SQL example]
-```
-````
-
-**Correct (description):**
-
-```sql
--- Comment explaining why this is better
-[Good SQL example]
-```
-
-```
-## Writing Guidelines
-
-See `references/_contributing.md` for detailed guidelines. Key principles:
-
-1. **Show concrete transformations** - "Change X to Y", not abstract advice
-2. **Error-first structure** - Show the problem before the solution
-3. **Quantify impact** - Include specific metrics (10x faster, 50% smaller)
-4. **Self-contained examples** - Complete, runnable SQL
-5. **Semantic naming** - Use meaningful names (users, email), not (table1, col1)
-
-## Impact Levels
-
-| Level | Improvement | Examples |
-|-------|-------------|----------|
-| CRITICAL | 10-100x | Missing indexes, connection exhaustion |
-| HIGH | 5-20x | Wrong index types, poor partitioning |
-| MEDIUM-HIGH | 2-5x | N+1 queries, RLS optimization |
-| MEDIUM | 1.5-3x | Redundant indexes, stale statistics |
-| LOW-MEDIUM | 1.2-2x | VACUUM tuning, config tweaks |
-| LOW | Incremental | Advanced patterns, edge cases |
-```
+- https://www.postgresql.org/docs/current/
+- https://supabase.com/docs
+- https://wiki.postgresql.org/wiki/Performance_Optimization
+- https://supabase.com/docs/guides/database/overview
+- https://supabase.com/docs/guides/auth/row-level-security
