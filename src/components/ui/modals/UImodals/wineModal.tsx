@@ -147,6 +147,37 @@ export const WineModal: React.FC<WineModalProps> = ({
     key
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .replace(/^./, (value) => value.toUpperCase());
+  const formatFlavorFamilyLabel = (key: string): string =>
+    key
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/^./, (value) => value.toUpperCase());
+  const formatPriceInputLabel = (key: string): string => {
+    const map: Record<string, string> = {
+      basePrice: 'Base Price',
+      wineScoreMultiplier: 'Wine Score Multiplier',
+      landValuePriceMultiplier: 'Land Value Multiplier',
+      featurePriceMultiplier: 'Feature Multiplier',
+      prePrestigePrice: 'Pre-Prestige Price',
+      companyPrestigeMultiplier: 'Company Prestige Multiplier',
+      vineyardPrestigeMultiplier: 'Vineyard Prestige Multiplier',
+      finalPrice: 'Final Price'
+    };
+    return map[key] || formatFlavorFamilyLabel(key);
+  };
+  const formatAnchorEffectDescription = (description: string): string => {
+    if (description === 'Harvest identity (combined)') return 'Harvest anchor blend (multiple harvest additions)';
+    if (description === 'Harvest identity') return 'Harvest anchor snapshot (single harvest)';
+    return description;
+  };
+  const structureImpactOrder: Array<keyof WineBatch['characteristics']> = [
+    'acidity',
+    'aroma',
+    'body',
+    'spice',
+    'sweetness',
+    'tannins'
+  ] as any;
+  const TASTE_FAMILY_EPSILON = 0.0005;
   const anchorOrigins = anchorDebug
     ? Object.keys(anchorDebug.currentAnchors).map((anchorKey) => {
         const key = anchorKey as keyof typeof anchorDebug.currentAnchors;
@@ -157,7 +188,11 @@ export const WineModal: React.FC<WineModalProps> = ({
             existing.modifier += effect.modifier;
             existing.count += 1;
           } else {
-            acc.push({ description: effect.description, modifier: effect.modifier, count: 1 });
+            acc.push({
+              description: formatAnchorEffectDescription(effect.description),
+              modifier: effect.modifier,
+              count: 1
+            });
           }
           return acc;
         }, [] as Array<{ description: string; modifier: number; count: number }>);
@@ -617,6 +652,10 @@ export const WineModal: React.FC<WineModalProps> = ({
 
                       <div className="space-y-2">
                         <div className="text-[11px] font-medium text-amber-900/90">Anchor Origins</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          Harvest anchor snapshot = anchor values created at harvest from grape, vineyard site, and ripeness.
+                          If the batch receives another harvest addition, snapshots are blended by quantity.
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {anchorOrigins.map((origin) => (
                             <div key={origin.key} className="rounded border bg-white p-2.5 space-y-1.5">
@@ -628,13 +667,16 @@ export const WineModal: React.FC<WineModalProps> = ({
                               </div>
                               <div className="text-[11px] text-muted-foreground">
                                 Base: <span className="font-mono">{formatNumber(origin.baseValue, { decimals: 3, forceDecimals: true })}</span>
-                                {' · '}
+                                {' | '}
                                 Total effects: <span className={`font-mono ${getDeltaTextClass(origin.totalEffect)}`}>{formatSigned(origin.totalEffect)}</span>
                               </div>
                               <div className="space-y-1">
                                 {origin.groupedEffects.map((effect) => (
                                   <div key={effect.description} className="flex items-center justify-between rounded bg-muted/40 px-2 py-1 text-[11px]">
-                                    <div className="truncate pr-2">
+                                    <div
+                                      className="break-words pr-2"
+                                      title={effect.description}
+                                    >
                                       {effect.description}
                                       {effect.count > 1 && <span className="text-muted-foreground"> ({effect.count}x)</span>}
                                     </div>
@@ -651,11 +693,11 @@ export const WineModal: React.FC<WineModalProps> = ({
 
                       <div className="overflow-x-auto scrollbar-styled">
                         <div className="grid min-w-[48rem] grid-cols-[minmax(10rem,1fr)_repeat(4,minmax(5.5rem,7rem))] gap-2 text-[11px]">
-                          <div className="font-medium text-amber-900/90">Isolated Anchor Impact</div>
-                          <div className="text-right font-medium text-amber-900/90">Structure Δ</div>
-                          <div className="text-right font-medium text-amber-900/90">Taste Δ</div>
-                          <div className="text-right font-medium text-amber-900/90">Score Δ</div>
-                          <div className="text-right font-medium text-amber-900/90">Price Δ</div>
+                          <div className="font-medium text-amber-900/90">Isolated Anchor Impact (Totals)</div>
+                          <div className="text-right font-medium text-amber-900/90">Structure Delta</div>
+                          <div className="text-right font-medium text-amber-900/90">Taste Delta</div>
+                          <div className="text-right font-medium text-amber-900/90">Score Delta</div>
+                          <div className="text-right font-medium text-amber-900/90">Price Delta</div>
                           {anchorDebug.isolatedAnchorImpacts.map((impact) => (
                             <React.Fragment key={`isolated-${impact.anchor}`}>
                               <div className="rounded bg-white px-2 py-1 font-medium text-foreground">
@@ -675,6 +717,104 @@ export const WineModal: React.FC<WineModalProps> = ({
                               </div>
                             </React.Fragment>
                           ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-medium text-amber-900/90">{'Isolated Anchor -> Structure Characteristic Delta'}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {anchorDebug.isolatedAnchorImpacts.map((impact) => (
+                            <div key={`structure-detail-${impact.anchor}`} className="rounded border bg-white p-2.5 space-y-1.5">
+                              <div className="text-xs font-medium">{formatAnchorLabel(String(impact.anchor))}</div>
+                              <div className="grid grid-cols-[minmax(7rem,1fr)_minmax(5rem,auto)] gap-1 text-[11px]">
+                                {structureImpactOrder.map((characteristic) => {
+                                  const delta = impact.structureCharacteristicDelta[characteristic];
+                                  return (
+                                    <React.Fragment key={`${impact.anchor}-${String(characteristic)}`}>
+                                      <div className="text-muted-foreground">{formatAnchorLabel(String(characteristic))}</div>
+                                      <div className={`text-right font-mono tabular-nums ${getDeltaTextClass(delta)}`}>
+                                        {formatSigned(delta)}
+                                      </div>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-medium text-amber-900/90">{'Isolated Anchor -> Taste Family Delta (All families)'}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {anchorDebug.isolatedAnchorImpacts.map((impact) => {
+                            const allTasteDeltas = Object.entries(impact.tasteFamilyDelta)
+                              .map(([family, delta]) => ({ family, delta }))
+                              .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+                            return (
+                              <div key={`taste-detail-${impact.anchor}`} className="rounded border bg-white p-2.5 space-y-1.5">
+                                <div className="text-xs font-medium">{formatAnchorLabel(String(impact.anchor))}</div>
+                                <div className="grid grid-cols-[minmax(7rem,1fr)_minmax(5rem,auto)] gap-1 text-[11px]">
+                                  {allTasteDeltas.map((entry) => (
+                                    <React.Fragment key={`${impact.anchor}-${entry.family}`}>
+                                      <div className="text-muted-foreground">{formatFlavorFamilyLabel(entry.family)}</div>
+                                      <div
+                                        className={`text-right font-mono tabular-nums ${
+                                          Math.abs(entry.delta) <= TASTE_FAMILY_EPSILON ? 'text-muted-foreground' : getDeltaTextClass(entry.delta)
+                                        }`}
+                                      >
+                                        {formatSigned(entry.delta)}
+                                      </div>
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-medium text-amber-900/90">{'Isolated Anchor -> Price Input Delta'}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {anchorDebug.isolatedAnchorImpacts.map((impact) => {
+                            const topPriceDeltas = Object.entries(impact.priceInputDelta)
+                              .map(([key, delta]) => ({ key, delta }))
+                              .filter((entry) => Math.abs(entry.delta) > 0.0005)
+                              .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+                            return (
+                              <div key={`price-detail-${impact.anchor}`} className="rounded border bg-white p-2.5 space-y-1.5">
+                                <div className="text-xs font-medium">{formatAnchorLabel(String(impact.anchor))}</div>
+                                <div className="rounded bg-muted/30 px-2 py-1.5">
+                                  <div className="text-[10px] font-medium text-muted-foreground">{'Flow: anchor -> structure/taste -> score -> price'}</div>
+                                  <div className="mt-1 grid grid-cols-[minmax(8rem,1fr)_minmax(5rem,auto)] gap-1 text-[11px]">
+                                    <div className="text-muted-foreground">Structure Delta</div>
+                                    <div className={`text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.structureIndex)}`}>{formatSigned(impact.delta.structureIndex)}</div>
+                                    <div className="text-muted-foreground">Taste Delta</div>
+                                    <div className={`text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.tasteQualityIndex)}`}>{formatSigned(impact.delta.tasteQualityIndex)}</div>
+                                    <div className="text-muted-foreground">Wine Score Delta</div>
+                                    <div className={`text-right font-mono tabular-nums ${getDeltaTextClass(impact.delta.wineScore)}`}>{formatSigned(impact.delta.wineScore)}</div>
+                                  </div>
+                                </div>
+                                {topPriceDeltas.length === 0 ? (
+                                  <div className="text-[11px] text-muted-foreground">No material price-input movement.</div>
+                                ) : (
+                                  <div className="grid grid-cols-[minmax(8rem,1fr)_minmax(5rem,auto)] gap-1 text-[11px]">
+                                    {topPriceDeltas.map((entry) => (
+                                      <React.Fragment key={`${impact.anchor}-${entry.key}`}>
+                                        <div className="text-muted-foreground">{formatPriceInputLabel(entry.key)}</div>
+                                        <div className={`text-right font-mono tabular-nums ${getDeltaTextClass(entry.delta)}`}>
+                                          {entry.key.toLowerCase().includes('price')
+                                            ? formatSigned(entry.delta, true)
+                                            : formatSigned(entry.delta)}
+                                        </div>
+                                      </React.Fragment>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </CardContent>

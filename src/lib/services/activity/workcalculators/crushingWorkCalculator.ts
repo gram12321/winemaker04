@@ -173,7 +173,8 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       effects: [
         ...(batch.breakdown?.effects || []),
         ...crushingBreakdown.effects
-      ]
+      ],
+      anchorEffects: [...(batch.breakdown?.anchorEffects || [])]
     };
 
     // Process crushing event triggers (e.g., green flavor, oxidation from fragile grapes)

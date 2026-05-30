@@ -18,7 +18,8 @@ import { calculateGrapeSuitabilityMetrics } from '../../vineyard/vineyardValueCa
 import {
   combineWineAnchorSets,
   computeHarvestWineAnchors,
-  resolveWineAnchors
+  resolveWineAnchors,
+  WINE_ANCHOR_KEYS
 } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
 import { buildAnchorEffectsFromNeutral } from '../debug/wineAnchorEffectUtils';
@@ -115,12 +116,26 @@ function combineWineBatches(
     existingBatch.quantity,
     newQuantity
   );
+  const existingSharePct = existingWeight * 100;
+  const newSharePct = newWeight * 100;
+  const formatAnchorValue = (value: number): string => value.toFixed(3);
+  const formatShare = (value: number): string => value.toFixed(1);
+  const combinedAnchorEffects = WINE_ANCHOR_KEYS.map((anchor) => {
+    const existingValue = existingBatch.wineAnchors[anchor];
+    const incomingValue = newWineAnchors[anchor];
+    const mergedValue = mergedAnchors[anchor];
+    return {
+      anchor,
+      modifier: mergedValue - 0.5,
+      description: `Harvest anchor blend: (${formatAnchorValue(existingValue)} x ${formatShare(existingSharePct)}% existing batch qty ${Math.round(existingBatch.quantity)}) + (${formatAnchorValue(incomingValue)} x ${formatShare(newSharePct)}% new harvest qty ${Math.round(newQuantity)}) = ${formatAnchorValue(mergedValue)}`
+    };
+  });
 
   // Create new breakdown with only the combined harvest effects
   // This replaces all individual partial harvest effects
   const combinedBreakdown = {
     effects: harvestEffects,
-    anchorEffects: buildAnchorEffectsFromNeutral(mergedAnchors, 'Harvest identity (combined)')
+    anchorEffects: combinedAnchorEffects
   };
   const structureRanges = getAnchorAdjustedStructureRanges(
     BASE_BALANCED_RANGES,
@@ -261,7 +276,10 @@ export async function createWineBatchFromHarvest(
     return combinedBatch;
   } else {
     // Create new wine batch
-    const harvestAnchorEffects = buildAnchorEffectsFromNeutral(wineAnchors, 'Harvest identity');
+    const harvestAnchorEffects = buildAnchorEffectsFromNeutral(
+      wineAnchors,
+      'Harvest anchor snapshot (grape + vineyard + ripeness/site at harvest)'
+    );
     const wineBatch: WineBatch = {
       id: uuidv4(),
       vineyardId,

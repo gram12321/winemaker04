@@ -67,6 +67,19 @@ export interface FeatureRiskDisplayData {
   nextAction?: string;
 }
 
+function buildFeatureLayerAnchorEffectDescription(
+  presentFeatures: WineFeature[],
+  configs: FeatureConfig[],
+  totalFeatureSlots: number
+): string {
+  const activeNames = presentFeatures
+    .map((feature) => configs.find((config) => config.id === feature.id)?.name || feature.id)
+    .slice(0, 5);
+  const listed = activeNames.length > 0 ? activeNames.join(', ') : 'none';
+  const overflow = presentFeatures.length > activeNames.length ? ` +${presentFeatures.length - activeNames.length} more` : '';
+  return `Feature layer (${listed}${overflow}; active ${presentFeatures.length}/${Math.max(totalFeatureSlots, 0)})`;
+}
+
 // ===== FEATURE CREATION & INITIALIZATION =====
 
 /**
@@ -426,10 +439,15 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
 
   const anchorsBeforeFeatureLayer = resolveWineAnchors(batch.wineAnchors);
   let wineAnchors = applyFeatureLayerAnchors(batch, anchorsBeforeFeatureLayer);
+  const featureLayerDescription = buildFeatureLayerAnchorEffectDescription(
+    presentFeatures,
+    configs,
+    batch.features?.length || 0
+  );
   const featureLayerAnchorEffects = diffAnchorEffects(
     anchorsBeforeFeatureLayer,
     wineAnchors,
-    'Feature layer'
+    featureLayerDescription
   );
 
   const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);

@@ -676,7 +676,7 @@ export interface Transaction {
 // ===== ECONOMY TYPES =====
 export type EconomyPhase = 'Crash' | 'Recession' | 'Stable' | 'Expansion' | 'Boom';
 export type WeatherState = 'Clear' | 'Rain' | 'Heat' | 'Frost' | 'Storm' | 'Snow';
-export type WeatherIntensity = 'Mild' | 'Moderate' | 'Severe';
+export type WeatherIntensity = 'VeryMild' | 'Mild' | 'Moderate' | 'Severe' | 'Extreme';
 export type WeatherForecastPattern = 'Stable' | 'Wet' | 'Dry' | 'Cold' | 'Heat' | 'Storm-prone';
 export type WeatherForecastConfidence = 'Low' | 'Medium' | 'High';
 

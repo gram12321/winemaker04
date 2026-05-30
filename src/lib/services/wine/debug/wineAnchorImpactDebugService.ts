@@ -1,18 +1,61 @@
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
-import type { Vineyard, WineAnchorValues, WineBatch } from '@/lib/types/types';
-import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import {
+  FLAVOR_FAMILY_IDS,
+  type FlavorFamilyId,
+  type Vineyard,
+  type WineAnchorValues,
+  type WineBatch,
+  type WineCharacteristics
+} from '@/lib/types/types';
+import {
+  calculateCharacteristicBreakdown,
+  calculateStructureIndex,
+  RANGE_ADJUSTMENTS,
+  RULES
+} from '@/lib/wineStructure';
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { NEUTRAL_WINE_ANCHORS, resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { calculateTasteQualityIndex } from '@/lib/services/wine/taste/tasteQualityIndexService';
-import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { computeWineTasteProfile } from '@/lib/services/wine/taste/wineTasteProfileService';
+import {
+  calculateEstimatedPriceBreakdown,
+  type EstimatedPriceBreakdown
+} from '@/lib/services/wine/winescore/wineScoreCalculation';
 import type { AnchorEffectEntry } from './wineAnchorEffectUtils';
 import { buildAnchorEffectsFromNeutral } from './wineAnchorEffectUtils';
+
+type CharacteristicDeltaMap = Record<keyof WineCharacteristics, number>;
+type FlavorFamilyDeltaMap = Record<FlavorFamilyId, number>;
+type PriceInputKey =
+  | 'basePrice'
+  | 'wineScoreMultiplier'
+  | 'landValuePriceMultiplier'
+  | 'featurePriceMultiplier'
+  | 'prePrestigePrice'
+  | 'companyPrestigeMultiplier'
+  | 'vineyardPrestigeMultiplier'
+  | 'finalPrice';
+type PriceInputDeltaMap = Record<PriceInputKey, number>;
+
+interface PriceInputSnapshot {
+  basePrice: number;
+  wineScoreMultiplier: number;
+  landValuePriceMultiplier: number;
+  featurePriceMultiplier: number;
+  prePrestigePrice: number;
+  companyPrestigeMultiplier: number;
+  vineyardPrestigeMultiplier: number;
+  finalPrice: number;
+}
 
 interface DownstreamSnapshot {
   structureIndex: number;
   tasteQualityIndex: number;
   wineScore: number;
   estimatedPrice: number;
+  structureCharacteristicContributions: CharacteristicDeltaMap;
+  tasteFamilyValues: FlavorFamilyDeltaMap;
+  priceInputs: PriceInputSnapshot;
 }
 
 interface DownstreamDeltas {
@@ -29,6 +72,9 @@ export interface AnchorIsolatedImpact {
   current: DownstreamSnapshot;
   neutralBaseline: DownstreamSnapshot;
   delta: DownstreamDeltas;
+  structureCharacteristicDelta: CharacteristicDeltaMap;
+  tasteFamilyDelta: FlavorFamilyDeltaMap;
+  priceInputDelta: PriceInputDeltaMap;
 }
 
 export interface WineAnchorImpactDebugAnalysis {
@@ -44,6 +90,37 @@ export interface WineAnchorImpactDebugAnalysis {
 }
 
 const ANCHOR_KEYS = Object.keys(NEUTRAL_WINE_ANCHORS) as Array<keyof WineAnchorValues>;
+const CHARACTERISTIC_KEYS: Array<keyof WineCharacteristics> = [
+  'acidity',
+  'aroma',
+  'body',
+  'spice',
+  'sweetness',
+  'tannins'
+];
+const PRICE_INPUT_KEYS: PriceInputKey[] = [
+  'basePrice',
+  'wineScoreMultiplier',
+  'landValuePriceMultiplier',
+  'featurePriceMultiplier',
+  'prePrestigePrice',
+  'companyPrestigeMultiplier',
+  'vineyardPrestigeMultiplier',
+  'finalPrice'
+];
+
+function pickPriceInputs(breakdown: EstimatedPriceBreakdown): PriceInputSnapshot {
+  return {
+    basePrice: breakdown.basePrice,
+    wineScoreMultiplier: breakdown.wineScoreMultiplier,
+    landValuePriceMultiplier: breakdown.landValuePriceMultiplier,
+    featurePriceMultiplier: breakdown.featurePriceMultiplier,
+    prePrestigePrice: breakdown.prePrestigePrice,
+    companyPrestigeMultiplier: breakdown.companyPrestigeMultiplier,
+    vineyardPrestigeMultiplier: breakdown.vineyardPrestigeMultiplier,
+    finalPrice: breakdown.finalPrice
+  };
+}
 
 function buildDownstreamSnapshot(
   batch: WineBatch,
@@ -53,6 +130,12 @@ function buildDownstreamSnapshot(
   vineyardPrestige?: number
 ): DownstreamSnapshot {
   const adjustedRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, anchors);
+  const structureBreakdown = calculateCharacteristicBreakdown(
+    batch.characteristics,
+    adjustedRanges,
+    RANGE_ADJUSTMENTS,
+    RULES
+  );
   const structureIndex = calculateStructureIndex(
     batch.characteristics,
     adjustedRanges,
@@ -66,6 +149,14 @@ function buildDownstreamSnapshot(
     structureIndex
   };
 
+  const contributionScale = CHARACTERISTIC_KEYS.length > 0 ? -2 / CHARACTERISTIC_KEYS.length : 0;
+  const structureCharacteristicContributions = {} as CharacteristicDeltaMap;
+  for (const key of CHARACTERISTIC_KEYS) {
+    structureCharacteristicContributions[key] =
+      contributionScale * structureBreakdown[key].finalTotalDistance;
+  }
+
+  const tasteFamilyValues = computeWineTasteProfile(batchWithAnchors).flavorFamilies;
   const tasteQualityIndex = calculateTasteQualityIndex(batchWithAnchors).tasteQualityIndex;
   const breakdown = calculateEstimatedPriceBreakdown(
     batchWithAnchors,
@@ -78,7 +169,10 @@ function buildDownstreamSnapshot(
     structureIndex,
     tasteQualityIndex,
     wineScore: breakdown.wineScore,
-    estimatedPrice: breakdown.finalPrice
+    estimatedPrice: breakdown.finalPrice,
+    structureCharacteristicContributions,
+    tasteFamilyValues,
+    priceInputs: pickPriceInputs(breakdown)
   };
 }
 
@@ -134,7 +228,21 @@ export function analyzeWineAnchorDownstreamImpact(
         tasteQualityIndex: isolatedCurrent.tasteQualityIndex - neutralBaseline.tasteQualityIndex,
         wineScore: isolatedCurrent.wineScore - neutralBaseline.wineScore,
         estimatedPrice: isolatedCurrent.estimatedPrice - neutralBaseline.estimatedPrice
-      }
+      },
+      structureCharacteristicDelta: CHARACTERISTIC_KEYS.reduce((acc, characteristic) => {
+        acc[characteristic] =
+          isolatedCurrent.structureCharacteristicContributions[characteristic] -
+          neutralBaseline.structureCharacteristicContributions[characteristic];
+        return acc;
+      }, {} as CharacteristicDeltaMap),
+      tasteFamilyDelta: FLAVOR_FAMILY_IDS.reduce((acc, family) => {
+        acc[family] = isolatedCurrent.tasteFamilyValues[family] - neutralBaseline.tasteFamilyValues[family];
+        return acc;
+      }, {} as FlavorFamilyDeltaMap),
+      priceInputDelta: PRICE_INPUT_KEYS.reduce((acc, keyName) => {
+        acc[keyName] = isolatedCurrent.priceInputs[keyName] - neutralBaseline.priceInputs[keyName];
+        return acc;
+      }, {} as PriceInputDeltaMap)
     };
   });
 

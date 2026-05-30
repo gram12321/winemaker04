@@ -93,9 +93,11 @@ export const BUYER_WEATHER_VOLATILITY_PRESSURE: Record<WeatherState, { price: nu
 };
 
 export const WEATHER_INTENSITY_MULTIPLIER: Record<WeatherIntensity, number> = {
+  VeryMild: 0.92,
   Mild: 0.96,
   Moderate: 1.0,
   Severe: 1.08,
+  Extreme: 1.16,
 };
 
 const PRICE_SEASON_THEME: Record<Season, string> = {
