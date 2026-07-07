@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BASE_SEASONAL_BUYER_COUNT, BULK_BASE_SEASON_LIMIT_KG } from '@/lib/constants';
 
 type BuyerRow = {
   company_id: string;
@@ -136,7 +137,7 @@ describe('grape buyer market', () => {
   });
 
   it('creates the always-available bulk buyer and scales its seasonal limit from company demand', async () => {
-    const { BULK_BASE_SEASON_LIMIT_KG, getBulkBuyer } = await import('@/lib/services/sales/grapeBuyerMarketService');
+    const { getBulkBuyer } = await import('@/lib/services/sales/grapeBuyerMarketService');
 
     const buyer = await getBulkBuyer('France');
 
@@ -178,7 +179,7 @@ describe('grape buyer market', () => {
   });
 
   it('uses research slot unlocks when filling the seasonal buyer rotation', async () => {
-    const { BASE_SEASONAL_BUYER_COUNT, getSeasonalBuyers } = await import('@/lib/services/sales/grapeBuyerMarketService');
+    const { getSeasonalBuyers } = await import('@/lib/services/sales/grapeBuyerMarketService');
 
     const buyers = await getSeasonalBuyers('France');
 
