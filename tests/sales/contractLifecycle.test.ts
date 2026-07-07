@@ -7,8 +7,9 @@ const mocks = vi.hoisted(() => ({
   updateContractStatus: vi.fn(async () => true),
   getPendingContracts: vi.fn(async (): Promise<WineContract[]> => []),
   updateContractProgress: vi.fn(async () => true),
-  getWineBatchById: vi.fn(),
-  saveWineBatch: vi.fn(async () => true),
+  getInventoryBatchById: vi.fn(),
+  saveInventoryBatch: vi.fn(async () => true),
+  getAllWineBatches: vi.fn(async (): Promise<WineBatch[]> => []),
   loadVineyards: vi.fn(async () => []),
   addTransaction: vi.fn(async () => undefined),
   createRelationshipBoost: vi.fn(async () => undefined),
@@ -29,14 +30,19 @@ vi.mock('@/lib/database/sales/contractDB', () => ({
   updateContractProgress: mocks.updateContractProgress
 }));
 
-vi.mock('@/lib/database/activities/inventoryDB', () => ({
-  getWineBatchById: mocks.getWineBatchById,
-  saveWineBatch: mocks.saveWineBatch
-}));
-
 vi.mock('@/lib/database/activities/vineyardDB', () => ({
   loadVineyards: mocks.loadVineyards
 }));
+
+vi.mock('@/lib/services/wine/winery/inventoryService', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/services/wine/winery/inventoryService')>('@/lib/services/wine/winery/inventoryService');
+  return {
+    ...actual,
+    getInventoryBatchById: mocks.getInventoryBatchById,
+    saveInventoryBatch: mocks.saveInventoryBatch,
+    getAllWineBatches: mocks.getAllWineBatches
+  };
+});
 
 vi.mock('@/lib/services/finance/financeService', () => ({
   addTransaction: mocks.addTransaction
@@ -135,7 +141,8 @@ describe('contract lifecycle', () => {
     vi.clearAllMocks();
     mocks.getGameState.mockReturnValue({ week: 3, season: 'Fall', currentYear: 2026 });
     mocks.getContractById.mockResolvedValue(contract());
-    mocks.getWineBatchById.mockResolvedValue(bottledWine());
+    mocks.getInventoryBatchById.mockResolvedValue(bottledWine());
+    mocks.getAllWineBatches.mockResolvedValue([]);
     mocks.loadVineyards.mockResolvedValue([]);
     mocks.getAllFeatureConfigs.mockReturnValue([]);
   });
@@ -150,7 +157,7 @@ describe('contract lifecycle', () => {
       message: 'Contract fulfilled successfully',
       revenue: 110
     });
-    expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.saveInventoryBatch).toHaveBeenCalledWith(expect.objectContaining({
       id: 'batch-1',
       quantity: 3
     }));
@@ -195,7 +202,7 @@ describe('contract lifecycle', () => {
       }
     };
 
-    mocks.getWineBatchById.mockResolvedValue(bottledWine({ features: [feature] as any }));
+    mocks.getInventoryBatchById.mockResolvedValue(bottledWine({ features: [feature] as any }));
     (mocks.getAllFeatureConfigs as any).mockReturnValue([featureConfig as any]);
     (mocks.loadVineyards as any).mockResolvedValue([{ id: 'vineyard-1', name: 'Contract Vineyard', vineyardPrestige: 25 }]);
 
@@ -244,6 +251,25 @@ describe('contract lifecycle', () => {
       'Contract rejected'
     );
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('contracts');
+  });
+
+  it('loads contract-eligible bottled inventory through the inventory service seam', async () => {
+    const eligibleWine = bottledWine({ id: 'eligible-batch', quantity: 4 });
+    const ineligibleWine = bottledWine({ id: 'empty-batch', quantity: 0 });
+    mocks.getAllWineBatches.mockResolvedValue([eligibleWine, ineligibleWine]);
+
+    const { getEligibleWinesForContract } = await import('@/lib/services/sales/contractService');
+
+    await expect(getEligibleWinesForContract(contract())).resolves.toEqual([
+      {
+        wine: eligibleWine,
+        validation: {
+          isValid: true,
+          failedRequirements: []
+        }
+      }
+    ]);
+    expect(mocks.getAllWineBatches).toHaveBeenCalledOnce();
   });
 
   it('accepts an offered bottle pre-sale contract, records accepted date, and books upfront revenue', async () => {

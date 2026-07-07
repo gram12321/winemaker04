@@ -3,7 +3,6 @@ import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { companyService } from '../user/companyService';
 import { calculateCompanyValue } from '../finance/financeService';
-import { saveWineBatch } from '../../database/activities/inventoryDB';
 import {
   BuyMarketOfferRow,
   deleteBuyOfferRow,
@@ -64,7 +63,12 @@ import {
 } from './grapeSupplierLoyaltyService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
-import { buildMarketPreviewBatch, type CreateMarketWineBatchInput, type MarketBatchStateProfile } from '../wine/winery/inventoryService';
+import {
+  buildMarketPreviewBatch,
+  saveInventoryBatch,
+  type CreateMarketWineBatchInput,
+  type MarketBatchStateProfile
+} from '../wine/winery/inventoryService';
 import { v4 as uuidv4 } from 'uuid';
 
 export { BUY_MARKET_FIXED_SPREAD } from '@/lib/constants';
@@ -816,7 +820,7 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
   };
 
   try {
-    await saveWineBatch(purchasedBatch);
+    await saveInventoryBatch(purchasedBatch);
     await addTransaction(
       -totalCost,
       `Market Purchase: ${roundedQuantity} kg ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name}`,

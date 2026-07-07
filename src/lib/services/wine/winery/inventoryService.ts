@@ -1,7 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics, GameDate, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Vineyard, WineBatchOriginSnapshot, WineBatchState } from '../../../types/types';
-import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
+import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
@@ -700,6 +700,14 @@ export async function createWineBatchFromMarketSource(input: CreateMarketWineBat
   await saveWineBatch(batch);
   triggerGameUpdate();
   return batch;
+}
+
+export async function saveInventoryBatch(batch: WineBatch): Promise<void> {
+  await saveWineBatch(batch);
+}
+
+export async function getInventoryBatchById(batchId: string): Promise<WineBatch | null> {
+  return await getWineBatchById(batchId);
 }
 
 // Get all wine batches

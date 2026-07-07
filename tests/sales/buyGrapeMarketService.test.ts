@@ -59,7 +59,7 @@ const mocks = vi.hoisted(() => ({
   })),
   deleteBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
   updateBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
-  saveWineBatch: vi.fn(async () => true),
+  saveInventoryBatch: vi.fn(async () => true),
   addTransaction: vi.fn(async () => undefined),
   recordSupplierPurchase: vi.fn(async () => ({
     companyId: 'company-1',
@@ -194,10 +194,6 @@ vi.mock('@/lib/database/sales/buyMarketOffersDB', () => ({
   upsertBuyOfferRows: mocks.upsertBuyOfferRows,
 }));
 
-vi.mock('@/lib/database/activities/inventoryDB', () => ({
-  saveWineBatch: mocks.saveWineBatch,
-}));
-
 vi.mock('@/lib/services/finance/financeService', async () => {
   const actual = await vi.importActual<typeof import('@/lib/services/finance/financeService')>('@/lib/services/finance/financeService');
   return {
@@ -218,6 +214,7 @@ vi.mock('@/hooks/useGameUpdates', () => ({
 
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   buildMarketPreviewBatch: mocks.buildMarketPreviewBatch,
+  saveInventoryBatch: mocks.saveInventoryBatch,
 }));
 
 describe('buy grape market service', () => {
@@ -286,7 +283,7 @@ describe('buy grape market service', () => {
     const result = await purchaseBuyGrapeOffer('offer-1', 120);
 
     expect(result).toEqual({ success: true });
-    expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.saveInventoryBatch).toHaveBeenCalledWith(expect.objectContaining({
       quantity: 120,
       grape: 'Chardonnay',
       state: 'grapes',
@@ -354,7 +351,7 @@ describe('buy grape market service', () => {
     const result = await purchaseBuyGrapeOffer('offer-2', 75);
 
     expect(result).toEqual({ success: true });
-    expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.saveInventoryBatch).toHaveBeenCalledWith(expect.objectContaining({
       grape: 'Pinot Noir',
       quantity: 75,
       state: 'must_fermenting',
@@ -377,7 +374,7 @@ describe('buy grape market service', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('remaining seasonal supply (400 kg)');
-    expect(mocks.saveWineBatch).not.toHaveBeenCalled();
+    expect(mocks.saveInventoryBatch).not.toHaveBeenCalled();
     expect(mocks.addTransaction).not.toHaveBeenCalled();
     expect(mocks.recordSupplierPurchase).not.toHaveBeenCalled();
     expect(mocks.recordMarketSupplierPurchase).not.toHaveBeenCalled();

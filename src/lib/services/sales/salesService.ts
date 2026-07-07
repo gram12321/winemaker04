@@ -1,7 +1,6 @@
 // Sales service for wine order management (fulfillment and rejection)
 import { WineOrder, WineBatch } from '../../types/types';
 import { loadWineOrders, updateWineOrderStatus, saveWineOrder, getOrderById } from '../../database/customers/salesDB';
-import { saveWineBatch, getWineBatchById } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../finance/financeService';
@@ -10,6 +9,7 @@ import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPres
 import { getCurrentPrestige } from '../core/gameState';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
+import { getInventoryBatchById, saveInventoryBatch } from '../wine/winery/inventoryService';
 
 // ===== ORDER MANAGEMENT =====
 
@@ -31,7 +31,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   }
   
   // Get the wine batch
-  const wineBatch = await getWineBatchById(order.wineBatchId);
+  const wineBatch = await getInventoryBatchById(order.wineBatchId);
   
   if (!wineBatch) {
     return false;
@@ -54,7 +54,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     quantity: wineBatch.quantity - fulfillableQuantity
   };
   
-  await saveWineBatch(updatedBatch);
+  await saveInventoryBatch(updatedBatch);
   
   // Auto-reject other pending orders for this batch if inventory is now 0
   if (updatedBatch.quantity === 0) {

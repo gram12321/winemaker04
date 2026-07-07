@@ -1,7 +1,6 @@
 ﻿// Contract fulfillment service - handles contract fulfillment, rejection, and expiration
 import { WineContract, WineBatch, ContractRequirement, GameDate, Vineyard } from '../../types/types';
 import { getContractById, updateContractStatus, getPendingContracts, updateContractProgress } from '../../database/sales/contractDB';
-import { getWineBatchById, saveWineBatch } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from './relationshipService';
@@ -10,7 +9,12 @@ import { addSalePrestigeEvent, addFeaturePrestigeEvent, addContractOutcomePresti
 import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
-import { formatCompletedWineName } from '../wine/winery/inventoryService';
+import {
+  formatCompletedWineName,
+  getAllWineBatches,
+  getInventoryBatchById,
+  saveInventoryBatch
+} from '../wine/winery/inventoryService';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 import { formatNumber } from '../../utils/utils';
 import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
@@ -324,10 +328,7 @@ export async function getEligibleWinesForContract(contract: WineContract): Promi
   wine: WineBatch;
   validation: Awaited<ReturnType<typeof validateWineAgainstContract>>;
 }[]> {
-  // Import here to avoid circular dependency
-  const { loadWineBatches } = await import('../../database/activities/inventoryDB');
-  
-  const allBatches = await loadWineBatches();
+  const allBatches = await getAllWineBatches();
   const bottledWines = allBatches.filter(b => b.state === 'bottled' && b.quantity > 0);
   
   // Validate each wine against contract and check land value requirement
@@ -383,7 +384,7 @@ export async function fulfillContract(
     
     // Validate each wine against contract requirements
     for (const selectedWine of selectedWines) {
-      const wineBatch = await getWineBatchById(selectedWine.wineBatchId);
+      const wineBatch = await getInventoryBatchById(selectedWine.wineBatchId);
       if (!wineBatch) {
         return { success: false, message: `Wine batch ${selectedWine.wineBatchId} not found` };
       }
@@ -412,7 +413,7 @@ export async function fulfillContract(
     
     // Deduct inventory
     for (const selectedWine of selectedWines) {
-      const wineBatch = await getWineBatchById(selectedWine.wineBatchId);
+      const wineBatch = await getInventoryBatchById(selectedWine.wineBatchId);
       if (!wineBatch) continue;
       
       const updatedBatch: WineBatch = {
@@ -420,7 +421,7 @@ export async function fulfillContract(
         quantity: wineBatch.quantity - selectedWine.quantity
       };
       
-      await saveWineBatch(updatedBatch);
+      await saveInventoryBatch(updatedBatch);
       fulfilledBatchIds.push(selectedWine.wineBatchId);
       fulfilledWines.push({
         wineBatch,
