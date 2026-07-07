@@ -23,32 +23,34 @@ function applyPermanentEffect(
 ): ResearchPermanentEffectsSummary {
   switch (effect.kind) {
     case 'vineyard_health_decay_multiplier': {
-      // Multiplicative stacking allows independent effects to compose predictably.
       const multiplier = Number.isFinite(effect.multiplier) ? effect.multiplier : 1;
       return {
         ...current,
-        vineyardHealthDecayMultiplier: Math.max(0.1, current.vineyardHealthDecayMultiplier * multiplier)
+        vineyardHealthDecayMultiplier: Math.max(0.1, current.vineyardHealthDecayMultiplier * multiplier),
       };
     }
     case 'research_skill_multiplier': {
       const multiplier = Number.isFinite(effect.multiplier) ? effect.multiplier : 1;
       return {
         ...current,
-        researchSkillMultiplier: Math.min(3, current.researchSkillMultiplier * Math.max(1, multiplier))
+        researchSkillMultiplier: Math.min(3, current.researchSkillMultiplier * Math.max(1, multiplier)),
       };
     }
     case 'administration_and_research_work_multiplier': {
       const multiplier = Number.isFinite(effect.multiplier) ? effect.multiplier : 1;
       return {
         ...current,
-        administrationAndResearchWorkMultiplier: Math.max(0.5, current.administrationAndResearchWorkMultiplier * Math.max(0.5, multiplier))
+        administrationAndResearchWorkMultiplier: Math.max(
+          0.5,
+          current.administrationAndResearchWorkMultiplier * Math.max(0.5, multiplier)
+        ),
       };
     }
     case 'all_staff_work_multiplier': {
       const multiplier = Number.isFinite(effect.multiplier) ? effect.multiplier : 1;
       return {
         ...current,
-        allStaffWorkMultiplier: Math.min(3, current.allStaffWorkMultiplier * Math.max(1, multiplier))
+        allStaffWorkMultiplier: Math.min(3, current.allStaffWorkMultiplier * Math.max(1, multiplier)),
       };
     }
     default:
@@ -65,12 +67,13 @@ export async function getResearchPermanentEffects(companyId?: string): Promise<R
     researchSkillMultiplier: 1,
     administrationAndResearchWorkMultiplier: 1,
     allStaffWorkMultiplier: 1,
-    activeEffects: []
+    activeEffects: [],
   };
 
   for (const project of RESEARCH_PROJECTS) {
-    if (!completedResearchIds.has(project.id)) continue;
-    if (!project.permanentEffects?.length) continue;
+    if (!completedResearchIds.has(project.id) || !project.permanentEffects?.length) {
+      continue;
+    }
 
     for (const effect of project.permanentEffects) {
       summary = applyPermanentEffect(summary, effect);
@@ -78,7 +81,7 @@ export async function getResearchPermanentEffects(companyId?: string): Promise<R
         projectId: project.id,
         projectTitle: project.title,
         description: effect.description || 'Permanent research effect',
-        kind: effect.kind
+        kind: effect.kind,
       });
     }
   }

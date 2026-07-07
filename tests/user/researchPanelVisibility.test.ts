@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
-import { getVisibleResearchProjects } from '@/components/finance/ResearchPanel';
+import { getVisibleResearchProjects } from '@/lib/features/researchUpgrade/services/research/researchPresentationService';
 
 describe('getVisibleResearchProjects', () => {
   it('shows only the first incomplete vineyard size prerequisite tier when none are completed', () => {

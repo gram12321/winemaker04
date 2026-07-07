@@ -1,11 +1,12 @@
-﻿import { type ResearchProject } from '@/lib/constants/researchConstants';
+import { type ResearchProject } from '@/lib/constants/researchConstants';
+import { GAME_INITIALIZATION } from '@/lib/constants';
 import { getAllAchievementUnlocks } from '@/lib/database/core/achievementsDB';
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
-import { getMaxBuyerLoyaltyLevel, type BuyerLoyaltyLevel } from '@/lib/services';
-import { GAME_INITIALIZATION } from '@/lib/constants';
+import { type BuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
+import { getMaxBuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber } from '@/lib/utils/utils';
 
 export interface ResearchEligibilityContext {
@@ -17,8 +18,6 @@ export interface ResearchEligibilityContext {
   unlockedAchievementIds: Set<string>;
 }
 
-// Shared eligibility data used by both the research panel and the start workflow.
-// researchManager.ts remains the enforcement point; this helper only assembles and evaluates requirements.
 export async function loadResearchEligibilityContext(
   currentPrestige: number,
   completedResearch: Set<string>,
@@ -34,7 +33,7 @@ export async function loadResearchEligibilityContext(
   const gameState = getGameState();
   const currentAbsoluteWeeks = calculateAbsoluteWeeks(
     gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
-    (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as any,
+    (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as never,
     gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR
   );
   const initialAbsoluteWeeks = calculateAbsoluteWeeks(
@@ -43,14 +42,13 @@ export async function loadResearchEligibilityContext(
     GAME_INITIALIZATION.STARTING_YEAR
   );
   const companyAgeWeeks = Math.max(0, currentAbsoluteWeeks - initialAbsoluteWeeks);
-
   return {
     currentPrestige,
     completedResearch,
     companyValue,
     companyAgeWeeks,
     maxBuyerLoyaltyLevel,
-    unlockedAchievementIds: new Set(unlocks.map(unlock => unlock.achievementId)),
+    unlockedAchievementIds: new Set(unlocks.map((unlock) => unlock.achievementId)),
   };
 }
 
@@ -62,14 +60,16 @@ export function getResearchRequirementReasons(project: ResearchProject, context:
   }
 
   if (project.prerequisites?.length) {
-    const missing = project.prerequisites.filter(id => !context.completedResearch.has(id));
+    const missing = project.prerequisites.filter((id) => !context.completedResearch.has(id));
     if (missing.length > 0) {
       reasons.push(`Complete prerequisite research: ${missing.join(', ')}`);
     }
   }
 
   if (project.requiredCompanyValue !== undefined && context.companyValue < project.requiredCompanyValue) {
-    reasons.push(`Requires company value ${formatNumber(Math.floor(project.requiredCompanyValue), { currency: true, decimals: 0 })} (you have ${formatNumber(Math.floor(context.companyValue), { currency: true, decimals: 0 })})`);
+    reasons.push(
+      `Requires company value ${formatNumber(Math.floor(project.requiredCompanyValue), { currency: true, decimals: 0 })} (you have ${formatNumber(Math.floor(context.companyValue), { currency: true, decimals: 0 })})`
+    );
   }
 
   if (project.requiredCompanyAgeWeeks !== undefined && context.companyAgeWeeks < project.requiredCompanyAgeWeeks) {
@@ -81,7 +81,7 @@ export function getResearchRequirementReasons(project: ResearchProject, context:
   }
 
   if (project.requiredAchievementIds?.length) {
-    const missingAchievements = project.requiredAchievementIds.filter(id => !context.unlockedAchievementIds.has(id));
+    const missingAchievements = project.requiredAchievementIds.filter((id) => !context.unlockedAchievementIds.has(id));
     if (missingAchievements.length > 0) {
       reasons.push(`Requires achievements: ${missingAchievements.join(', ')}`);
     }

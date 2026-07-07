@@ -4,7 +4,7 @@ import {
   getResearchRequirementReasons,
   isResearchProjectEligible,
   type ResearchEligibilityContext
-} from '@/lib/services/research/researchEligibilityService';
+} from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
 
 function context(overrides: Partial<ResearchEligibilityContext> = {}): ResearchEligibilityContext {
   return {

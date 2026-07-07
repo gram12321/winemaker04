@@ -12,7 +12,7 @@ import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber } from '@/lib/utils';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-import { getResearchPermanentEffects } from '@/lib/services/research/researchPermanentEffectsService';
+import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
 
 
 

@@ -1,10 +1,6 @@
 import type { ResearchUpgradeFeature } from './featureTypes';
 
 export const noResearchUpgradeFeature: ResearchUpgradeFeature = {
-  ui: {
-    getFinanceTabs: () => []
-  },
-
   workflow: {
     async startResearch() {
       return null;

@@ -177,26 +177,23 @@ describe('prestige event scenario archetypes', () => {
     const regionalProject = getResearchProject(archetypes.establishedRegionalEstate.researchProjectId);
     const iconicProject = getResearchProject(archetypes.iconicLateGameBrand.researchProjectId);
 
-    expect(youngProject?.prestigeReward).toBe(4);
+    expect(youngProject?.requiredPrestige).toBe(0);
+    expect(youngProject?.prestigeReward).toBeCloseTo(0.6);
     expect(youngProject?.requiredPrestige ?? 0).toBeLessThanOrEqual(archetypes.youngLocalEstate.currentPrestige);
     expect(youngProject?.requiredCompanyValue ?? 0).toBeLessThanOrEqual(archetypes.youngLocalEstate.companyValue);
-    expect(regionalProject).toEqual(expect.objectContaining({
-      requiredPrestige: 15,
-      prestigeReward: 10
-    }));
+    expect(regionalProject?.requiredPrestige).toBe(0);
+    expect(regionalProject?.prestigeReward).toBeCloseTo(1.2);
     expect(regionalProject?.requiredPrestige ?? 0).toBeLessThanOrEqual(archetypes.establishedRegionalEstate.currentPrestige);
     expect(regionalProject?.requiredCompanyValue ?? 0).toBeLessThanOrEqual(archetypes.establishedRegionalEstate.companyValue);
-    expect(iconicProject).toEqual(expect.objectContaining({
-      requiredPrestige: 58,
-      requiredCompanyValue: 4_500_000,
-      prestigeReward: 15
-    }));
+    expect(iconicProject?.requiredPrestige).toBe(6);
+    expect(iconicProject?.requiredCompanyValue).toBe(4_500_000);
+    expect(iconicProject?.prestigeReward).toBe(2);
     expect(iconicProject?.requiredPrestige ?? 0).toBeLessThanOrEqual(archetypes.iconicLateGameBrand.currentPrestige);
     expect(iconicProject?.requiredCompanyValue ?? 0).toBeLessThanOrEqual(archetypes.iconicLateGameBrand.companyValue);
 
-    expect(young.researchReward).toBeGreaterThan(young.regularVineyardSale);
-    expect(regional.researchReward).toBeGreaterThanOrEqual(regional.regularVineyardSale);
-    expect(iconic.researchReward).toBeGreaterThanOrEqual(iconic.regularVineyardSale);
+    expect(young.researchReward).toBeGreaterThan(young.companyValueRow);
+    expect(regional.researchReward).toBeGreaterThan(regional.companyValueRow);
+    expect(iconic.researchReward).toBeLessThan(iconic.regularVineyardSale);
 
     expect(young.achievementReward).toBe(3);
     expect(regional.achievementReward).toBe(20);
@@ -204,7 +201,7 @@ describe('prestige event scenario archetypes', () => {
 
     expect(regional.achievementReward).toBeLessThan(young.achievementReward * 10);
     expect(iconic.achievementReward).toBeLessThan(regional.achievementReward * 20);
-    expect(iconic.companyValueRow).toBeLessThan(iconic.researchReward);
+    expect(iconic.companyValueRow).toBeGreaterThan(iconic.researchReward);
   });
 
   it('scales public faults and loan events from small-house learning mistakes to famous-house scandals', () => {

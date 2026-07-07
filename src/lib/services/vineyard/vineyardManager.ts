@@ -8,7 +8,7 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
-import { getResearchPermanentEffects } from '../research/researchPermanentEffectsService';
+import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { type VineyardWeatherContext } from './weatherImpactService';
 import {

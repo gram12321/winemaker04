@@ -70,10 +70,6 @@ export * from './prestige/prestigeService';
 
 // Research services
 export * from '@/lib/features/researchUpgrade/services/research/researchEnforcer';
-export * from './research/researchEligibilityService';
-export * from './research/researchPermanentEffectsService';
-export * from './research/researchPresentationService';
-export * from './research/researchViewService';
 export * from './vineyard/weatherCenterService';
 
 // Activity system

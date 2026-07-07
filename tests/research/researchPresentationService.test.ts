@@ -6,7 +6,7 @@ import {
   getResearchDependencyMetadata,
   getResearchDisplayGroup,
   getResearchGateChips,
-} from '@/lib/services/research/researchPresentationService';
+} from '@/lib/features/researchUpgrade/services/research/researchPresentationService';
 
 function projectById(id: string) {
   const project = RESEARCH_PROJECTS.find(candidate => candidate.id === id);
@@ -43,7 +43,7 @@ describe('research presentation service', () => {
     expect(dependencyMetadata.prerequisiteTitles).toEqual(['Fermentation Technology Basics']);
     expect(getPrimaryResearchImpact(project)).toBe('Unlocks Extended Maceration fermentation method');
 
-    const foundationGateTypes = getResearchGateChips(projectById('foundation_admin_baseline')).map(chip => chip.type);
+    const foundationGateTypes = getResearchGateChips(projectById('foundation_admin_methodology')).map(chip => chip.type);
     expect(foundationGateTypes).toEqual(expect.arrayContaining(['company', 'age']));
   });
 
@@ -71,7 +71,14 @@ describe('research presentation service', () => {
     );
     expect(footprint.chainSummaries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: 'Intermediate Admin Program' }),
+        expect.objectContaining({
+          label: 'Basic Admin Program',
+          projectIds: expect.arrayContaining([
+            'foundation_admin_baseline',
+            'foundation_admin_methodology',
+            'foundation_admin_office',
+          ]),
+        }),
       ])
     );
   });

@@ -1,4 +1,3 @@
-import { ResearchPanel } from '@/components/finance/ResearchPanel';
 import { GAME_INITIALIZATION, type SeasonName } from '@/lib/constants';
 import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
 import { getAllResearchUnlocks, getUnlockedResearchIds, unlockResearch } from '@/lib/database/core/researchUnlocksDB';
@@ -31,19 +30,6 @@ async function getUnlockedResearchSet(companyId?: string): Promise<Set<string>> 
 }
 
 export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
-  ui: {
-    getFinanceTabs() {
-      return [
-        {
-          id: 'upgrades',
-          label: 'Research and Upgrades',
-          activeLabel: 'Research & Upgrades',
-          render: () => <ResearchPanel />
-        }
-      ];
-    }
-  },
-
   workflow: {
     startResearch,
     completeResearch

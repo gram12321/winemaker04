@@ -13,7 +13,7 @@ vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: mocks.getCurrentCompanyId
 }));
 
-import { getResearchPermanentEffects } from '@/lib/services/research/researchPermanentEffectsService';
+import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
 
 describe('research permanent effects', () => {
   beforeEach(() => {

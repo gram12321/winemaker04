@@ -16,7 +16,7 @@ import {
 import { Settings, Users, AlertTriangle, Trash2, TestTube2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import TestLabPage from './admin/TestLabPage';
-import { ResearchPanel } from '@/components/finance/ResearchPanel';
+import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
 import {
   adminClearAllAchievements,
   adminClearAllCompanies,
@@ -269,7 +269,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                 onClick={() => setShowAllResearch(value => !value)}
                 className="w-full"
               >
-                {showAllResearch ? 'Hide Research Panel' : 'Show All Research'}
+                {showAllResearch ? 'Hide Research Inspector' : 'Show All Research'}
               </Button>
               <p className="mt-2 text-xs text-gray-500">
                 Shows research projects without prestige or prerequisite gates.
@@ -286,7 +286,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResearchPanel bypassGates={true} />
+                    <ResearchAdminInspector />
                   </CardContent>
                 </Card>
               </div>

@@ -265,8 +265,8 @@ describe('processGameTick', () => {
     let resolveFeatureRisks: (() => void) | null = null;
     mocks.processWeeklyFeatureRisks.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          resolveFeatureRisks = resolve;
+        new Promise<undefined>((resolve) => {
+          resolveFeatureRisks = () => resolve(undefined);
         })
     );
 

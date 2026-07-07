@@ -10,7 +10,8 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getResearchUpgradeFeature } from '../../..';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
-import { getResearchPermanentEffects, getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/services';
+import { getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
+import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
 import { formatNumber } from '@/lib/utils/utils';
 
 /**

@@ -146,6 +146,14 @@ describe('Staff Search Calculations - Pure Functions', () => {
       };
     };
 
+    const fixedSkills: Staff['skills'] = {
+      field: 0.5,
+      winery: 0.5,
+      financeAndStaff: 0.5,
+      sales: 0.5,
+      administrationAndResearch: 0.5
+    };
+
     it('calculates work for a candidate', () => {
       const candidate = createTestStaff();
       const work = calculateHiringWorkForCandidate(candidate);
@@ -165,8 +173,16 @@ describe('Staff Search Calculations - Pure Functions', () => {
     });
 
     it('work increases with candidate specializations', () => {
-      const candidate1 = createTestStaff({ specializations: [] });
-      const candidate2 = createTestStaff({ specializations: ['field', 'winery'] });
+      const candidate1 = createTestStaff({
+        skills: fixedSkills,
+        wage: 2000,
+        specializations: []
+      });
+      const candidate2 = createTestStaff({
+        skills: fixedSkills,
+        wage: 2000,
+        specializations: ['field', 'winery']
+      });
       
       const work1 = calculateHiringWorkForCandidate(candidate1);
       const work2 = calculateHiringWorkForCandidate(candidate2);

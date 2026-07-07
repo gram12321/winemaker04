@@ -71,7 +71,7 @@ vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   createWineBatchFromHarvest: mocks.createWineBatchFromHarvest
 }));
 
-vi.mock('@/lib/services/research/researchPermanentEffectsService', () => ({
+vi.mock('@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService', () => ({
   getResearchPermanentEffects: mocks.getResearchPermanentEffects
 }));
 

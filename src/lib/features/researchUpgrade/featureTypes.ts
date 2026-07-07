@@ -1,17 +1,5 @@
-import type { ReactNode } from 'react';
 import type { ResearchProject, UnlockType } from '@/lib/constants/researchConstants';
 import type { Activity, GameDate } from '@/lib/types/types';
-
-export interface ResearchUpgradeFinanceTabRegistration {
-  id: string;
-  label: string;
-  render: () => ReactNode;
-  activeLabel: string;
-}
-
-export interface ResearchUpgradeUiHooks {
-  getFinanceTabs(): ResearchUpgradeFinanceTabRegistration[];
-}
 
 export interface ResearchUpgradeWorkflowHooks {
   startResearch(projectId: string): Promise<string | null>;
@@ -63,7 +51,6 @@ export interface ResearchUpgradeAdminHooks {
 }
 
 export interface ResearchUpgradeFeature {
-  ui: ResearchUpgradeUiHooks;
   workflow: ResearchUpgradeWorkflowHooks;
   unlocks: ResearchUpgradeUnlockHooks;
   setup: ResearchUpgradeSetupHooks;
