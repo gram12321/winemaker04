@@ -4,8 +4,8 @@ import { NEUTRAL_WINE_ANCHORS } from '@/lib/services/wine/anchors/wineAnchorServ
 
 const mocks = vi.hoisted(() => ({
   getOrderById: vi.fn(),
-  getWineBatchById: vi.fn(),
-  saveWineBatch: vi.fn(async () => true),
+  getInventoryBatchById: vi.fn(),
+  saveInventoryBatch: vi.fn(async () => true),
   loadWineOrders: vi.fn(async (): Promise<WineOrder[]> => []),
   updateWineOrderStatus: vi.fn(async () => true),
   saveWineOrder: vi.fn(async () => true),
@@ -28,14 +28,18 @@ vi.mock('@/lib/database/customers/salesDB', () => ({
   getOrderById: mocks.getOrderById
 }));
 
-vi.mock('@/lib/database/activities/inventoryDB', () => ({
-  saveWineBatch: mocks.saveWineBatch,
-  getWineBatchById: mocks.getWineBatchById
-}));
-
 vi.mock('@/lib/database/activities/vineyardDB', () => ({
   loadVineyards: mocks.loadVineyards
 }));
+
+vi.mock('@/lib/services/wine/winery/inventoryService', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/services/wine/winery/inventoryService')>('@/lib/services/wine/winery/inventoryService');
+  return {
+    ...actual,
+    getInventoryBatchById: mocks.getInventoryBatchById,
+    saveInventoryBatch: mocks.saveInventoryBatch
+  };
+});
 
 vi.mock('@/hooks/useGameUpdates', () => ({
   triggerGameUpdate: mocks.triggerGameUpdate
@@ -121,7 +125,7 @@ describe('sales order lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getOrderById.mockResolvedValue(wineOrder());
-    mocks.getWineBatchById.mockResolvedValue(wineBatch());
+    mocks.getInventoryBatchById.mockResolvedValue(wineBatch());
     mocks.loadWineOrders.mockResolvedValue([
       wineOrder(),
       wineOrder({ id: 'order-2', customerId: 'customer-2', requestedQuantity: 3 })
@@ -134,7 +138,7 @@ describe('sales order lifecycle', () => {
 
     await expect(fulfillWineOrder('order-1')).resolves.toBe(true);
 
-    expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.saveInventoryBatch).toHaveBeenCalledWith(expect.objectContaining({
       id: 'batch-1',
       quantity: 0
     }));
@@ -181,7 +185,7 @@ describe('sales order lifecycle', () => {
       }
     };
 
-    mocks.getWineBatchById.mockResolvedValue(wineBatch({ features: [feature] as any }));
+    mocks.getInventoryBatchById.mockResolvedValue(wineBatch({ features: [feature] as any }));
     (mocks.getAllFeatureConfigs as any).mockReturnValue([featureConfig as any]);
     (mocks.loadVineyards as any).mockResolvedValue([{ id: 'vineyard-1', name: 'Order Vineyard', vineyardPrestige: 20 }]);
 
