@@ -47,21 +47,6 @@ const BULK_BUYER_ID = 'bulk_buyer';
 export type CountryKey = BuyerMarketCountryKey;
 type BuyerOriginTag = 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
 
-export {
-  BASE_SEASONAL_BUYER_COUNT,
-  BULK_BASE_SEASON_LIMIT_KG,
-  BUYER_ECONOMY_LIMIT_MULTIPLIERS,
-  BUYER_ECONOMY_PRICE_MULTIPLIERS,
-  BUYER_ECONOMY_VOLATILITY_AMPLITUDE,
-  BUYER_ECONOMY_VOLATILITY_PRESSURE,
-  BUYER_SEASON_LIMIT_MULTIPLIERS,
-  BUYER_SEASON_PRICE_MULTIPLIERS,
-  BUYER_WEATHER_VOLATILITY_PRESSURE,
-  COUNTRY_MULTIPLIER_RANGE,
-  MAX_SEASONAL_BUYER_COUNT,
-  WEATHER_INTENSITY_MULTIPLIER,
-} from '@/lib/constants';
-
 interface BuyerMarketRow {
   buyer_id: string;
   display_name: string;

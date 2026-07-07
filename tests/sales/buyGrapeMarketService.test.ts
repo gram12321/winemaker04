@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BUY_MARKET_FIXED_SPREAD, computeBuyOfferPricePerKg, getBuyOfferStateLabel } from '@/lib/services/sales/buyGrapeMarketService';
+import { BUY_MARKET_FIXED_SPREAD } from '@/lib/constants';
+import { computeBuyOfferPricePerKg, getBuyOfferStateLabel } from '@/lib/services/sales/buyGrapeMarketService';
 
 const mocks = vi.hoisted(() => ({
   getCurrentCompanyId: vi.fn(() => 'company-1'),

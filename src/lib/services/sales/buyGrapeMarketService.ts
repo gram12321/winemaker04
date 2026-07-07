@@ -71,8 +71,6 @@ import {
 } from '../wine/winery/inventoryService';
 import { v4 as uuidv4 } from 'uuid';
 
-export { BUY_MARKET_FIXED_SPREAD } from '@/lib/constants';
-
 export interface BuyGrapeMarketOffer {
   id: string;
   supplierId: string;
