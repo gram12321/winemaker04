@@ -18,6 +18,10 @@ export async function getPendingOrders(): Promise<WineOrder[]> {
   return await loadWineOrders('pending');
 }
 
+export async function getAllOrders(): Promise<WineOrder[]> {
+  return await loadWineOrders();
+}
+
 // Fulfill a wine order (sell the wine) - supports partial fulfillment
 export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   const order = await getOrderById(orderId);

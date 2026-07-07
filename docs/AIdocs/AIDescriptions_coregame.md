@@ -1,6 +1,6 @@
 # Core Game Mechanics - Winery Management Game
 
-Last code-verified: 2026-05-27
+Last code-verified: 2026-07-07
 
 This document describes the current mainline Winemaker 0.4 implementation. It is an orientation file for agents and maintainers: use it to understand what exists now, where systems live, and which older design ideas are not active runtime behavior.
 
@@ -44,8 +44,8 @@ Main UI surfaces:
 - Layout: `Header`, `ActivityPanel`, `NotificationCenter`, `GlobalSearchResultsDisplay`, and app-level optional feature overlays.
 - Pages: `Login`, `CompanyOverview`, `Vineyard`, `Winery`, `Sales`, `Finance`, `Research`, `Staff`, `WeatherCenter`, `WineLog`, `Winepedia`, `Achievements`, `Highscores`, `Profile`, `Settings`, and the dev-gated `AdminDashboard`.
 - Sales UI: orders, contracts, and wine cellar tabs under `src/components/pages/sales/`, plus wine assignment and forward/pre-sale contract actions.
-- Finance UI: finance statements, cash flow, income/balance views, staff wage summary, loan/lender surfaces, founder panel, and research panel.
-- Winepedia UI: reference tabs for countries, regions, grape varieties, customers, customer types, economy, grape buyers, weather, research, winemaking, wine quality, mathematical models, yield projection, and scoring explanations.
+- Finance UI: finance statements, cash flow, income/balance views, staff wage summary, loan/lender surfaces, and founder panel.
+- Winepedia UI: reference tabs for countries, regions, grape varieties, customers, customer types, economy, grape buyers, weather, winemaking, wine quality, mathematical models, yield projection, and scoring explanations.
 - Activity modals: land search/results, planting, clearing, harvest, crushing, fermentation, staff search/results, hiring, staff assignment, sell grapes, and buy from market.
 - Domain modals/components: wine, vineyard, staff, prestige, structure index, land value modifier, feature display, taste profile, taste wheel, taste quality breakdown, market offer tables, and constraint displays.
 
@@ -163,8 +163,9 @@ Remaining market work:
 ### Research
 
 - Research catalog, project categories, complexity, work profiles, prerequisites, prestige gates, company-value gates, buyer-loyalty gates, achievement gates, costs, and completion persistence are implemented.
-- Research UI has Active Research Effects, Research Footprint, and Catalog tabs.
-- Catalog supports in-progress, locked, available, completed, admin-bypass, and Hide completed states.
+- The standalone Research page is the canonical player-facing surface and is owned by `src/lib/features/researchUpgrade/`.
+- The current player UI is a unified progression-first surface with summary metrics, category filters, chain-aware project cards, and a project inspector.
+- Admin keeps a separate read-only research inspector with gate bypass for debugging; research is no longer presented as a finance panel or Winepedia tab.
 - Starting conditions can apply regional `startingResearch` pre-unlocks.
 - Implemented unlock enforcement includes:
   - grape planting unlocks;
@@ -181,7 +182,6 @@ Research limitations:
 - Dedicated vineyard-technique projects/hooks are still future work.
 - `wine_feature` project typing exists, but there is no full project/enforcement track yet.
 - Some `benefits` copy remains aspirational; use `unlocks` and `permanentEffects` as authoritative gameplay effects.
-- `tests/user/researchPanelVisibility.test.ts` has known failing visibility expectations from the research UI backlog.
 
 ### Prestige, Achievements, And Highscores
 
@@ -232,7 +232,7 @@ Research limitations:
 | Finance/founder | `src/lib/services/finance/`, `src/components/finance/`, `src/lib/services/user/staffService.ts` |
 | Loans/lenders | `src/lib/features/loanLender/` |
 | Board/share seam | `src/lib/features/boardShare/`, share and board database scaffolding |
-| Research | `src/lib/constants/researchConstants.ts`, `src/lib/services/research/`, `src/lib/features/researchUpgrade/`, `src/components/pages/Research.tsx` |
+| Research | `src/lib/constants/researchConstants.ts`, `src/lib/features/researchUpgrade/`, `src/components/pages/Research.tsx` |
 | Prestige | `src/lib/services/prestige/`, `src/lib/database/customers/prestigeEventsDB.ts` |
 | Achievements/highscores | `src/lib/services/user/achievementService.ts`, `highscoreService.ts`, achievement/highscore DB modules and pages |
 | Admin test lab | `src/components/pages/admin/TestLabPage.tsx`, `src/lib/services/admin/testLab/`, `server/test-runner.ts` |

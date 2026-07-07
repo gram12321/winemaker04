@@ -1,8 +1,7 @@
 // Custom hook for managing customer data in winepedia components
 import { useCallback, useState, useEffect } from 'react';
 import { useGameStateWithData, useGameUpdates } from '@/hooks';
-import { getAllCustomers } from '@/lib/services';
-import { loadActiveCustomers } from '@/lib/database/customers/customerDB';
+import { getActiveCustomers, getAllCustomers } from '@/lib/services';
 import { Customer } from '@/lib/types/types';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown, clearRelationshipBreakdownCache } from '@/lib/services';
@@ -38,7 +37,7 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
 
   // Load active customers immediately (fast, relevant data)
   const loadActiveCustomersData = useCallback(async () => {
-    return await loadActiveCustomers();
+    return await getActiveCustomers();
   }, []);
 
   const activeCustomers = useGameStateWithData(loadActiveCustomersData, []);

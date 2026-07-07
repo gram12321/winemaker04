@@ -8,31 +8,20 @@ import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { getGameState } from '../core/gameState';
+import {
+  BASE_GRAPE_PRICE_PER_KG,
+  FAVORITE_GRAPE_PRIMARY_BONUS,
+  FAVORITE_GRAPE_SECONDARY_BONUS,
+  GRAPE_SALE_FIXED_MARKET_PENALTY,
+  GRAPE_SALE_PRESTIGE_MAX_BONUS,
+  SELLABLE_BATCH_STATES,
+  SELL_STATE_PRICE_MULTIPLIERS
+} from '@/lib/constants';
 import { getCooperativeMembership, recordCooperativeSale, getCooperativeFloorPrice } from './cooperativeService';
 import { recordBuyerSale } from '@/lib/services';
 import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';
-import { BUY_MARKET_FIXED_SPREAD } from './buyGrapeMarketService';
 import { GrapeVariety } from '../../types/types';
 import { formatNumber } from '../../utils/utils';
-
-// ===== CONSTANTS =====
-
-export const BASE_GRAPE_PRICE_PER_KG = 3.0;
-export const GRAPE_SALE_PRESTIGE_MAX_BONUS = 0.3; // max +30% from prestige (vs wine's +250%)
-export const GRAPE_SALE_FIXED_MARKET_PENALTY = 1 / (1 + BUY_MARKET_FIXED_SPREAD); // mirror the buy-side spread to prevent arbitrage
-export const FAVORITE_GRAPE_PRIMARY_BONUS = 0.18;
-export const FAVORITE_GRAPE_SECONDARY_BONUS = 0.1;
-export const SELLABLE_BATCH_STATES: Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>[] = [
-  'grapes',
-  'must_ready',
-  'must_fermenting',
-];
-
-const SELL_STATE_PRICE_MULTIPLIERS: Record<Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>, number> = {
-  grapes: 1.0,
-  must_ready: 1.08,
-  must_fermenting: 1.15,
-};
 
 // ===== TYPES =====
 

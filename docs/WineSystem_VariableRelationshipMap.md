@@ -1,5 +1,5 @@
 # Wine System Variable Relationship Map
-Date: 2026-05-20
+Date: 2026-07-07
 Status: Current variable relationship map
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](../CONTEXT.md). This document focuses on how the main wine-system variables depend on each other through the gameflow.
@@ -65,6 +65,7 @@ flowchart LR
 - Sales-channel research affects customer/contract access and pricing opportunities; it is not a structure or taste variable.
 - Weather affects vineyard health/ripeness and market pressure as explicit deviations; it should not be hidden inside wine score formulas.
 - Grape buyer/supplier markets are market overlays. They can use wine/grape state and quality, economy, weather, loyalty, and research unlocks, but they should not mutate historical wine snapshots.
+- Grape market tuning baselines such as state premiums, spread, buyer limits, supplier supply, and cooperative floors should live in dedicated constants modules; services consume them, and UI should not reach into service-local constants.
 - Founder economy is a finance/staff ownership layer. It affects wages, yearly distributions, buyout, and cash flow; it does not replace the archived public-company/share-market design.
 - The current `boardShare` feature seam is no-op in mainline. Share/board constants and database scaffolding are not active share-market runtime.
 - Bottling snapshots are the historical source for wine log, highscores, and achievement score checks.
@@ -80,6 +81,8 @@ flowchart LR
 - Research progression gates control option availability and scaling boundaries, not score formula shortcuts.
 - Unlock-based gates currently affect grape planting, fermentation method availability, staff cap, vineyard size cap, contract channel eligibility, and grape buyer market access/scaling.
 - Permanent research effects are aggregated from completed research and applied through explicit domain services.
+- The canonical player-facing research surface is the standalone Research page; admin inspection remains a separate read-only debug view owned by `researchUpgrade`.
+- Research-owned view-model assembly should stay in `src/lib/features/researchUpgrade/`, not in finance UI or generic database layers.
 - Current permanent-effect slice modifies vineyard health decay; additional effect kinds should follow the same explicit, auditable service pattern.
 
 ## 6) Subsystem Diagrams
@@ -279,7 +282,8 @@ flowchart LR
 | Origins tab | Characteristic changes grouped by source/effect. |
 | Wine log and vineyard analytics | Bottling snapshots and historical production records. |
 | Weather Center | Current weather context, per-vineyard health/ripeness impact, site-response explanation. |
-| Grape market modals | Buyer/supplier options, economy/weather pressure, price/limit factors, loyalty context. |
+| Research page | Chain-first progression, unlock gates, permanent capability summary, and project inspector for long-range progression. |
+| Grape market modals | Buyer/supplier options, economy/weather pressure, price/limit factors, loyalty context, using service-prepared snapshots instead of direct database lookups. |
 | Finance Founder Panel | Active founders, yearly profit-share explanation, buyout cost/action. |
 
 ## 10) Current Implementation Checkpoints
@@ -294,6 +298,7 @@ flowchart LR
 | Contract quality split | `tasteQuality` and `landValue` are separate requirements. |
 | Weather vineyard integration | Weather state/intensity create bounded health and ripeness deviations through `weatherImpactService`; Weather Center exposes the breakdown. |
 | Grape markets | Sell-side buyers and buy-side suppliers are active, including bulk fallback channels, seasonal rows, loyalty, economy/weather volatility, and research unlock scaling. |
+| Market tuning ownership | Static grape-market and cooperative baselines now live in dedicated constants modules under `src/lib/constants/`; gameplay UI reads them through constants/service seams rather than service-local definitions. |
 | Founder economy | Founders are staff with `isFounder`, zero wages, yearly positive-profit Founder Returns, and buyout conversion to salaried employees. |
 | Board/share runtime | Current mainline has a no-op `boardShare` seam and share/board scaffolding only; public-company docs are reintroduction references, not active runtime. |
 | Descriptor hierarchy | Descriptors are grouped under flavor families and remain display-only for now. |

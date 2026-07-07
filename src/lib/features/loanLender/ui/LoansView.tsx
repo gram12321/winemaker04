@@ -1,35 +1,19 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Separator } from '@/components/ui';
-import { Loan, LenderType, NotificationCategory } from '@/lib/types/types';
-import { loadActiveLoans } from '@/lib/database/core/loansDB';
-import { getGameState } from '@/lib/services/core/gameState';
+import { LenderType, NotificationCategory } from '@/lib/types/types';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
-import { getAllLenders, getAvailableLenders, calculateLenderAvailability } from '@/lib/features/loanLender/services/finance/lenderService';
-import { calculateCreditRating } from '@/lib/features/loanLender/services/finance/creditRatingService';
 import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty, repayLoanInFull, makeExtraLoanPayment } from '@/lib/features/loanLender/services/finance/loanService';
+import {
+  DEFAULT_LOANS_DASHBOARD_DATA,
+  loadLoansDashboardData,
+  type LoanAvailabilityBreakdownRow,
+} from '@/lib/features/loanLender/services/finance/loanViewService';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from './LenderSearchOptionsModal';
 // Search results are rendered from the loan feature's app overlays.
 import { useGameStateWithData } from '@/hooks';
 import { LENDER_TYPE_DISTRIBUTION, LOAN_EXTRA_PAYMENT, LOAN_PREPAYMENT } from '@/lib/constants';
-
-// Helper type for combined loans data
-type LoansData = {
-  loans: Loan[];
-  creditRatingBreakdown: any;
-  comprehensiveCreditRating: number;
-  availableLenders: any[];
-  lenderAvailabilityBreakdown: any;
-};
-
-const defaultLoansData: LoansData = {
-  loans: [],
-  creditRatingBreakdown: null,
-  comprehensiveCreditRating: 0.5,
-  availableLenders: [],
-  lenderAvailabilityBreakdown: null
-};
 
 export function LoansView() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -37,7 +21,6 @@ export function LoansView() {
   const [isCreditRatingExpanded, setIsCreditRatingExpanded] = useState(false);
   const [lenderTypeFilter, setLenderTypeFilter] = useState<LenderType | 'All'>('All');
 
-  const gameState = getGameState();
   const lenderTypeOrder = useMemo(() => Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[], []);
   const lenderTypeOptions: Array<'All' | LenderType> = useMemo(
     () => ['All', ...lenderTypeOrder],
@@ -45,63 +28,7 @@ export function LoansView() {
   );
 
   // Use the global cache hook for all loan-related data
-  const loansData = useGameStateWithData<LoansData>(async () => {
-    try {
-      // Calculate comprehensive credit rating
-      const creditBreakdown = await calculateCreditRating();
-
-      const loans = await loadActiveLoans();
-
-      // Calculate lender availability breakdown
-      const currentCreditRating = creditBreakdown.finalRating;
-      const companyPrestige = gameState.prestige || 0;
-
-      // Get all lenders (not just available ones) for the breakdown
-      const allLenders = await getAllLenders();
-      const availableLenders = await getAvailableLenders(currentCreditRating * 100, companyPrestige);
-
-      const lenderAvailabilityBreakdown = allLenders.map(lender => {
-        const availability = calculateLenderAvailability(lender, currentCreditRating * 100, companyPrestige);
-        return {
-          ...lender,
-          availability
-        };
-      });
-
-      return {
-        loans,
-        creditRatingBreakdown: creditBreakdown,
-        comprehensiveCreditRating: creditBreakdown.finalRating,
-        availableLenders,
-        lenderAvailabilityBreakdown
-      };
-    } catch (error) {
-      console.error('Error loading loans data:', error);
-      // Fallback to game state credit rating
-      const loans = await loadActiveLoans();
-      const currentCreditRating = gameState.creditRating || 0.5;
-      const companyPrestige = gameState.prestige || 0;
-
-      const allLenders = await getAllLenders();
-      const availableLenders = await getAvailableLenders(currentCreditRating * 100, companyPrestige);
-
-      const lenderAvailabilityBreakdown = allLenders.map(lender => {
-        const availability = calculateLenderAvailability(lender, currentCreditRating * 100, companyPrestige);
-        return {
-          ...lender,
-          availability
-        };
-      });
-
-      return {
-        loans,
-        creditRatingBreakdown: null,
-        comprehensiveCreditRating: currentCreditRating,
-        availableLenders,
-        lenderAvailabilityBreakdown
-      };
-    }
-  }, defaultLoansData);
+  const loansData = useGameStateWithData(loadLoansDashboardData, DEFAULT_LOANS_DASHBOARD_DATA);
 
   const { loans: activeLoans, creditRatingBreakdown, comprehensiveCreditRating, lenderAvailabilityBreakdown } = loansData;
   const sortedLenderAvailability = useMemo(() => {
@@ -109,11 +36,11 @@ export function LoansView() {
       return [];
     }
 
-    const filtered = lenderAvailabilityBreakdown.filter((lender: any) =>
+    const filtered = lenderAvailabilityBreakdown.filter((lender: LoanAvailabilityBreakdownRow) =>
       lenderTypeFilter === 'All' ? true : lender.type === lenderTypeFilter
     );
 
-    return filtered.sort((a: any, b: any) => {
+    return filtered.sort((a: LoanAvailabilityBreakdownRow, b: LoanAvailabilityBreakdownRow) => {
       const typeComparison =
         lenderTypeOrder.indexOf(a.type) - lenderTypeOrder.indexOf(b.type);
 
@@ -448,7 +375,7 @@ export function LoansView() {
                           </div>
                           {sortedLenderAvailability.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {sortedLenderAvailability.map((lender: any, index: number) => (
+                              {sortedLenderAvailability.map((lender: LoanAvailabilityBreakdownRow, index: number) => (
                                 <div key={lender.id || index} className={`p-4 rounded-lg border-2 ${lender.availability.isAvailable
                                   ? 'bg-green-50 border-green-200'
                                   : 'bg-red-50 border-red-200'
@@ -505,7 +432,7 @@ export function LoansView() {
                                       </div>
                                       {!lender.availability.isAvailable && (
                                         <div className="text-xs text-red-500 mt-1">
-                                          {lender.availability.reason}
+                                          Requires at least {formatPercent(lender.availability.adjustedRequirement / 100)} effective credit access.
                                         </div>
                                       )}
                                     </div>
@@ -791,7 +718,7 @@ export function LoansView() {
                       density="compact"
                     >
                       <div className="font-medium text-blue-800 mb-2 cursor-help">
-                        Asset Health ({formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%)
+                        Asset Health ({formatNumber(creditRatingBreakdown!.assetHealth.score * 100, { decimals: 1 })}%)
                       </div>
                     </UnifiedTooltip>
                     <div className="space-y-1 text-blue-700">
@@ -801,7 +728,7 @@ export function LoansView() {
                         variant="panel"
                         density="compact"
                       >
-                        <div className="cursor-help">Debt-to-Asset: {formatNumber(creditRatingBreakdown.assetHealth.debtToAssetRatio * 100, { decimals: 1 })}%</div>
+                        <div className="cursor-help">Debt-to-Asset: {formatNumber(creditRatingBreakdown!.assetHealth.debtToAssetRatio * 100, { decimals: 1 })}%</div>
                       </UnifiedTooltip>
                       <UnifiedTooltip
                         content={<div className="text-xs">Asset Coverage = Total Assets ÷ Outstanding Loans</div>}
@@ -809,7 +736,7 @@ export function LoansView() {
                         variant="panel"
                         density="compact"
                       >
-                        <div className="cursor-help">Asset Coverage: {formatNumber(creditRatingBreakdown.assetHealth.assetCoverage, { decimals: 1 })}x</div>
+                        <div className="cursor-help">Asset Coverage: {formatNumber(creditRatingBreakdown!.assetHealth.assetCoverage, { decimals: 1 })}x</div>
                       </UnifiedTooltip>
                       <UnifiedTooltip
                         content={<div className="text-xs">Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>}
@@ -817,7 +744,7 @@ export function LoansView() {
                         variant="panel"
                         density="compact"
                       >
-                        <div className="cursor-help">Liquidity Ratio: {formatNumber(creditRatingBreakdown.assetHealth.liquidityRatio, { decimals: 1 })}x</div>
+                        <div className="cursor-help">Liquidity Ratio: {formatNumber(creditRatingBreakdown!.assetHealth.liquidityRatio, { decimals: 1 })}x</div>
                       </UnifiedTooltip>
                     </div>
                   </div>
@@ -843,7 +770,7 @@ export function LoansView() {
                       density="compact"
                     >
                       <div className="font-medium text-blue-800 mb-2 cursor-help">
-                        Company Stability ({formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%)
+                        Company Stability ({formatNumber(creditRatingBreakdown!.companyStability.score * 100, { decimals: 1 })}%)
                       </div>
                     </UnifiedTooltip>
                     <div className="space-y-1 text-blue-700">
@@ -853,7 +780,7 @@ export function LoansView() {
                         variant="panel"
                         density="compact"
                       >
-                        <div className="cursor-help">Company Age: {formatNumber(creditRatingBreakdown.companyStability.companyAge, { decimals: 1 })} years</div>
+                        <div className="cursor-help">Company Age: {formatNumber(creditRatingBreakdown!.companyStability.companyAge, { decimals: 1 })} years</div>
                       </UnifiedTooltip>
                       <UnifiedTooltip
                         content={<div className="text-xs">Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3% - Based on variance in last 4 seasons</div>}
@@ -861,7 +788,7 @@ export function LoansView() {
                         variant="panel"
                         density="compact"
                       >
-                        <div className="cursor-help">Profit Consistency: {formatNumber(creditRatingBreakdown.companyStability.profitConsistency * 100, { decimals: 1 })}%</div>
+                        <div className="cursor-help">Profit Consistency: {formatNumber(creditRatingBreakdown!.companyStability.profitConsistency * 100, { decimals: 1 })}%</div>
                       </UnifiedTooltip>
                       <UnifiedTooltip
                         content={<div className="text-xs">Expense Efficiency = (1 - Expense Ratio) × 2% - Lower expense ratio = higher score</div>}
@@ -869,7 +796,7 @@ export function LoansView() {
                         variant="panel"
                         density="compact"
                       >
-                        <div className="cursor-help">Expense Efficiency: {formatNumber(creditRatingBreakdown.companyStability.expenseEfficiency * 100, { decimals: 1 })}%</div>
+                        <div className="cursor-help">Expense Efficiency: {formatNumber(creditRatingBreakdown!.companyStability.expenseEfficiency * 100, { decimals: 1 })}%</div>
                       </UnifiedTooltip>
                     </div>
                   </div>
@@ -881,7 +808,7 @@ export function LoansView() {
                           <div className="text-xs space-y-1">
                             <div>• Penalty: -2% per week with negative balance</div>
                             <div>• Max Penalty: -30% (after 15 weeks)</div>
-                            <div>• Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
+                            <div>• Consecutive Weeks: {creditRatingBreakdown!.negativeBalance.consecutiveWeeksNegative} weeks</div>
                             <div className="mt-2 font-medium">Formula:</div>
                             <div>Penalty = min(Weeks Negative × -2%, -30%)</div>
                           </div>
@@ -892,12 +819,12 @@ export function LoansView() {
                       density="compact"
                     >
                       <div className="font-medium text-blue-800 mb-2 cursor-help">
-                        Negative Balance ({formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%)
+                        Negative Balance ({formatNumber(creditRatingBreakdown!.negativeBalance.score * 100, { decimals: 1 })}%)
                       </div>
                     </UnifiedTooltip>
                     <div className="space-y-1 text-blue-700">
-                      <div>Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
-                      <div>Penalty per Week: {formatNumber(creditRatingBreakdown.negativeBalance.penaltyPerWeek * 100, { decimals: 1 })}%</div>
+                      <div>Consecutive Weeks: {creditRatingBreakdown!.negativeBalance.consecutiveWeeksNegative} weeks</div>
+                      <div>Penalty per Week: {formatNumber(creditRatingBreakdown!.negativeBalance.penaltyPerWeek * 100, { decimals: 1 })}%</div>
                     </div>
                   </div>
                 </div>
@@ -917,11 +844,11 @@ export function LoansView() {
                           <div className="mt-2 font-medium">Total Range: 0-100% (0% = C rating, 100% = AAA rating)</div>
                           <div className="mt-2 font-medium">Current Breakdown:</div>
                           <div>• Base: 50%</div>
-                          <div>• Asset Health: {formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%</div>
-                          <div>• Payment History: {formatNumber(creditRatingBreakdown.paymentHistory.score * 100, { decimals: 1 })}%</div>
-                          <div>• Company Stability: {formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%</div>
-                          <div>• Negative Balance: {formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%</div>
-                          <div>• Final: {formatNumber(creditRatingBreakdown.finalRating * 100, { decimals: 1 })}%</div>
+                          <div>• Asset Health: {formatNumber(creditRatingBreakdown!.assetHealth.score * 100, { decimals: 1 })}%</div>
+                          <div>• Payment History: {formatNumber(creditRatingBreakdown!.paymentHistory.score * 100, { decimals: 1 })}%</div>
+                          <div>• Company Stability: {formatNumber(creditRatingBreakdown!.companyStability.score * 100, { decimals: 1 })}%</div>
+                          <div>• Negative Balance: {formatNumber(creditRatingBreakdown!.negativeBalance.score * 100, { decimals: 1 })}%</div>
+                          <div>• Final: {formatNumber(creditRatingBreakdown!.finalRating * 100, { decimals: 1 })}%</div>
                         </div>
                       </div>
                     }
@@ -930,7 +857,7 @@ export function LoansView() {
                     density="compact"
                   >
                     <div className="cursor-help">
-                      {getCreditRatingDescription(creditRatingBreakdown.finalRating)}
+                      {getCreditRatingDescription(creditRatingBreakdown!.finalRating)}
                     </div>
                   </UnifiedTooltip>
                 </div>

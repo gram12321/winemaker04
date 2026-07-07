@@ -6,9 +6,7 @@ import { SALES_CONSTANTS } from '@/lib/constants';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
 import { useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
-import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
+import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, updateInventoryBatch } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateEstimatedPriceBreakdown, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
@@ -641,14 +639,7 @@ onWineDetailsClick
  }
 
  try {
- const updatedWine: WineBatch = {
- ...wine,
- askingPrice: newPrice
- };
-
- await saveWineBatch(updatedWine);
- // Notify only cellar-related subscribers
- triggerTopicUpdate('wine_batches');
+ await updateInventoryBatch(wine.id, { askingPrice: newPrice });
  setEditingPrices(prev => {
  const updated = { ...prev };
  delete updated[wine.id];

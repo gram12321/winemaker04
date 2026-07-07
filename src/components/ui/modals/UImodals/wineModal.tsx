@@ -10,13 +10,12 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { getQualityCategory, getQualityDescription, getWineStructureCategory, getWineStructureDescription, getColorClass } from '@/lib/utils/utils';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { LandValueModifierFactorsBreakdown } from '../../components/landValueModifierBreakdown';
 import { StructureIndexBreakdown } from '../../components/StructureIndexBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import { WineTasteProfilePanel } from '../../components/WineTasteProfilePanel';
-import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
+import { getStoredVineyards, getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBatchStructureIndex, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
@@ -72,7 +71,7 @@ export const WineModal: React.FC<WineModalProps> = ({
         return;
       }
 
-      loadVineyards().then((vineyards) => {
+      getStoredVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setVineyard(foundVineyard || null);
       }).catch((error) => {

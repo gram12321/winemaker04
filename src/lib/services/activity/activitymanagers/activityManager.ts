@@ -267,6 +267,23 @@ export async function getActivityById(activityId: string): Promise<Activity | nu
   return activities.find(activity => activity.id === activityId) || null;
 }
 
+export async function updateActivity(activityId: string, updates: Partial<Activity>): Promise<boolean> {
+  try {
+    const success = await updateActivityInDb(activityId, updates);
+    if (!success) {
+      return false;
+    }
+
+    const currentActivities = await getAllActivities();
+    updateGameState({ activities: currentActivities });
+    triggerGameUpdateImmediate();
+    return true;
+  } catch (error) {
+    console.error('Error updating activity:', error);
+    return false;
+  }
+}
+
 /**
  * Pause an activity - staff will not contribute work until resumed
  */

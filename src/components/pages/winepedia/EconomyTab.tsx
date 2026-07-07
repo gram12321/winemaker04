@@ -1,12 +1,12 @@
 import { ECONOMY_PHASES, ECONOMY_SALES_MULTIPLIERS } from '@/lib/constants/economyConstants';
 import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/economyConstants';
 import {
+  BUY_MARKET_FIXED_SPREAD,
   BUYER_ECONOMY_LIMIT_MULTIPLIERS,
   BUYER_ECONOMY_PRICE_MULTIPLIERS,
   BUYER_ECONOMY_VOLATILITY_AMPLITUDE,
   BUYER_ECONOMY_VOLATILITY_PRESSURE,
-} from '@/lib/services/sales/grapeBuyerMarketService';
-import { BUY_MARKET_FIXED_SPREAD } from '@/lib/services/sales/buyGrapeMarketService';
+} from '@/lib/constants';
 
 export function EconomyTab() {
   return (

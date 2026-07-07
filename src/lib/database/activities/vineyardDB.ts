@@ -51,6 +51,60 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
   }
 };
 
+export interface StartingVineyardInsert {
+  companyId: string;
+  name: string;
+  country: string;
+  region: string;
+  hectares: number;
+  soil: string[];
+  altitude: number;
+  aspect: Vineyard['aspect'];
+  density: number;
+  status: Vineyard['status'];
+  grape: Vineyard['grape'];
+  vineAge: Vineyard['vineAge'];
+  ripeness: number;
+  vineYield: number;
+  vineyardHealth: number;
+  vineyardPrestige: number;
+  landValue: number;
+  vineyardTotalValue: number;
+}
+
+export const createStartingVineyard = async (input: StartingVineyardInsert): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from(VINEYARDS_TABLE)
+      .insert({
+        company_id: input.companyId,
+        name: input.name,
+        country: input.country,
+        region: input.region,
+        hectares: input.hectares,
+        soil: input.soil,
+        altitude: input.altitude,
+        aspect: input.aspect,
+        density: input.density,
+        status: input.status,
+        grape_variety: input.grape,
+        vine_age: input.vineAge,
+        ripeness: input.ripeness,
+        vine_yield: input.vineYield,
+        vineyard_health: input.vineyardHealth,
+        vineyard_prestige: input.vineyardPrestige,
+        land_value: input.landValue,
+        vineyard_total_value: input.vineyardTotalValue,
+        created_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Create starting vineyard failed:', error);
+    throw error;
+  }
+};
+
 export const loadVineyards = async (): Promise<Vineyard[]> => {
   try {
     const { data, error } = await getCompanyQuery(VINEYARDS_TABLE)

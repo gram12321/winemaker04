@@ -21,6 +21,11 @@ function isWinePresaleContract(contract: WineContract): boolean {
   return contract.contractMode === 'wine_presale';
 }
 
+export async function getAllWineContracts(): Promise<WineContract[]> {
+  const { loadWineContracts } = await import('../../database/sales/contractDB');
+  return await loadWineContracts();
+}
+
 export async function acceptWinePresaleContract(contractId: string): Promise<{ success: boolean; message: string }> {
   try {
     const contract = await getContractById(contractId);

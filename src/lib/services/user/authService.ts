@@ -1,7 +1,7 @@
 import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { getUserById, updateUser, deleteUser, type AuthUser } from '@/lib/database';
+import { getUserById, insertUser, updateUser, deleteUser, type AuthUser } from '@/lib/database';
 
 export interface SignUpData {
   email: string;
@@ -62,6 +62,26 @@ class AuthService {
     this.listeners.forEach(listener => listener(this.currentUser));
   }
 
+  private mapAuthUserRow(row: {
+    id: string;
+    email?: string;
+    name: string;
+    avatar?: string;
+    avatar_color?: string;
+    created_at: string;
+    updated_at?: string;
+  }): AuthUser {
+    return {
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      avatar: row.avatar,
+      avatarColor: row.avatar_color,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at ?? row.created_at)
+    };
+  }
+
   public onAuthStateChange(callback: (user: AuthUser | null) => void) {
     this.listeners.push(callback);
     // Call immediately with current state
@@ -75,6 +95,10 @@ class AuthService {
 
   public getCurrentUser(): AuthUser | null {
     return this.currentUser;
+  }
+
+  public async getUserProfileById(userId: string): Promise<AuthUser | null> {
+    return await getUserById(userId);
   }
 
   public isAuthenticated(): boolean {
@@ -98,18 +122,16 @@ class AuthService {
       }
 
       // Create user profile
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email,
-          name,
-          avatar: avatar || 'default',
-          avatar_color: avatarColor || 'blue'
-        });
+      const profileResult = await insertUser({
+        id: authData.user.id,
+        email,
+        name,
+        avatar: avatar || 'default',
+        avatar_color: avatarColor || 'blue'
+      });
 
-      if (profileError) {
-        console.error('Error creating user profile:', profileError);
+      if (!profileResult.success) {
+        console.error('Error creating user profile:', profileResult.error);
         // Auth user was created but profile failed - this should trigger email verification
         return { success: false, error: 'Failed to create user profile' };
       }
@@ -183,6 +205,71 @@ class AuthService {
       return { success: true };
     } catch (error) {
       console.error('Update profile error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  public async createLocalUserProfile(name: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+    try {
+      const result = await insertUser({
+        name: name.trim(),
+        created_at: new Date().toISOString()
+      });
+
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to create user' };
+      }
+
+      return {
+        success: true,
+        user: this.mapAuthUserRow(result.data)
+      };
+    } catch (error) {
+      console.error('Create local user profile error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  public async updateUserProfileById(
+    userId: string,
+    updates: Partial<Pick<AuthUser, 'name' | 'avatar' | 'avatarColor'>>
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await updateUser(userId, {
+        name: updates.name,
+        avatar: updates.avatar,
+        avatar_color: updates.avatarColor
+      });
+
+      if (!result.success) {
+        return result;
+      }
+
+      if (this.currentUser?.id === userId) {
+        await this.loadUserProfile(userId);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Update user profile by ID error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  public async deleteUserProfileById(userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await deleteUser(userId);
+      if (!result.success) {
+        return result;
+      }
+
+      if (this.currentUser?.id === userId) {
+        this.setCurrentUser(null);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Delete user profile by ID error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   }

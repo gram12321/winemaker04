@@ -3,9 +3,7 @@ import { calculateFinancialData, calculateCompanyValue } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS, WEEKS_PER_SEASON } from '@/lib/constants';
-import { loadActiveLoans } from '@/lib/database/core/loansDB';
-import { useState, useEffect } from 'react';
-import { Loan } from '@/lib/types/types';
+import { DEFAULT_ACTIVE_LOAN_PORTFOLIO, loadActiveLoanPortfolio } from '@/lib/features/loanLender/services/finance/loanViewService';
 
 interface IncomeBalanceViewProps {
   period: 'weekly' | 'season' | 'year' | 'all';
@@ -38,9 +36,12 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
     () => calculateFinancialData(period, filters),
     DEFAULT_FINANCIAL_DATA
   );
-  
-  const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
-  const [loadingLoans, setLoadingLoans] = useState(true);
+
+  const loanPortfolio = useGameStateWithData(
+    loadActiveLoanPortfolio,
+    DEFAULT_ACTIVE_LOAN_PORTFOLIO
+  );
+  const { loans: activeLoans, totalOutstandingLoans } = loanPortfolio;
 
   const periodLabels = FINANCE_PERIOD_LABELS[period] ?? FINANCE_PERIOD_LABELS.weekly;
   const periodLabel = period === 'all' ? 'All Time' : `${period.charAt(0).toUpperCase() + period.slice(1)}`;
@@ -51,26 +52,6 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
     () => calculateCompanyValue(),
     0
   );
-
-  useEffect(() => {
-    const loadLoans = async () => {
-      try {
-        setLoadingLoans(true);
-        const loans = await loadActiveLoans();
-        setActiveLoans(loans);
-      } catch (error) {
-        console.error('Error loading loans:', error);
-        setActiveLoans([]);
-      } finally {
-        setLoadingLoans(false);
-      }
-    };
-
-    loadLoans();
-  }, []);
-
-  // Calculate loan totals
-  const totalOutstandingLoans = activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
   
   // Calculate period-appropriate payment amounts
   const getPeriodPaymentAmount = (seasonalPayment: number) => {
@@ -275,9 +256,7 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
           description="What your company owes and owns"
         >
           <FinancialSection title="LIABILITIES">
-            {loadingLoans ? (
-              <div className="text-sm text-gray-500">Loading loan data...</div>
-            ) : activeLoans.length > 0 ? (
+            {activeLoans.length > 0 ? (
               <>
                 {activeLoans.map((loan) => (
                   <div key={loan.id} className="space-y-1 mb-2">

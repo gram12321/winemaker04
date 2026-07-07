@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanConfig } from '@/lib/constants/startingConditions';
 import { createStaff, addStaff } from '../user/staffService';
 import { assignStaffToTeam, getAllTeams } from '../user/teamService';
-import { supabase } from '@/lib/database';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
@@ -17,6 +16,7 @@ import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { createStartingVineyard } from '@/lib/database/activities/vineyardDB';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -308,10 +308,9 @@ export async function applyStartingConditions(
     // Determine initial status based on current season (uses shared logic from vineyardService)
     const vineyardStatus = getPlantedVineyardStatus(isPlanted);
 
-    const { error: vineyardError } = await supabase
-      .from('vineyards')
-      .insert({
-        company_id: companyId,
+    try {
+      await createStartingVineyard({
+        companyId,
         name: vineyardPreview.name,
         country: vineyardPreview.country,
         region: vineyardPreview.region,
@@ -319,20 +318,18 @@ export async function applyStartingConditions(
         soil: vineyardPreview.soil,
         altitude: vineyardPreview.altitude,
         aspect: previewAspect,
-        density: isPlanted ? DEFAULT_VINE_DENSITY : 0, // Planted vineyards have full density
+        density: isPlanted ? DEFAULT_VINE_DENSITY : 0,
         status: vineyardStatus,
-        grape_variety: startingGrape,
-        vine_age: isPlanted ? startingVineAge : null,
+        grape: startingGrape,
+        vineAge: isPlanted ? startingVineAge : null,
         ripeness: 0,
-        vine_yield: startingVineYield,
-        vineyard_health: 0.6, // Default starting health
-        vineyard_prestige: 0,
-        land_value: adjustedLandValuePerHectare, // Use adjusted value if planted, base value if not
-        vineyard_total_value: baseTotalValue,
-        created_at: new Date().toISOString()
+        vineYield: startingVineYield,
+        vineyardHealth: 0.6,
+        vineyardPrestige: 0,
+        landValue: adjustedLandValuePerHectare,
+        vineyardTotalValue: baseTotalValue
       });
-
-    if (vineyardError) {
+    } catch (vineyardError) {
       console.error('Error creating starting vineyard:', vineyardError);
       return { success: false, error: 'Failed to create starting vineyard' };
     }

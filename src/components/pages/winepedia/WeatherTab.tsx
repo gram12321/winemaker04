@@ -2,7 +2,7 @@ import { useGameState } from '@/hooks';
 import {
   BUYER_WEATHER_VOLATILITY_PRESSURE,
   WEATHER_INTENSITY_MULTIPLIER,
-} from '@/lib/services/sales/grapeBuyerMarketService';
+} from '@/lib/constants';
 import {
   WEATHER_HEALTH_DEVIATION_BY_STATE_INTENSITY,
   WEATHER_RIPENESS_DEVIATION_BY_STATE_INTENSITY,

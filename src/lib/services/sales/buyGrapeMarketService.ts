@@ -13,18 +13,41 @@ import {
   updateBuyOfferRow,
 } from '../../database/sales/buyMarketOffersDB';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { clamp, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
+import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { GAME_INITIALIZATION, SEASON_ORDER } from '../../constants';
-import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_SOIL_TYPES } from '../../constants/vineyardConstants';
-import { NotificationCategory } from '../../types/types';
-import type { EconomyPhase, GrapeVariety, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Nationality, Season, WeatherIntensity, WeatherState, WineBatch, WineBatchState } from '../../types/types';
 import {
+  BASE_BUY_MARKET_PRICE_PER_KG,
+  BUY_MARKET_FIXED_SPREAD,
+  BUY_MARKET_MAX_PRICE,
+  BUY_MARKET_MIN_PRICE,
   BUYER_ECONOMY_PRICE_MULTIPLIERS,
   BUYER_SEASON_PRICE_MULTIPLIERS,
-  getBulkBuyer,
-} from './grapeBuyerMarketService';
+  BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER,
+  BUY_OFFER_COMPANY_VALUE_REFERENCE,
+  BUY_OFFER_MAX_AVAILABLE_KG,
+  BUY_OFFER_MIN_AVAILABLE_KG,
+  BUY_OFFER_PRESTIGE_MAX_DISCOUNT,
+  BUY_OFFER_PREVIEW_VERSION,
+  DEFAULT_BUY_MARKET_DEMAND_FACTORS,
+  GAME_INITIALIZATION,
+  MARKET_CRUSHING_PROFILE_BY_COLOR,
+  MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS,
+  MARKET_FERMENTATION_PROFILE_BY_COLOR,
+  MAX_SEASONAL_OFFERS,
+  MIN_SEASONAL_OFFERS,
+  SEASON_ORDER,
+  STATE_DISTRIBUTION,
+  STATE_PREMIUMS,
+  STATE_QUALITY_DECAY_PER_WEEK,
+  YEAR_PRICE_CYCLE,
+  type BuyMarketDemandFactors,
+  type BuyOfferBatchState
+} from '../../constants';
+import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_SOIL_TYPES } from '../../constants/vineyardConstants';
+import { NotificationCategory } from '../../types/types';
+import type { EconomyPhase, GrapeVariety, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Nationality, Season, WineBatch } from '../../types/types';
+import { getBulkBuyer } from './grapeBuyerMarketService';
 import {
   getBulkSupplier,
   getSeasonalSuppliers,
@@ -42,10 +65,9 @@ import {
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { buildMarketPreviewBatch, type CreateMarketWineBatchInput, type MarketBatchStateProfile } from '../wine/winery/inventoryService';
-import type { FermentationOptions } from '../wine/characteristics/fermentationCharacteristics';
 import { v4 as uuidv4 } from 'uuid';
 
-export type BuyOfferBatchState = Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>;
+export { BUY_MARKET_FIXED_SPREAD } from '@/lib/constants';
 
 export interface BuyGrapeMarketOffer {
   id: string;
@@ -72,33 +94,6 @@ export interface BuyGrapeMarketOffer {
   previewVersion: number;
 }
 
-export interface BuyMarketDemandFactors {
-  volatilitySeason?: Season;
-  volatilityEconomyPhase?: EconomyPhase;
-  volatilityWeatherState?: WeatherState;
-  volatilityWeatherIntensity?: WeatherIntensity;
-  seasonPriceMultiplier: number;
-  seasonLimitMultiplier: number;
-  economyPriceMultiplier: number;
-  economyLimitMultiplier: number;
-  yearCyclePriceMultiplier: number;
-  yearCycleLimitMultiplier: number;
-  volatilityPriceMultiplier: number;
-  volatilityLimitMultiplier: number;
-  volatilitySeasonPressureMultiplier?: number;
-  volatilityEconomyPressureMultiplier?: number;
-  volatilityWeatherPricePressureMultiplier?: number;
-  volatilityWeatherLimitPressureMultiplier?: number;
-  volatilitySentimentPriceMultiplier?: number;
-  volatilitySentimentLimitMultiplier?: number;
-  volatilityBuyerPriceSensitivityMultiplier?: number;
-  volatilityBuyerLimitSensitivityMultiplier?: number;
-  volatilityBuyerSensitivityReason?: string;
-  volatilityWeatherReason?: string;
-  volatilityPriceReason?: string;
-  volatilityLimitReason?: string;
-}
-
 export interface BuyOfferPriceBreakdown {
   basePricePerKg: number;
   qualityMultiplier: number;
@@ -115,96 +110,6 @@ export interface BuyOfferPriceBreakdown {
   marketFloorPrice: number;
   finalPricePerKg: number;
 }
-
-export const BUY_MARKET_FIXED_SPREAD = 0.22;
-const BASE_BUY_MARKET_PRICE_PER_KG = 2.9;
-const BUY_MARKET_MIN_PRICE = 0.8;
-const BUY_MARKET_MAX_PRICE = 14;
-const MIN_SEASONAL_OFFERS = 8;
-const MAX_SEASONAL_OFFERS = 12;
-const BUY_OFFER_MIN_AVAILABLE_KG = 120;
-const BUY_OFFER_MAX_AVAILABLE_KG = 6000;
-const BUY_OFFER_COMPANY_VALUE_REFERENCE = 10000;
-const BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER = 2.1;
-const BUY_OFFER_PRESTIGE_MAX_DISCOUNT = 0.3;
-const BUY_OFFER_PREVIEW_VERSION = 1;
-const MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS = 6;
-
-const MARKET_CRUSHING_PROFILE_BY_COLOR: Record<'red' | 'white', NonNullable<MarketBatchStateProfile['crushingOptions']>> = {
-  red: {
-    method: 'Mechanical Press',
-    destemming: true,
-    coldSoak: true,
-    pressingIntensity: 0.52,
-  },
-  white: {
-    method: 'Pneumatic Press',
-    destemming: false,
-    coldSoak: false,
-    pressingIntensity: 0.36,
-  },
-};
-
-const MARKET_FERMENTATION_PROFILE_BY_COLOR: Record<'red' | 'white', FermentationOptions> = {
-  red: {
-    method: 'Extended Maceration',
-    temperature: 'Warm',
-  },
-  white: {
-    method: 'Temperature Controlled',
-    temperature: 'Cool',
-  },
-};
-
-const YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
-
-const STATE_PREMIUMS: Record<BuyOfferBatchState, number> = {
-  grapes: 1.0,
-  must_ready: 1.08,
-  must_fermenting: 1.15,
-};
-
-const STATE_QUALITY_DECAY_PER_WEEK: Record<BuyOfferBatchState, number> = {
-  grapes: 0.012,
-  must_ready: 0.008,
-  must_fermenting: 0.005,
-};
-
-const STATE_DISTRIBUTION: BuyOfferBatchState[] = [
-  'grapes',
-  'grapes',
-  'grapes',
-  'must_ready',
-  'must_ready',
-  'must_fermenting',
-];
-
-const DEFAULT_DEMAND_FACTORS: BuyMarketDemandFactors = {
-  volatilitySeason: 'Spring',
-  volatilityEconomyPhase: 'Stable',
-  volatilityWeatherState: 'Clear',
-  volatilityWeatherIntensity: 'Moderate',
-  seasonPriceMultiplier: 1,
-  seasonLimitMultiplier: 1,
-  economyPriceMultiplier: 1,
-  economyLimitMultiplier: 1,
-  yearCyclePriceMultiplier: 1,
-  yearCycleLimitMultiplier: 1,
-  volatilityPriceMultiplier: 1,
-  volatilityLimitMultiplier: 1,
-  volatilitySeasonPressureMultiplier: 1,
-  volatilityEconomyPressureMultiplier: 1,
-  volatilityWeatherPricePressureMultiplier: 1,
-  volatilityWeatherLimitPressureMultiplier: 1,
-  volatilitySentimentPriceMultiplier: 1,
-  volatilitySentimentLimitMultiplier: 1,
-  volatilityBuyerPriceSensitivityMultiplier: 1,
-  volatilityBuyerLimitSensitivityMultiplier: 1,
-  volatilityBuyerSensitivityReason: 'No buyer sensitivity applied.',
-  volatilityWeatherReason: 'No weather pressure applied.',
-  volatilityPriceReason: 'Baseline market pricing conditions.',
-  volatilityLimitReason: 'Baseline market limit conditions.',
-};
 
 function getYearCycleMultiplier(year: number): number {
   const index = Math.abs(year) % YEAR_PRICE_CYCLE.length;
@@ -251,10 +156,6 @@ function computeOfferAvailableKgForSupplier(supplier: BuyMarketSupplierProfile, 
   const supplyScale = clamp(supplier.effectiveSeasonSupplyKg / 3000, 0.75, 4);
   const scaled = clamp(Math.round(baseAvailableKg * supplyScale), BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_MAX_AVAILABLE_KG);
   return Math.max(1, Math.min(scaled, supplier.remainingSeasonSupplyKg));
-}
-
-function clamp01(value: number): number {
-  return clamp(value, 0, 1);
 }
 
 function cloneStateProfile<T>(value: T): T {
@@ -596,11 +497,11 @@ function getCurrentTime(): { week: number; season: Season; year: number; economy
 async function resolveSyncedDemandFactors(startingCountry?: string): Promise<BuyMarketDemandFactors> {
   const bulkBuyer = await getBulkBuyer(startingCountry);
   if (!bulkBuyer?.demandFactors) {
-    return DEFAULT_DEMAND_FACTORS;
+    return DEFAULT_BUY_MARKET_DEMAND_FACTORS;
   }
 
   return {
-    ...DEFAULT_DEMAND_FACTORS,
+    ...DEFAULT_BUY_MARKET_DEMAND_FACTORS,
     ...bulkBuyer.demandFactors,
   };
 }

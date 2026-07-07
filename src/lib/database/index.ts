@@ -19,4 +19,5 @@ export * from './sales/grapeBuyerMarketDB';
 export * from './sales/grapeSupplierMarketDB';
 export * from './sales/grapeBuyerLoyaltyDB';
 export * from './sales/grapeSupplierLoyaltyDB';
+export * from './sales/cooperativeDB';
 export { supabase } from './core/supabase';

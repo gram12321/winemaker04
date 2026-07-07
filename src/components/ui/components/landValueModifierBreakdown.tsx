@@ -3,13 +3,11 @@ import { Vineyard, WineBatch } from '@/lib/types/types';
 import { LandValueModifierFactorsDisplay } from './landValueModifierBar';
 import { getVineyardLandValueModifierFactors, getMaxLandValue } from '@/lib/services/wine/winescore/landValueModifierCalculation';
 import { getFeatureImpacts } from '@/lib/services/wine/features/featureService';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
-import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
-import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
+import { BoundedVineyardPrestigeFactor, getEventDisplayData, getStoredVineyards, getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface LandValueModifierFactorsBreakdownProps {
@@ -71,7 +69,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
         return;
       }
 
-      loadVineyards().then((vineyards) => {
+      getStoredVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setWineBatchVineyard(foundVineyard || null);
       }).catch((error) => {

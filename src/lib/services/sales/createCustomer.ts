@@ -362,3 +362,12 @@ export async function getAllCustomers(): Promise<Customer[]> {
   }
 }
 
+export async function getActiveCustomers(): Promise<Customer[]> {
+  try {
+    return await loadActiveCustomers();
+  } catch (error) {
+    console.error('[Customer Service] Failed to get active customers:', error);
+    return [];
+  }
+}
+

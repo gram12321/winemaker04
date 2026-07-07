@@ -346,6 +346,10 @@ export async function getAllVineyards(): Promise<Vineyard[]> {
   }
 }
 
+export async function getStoredVineyards(): Promise<Vineyard[]> {
+  return await loadVineyards();
+}
+
 // ===== EXPECTED YIELD CALCULATION =====
 
 /**

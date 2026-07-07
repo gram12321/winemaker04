@@ -26,7 +26,7 @@ npm run build
 | Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, research, staff, Weather Center, Winepedia, highscores. |
 | Shared UI | `src/components/ui/` | ShadCN wrappers, modals, reusable game UI. |
 | Hooks | `src/hooks/` | Game state, loading, sorting, mobile detection, reactive updates. |
-| Services | `src/lib/services/` | Domain logic for core game, vineyard/weather, wine, sales/grape markets, finance/founders, activities, research, prestige. |
+| Services | `src/lib/services/` and `src/lib/features/` | Domain logic for core game, vineyard/weather, wine, sales/grape markets, finance/founders, activities, prestige, and active feature-owned modules such as research and loans. |
 | Database | `src/lib/database/` | Supabase access grouped by domain. |
 | Types | `src/lib/types/` | Shared TypeScript domain and UI interfaces. |
 | Constants | `src/lib/constants/` | Grapes, vineyards, economy, staff, wine features, taste labels. |
@@ -88,7 +88,7 @@ Use `docs/versionlog.md` as the canonical running change history for meaningful 
 - Vineyard capacity enforcement includes vineyard size, total hectares, and vineyard-count ladders.
 - Starting conditions now include regional `startingResearch` pre-unlocks applied during setup.
 - Permanent effects are active via runtime aggregation (current shipped slice: vineyard health decay multiplier).
-- Research UI is split into Active Research Effects, Research Footprint, and Catalog tabs; catalog includes `Hide completed` and no longer embeds the footprint card.
+- Research now lives on a single standalone progression page owned by `researchUpgrade`, with summary, chain-first progression cards, category filters, and the project inspector in one surface.
 - Some project benefit text is still aspirational and does not yet map to a dedicated gameplay mechanic.
 
 ## Current Systems Snapshot

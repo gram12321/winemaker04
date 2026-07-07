@@ -22,51 +22,44 @@ import {
   UnifiedTooltip,
 } from '@/components/ui';
 import { Progress } from '@/components/ui/shadCN/progress';
-import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researchConstants';
-import { getUnlockedResearchIds } from '@/lib/database';
+import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   buildResearchFootprintSummary,
   buildResearchPresentationRows,
-  getResearchDisplayGroup,
-  getVisibleResearchProjects,
   type ResearchDisplayGroupId,
-  type ResearchProjectPresentationRow,
 } from '@/lib/features/researchUpgrade/services/research/researchPresentationService';
-import { getResearchPermanentEffects, type ResearchPermanentEffectsSummary } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
+import { type ResearchEligibilityContext } from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
 import {
-  getResearchRequirementReasons,
-  isResearchProjectEligible,
-  loadResearchEligibilityContext,
-  type ResearchEligibilityContext,
-} from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
-import { getResearchViewSummary } from '@/lib/features/researchUpgrade/services/research/researchViewService';
-import { calculateResearchCost, calculateResearchWork, getAllActivities, getCurrentPrestige } from '@/lib/services';
-import { WorkCategory } from '@/lib/types/types';
+  buildFilteredResearchGroups,
+  buildResearchDirectChainLookup,
+  buildResearchProjectModels,
+  flattenResearchProjectGroups,
+  getCompactResearchChainModels,
+  getDefaultSelectedResearchProjectId,
+  getResearchChainStepLabel,
+  getResearchGroupStats,
+  getResearchViewSummary,
+  getSelectedResearchChainModels,
+  loadResearchWorkspaceSnapshot,
+  type ResearchProjectModel,
+  type ResearchSortMode,
+  type ResearchStatus,
+  type ResearchViewMode,
+} from '@/lib/features/researchUpgrade/services/research/researchViewService';
+import { type ResearchPermanentEffectsSummary } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
 import { formatNumber } from '@/lib/utils';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { ChevronRight, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
 
 const RESEARCH_HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1600&h=700&fit=crop';
 
-type ResearchStatus = 'available' | 'in-progress' | 'completed' | 'locked';
-type ViewMode = 'focus' | 'full';
-type SortMode = 'recommended' | 'cost' | 'work' | 'complexity';
 type ResearchGroupFilter = 'all' | ResearchDisplayGroupId;
 
 interface ResearchWorkspaceProps {
   bypassGates?: boolean;
   readOnly?: boolean;
   variant?: 'player' | 'admin';
-}
-
-interface ResearchProjectModel {
-  project: ResearchProject;
-  presentation: ResearchProjectPresentationRow;
-  status: ResearchStatus;
-  lockReason: string;
-  totalWork: number;
-  totalCost: number;
 }
 
 const GROUP_ICONS: Record<ResearchDisplayGroupId, typeof Landmark> = {
@@ -91,100 +84,6 @@ const STATUS_LABELS: Record<ResearchStatus, string> = {
   locked: 'Locked',
 };
 
-function getProjectStatus(
-  project: ResearchProject,
-  activeResearch: Set<string>,
-  completedResearch: Set<string>,
-  currentPrestige: number,
-  eligibilityContext: ResearchEligibilityContext | null,
-  bypassGates: boolean
-): ResearchStatus {
-  if (completedResearch.has(project.id)) return 'completed';
-  if (activeResearch.has(project.id)) return 'in-progress';
-
-  if (bypassGates) {
-    return 'available';
-  }
-
-  const context =
-    eligibilityContext || {
-      currentPrestige,
-      completedResearch,
-      companyValue: Number.MAX_SAFE_INTEGER,
-      companyAgeWeeks: Number.MAX_SAFE_INTEGER,
-      maxBuyerLoyaltyLevel: 10,
-      unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map((id) => id)),
-    };
-
-  return isResearchProjectEligible(project, context) ? 'available' : 'locked';
-}
-
-function formatLockReason(project: ResearchProject, context: ResearchEligibilityContext): string {
-  const reasons = getResearchRequirementReasons(project, context).map((reason) => {
-    if (!reason.startsWith('Complete prerequisite research: ')) {
-      return reason;
-    }
-
-    const rawIds = reason.replace('Complete prerequisite research: ', '').split(', ').filter(Boolean);
-    const missingTitles = rawIds.map((id) => RESEARCH_PROJECTS.find((candidate) => candidate.id === id)?.title ?? id);
-    return `Complete first: ${missingTitles.join(', ')}`;
-  });
-
-  return reasons.join(' | ');
-}
-
-function chainStepLabel(model: ResearchProjectModel, allModels: ResearchProjectModel[]): string | null {
-  const chainType = model.presentation.chainType;
-  if (!chainType) {
-    return null;
-  }
-
-  const ladder = allModels
-    .filter((candidate) => candidate.presentation.chainType === chainType)
-    .sort((left, right) => (left.presentation.chainUnlockValue ?? 0) - (right.presentation.chainUnlockValue ?? 0));
-
-  const index = ladder.findIndex((candidate) => candidate.project.id === model.project.id);
-  if (index < 0) {
-    return null;
-  }
-
-  return `${index + 1}/${ladder.length}`;
-}
-
-function groupStatSummary(models: ResearchProjectModel[]) {
-  return {
-    total: models.length,
-    completed: models.filter((model) => model.status === 'completed').length,
-    available: models.filter((model) => model.status === 'available').length,
-  };
-}
-
-function getCompactChainModels(models: ResearchProjectModel[]): Array<ResearchProjectModel | 'ellipsis'> {
-  if (models.length <= 5) {
-    return models;
-  }
-
-  const activeIndex = models.findIndex((model) => model.status === 'in-progress');
-  const nextIndex = models.findIndex((model) => model.status !== 'completed');
-  const focusIndex = activeIndex >= 0 ? activeIndex : nextIndex >= 0 ? nextIndex : models.length - 1;
-  const startIndex = Math.max(1, focusIndex - 1);
-  const endIndex = Math.min(models.length - 2, focusIndex + 1);
-  const compact: Array<ResearchProjectModel | 'ellipsis'> = [models[0]];
-
-  if (startIndex > 1) {
-    compact.push('ellipsis');
-  }
-
-  compact.push(...models.slice(startIndex, endIndex + 1));
-
-  if (endIndex < models.length - 2) {
-    compact.push('ellipsis');
-  }
-
-  compact.push(models[models.length - 1]);
-  return compact;
-}
-
 export function ResearchWorkspace({
   bypassGates = false,
   readOnly = false,
@@ -203,8 +102,8 @@ export function ResearchWorkspace({
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ResearchStatus>('all');
-  const [sortMode, setSortMode] = useState<SortMode>('recommended');
-  const [viewMode, setViewMode] = useState<ViewMode>(readOnly ? 'full' : 'focus');
+  const [sortMode, setSortMode] = useState<ResearchSortMode>('recommended');
+  const [viewMode, setViewMode] = useState<ResearchViewMode>(readOnly ? 'full' : 'focus');
   const [groupFilter, setGroupFilter] = useState<ResearchGroupFilter>('all');
   const [hideCompleted, setHideCompleted] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -216,36 +115,17 @@ export function ResearchWorkspace({
     let mounted = true;
 
     const loadResearchStatus = async () => {
-      const [activities, completedIds, prestige, effects] = await Promise.all([
-        getAllActivities(),
-        getUnlockedResearchIds(),
-        getCurrentPrestige(),
-        getResearchPermanentEffects(),
-      ]);
+      const snapshot = await loadResearchWorkspaceSnapshot(bypassGates);
 
       if (!mounted) {
         return;
       }
 
-      const nextActiveResearch = new Set(
-        activities
-          .filter((activity) => activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH)
-          .filter((activity) => activity.status === 'active' && typeof activity.params?.researchId === 'string')
-          .map((activity) => activity.params!.researchId as string)
-      );
-
-      const completedSet = new Set(completedIds);
-      const context = bypassGates ? null : await loadResearchEligibilityContext(prestige, completedSet);
-
-      if (!mounted) {
-        return;
-      }
-
-      setActiveResearch(nextActiveResearch);
-      setCompletedResearch(completedSet);
-      setCurrentPrestige(prestige);
-      setEligibilityContext(context);
-      setPermanentEffects(effects);
+      setActiveResearch(snapshot.activeResearch);
+      setCompletedResearch(snapshot.completedResearch);
+      setCurrentPrestige(snapshot.currentPrestige);
+      setEligibilityContext(snapshot.eligibilityContext);
+      setPermanentEffects(snapshot.permanentEffects);
     };
 
     loadResearchStatus();
@@ -262,34 +142,16 @@ export function ResearchWorkspace({
   const presentationRows = useMemo(() => buildResearchPresentationRows(RESEARCH_PROJECTS), []);
 
   const projectModels = useMemo<ResearchProjectModel[]>(() => {
-    return presentationRows.map((presentation) => {
-      const project = presentation.project;
-      const status = getProjectStatus(
-        project,
-        activeResearch,
-        completedResearch,
-        currentPrestige,
-        eligibilityContext,
-        bypassGates
-      );
-      const lockReason =
-        status === 'locked' && eligibilityContext
-          ? formatLockReason(project, eligibilityContext)
-          : '';
-      const { totalWork } = calculateResearchWork(project.id, {
-        workMultiplier: permanentEffects.administrationAndResearchWorkMultiplier,
-      });
-
-      return {
-        project,
-        presentation,
-        status,
-        lockReason,
-        totalWork,
-        totalCost: calculateResearchCost(project.id),
-      };
+    return buildResearchProjectModels({
+      activeResearch,
+      bypassGates,
+      completedResearch,
+      currentPrestige,
+      eligibilityContext,
+      permanentEffects,
+      presentationRows,
     });
-  }, [activeResearch, bypassGates, completedResearch, currentPrestige, eligibilityContext, permanentEffects.administrationAndResearchWorkMultiplier, presentationRows]);
+  }, [activeResearch, bypassGates, completedResearch, currentPrestige, eligibilityContext, permanentEffects, presentationRows]);
 
   const footprintSummary = useMemo(
     () =>
@@ -302,89 +164,28 @@ export function ResearchWorkspace({
   );
 
   const filteredModels = useMemo(() => {
-    const byGroup = new Map<ResearchDisplayGroupId, ResearchProjectModel[]>();
-    for (const model of projectModels) {
-      const groupId = getResearchDisplayGroup(model.project).id;
-      byGroup.set(groupId, [...(byGroup.get(groupId) || []), model]);
-    }
-
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const selectedGroupIds =
-      groupFilter === 'all' ? Array.from(byGroup.keys()) : [groupFilter];
-
-    const next = new Map<ResearchDisplayGroupId, ResearchProjectModel[]>();
-
-    for (const groupId of selectedGroupIds) {
-      const groupModels = byGroup.get(groupId) || [];
-      const visibleProjects =
-        viewMode === 'focus'
-          ? getVisibleResearchProjects(
-              groupModels.map((model) => model.project),
-              completedResearch,
-              activeResearch,
-              bypassGates
-            )
-          : groupModels.map((model) => model.project);
-
-      const visibleIds = new Set(visibleProjects.map((project) => project.id));
-      let models = groupModels.filter((model) => visibleIds.has(model.project.id));
-
-      if (hideCompleted) {
-        models = models.filter((model) => model.status !== 'completed');
-      }
-
-      if (statusFilter !== 'all') {
-        models = models.filter((model) => model.status === statusFilter);
-      }
-
-      if (normalizedSearch) {
-        models = models.filter((model) => {
-          const searchableText = [
-            model.project.title,
-            model.project.id,
-            model.project.description,
-            model.presentation.primaryImpact,
-            model.presentation.prerequisiteTitles.join(' '),
-            model.presentation.unlockTypeLabels.join(' '),
-            ...(model.project.benefits || []),
-          ]
-            .join(' ')
-            .toLowerCase();
-
-          return searchableText.includes(normalizedSearch);
-        });
-      }
-
-      if (sortMode !== 'recommended') {
-        models = [...models].sort((left, right) => {
-          if (sortMode === 'cost') return left.totalCost - right.totalCost;
-          if (sortMode === 'work') return left.totalWork - right.totalWork;
-          return left.project.complexity - right.project.complexity;
-        });
-      }
-
-      next.set(groupId, models);
-    }
-
-    return next;
+    return buildFilteredResearchGroups({
+      activeResearch,
+      bypassGates,
+      completedResearch,
+      groupFilter,
+      hideCompleted,
+      projectModels,
+      searchTerm,
+      sortMode,
+      statusFilter,
+      viewMode,
+    });
   }, [activeResearch, bypassGates, completedResearch, groupFilter, hideCompleted, projectModels, searchTerm, sortMode, statusFilter, viewMode]);
 
   const visibleModels = useMemo(() => {
-    const next: ResearchProjectModel[] = [];
-    for (const models of filteredModels.values()) {
-      next.push(...models);
-    }
-    return next;
+    return flattenResearchProjectGroups(filteredModels);
   }, [filteredModels]);
 
   useEffect(() => {
-    if (visibleModels.length === 0) {
-      setSelectedProjectId('');
-      return;
-    }
-
-    if (!visibleModels.some((model) => model.project.id === selectedProjectId)) {
-      setSelectedProjectId(visibleModels[0].project.id);
+    const nextSelectedProjectId = getDefaultSelectedResearchProjectId(visibleModels, selectedProjectId);
+    if (nextSelectedProjectId !== selectedProjectId) {
+      setSelectedProjectId(nextSelectedProjectId);
     }
   }, [selectedProjectId, visibleModels]);
 
@@ -393,35 +194,13 @@ export function ResearchWorkspace({
     [selectedProjectId, visibleModels]
   );
 
-  const directChainByProjectId = useMemo(() => {
-    const next = new Map<string, string[]>();
-    for (const chain of footprintSummary.chainSummaries) {
-      for (const projectId of chain.projectIds) {
-        next.set(projectId, chain.projectIds);
-      }
-    }
-    return next;
-  }, [footprintSummary.chainSummaries]);
+  const directChainByProjectId = useMemo(
+    () => buildResearchDirectChainLookup(footprintSummary.chainSummaries),
+    [footprintSummary.chainSummaries]
+  );
 
   const selectedChainModels = useMemo(() => {
-    if (!selectedModel) {
-      return [];
-    }
-
-    const directChainIds = directChainByProjectId.get(selectedModel.project.id);
-    if (directChainIds) {
-      return directChainIds
-        .map((projectId) => projectModels.find((model) => model.project.id === projectId))
-        .filter((model): model is ResearchProjectModel => Boolean(model));
-    }
-
-    if (!selectedModel.presentation.chainType) {
-      return [];
-    }
-
-    return projectModels
-      .filter((model) => model.presentation.chainType === selectedModel.presentation.chainType)
-      .sort((left, right) => (left.presentation.chainUnlockValue ?? 0) - (right.presentation.chainUnlockValue ?? 0));
+    return getSelectedResearchChainModels(directChainByProjectId, projectModels, selectedModel);
   }, [directChainByProjectId, projectModels, selectedModel]);
 
   const handleStartResearch = async (projectId: string) => {
@@ -508,7 +287,7 @@ export function ResearchWorkspace({
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search project, effect, prerequisite, or unlock"
             />
-            <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+            <Select value={viewMode} onValueChange={(value) => setViewMode(value as ResearchViewMode)}>
               <SelectTrigger>
                 <SelectValue placeholder="Tree view" />
               </SelectTrigger>
@@ -517,7 +296,7 @@ export function ResearchWorkspace({
                 <SelectItem value="full">Full tree</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}>
+            <Select value={sortMode} onValueChange={(value) => setSortMode(value as ResearchSortMode)}>
               <SelectTrigger>
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
@@ -581,7 +360,7 @@ export function ResearchWorkspace({
               if (!group) {
                 return null;
               }
-              const stats = groupStatSummary(models);
+              const stats = getResearchGroupStats(models);
               const Icon = GROUP_ICONS[groupId];
 
               return (
@@ -605,7 +384,7 @@ export function ResearchWorkspace({
                     <div className="flex flex-col gap-2">
                       {models.map((model) => {
                         const isSelected = model.project.id === selectedProjectId;
-                        const stepLabel = chainStepLabel(model, projectModels);
+                        const stepLabel = getResearchChainStepLabel(model, projectModels);
                         const isDisabled = readOnly || model.status !== 'available';
                         const gateLabel = model.presentation.gateChips.length
                           ? `${model.presentation.gateChips.length} gate${model.presentation.gateChips.length === 1 ? '' : 's'}`
@@ -616,7 +395,7 @@ export function ResearchWorkspace({
                               .map((projectId) => projectModels.find((candidate) => candidate.project.id === projectId))
                               .filter((candidate): candidate is ResearchProjectModel => Boolean(candidate))
                           : [];
-                        const compactChainModels = directChainModels.length ? getCompactChainModels(directChainModels) : [];
+                        const compactChainModels = directChainModels.length ? getCompactResearchChainModels(directChainModels) : [];
                         const directChainSummary = footprintSummary.chainSummaries.find((chain) => chain.projectIds.includes(model.project.id)) || null;
                         const directChainProgress = directChainSummary && directChainSummary.totalSteps > 0
                           ? (directChainSummary.completedSteps / directChainSummary.totalSteps) * 100

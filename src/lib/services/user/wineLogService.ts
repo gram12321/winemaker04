@@ -3,7 +3,7 @@ import { WineBatch, WineLogEntry } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from './highscoreService';
 import { getGameState, getCurrentCompany } from '../core/gameState';
-import { insertWineLogEntry, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
+import { insertWineLogEntry, loadWineLog, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
 import { calculateWineScore, getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 
 const getEntryTasteQualityIndex = (entry: Pick<WineLogEntry, 'tasteQualityIndex'>): number =>
@@ -102,6 +102,10 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
  */
 export async function getVineyardWineHistory(vineyardId: string): Promise<WineLogEntry[]> {
   return await loadWineLogByVineyard(vineyardId);
+}
+
+export async function getWineLogEntries(): Promise<WineLogEntry[]> {
+  return await loadWineLog();
 }
 
 

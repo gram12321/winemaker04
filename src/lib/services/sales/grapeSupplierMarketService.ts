@@ -2,8 +2,16 @@ import { NAMES, GRAPE_MERCHANT_SUFFIXES } from '../../constants/namesConstants';
 import { calculateCompanyValue } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
+import {
+  BASE_SEASONAL_SUPPLIER_COUNT,
+  BULK_BASE_SEASON_SUPPLY_KG,
+  BULK_SUPPLIER_ID,
+  COUNTRY_SUPPLIER_CONFIG,
+  MAX_SEASONAL_SUPPLIER_COUNT,
+  SUPPLIER_MARKET_COUNTRY_KEYS,
+  type SupplierMarketCountryKey
+} from '@/lib/constants';
 import { getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
-import { type Nationality } from '../../types/types';
 import { researchEnforcer } from '../../features/researchUpgrade/services/research/researchEnforcer';
 import {
   createSupplierRow,
@@ -14,16 +22,8 @@ import {
   updateSupplierRow,
 } from '../../database/sales/grapeSupplierMarketDB';
 import { getSupplierPriorityProfiles, type SupplierLoyaltyLevel } from './grapeSupplierLoyaltyService';
-
-export const BASE_SEASONAL_SUPPLIER_COUNT = 3;
-export const MAX_SEASONAL_SUPPLIER_COUNT = 7;
-export const BULK_SUPPLIER_ID = 'bulk_supplier';
-export const BULK_BASE_SEASON_SUPPLY_KG = 22000;
-
-type CountryKey = Nationality;
+type CountryKey = SupplierMarketCountryKey;
 type SupplierOriginTag = 'trusted_carryover' | 'seasonal_rotation' | 'country_special';
-
-const COUNTRY_KEYS: readonly CountryKey[] = ['France', 'Germany', 'Italy', 'Spain', 'United States'];
 
 interface SupplierMarketRow {
   supplier_id: string;
@@ -54,16 +54,8 @@ export interface BuyMarketSupplierProfile {
   isBulkSupplier: boolean;
 }
 
-const COUNTRY_SUPPLIER_CONFIG: Record<CountryKey, { min: number; max: number; baseSupplyMin: number; baseSupplyMax: number; title: string }> = {
-  France: { min: 0.94, max: 1.16, baseSupplyMin: 1800, baseSupplyMax: 4600, title: 'Negoce Seller' },
-  Germany: { min: 0.92, max: 1.14, baseSupplyMin: 1700, baseSupplyMax: 4400, title: 'Regional Traubenanbieter' },
-  Italy: { min: 0.93, max: 1.15, baseSupplyMin: 1750, baseSupplyMax: 4500, title: 'Cantina Seller' },
-  Spain: { min: 0.92, max: 1.14, baseSupplyMin: 1700, baseSupplyMax: 4300, title: 'Bodega Seller' },
-  'United States': { min: 0.95, max: 1.17, baseSupplyMin: 1900, baseSupplyMax: 4700, title: 'Valley Grower Seller' },
-};
-
 function isCountryKey(country?: string): country is CountryKey {
-  return !!country && COUNTRY_KEYS.includes(country as CountryKey);
+  return !!country && SUPPLIER_MARKET_COUNTRY_KEYS.includes(country as CountryKey);
 }
 
 function toCountryKey(country?: string): CountryKey {

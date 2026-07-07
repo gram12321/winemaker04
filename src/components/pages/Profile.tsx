@@ -3,7 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedTooltip } from '../ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
 import { authService, companyService } from '@/lib/services';
-import { type AuthUser, type Company, supabase, updateUser, deleteUser } from '@/lib/database';
+import { type AuthUser, type Company } from '@/lib/database';
 import type { CompanyStats } from '@/lib/services';
 import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
@@ -93,42 +93,21 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
 
   const loadCompanyUserData = async (userId: string) => {
     try {
-      // Load user data from the database for companies with user_id
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const user = await authService.getUserProfileById(userId);
 
-      if (error) {
-        console.error('Error loading company user data:', error);
+      if (!user) {
+        console.error('Error loading company user data:', userId);
         return;
       }
 
-      if (user) {
-        // Create a mock AuthUser object for display purposes
-        const mockUser: AuthUser = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatar: user.avatar,
-          avatarColor: user.avatar_color,
-          createdAt: new Date(user.created_at),
-          updatedAt: new Date(user.updated_at)
-        };
-        
-        setCurrentUser(mockUser);
-        setEditName(user.name);
-        setSelectedAvatar(user.avatar || 'default');
-        setSelectedColor(user.avatar_color || 'blue');
-        
-        // Load player balance
-        const balance = await getPlayerBalance(userId);
-        setPlayerBalance(balance);
-        
-        // Load all companies for this user
-        await loadUserData(userId);
-      }
+      setCurrentUser(user);
+      setEditName(user.name);
+      setSelectedAvatar(user.avatar || 'default');
+      setSelectedColor(user.avatarColor || 'blue');
+
+      const balance = await getPlayerBalance(userId);
+      setPlayerBalance(balance);
+      await loadUserData(userId);
     } catch (error) {
       console.error('Error loading company user data:', error);
     }
@@ -157,11 +136,10 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
         avatarColor: selectedColor
       });
     } else {
-      // Use direct database update for company-linked users
-      result = await updateUser(currentUser.id, {
+      result = await authService.updateUserProfileById(currentUser.id, {
         name: editName.trim(),
         avatar: selectedAvatar,
-        avatar_color: selectedColor
+        avatarColor: selectedColor
       });
       
       // Reload the user data after update
@@ -196,8 +174,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
         // Use authService for authenticated users
         result = await authService.deleteAccount();
       } else {
-        // Use direct database deletion for company-linked users
-        result = await deleteUser(currentUser.id);
+        result = await authService.deleteUserProfileById(currentUser.id);
       }
       
       if (result.success) {

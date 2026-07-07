@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { WarningModal } from '@/components/ui';
 import { PendingLoanWarning } from '@/lib/types/types';
-import { getFirstUnacknowledgedLoanWarning, acknowledgeLoanWarning } from '@/lib/database/core/loansDB';
 import { setModalMinimized, isModalMinimized } from '@/lib/utils';
 import { acceptForcedLoanRestructure, declineForcedLoanRestructure } from '@/lib/features/loanLender/services/finance/loanService';
+import { acknowledgePendingLoanWarning, loadNextLoanWarning } from '@/lib/features/loanLender/services/finance/loanViewService';
 
 /**
  * Display loan warning modals from database only
@@ -19,7 +19,7 @@ export function LoanWarningModalDisplay() {
   useEffect(() => {
     const loadWarnings = async () => {
       try {
-        const warning = await getFirstUnacknowledgedLoanWarning();
+        const warning = await loadNextLoanWarning();
         
         if (warning) {
           setWarning(warning);
@@ -43,7 +43,7 @@ export function LoanWarningModalDisplay() {
       // Only check if we don't already have a warning showing
       if (!warning) {
         try {
-          const newWarning = await getFirstUnacknowledgedLoanWarning();
+          const newWarning = await loadNextLoanWarning();
           if (newWarning) {
             setWarning(newWarning);
             setWarningId(newWarning.loanId);
@@ -71,7 +71,7 @@ export function LoanWarningModalDisplay() {
     try {
       // Acknowledge warning in database if it has an ID
       if (warningId) {
-        await acknowledgeLoanWarning(warningId);
+        await acknowledgePendingLoanWarning(warningId);
       }
       
       // Clear local state

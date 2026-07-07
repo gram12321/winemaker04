@@ -3,8 +3,8 @@ import { WineBatch, type GrapeVariety } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Slider, UnifiedTooltip } from '@/components/ui';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
+import { BASE_GRAPE_PRICE_PER_KG, COOPERATIVE_LEVELS } from '@/lib/constants';
 import {
-  BASE_GRAPE_PRICE_PER_KG,
   GrapeBuyer,
   GrapeSalePricing,
   getAvailableBuyers,
@@ -15,7 +15,6 @@ import {
   CooperativeMembership,
   getCooperativeMembership,
   getCooperativeFloorPrice,
-  COOPERATIVE_LEVELS,
 } from '@/lib/services/sales/cooperativeService';
 import {
   BUYER_LOYALTY_LEVELS,
