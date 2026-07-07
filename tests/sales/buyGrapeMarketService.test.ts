@@ -47,8 +47,12 @@ const mocks = vi.hoisted(() => ({
       created_year: 2026,
       created_season: 'Spring',
       created_week: 3,
+      last_refreshed_year: 2026,
+      last_refreshed_season: 'Spring',
+      last_refreshed_week: 3,
       expires_year: 2026,
       expires_season: 'Summer',
+      expires_week: 1,
       updated_at: new Date().toISOString(),
     },
     error: null,
@@ -79,6 +83,65 @@ const mocks = vi.hoisted(() => ({
   getBulkBuyer: vi.fn(async () => null),
   getCompanyBuyOfferRows: vi.fn(async () => ({ data: [], error: null })),
   upsertBuyOfferRows: vi.fn(async () => ({ data: null, error: null })),
+  buildMarketPreviewBatch: vi.fn(async (input: any) => ({
+    id: 'preview-batch',
+    vineyardId: 'market_purchase',
+    vineyardName: input.supplierName,
+    grape: input.grape,
+    quantity: input.quantity,
+    state: input.stateProfile?.state ?? 'grapes',
+    fermentationProgress: input.stateProfile?.fermentationProgress ?? 0,
+    fermentationOptions: input.stateProfile?.fermentationOptions,
+    landValueModifierHarvestSnapshot: input.source.baseQualityScore ?? 0.6,
+    structureIndexHarvestSnapshot: input.source.baseQualityScore ?? 0.6,
+    tasteQualityIndexHarvestSnapshot: input.source.baseQualityScore ?? 0.6,
+    landValueModifier: input.source.baseQualityScore ?? 0.6,
+    structureIndex: input.source.baseQualityScore ?? 0.6,
+    tasteQualityIndex: input.source.baseQualityScore ?? 0.6,
+    characteristics: {
+      acidity: input.source.baseQualityScore ?? 0.6,
+      aroma: input.source.baseQualityScore ?? 0.6,
+      body: input.source.baseQualityScore ?? 0.6,
+      spice: 0.5,
+      sweetness: 0.5,
+      tannins: 0.5,
+    },
+    estimatedPrice: 10,
+    grapeColor: input.grape === 'Pinot Noir' ? 'red' : 'white',
+    naturalYield: 1,
+    fragile: 0.3,
+    proneToOxidation: 0.3,
+    features: [],
+    wineAnchors: {
+      sugarPotential: 0.6,
+      acidPotential: 0.6,
+      phenolicPotential: 0.6,
+      aromaticPotential: 0.6,
+      bodyPotential: 0.6,
+      extractionState: input.stateProfile?.state === 'grapes' ? 0.1 : 0.4,
+      fermentationState: input.stateProfile?.state === 'must_fermenting' ? 0.7 : input.stateProfile?.state === 'must_ready' ? 0.3 : 0.05,
+      leesState: 0.1,
+      oxidationPressure: 0.25,
+      maturationState: 0,
+      terroirExpression: 0.55,
+      processFootprint: 0.35,
+    },
+    breakdown: {
+      effects: [],
+      anchorEffects: [{ anchor: 'terroirExpression', modifier: 0.05, description: 'Market preview' }],
+    },
+    originSnapshot: {
+      sourceKind: 'market',
+      supplierId: input.supplierId,
+      supplierName: input.supplierName,
+      originTag: input.originTag,
+      previewState: input.stateProfile?.state ?? 'grapes',
+      terroirSummary: `${input.source.region}, ${input.source.country}`,
+      provenance: input.source,
+    },
+    harvestStartDate: input.harvestStartDate,
+    harvestEndDate: input.harvestEndDate,
+  })),
 }));
 
 vi.mock('@/lib/utils/companyUtils', () => ({
@@ -153,6 +216,10 @@ vi.mock('@/hooks/useGameUpdates', () => ({
   triggerTopicUpdate: mocks.triggerTopicUpdate,
 }));
 
+vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
+  buildMarketPreviewBatch: mocks.buildMarketPreviewBatch,
+}));
+
 describe('buy grape market service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -223,6 +290,14 @@ describe('buy grape market service', () => {
       quantity: 120,
       grape: 'Chardonnay',
       state: 'grapes',
+      wineAnchors: expect.any(Object),
+      characteristics: expect.any(Object),
+      originSnapshot: expect.objectContaining({
+        sourceKind: 'market',
+        supplierId: 'bulk_supplier',
+        supplierName: 'Bulk Supply Syndicate',
+        terroirSummary: expect.any(String)
+      })
     }));
     expect(mocks.addTransaction).toHaveBeenCalledWith(
       -480,
@@ -242,6 +317,59 @@ describe('buy grape market service', () => {
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
   });
 
+  it('creates deterministic fermenting batches from the stored market offer preview contract', async () => {
+    mocks.getCompanyBuyOfferRow.mockResolvedValueOnce({
+      data: {
+        company_id: 'company-1',
+        offer_id: 'offer-2',
+        ware_group: 'grapes',
+        supplier_id: 'bulk_supplier',
+        supplier_name: 'Bulk Supply Syndicate',
+        origin_tag: 'country_special',
+        batch_state: 'must_fermenting',
+        grape_variety: 'Pinot Noir',
+        available_kg: 300,
+        quality_score: 0.71,
+        base_price_per_kg: 3.6,
+        effective_price_per_kg: 4.2,
+        weeks_on_market: 2,
+        quality_decay_per_week: 0.01,
+        min_quality_floor: 0.45,
+        is_persistent: true,
+        created_year: 2026,
+        created_season: 'Spring',
+        created_week: 3,
+        last_refreshed_year: 2026,
+        last_refreshed_season: 'Spring',
+        last_refreshed_week: 3,
+        expires_year: 2026,
+        expires_season: 'Summer',
+        expires_week: 1,
+        updated_at: new Date().toISOString(),
+      },
+      error: null,
+    });
+
+    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
+    const result = await purchaseBuyGrapeOffer('offer-2', 75);
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({
+      grape: 'Pinot Noir',
+      quantity: 75,
+      state: 'must_fermenting',
+      fermentationOptions: expect.objectContaining({
+        method: expect.any(String),
+        temperature: expect.any(String)
+      }),
+      fermentationProgress: expect.any(Number),
+      originSnapshot: expect.objectContaining({
+        sourceKind: 'market',
+        supplierName: 'Bulk Supply Syndicate'
+      })
+    }));
+  });
+
   it('blocks purchase when requested quantity exceeds supplier seasonal remaining capacity', async () => {
     const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
 
@@ -253,7 +381,11 @@ describe('buy grape market service', () => {
     expect(mocks.addTransaction).not.toHaveBeenCalled();
     expect(mocks.recordSupplierPurchase).not.toHaveBeenCalled();
     expect(mocks.recordMarketSupplierPurchase).not.toHaveBeenCalled();
-    expect(mocks.updateBuyOfferRow).not.toHaveBeenCalled();
+    expect(mocks.updateBuyOfferRow).not.toHaveBeenCalledWith(
+      'company-1',
+      'offer-1',
+      expect.objectContaining({ available_kg: expect.any(Number) })
+    );
     expect(mocks.deleteBuyOfferRow).not.toHaveBeenCalled();
   });
 });

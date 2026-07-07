@@ -45,7 +45,7 @@ import { calculateResearchCost, calculateResearchWork, getAllActivities, getCurr
 import { WorkCategory } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
-import { ChevronRight, Compass, FlaskConical, Grape, Landmark, Network, Search, Sparkles } from 'lucide-react';
+import { ChevronRight, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
 
 const RESEARCH_HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1600&h=700&fit=crop';
 
@@ -393,15 +393,36 @@ export function ResearchWorkspace({
     [selectedProjectId, visibleModels]
   );
 
+  const directChainByProjectId = useMemo(() => {
+    const next = new Map<string, string[]>();
+    for (const chain of footprintSummary.chainSummaries) {
+      for (const projectId of chain.projectIds) {
+        next.set(projectId, chain.projectIds);
+      }
+    }
+    return next;
+  }, [footprintSummary.chainSummaries]);
+
   const selectedChainModels = useMemo(() => {
-    if (!selectedModel?.presentation.chainType) {
+    if (!selectedModel) {
+      return [];
+    }
+
+    const directChainIds = directChainByProjectId.get(selectedModel.project.id);
+    if (directChainIds) {
+      return directChainIds
+        .map((projectId) => projectModels.find((model) => model.project.id === projectId))
+        .filter((model): model is ResearchProjectModel => Boolean(model));
+    }
+
+    if (!selectedModel.presentation.chainType) {
       return [];
     }
 
     return projectModels
       .filter((model) => model.presentation.chainType === selectedModel.presentation.chainType)
       .sort((left, right) => (left.presentation.chainUnlockValue ?? 0) - (right.presentation.chainUnlockValue ?? 0));
-  }, [projectModels, selectedModel]);
+  }, [directChainByProjectId, projectModels, selectedModel]);
 
   const handleStartResearch = async (projectId: string) => {
     if (readOnly) {
@@ -472,133 +493,15 @@ export function ResearchWorkspace({
         </section>
       )}
 
-      <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <div className="flex flex-col gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Compass className="h-4 w-4 text-emerald-700" />
-              <h3 className="text-base font-semibold text-slate-900">Progression Ladders</h3>
-            </div>
-            <p className="mt-1 text-sm text-slate-600">Chained limits and unlock lanes surface first so the next meaningful research step is visible immediately.</p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {footprintSummary.chainSummaries.map((chain) => {
-              const chainProjects = chain.projectIds
-                .map((projectId) => projectModels.find((model) => model.project.id === projectId))
-                .filter((model): model is ResearchProjectModel => Boolean(model));
-              const chainProgress = chain.totalSteps > 0 ? (chain.completedSteps / chain.totalSteps) * 100 : 0;
-              const compactChainProjects = getCompactChainModels(chainProjects);
-              const currentStep = chain.activeProjectTitle ?? chain.nextProjectTitle ?? chain.currentProjectTitle ?? 'Complete';
-
-              return (
-                <button
-                  key={chain.chainId}
-                  type="button"
-                  className="rounded-lg border bg-background px-4 py-3 text-left transition-colors hover:bg-slate-50"
-                  onClick={() => {
-                    const nextModel = chainProjects.find((model) => model.status !== 'completed') ?? chainProjects[chainProjects.length - 1];
-                    if (nextModel) {
-                      setSelectedProjectId(nextModel.project.id);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium text-slate-900">{chain.label}</div>
-                      <div className="text-xs text-slate-600">
-                        {chain.activeProjectTitle ? `Active: ${chain.activeProjectTitle}` : chain.nextProjectTitle ? `Next: ${chain.nextProjectTitle}` : 'Chain complete'}
-                      </div>
-                    </div>
-                    <div className="text-right text-xs text-slate-600">
-                      <div>{chain.completedSteps}/{chain.totalSteps}</div>
-                      <div>{chain.activeProjectTitle ? 'Running' : chain.nextProjectTitle ? 'Next' : 'Complete'}</div>
-                    </div>
-                  </div>
-                  <Progress value={chainProgress} className="mt-3 h-2" />
-                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
-                    {compactChainProjects.map((model, index) => (
-                      <div key={model === 'ellipsis' ? `${chain.chainId}-ellipsis-${index}` : model.project.id} className="flex items-center gap-2">
-                        {index > 0 ? <ChevronRight className="h-3 w-3 text-slate-400" /> : null}
-                        {model === 'ellipsis' ? (
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">...</span>
-                        ) : (
-                          <span className={model.project.id === selectedProjectId ? 'font-medium text-slate-900' : ''}>
-                            {model.project.title}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-600">
-                    Focus: {currentStep}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {footprintSummary.ladderSummaries.length ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {footprintSummary.ladderSummaries.map((ladder) => {
-              const progress = ladder.totalSteps > 0 ? (ladder.completedSteps / ladder.totalSteps) * 100 : 0;
-              return (
-                <div key={ladder.chainType} className="rounded-xl border bg-background px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium text-slate-900">{ladder.label}</div>
-                      <div className="text-xs text-slate-600">Current {ladder.currentLabel}</div>
-                    </div>
-                    <div className="text-right text-xs text-slate-600">
-                      <div>{ladder.completedSteps}/{ladder.totalSteps}</div>
-                      <div>{ladder.activeProjectTitle ? 'In progress' : ladder.nextProjectTitle ? 'Next available' : 'Complete'}</div>
-                    </div>
-                  </div>
-                  <Progress value={progress} className="mt-3 h-2" />
-                  <div className="mt-2 text-xs text-slate-600">
-                    {ladder.activeProjectTitle
-                      ? `Active: ${ladder.activeProjectTitle}`
-                      : ladder.nextProjectTitle
-                      ? `Next: ${ladder.nextProjectTitle}`
-                      : 'Chain completed'}
-                  </div>
-                </div>
-              );
-            })}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="rounded-xl border bg-background px-4 py-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-600" />
-              <h3 className="text-base font-semibold text-slate-900">Active Permanent Effects</h3>
-            </div>
-            <div className="mt-3 flex flex-col gap-2">
-              {permanentEffects.activeEffects.length ? (
-                permanentEffects.activeEffects.map((effect) => (
-                  <div key={`${effect.projectId}-${effect.kind}`} className="rounded-lg border bg-slate-50 px-3 py-2">
-                    <div className="text-sm font-medium text-slate-900">{effect.projectTitle}</div>
-                    <div className="text-xs text-slate-600">{effect.description}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-lg border border-dashed px-3 py-4 text-sm text-slate-500">
-                  No permanent research bonuses are active yet.
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </section>
-
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-slate-600" />
-            <h3 className="text-base font-semibold text-slate-900">Research Catalog</h3>
+            <Compass className="h-4 w-4 text-emerald-700" />
+            <h3 className="text-base font-semibold text-slate-900">Research Progression</h3>
           </div>
+          <p className="text-sm text-slate-600">
+            Direct chains, standalone unlocks, and progression cards now live in one surface. Filter by category, then work from the next useful card.
+          </p>
           <div className="grid gap-3 lg:grid-cols-[1.3fr_repeat(3,minmax(0,0.7fr))_auto]">
             <Input
               value={searchTerm}
@@ -707,6 +610,18 @@ export function ResearchWorkspace({
                         const gateLabel = model.presentation.gateChips.length
                           ? `${model.presentation.gateChips.length} gate${model.presentation.gateChips.length === 1 ? '' : 's'}`
                           : 'No gates';
+                        const directChainIds = directChainByProjectId.get(model.project.id);
+                        const directChainModels = directChainIds
+                          ? directChainIds
+                              .map((projectId) => projectModels.find((candidate) => candidate.project.id === projectId))
+                              .filter((candidate): candidate is ResearchProjectModel => Boolean(candidate))
+                          : [];
+                        const compactChainModels = directChainModels.length ? getCompactChainModels(directChainModels) : [];
+                        const directChainSummary = footprintSummary.chainSummaries.find((chain) => chain.projectIds.includes(model.project.id)) || null;
+                        const directChainProgress = directChainSummary && directChainSummary.totalSteps > 0
+                          ? (directChainSummary.completedSteps / directChainSummary.totalSteps) * 100
+                          : 0;
+                        const isDirectChainCard = directChainModels.length > 1;
 
                         return (
                           <div
@@ -720,6 +635,32 @@ export function ResearchWorkspace({
                                   <div className="text-sm font-semibold text-slate-900">{model.project.title}</div>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-600">{model.presentation.primaryImpact}</p>
+                                {isDirectChainCard ? (
+                                  <div className="mt-3 rounded-lg border bg-slate-50 px-3 py-2">
+                                    <div className="flex items-center justify-between gap-3 text-xs text-slate-600">
+                                      <span>{directChainSummary?.label}</span>
+                                      <span>{directChainSummary?.completedSteps}/{directChainSummary?.totalSteps}</span>
+                                    </div>
+                                    <Progress value={directChainProgress} className="mt-2 h-1.5" />
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
+                                      {compactChainModels.map((chainModel, index) => (
+                                        <div
+                                          key={chainModel === 'ellipsis' ? `${model.project.id}-ellipsis-${index}` : chainModel.project.id}
+                                          className="flex items-center gap-2"
+                                        >
+                                          {index > 0 ? <ChevronRight className="h-3 w-3 text-slate-400" /> : null}
+                                          {chainModel === 'ellipsis' ? (
+                                            <span className="rounded bg-white px-1.5 py-0.5 text-slate-500">...</span>
+                                          ) : (
+                                            <span className={chainModel.project.id === model.project.id ? 'font-medium text-slate-900' : ''}>
+                                              {chainModel.project.title}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
                                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                                   <span>{formatNumber(model.totalCost, { currency: true, decimals: 0 })}</span>
                                   <span>{model.totalWork.toLocaleString()} work</span>

@@ -211,6 +211,35 @@ export type WineBatchState =
   | 'must_fermenting'  // Currently fermenting
   | 'bottled';         // Completed
 
+export type MarketOfferOriginTag = 'trusted_carryover' | 'seasonal_rotation' | 'country_special';
+
+export interface MarketBatchProvenanceSnapshot {
+  country: string;
+  region: string;
+  soil: string[];
+  aspect: Aspect;
+  altitude: number;
+  density: number;
+  vineyardHealth: number;
+  ripeness: number;
+  vineAge: number;
+  landValue: number;
+  vineyardPrestige: number;
+  overgrowth?: Vineyard['overgrowth'];
+  pendingFeatures?: WineFeature[];
+  baseQualityScore: number;
+}
+
+export interface WineBatchOriginSnapshot {
+  sourceKind: 'vineyard' | 'market';
+  supplierId?: string;
+  supplierName?: string;
+  originTag?: MarketOfferOriginTag;
+  previewState?: Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>;
+  terroirSummary?: string;
+  provenance?: MarketBatchProvenanceSnapshot;
+}
+
 // Wine batch interface for winery operations
 export interface WineBatch {
   id: string;
@@ -269,6 +298,9 @@ export interface WineBatch {
 
   // Wine Features Framework (faults and positive features)
   features: WineFeature[];
+
+  // Source metadata for batches that do not map back to a real vineyard row
+  originSnapshot?: WineBatchOriginSnapshot;
 
   /** Hidden backend anchors (0–1); computed at harvest, persisted; not shown in UI yet */
   wineAnchors: WineAnchorValues;

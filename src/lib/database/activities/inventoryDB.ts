@@ -93,6 +93,7 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         fragile: batch.fragile,
         prone_to_oxidation: batch.proneToOxidation,
         features: batch.features || [], // Store features as JSONB array
+        origin_snapshot: batch.originSnapshot ?? null,
         wine_anchors: batch.wineAnchors,
         harvest_start_week: Math.round(batch.harvestStartDate.week),
         harvest_start_season: batch.harvestStartDate.season,
@@ -170,6 +171,7 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
         features: row.features || [],
+        originSnapshot: row.origin_snapshot || undefined,
         wineAnchors: parseWineAnchorsFromDb(row.wine_anchors),
         harvestStartDate: buildGameDate(row.harvest_start_week, row.harvest_start_season, row.harvest_start_year)!,
         harvestEndDate: buildGameDate(row.harvest_end_week, row.harvest_end_season, row.harvest_end_year)!,
@@ -266,6 +268,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           fragile: updatedBatch.fragile,
           prone_to_oxidation: updatedBatch.proneToOxidation,
           features: updatedBatch.features || [],
+          origin_snapshot: updatedBatch.originSnapshot ?? null,
           wine_anchors: updatedBatch.wineAnchors,
           harvest_start_week: Math.round(updatedBatch.harvestStartDate.week),
           harvest_start_season: updatedBatch.harvestStartDate.season,

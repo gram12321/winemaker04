@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { addTransaction } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
@@ -14,12 +13,13 @@ import {
   updateBuyOfferRow,
 } from '../../database/sales/buyMarketOffersDB';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { clamp, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
+import { clamp, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { GAME_INITIALIZATION, SEASON_ORDER } from '../../constants';
+import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_SOIL_TYPES } from '../../constants/vineyardConstants';
 import { NotificationCategory } from '../../types/types';
-import type { EconomyPhase, GrapeVariety, Nationality, Season, WeatherIntensity, WeatherState, WineBatch, WineBatchState } from '../../types/types';
+import type { EconomyPhase, GrapeVariety, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Nationality, Season, WeatherIntensity, WeatherState, WineBatch, WineBatchState } from '../../types/types';
 import {
   BUYER_ECONOMY_PRICE_MULTIPLIERS,
   BUYER_SEASON_PRICE_MULTIPLIERS,
@@ -41,6 +41,9 @@ import {
 } from './grapeSupplierLoyaltyService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
+import { buildMarketPreviewBatch, type CreateMarketWineBatchInput, type MarketBatchStateProfile } from '../wine/winery/inventoryService';
+import type { FermentationOptions } from '../wine/characteristics/fermentationCharacteristics';
+import { v4 as uuidv4 } from 'uuid';
 
 export type BuyOfferBatchState = Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>;
 
@@ -48,7 +51,7 @@ export interface BuyGrapeMarketOffer {
   id: string;
   supplierId: string;
   supplierName: string;
-  originTag: 'trusted_carryover' | 'seasonal_rotation' | 'country_special';
+  originTag: MarketOfferOriginTag;
   batchState: BuyOfferBatchState;
   grapeVariety: GrapeVariety;
   availableKg: number;
@@ -64,6 +67,9 @@ export interface BuyGrapeMarketOffer {
   createdWeek: number;
   supplierLoyalty: SupplierLoyaltyRecord | null;
   demandFactors: BuyMarketDemandFactors;
+  provenanceSnapshot: MarketBatchProvenanceSnapshot;
+  previewBatch: WineBatch;
+  previewVersion: number;
 }
 
 export interface BuyMarketDemandFactors {
@@ -121,6 +127,34 @@ const BUY_OFFER_MAX_AVAILABLE_KG = 6000;
 const BUY_OFFER_COMPANY_VALUE_REFERENCE = 10000;
 const BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER = 2.1;
 const BUY_OFFER_PRESTIGE_MAX_DISCOUNT = 0.3;
+const BUY_OFFER_PREVIEW_VERSION = 1;
+const MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS = 6;
+
+const MARKET_CRUSHING_PROFILE_BY_COLOR: Record<'red' | 'white', NonNullable<MarketBatchStateProfile['crushingOptions']>> = {
+  red: {
+    method: 'Mechanical Press',
+    destemming: true,
+    coldSoak: true,
+    pressingIntensity: 0.52,
+  },
+  white: {
+    method: 'Pneumatic Press',
+    destemming: false,
+    coldSoak: false,
+    pressingIntensity: 0.36,
+  },
+};
+
+const MARKET_FERMENTATION_PROFILE_BY_COLOR: Record<'red' | 'white', FermentationOptions> = {
+  red: {
+    method: 'Extended Maceration',
+    temperature: 'Warm',
+  },
+  white: {
+    method: 'Temperature Controlled',
+    temperature: 'Cool',
+  },
+};
 
 const YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
 
@@ -219,6 +253,213 @@ function computeOfferAvailableKgForSupplier(supplier: BuyMarketSupplierProfile, 
   return Math.max(1, Math.min(scaled, supplier.remainingSeasonSupplyKg));
 }
 
+function clamp01(value: number): number {
+  return clamp(value, 0, 1);
+}
+
+function cloneStateProfile<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function pickDeterministic<T>(items: readonly T[], seed: string): T {
+  if (items.length === 0) {
+    throw new Error('Cannot pick from an empty list.');
+  }
+
+  const index = Math.min(items.length - 1, Math.floor(deterministicSeasonalVariation(seed, 0, items.length)));
+  return items[index] as T;
+}
+
+function getOfferSeed(row: Pick<BuyMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'batch_state'>): string {
+  return `${row.offer_id}:${row.supplier_id}:${row.grape_variety}:${row.batch_state}`;
+}
+
+function buildOfferProvenanceSnapshot(
+  row: Pick<BuyMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'quality_score' | 'batch_state'>,
+  supplierCountry: Nationality
+): MarketBatchProvenanceSnapshot {
+  const seed = getOfferSeed(row);
+  const regions = COUNTRY_REGION_MAP[supplierCountry] as readonly string[];
+  const region = pickDeterministic(regions, `${seed}:region`);
+  const countrySoils = ((REGION_SOIL_TYPES as Record<string, Record<string, readonly string[]>>)[supplierCountry]?.[region] ?? ['Clay']) as readonly string[];
+  const [minAltitude, maxAltitude] = (((REGION_ALTITUDE_RANGES as Record<string, Record<string, readonly [number, number]>>)[supplierCountry]?.[region]) ?? [0, 100]) as readonly [number, number];
+  const [minLandValue, maxLandValue] = (((REGION_PRICE_RANGES as Record<string, Record<string, readonly [number, number]>>)[supplierCountry]?.[region]) ?? [25000, 90000]) as readonly [number, number];
+  const aspectPool = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest'] as const;
+  const primarySoil = pickDeterministic(countrySoils, `${seed}:soil:0`);
+  const secondarySoil = pickDeterministic(countrySoils, `${seed}:soil:1`);
+  const selectedSoils = Array.from(new Set([primarySoil, secondarySoil])).slice(0, 2);
+  const quality = row.quality_score;
+
+  return {
+    country: supplierCountry,
+    region,
+    soil: selectedSoils.length > 0 ? selectedSoils : [primarySoil],
+    aspect: pickDeterministic(aspectPool, `${seed}:aspect`),
+    altitude: Math.round(deterministicSeasonalVariation(`${seed}:altitude`, minAltitude, maxAltitude)),
+    density: Math.round(deterministicSeasonalVariation(`${seed}:density`, 2200, 8200)),
+    vineyardHealth: clamp01(0.45 + quality * 0.45 + deterministicSeasonalVariation(`${seed}:health`, -0.08, 0.08)),
+    ripeness: clamp01(0.42 + quality * 0.5 + deterministicSeasonalVariation(`${seed}:ripeness`, -0.08, 0.08)),
+    vineAge: Math.max(4, Math.round(deterministicSeasonalVariation(`${seed}:vine-age`, 4, 38))),
+    landValue: Math.round(deterministicSeasonalVariation(`${seed}:land-value`, minLandValue, maxLandValue)),
+    vineyardPrestige: clamp01(0.2 + quality * 0.55 + deterministicSeasonalVariation(`${seed}:prestige`, -0.1, 0.1)),
+    overgrowth: {
+      vegetation: 0,
+      debris: 0,
+      uproot: 0,
+      replant: 0,
+    },
+    pendingFeatures: [],
+    baseQualityScore: quality,
+  };
+}
+
+function getMarketStateProfile(
+  row: Pick<BuyMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'batch_state'>
+): MarketBatchStateProfile {
+  const grapeColor = GRAPE_CONST[row.grape_variety as GrapeVariety]?.grapeColor ?? 'white';
+  const crushingOptions = cloneStateProfile(MARKET_CRUSHING_PROFILE_BY_COLOR[grapeColor]);
+
+  if (row.batch_state === 'grapes') {
+    return { state: 'grapes' };
+  }
+
+  if (row.batch_state === 'must_ready') {
+    return {
+      state: 'must_ready',
+      crushingOptions,
+    };
+  }
+
+  const fermentationOptions = cloneStateProfile(MARKET_FERMENTATION_PROFILE_BY_COLOR[grapeColor]);
+  const progress = Math.round(deterministicSeasonalVariation(`${getOfferSeed(row)}:fermentation-progress`, 18, 68));
+  const fermentationWeeksApplied = Math.max(
+    0,
+    Math.min(
+      MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS,
+      Math.floor((progress / 100) * MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS)
+    )
+  );
+
+  return {
+    state: 'must_fermenting',
+    crushingOptions,
+    fermentationOptions,
+    fermentationProgress: progress,
+    fermentationWeeksApplied,
+  };
+}
+
+function buildPreviewDates(
+  row: Pick<BuyMarketOfferRow, 'created_week' | 'created_season' | 'created_year' | 'last_refreshed_week' | 'last_refreshed_season' | 'last_refreshed_year'>
+): Pick<CreateMarketWineBatchInput, 'harvestStartDate' | 'harvestEndDate'> {
+  const refreshWeek = row.last_refreshed_week ?? row.created_week;
+  const refreshSeason = (row.last_refreshed_season ?? row.created_season) as Season;
+  const refreshYear = row.last_refreshed_year ?? row.created_year;
+
+  return {
+    harvestStartDate: {
+      week: row.created_week,
+      season: row.created_season as Season,
+      year: row.created_year,
+    },
+    harvestEndDate: {
+      week: refreshWeek,
+      season: refreshSeason,
+      year: refreshYear,
+    },
+  };
+}
+
+function toPreviewInput(
+  row: BuyMarketOfferRow,
+  provenanceSnapshot: MarketBatchProvenanceSnapshot,
+  quantityKg: number = row.available_kg
+): CreateMarketWineBatchInput {
+  return {
+    supplierId: row.supplier_id,
+    supplierName: row.supplier_name,
+    originTag: row.origin_tag,
+    source: provenanceSnapshot,
+    grape: row.grape_variety as GrapeVariety,
+    quantity: quantityKg,
+    stateProfile: getMarketStateProfile(row),
+    ...buildPreviewDates(row),
+  };
+}
+
+async function buildOfferPreviewArtifacts(
+  row: BuyMarketOfferRow,
+  supplierCountry: Nationality,
+  quantityKg: number = row.available_kg,
+  qualityScoreOverride?: number
+): Promise<Pick<BuyMarketOfferRow, 'provenance_snapshot' | 'preview_snapshot' | 'preview_version'>> {
+  const provenanceRow = qualityScoreOverride === undefined
+    ? row
+    : { ...row, quality_score: qualityScoreOverride };
+  const provenanceSnapshot = buildOfferProvenanceSnapshot(provenanceRow, supplierCountry);
+  const previewSnapshot = await buildMarketPreviewBatch(
+    toPreviewInput(row, provenanceSnapshot, quantityKg)
+  );
+
+  return {
+    provenance_snapshot: provenanceSnapshot,
+    preview_snapshot: previewSnapshot,
+    preview_version: BUY_OFFER_PREVIEW_VERSION,
+  };
+}
+
+async function resolveSupplierCountry(
+  companyCountry: Nationality,
+  supplierId: string
+): Promise<Nationality> {
+  const [bulkSupplier, seasonalSuppliers] = await Promise.all([
+    getBulkSupplier(companyCountry),
+    getSeasonalSuppliers(companyCountry),
+  ]);
+  const supplier = [bulkSupplier, ...seasonalSuppliers]
+    .filter((profile): profile is BuyMarketSupplierProfile => Boolean(profile))
+    .find((profile) => profile.supplierId === supplierId);
+
+  return toNationality(supplier?.country ?? companyCountry);
+}
+
+async function hydrateOfferRow(
+  companyId: string,
+  companyCountry: Nationality,
+  row: BuyMarketOfferRow
+): Promise<BuyMarketOfferRow | null> {
+  const hasCompatiblePreview =
+    Boolean(row.provenance_snapshot) &&
+    Boolean(row.preview_snapshot) &&
+    row.preview_version === BUY_OFFER_PREVIEW_VERSION;
+
+  if (hasCompatiblePreview) {
+    return row;
+  }
+
+  try {
+    const supplierCountry = await resolveSupplierCountry(companyCountry, row.supplier_id);
+    const artifacts = await buildOfferPreviewArtifacts(row, supplierCountry);
+    const hydratedRow: BuyMarketOfferRow = {
+      ...row,
+      ...artifacts,
+    };
+
+    await updateBuyOfferRow(companyId, row.offer_id, {
+      provenance_snapshot: hydratedRow.provenance_snapshot,
+      preview_snapshot: hydratedRow.preview_snapshot,
+      preview_version: hydratedRow.preview_version,
+      updated_at: new Date().toISOString(),
+    });
+
+    return hydratedRow;
+  } catch (error) {
+    console.warn('Dropping stale buy-market offer that could not be rehydrated.', row.offer_id, error);
+    await deleteBuyOfferRow(companyId, row.offer_id);
+    return null;
+  }
+}
+
 function toOfferModel(
   row: BuyMarketOfferRow,
   demandFactors: BuyMarketDemandFactors,
@@ -244,6 +485,9 @@ function toOfferModel(
     createdWeek: row.created_week,
     supplierLoyalty: supplierLoyaltyById[row.supplier_id] ?? null,
     demandFactors,
+    provenanceSnapshot: row.provenance_snapshot!,
+    previewBatch: row.preview_snapshot!,
+    previewVersion: row.preview_version ?? BUY_OFFER_PREVIEW_VERSION,
   };
 }
 
@@ -375,14 +619,14 @@ function getNextSeason(season: Season, year: number): { season: Season; year: nu
   return { season: nextSeason, year: nextYear };
 }
 
-function buildNewOffer(
+async function buildNewOffer(
   companyId: string,
   offerIndex: number,
   supplier: BuyMarketSupplierProfile,
   demandFactors: BuyMarketDemandFactors,
   companyValue: number,
   prestige: number,
-): BuyMarketOfferRow {
+): Promise<BuyMarketOfferRow> {
   const { week, season, year, economyPhase } = getCurrentTime();
   const offerId = `buy_offer_${season.toLowerCase()}_${year}_${offerIndex}_${Math.random().toString(36).slice(2, 7)}`;
   const batchState = getRandomFromArray(STATE_DISTRIBUTION);
@@ -405,8 +649,7 @@ function buildNewOffer(
   }).toFixed(2));
 
   const expires = getNextSeason(season, year);
-
-  return {
+  const baseRow: BuyMarketOfferRow = {
     company_id: companyId,
     offer_id: offerId,
     ware_group: 'grapes',
@@ -433,6 +676,12 @@ function buildNewOffer(
     expires_season: expires.season,
     expires_week: 1,
     updated_at: new Date().toISOString(),
+  };
+
+  const artifacts = await buildOfferPreviewArtifacts(baseRow, toNationality(supplier.country));
+  return {
+    ...baseRow,
+    ...artifacts,
   };
 }
 
@@ -461,7 +710,7 @@ async function ensureOffers(companyId: string): Promise<void> {
   if (suppliers.length === 0) return;
 
   const targetCount = randomInt(MIN_SEASONAL_OFFERS, MAX_SEASONAL_OFFERS);
-  const generated = Array.from({ length: targetCount }, (_, index) => {
+  const generated = await Promise.all(Array.from({ length: targetCount }, (_, index) => {
     const supplier = pickPreferredSupplier(suppliers, index);
     return buildNewOffer(
       companyId,
@@ -471,7 +720,7 @@ async function ensureOffers(companyId: string): Promise<void> {
       companyValue,
       prestige
     );
-  });
+  }));
   await upsertBuyOfferRows(generated);
 }
 
@@ -484,12 +733,14 @@ export async function getBuyGrapeMarketOffers(): Promise<BuyGrapeMarketOffer[]> 
   const { data, error } = await getCompanyBuyOfferRows(companyId);
   if (error || !data) return [];
 
-  const { demandFactors } = await getMarketContext(companyId);
+  const { country, demandFactors } = await getMarketContext(companyId);
   const rows = (data as unknown) as BuyMarketOfferRow[];
-  const supplierIds = Array.from(new Set(rows.map((row) => row.supplier_id)));
+  const hydratedRows = (await Promise.all(rows.map((row) => hydrateOfferRow(companyId, country, row))))
+    .filter((row): row is BuyMarketOfferRow => Boolean(row));
+  const supplierIds = Array.from(new Set(hydratedRows.map((row) => row.supplier_id)));
   const supplierLoyaltyById = await getSupplierLoyalties(supplierIds);
 
-  return rows
+  return hydratedRows
     .filter(row => row.available_kg > 0)
     .sort((left, right) => right.quality_score - left.quality_score)
     .map((row) => toOfferModel(row, demandFactors, supplierLoyaltyById));
@@ -513,19 +764,33 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
   if (suppliers.length === 0) return;
 
   const existingRows = ((data || []) as unknown) as BuyMarketOfferRow[];
-  const persistentRows = existingRows
-    .filter(row => row.is_persistent && row.available_kg > 0)
-    .slice(0, 3)
-    .map((row) => ({
-      ...row,
-      origin_tag: 'trusted_carryover' as const,
-      supplier_name: row.supplier_name || 'Seasonal Supplier',
-      updated_at: new Date().toISOString(),
-    }));
+  const now = getCurrentTime();
+  const persistentRows = await Promise.all(
+    existingRows
+      .filter(row => row.is_persistent && row.available_kg > 0)
+      .slice(0, 3)
+      .map(async (row) => {
+        const supplierCountry = await resolveSupplierCountry(country, row.supplier_id);
+        const refreshedBaseRow: BuyMarketOfferRow = {
+          ...row,
+          origin_tag: 'trusted_carryover' as const,
+          supplier_name: row.supplier_name || 'Seasonal Supplier',
+          last_refreshed_year: now.year,
+          last_refreshed_season: now.season,
+          last_refreshed_week: now.week,
+          updated_at: new Date().toISOString(),
+        };
+        const artifacts = await buildOfferPreviewArtifacts(refreshedBaseRow, supplierCountry);
+        return {
+          ...refreshedBaseRow,
+          ...artifacts,
+        };
+      })
+  );
 
   const targetCount = randomInt(MIN_SEASONAL_OFFERS, MAX_SEASONAL_OFFERS);
   const generatedCount = Math.max(0, targetCount - persistentRows.length);
-  const newRows = Array.from({ length: generatedCount }, (_, index) => {
+  const newRows = await Promise.all(Array.from({ length: generatedCount }, (_, index) => {
     const supplier = pickPreferredSupplier(suppliers, index + persistentRows.length);
     return buildNewOffer(
       companyId,
@@ -535,7 +800,7 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
       companyValue,
       prestige
     );
-  });
+  }));
 
   const merged = [...persistentRows, ...newRows];
 
@@ -557,7 +822,7 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
 
   const rows = (data as unknown) as BuyMarketOfferRow[];
   const { season, year, economyPhase } = getCurrentTime();
-  const { demandFactors } = await getMarketContext(companyId);
+  const { country, demandFactors } = await getMarketContext(companyId);
   const prestige = getGameState().prestige ?? 0;
   const supplierIds = Array.from(new Set(rows.map((row) => row.supplier_id)));
   const supplierLoyaltyById = await getSupplierLoyalties(supplierIds);
@@ -582,64 +847,19 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
       demandFactors,
     }).toFixed(2));
 
+    const supplierCountry = await resolveSupplierCountry(country, row.supplier_id);
+    const artifacts = await buildOfferPreviewArtifacts(row, supplierCountry, row.available_kg, nextQuality);
+
     await updateBuyOfferRow(companyId, row.offer_id, {
       quality_score: Number(nextQuality.toFixed(3)),
       effective_price_per_kg: nextPrice,
       weeks_on_market: (row.weeks_on_market || 0) + 1,
+      provenance_snapshot: artifacts.provenance_snapshot,
+      preview_snapshot: artifacts.preview_snapshot,
+      preview_version: artifacts.preview_version,
       updated_at: new Date().toISOString(),
     });
   }
-}
-
-function buildPurchasedBatch(offer: BuyMarketOfferRow, quantityKg: number): WineBatch {
-  const currentTime = getCurrentTime();
-  const grapeConfig = GRAPE_CONST[offer.grape_variety as GrapeVariety] || GRAPE_CONST.Chardonnay;
-
-  return {
-    id: uuidv4(),
-    vineyardId: 'market_purchase',
-    vineyardName: `${offer.supplier_name} (${stateLabel(offer.batch_state)})`,
-    grape: offer.grape_variety as GrapeVariety,
-    quantity: quantityKg,
-    state: offer.batch_state,
-    fermentationProgress: offer.batch_state === 'must_fermenting' ? randomInt(5, 65) : 0,
-    landValueModifierHarvestSnapshot: 0.5,
-    structureIndexHarvestSnapshot: offer.quality_score,
-    tasteQualityIndexHarvestSnapshot: offer.quality_score,
-    landValueModifier: 0.5,
-    structureIndex: offer.quality_score,
-    tasteQualityIndex: offer.quality_score,
-    characteristics: {
-      acidity: offer.quality_score,
-      aroma: offer.quality_score,
-      body: offer.quality_score,
-      spice: 0.5,
-      sweetness: 0.5,
-      tannins: 0.5,
-    },
-    estimatedPrice: 0,
-    grapeColor: grapeConfig.grapeColor,
-    naturalYield: grapeConfig.naturalYield,
-    fragile: grapeConfig.fragile,
-    proneToOxidation: grapeConfig.proneToOxidation,
-    features: [],
-    wineAnchors: {
-      sugarPotential: offer.quality_score,
-      acidPotential: offer.quality_score,
-      phenolicPotential: offer.quality_score,
-      aromaticPotential: offer.quality_score,
-      bodyPotential: offer.quality_score,
-      extractionState: offer.batch_state === 'grapes' ? 0.1 : 0.4,
-      fermentationState: offer.batch_state === 'must_fermenting' ? 0.7 : offer.batch_state === 'must_ready' ? 0.3 : 0.05,
-      leesState: 0.1,
-      oxidationPressure: 0.25,
-      maturationState: 0,
-      terroirExpression: 0.5,
-      processFootprint: 0.35,
-    },
-    harvestStartDate: { ...currentTime },
-    harvestEndDate: { ...currentTime },
-  };
 }
 
 export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number): Promise<{ success: boolean; error?: string }> {
@@ -652,7 +872,12 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
     return { success: false, error: 'Offer not found.' };
   }
 
-  const offer = (data as unknown) as BuyMarketOfferRow;
+  const { country } = await getMarketContext(companyId);
+  const rawOffer = (data as unknown) as BuyMarketOfferRow;
+  const offer = await hydrateOfferRow(companyId, country, rawOffer);
+  if (!offer) {
+    return { success: false, error: 'Offer expired and was refreshed. Please reopen the market.' };
+  }
   if (roundedQuantity > offer.available_kg) {
     return { success: false, error: `Requested quantity exceeds available offer volume (${offer.available_kg.toLocaleString()} kg).` };
   }
@@ -674,7 +899,20 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
     return { success: false, error: `Insufficient funds. Required ${formatNumber(totalCost, { currency: true, decimals: 0 })}.` };
   }
 
-  const purchasedBatch = buildPurchasedBatch(offer, roundedQuantity);
+  const previewBatch = offer.preview_snapshot;
+  if (!previewBatch) {
+    return { success: false, error: 'Offer preview could not be loaded. Please reopen the market.' };
+  }
+
+  const purchasedBatch: WineBatch = {
+    ...previewBatch,
+    id: uuidv4(),
+    quantity: roundedQuantity,
+    originSnapshot: previewBatch.originSnapshot ? {
+      ...previewBatch.originSnapshot,
+      previewState: offer.batch_state,
+    } : previewBatch.originSnapshot,
+  };
 
   try {
     await saveWineBatch(purchasedBatch);

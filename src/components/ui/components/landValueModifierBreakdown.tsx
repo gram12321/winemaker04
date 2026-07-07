@@ -44,6 +44,33 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
   // Load vineyard data for wine batches
   useEffect(() => {
     if (wineBatch && !vineyard) {
+      if (wineBatch.originSnapshot?.sourceKind === 'market' && wineBatch.originSnapshot.provenance) {
+        const source = wineBatch.originSnapshot.provenance;
+        setWineBatchVineyard({
+          id: wineBatch.vineyardId,
+          name: wineBatch.vineyardName,
+          country: source.country,
+          region: source.region,
+          hectares: 1,
+          grape: wineBatch.grape,
+          vineAge: source.vineAge,
+          soil: source.soil,
+          altitude: source.altitude,
+          aspect: source.aspect,
+          density: source.density,
+          vineyardHealth: source.vineyardHealth,
+          landValue: source.landValue,
+          vineyardTotalValue: source.landValue,
+          status: 'Growing',
+          ripeness: source.ripeness,
+          vineyardPrestige: source.vineyardPrestige,
+          vineYield: 1,
+          overgrowth: source.overgrowth ?? { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
+          pendingFeatures: source.pendingFeatures ?? [],
+        });
+        return;
+      }
+
       loadVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setWineBatchVineyard(foundVineyard || null);
@@ -61,7 +88,6 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
 
       return getVineyardLandValueModifierFactors(wineBatchVineyard);
     } else if (wineBatch) {
-
       throw new Error(`Vineyard data not found for wine batch ${wineBatch.id}. Cannot calculate land-value modifier factors.`);
     }
     

@@ -45,6 +45,33 @@ export const WineModal: React.FC<WineModalProps> = ({
   // Load vineyard data
   useEffect(() => {
     if (wineBatch && wineBatch.vineyardId) {
+      if (wineBatch.originSnapshot?.sourceKind === 'market' && wineBatch.originSnapshot.provenance) {
+        const source = wineBatch.originSnapshot.provenance;
+        setVineyard({
+          id: wineBatch.vineyardId,
+          name: wineBatch.vineyardName,
+          country: source.country,
+          region: source.region,
+          hectares: 1,
+          grape: wineBatch.grape,
+          vineAge: source.vineAge,
+          soil: source.soil,
+          altitude: source.altitude,
+          aspect: source.aspect,
+          density: source.density,
+          vineyardHealth: source.vineyardHealth,
+          landValue: source.landValue,
+          vineyardTotalValue: source.landValue,
+          status: 'Growing',
+          ripeness: source.ripeness,
+          vineyardPrestige: source.vineyardPrestige,
+          vineYield: 1,
+          overgrowth: source.overgrowth ?? { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
+          pendingFeatures: source.pendingFeatures ?? [],
+        });
+        return;
+      }
+
       loadVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setVineyard(foundVineyard || null);
@@ -1031,6 +1058,39 @@ export const WineModal: React.FC<WineModalProps> = ({
             {/* Origins Tab */}
             <TabsContent value="origins" className="mt-4">
               <div className="space-y-4">
+                {wineBatch.originSnapshot && (
+                  <Card>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2">
+                        <MapPin className="h-4 w-4" /> Source Snapshot
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-3 text-sm space-y-2">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Source</span>
+                        <span className="font-medium capitalize">{wineBatch.originSnapshot.sourceKind}</span>
+                      </div>
+                      {wineBatch.originSnapshot.supplierName && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Supplier</span>
+                          <span className="font-medium">{wineBatch.originSnapshot.supplierName}</span>
+                        </div>
+                      )}
+                      {wineBatch.originSnapshot.terroirSummary && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Terroir</span>
+                          <span className="font-medium text-right">{wineBatch.originSnapshot.terroirSummary}</span>
+                        </div>
+                      )}
+                      {wineBatch.originSnapshot.previewState && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Preview State</span>
+                          <span className="font-medium">{wineBatch.originSnapshot.previewState.replace('_', ' ')}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 <Card>
                   <CardHeader className="py-3">

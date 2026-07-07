@@ -1,5 +1,7 @@
 import { supabase } from '../core/supabase';
 
+import type { MarketBatchProvenanceSnapshot, WineBatch } from '@/lib/types/types';
+
 const TABLE = 'grape_market_buy_offers';
 
 export interface BuyMarketOfferRow {
@@ -28,6 +30,9 @@ export interface BuyMarketOfferRow {
   expires_year: number | null;
   expires_season: string | null;
   expires_week: number | null;
+  provenance_snapshot?: MarketBatchProvenanceSnapshot | null;
+  preview_snapshot?: WineBatch | null;
+  preview_version?: number | null;
   updated_at?: string;
 }
 
@@ -54,7 +59,10 @@ const SELECT_FIELDS = [
   'last_refreshed_week',
   'expires_year',
   'expires_season',
-  'expires_week'
+  'expires_week',
+  'provenance_snapshot',
+  'preview_snapshot',
+  'preview_version'
 ].join(',');
 
 export async function getCompanyBuyOfferRows(companyId: string) {

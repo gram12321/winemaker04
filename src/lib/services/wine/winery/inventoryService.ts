@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { WineBatch, GrapeVariety, WineCharacteristics, GameDate } from '../../../types/types';
+import { WineBatch, GrapeVariety, WineCharacteristics, GameDate, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Vineyard, WineBatchOriginSnapshot, WineBatchState } from '../../../types/types';
 import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
@@ -22,9 +22,469 @@ import {
   WINE_ANCHOR_KEYS
 } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
-import { buildAnchorEffectsFromNeutral } from '../debug/wineAnchorEffectUtils';
+import { appendAnchorEffects, buildAnchorEffectsFromNeutral, diffAnchorEffects } from '../debug/wineAnchorEffectUtils';
+import { CrushingOptions, modifyCrushingCharacteristics } from '../characteristics/crushingCharacteristics';
+import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
+import { applyCrushingToWineAnchors, applyFermentationSetupToWineAnchors, applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
 
 const DEFAULT_TASTE_QUALITY_INDEX = 0.5;
+
+export interface MarketBatchStateProfile {
+  state: Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>;
+  crushingOptions?: CrushingOptions;
+  fermentationOptions?: FermentationOptions;
+  fermentationProgress?: number;
+  fermentationWeeksApplied?: number;
+}
+
+export interface CreateMarketWineBatchInput {
+  supplierId: string;
+  supplierName: string;
+  originTag: MarketOfferOriginTag;
+  source: MarketBatchProvenanceSnapshot;
+  grape: GrapeVariety;
+  quantity: number;
+  harvestStartDate: GameDate;
+  harvestEndDate: GameDate;
+  stateProfile?: MarketBatchStateProfile;
+}
+
+function cloneJsonValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function getPseudoVineyardName(supplierName: string, region: string): string {
+  return `${supplierName} - ${region}`;
+}
+
+function buildTerroirSummary(source: MarketBatchProvenanceSnapshot): string {
+  const soils = source.soil.slice(0, 2).join(', ');
+  return `${source.region}, ${source.country} • ${source.aspect} aspect • ${Math.round(source.altitude)}m • ${soils}`;
+}
+
+function buildMarketOriginSnapshot(
+  supplierId: string,
+  supplierName: string,
+  originTag: MarketOfferOriginTag,
+  state: Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>,
+  source: MarketBatchProvenanceSnapshot
+): WineBatchOriginSnapshot {
+  return {
+    sourceKind: 'market',
+    supplierId,
+    supplierName,
+    originTag,
+    previewState: state,
+    terroirSummary: buildTerroirSummary(source),
+    provenance: cloneJsonValue(source)
+  };
+}
+
+function buildPseudoVineyardFromMarketSource(
+  source: MarketBatchProvenanceSnapshot,
+  vineyardName: string,
+  grape: GrapeVariety
+): Vineyard {
+  return {
+    id: 'market_purchase',
+    name: vineyardName,
+    country: source.country,
+    region: source.region,
+    hectares: 1,
+    grape,
+    vineAge: source.vineAge,
+    soil: cloneJsonValue(source.soil),
+    altitude: source.altitude,
+    aspect: source.aspect,
+    density: source.density,
+    vineyardHealth: source.vineyardHealth,
+    landValue: source.landValue,
+    vineyardTotalValue: source.landValue,
+    status: 'Growing',
+    ripeness: source.ripeness,
+    vineyardPrestige: source.vineyardPrestige,
+    vineYield: 1,
+    overgrowth: cloneJsonValue(source.overgrowth) ?? { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
+    pendingFeatures: cloneJsonValue(source.pendingFeatures) ?? []
+  };
+}
+
+function getAbsoluteWeek(date: GameDate): number {
+  const idx = SEASON_ORDER.indexOf(date.season as typeof SEASON_ORDER[number]);
+  const safeIdx = idx >= 0 ? idx : 0;
+  return (date.year - 2024) * WEEKS_PER_YEAR + safeIdx * WEEKS_PER_SEASON + (date.week - 1);
+}
+
+interface BuildHarvestStageBatchInput {
+  vineyard: Vineyard;
+  vineyardId: string;
+  vineyardName: string;
+  grape: GrapeVariety;
+  quantity: number;
+  harvestStartDate: GameDate;
+  harvestEndDate: GameDate;
+  originSnapshot?: WineBatchOriginSnapshot;
+  companyPrestige?: number;
+  vineyardPrestige?: number;
+}
+
+async function buildHarvestStageBatch(input: BuildHarvestStageBatchInput): Promise<WineBatch> {
+  const {
+    vineyard,
+    vineyardId,
+    vineyardName,
+    grape,
+    quantity,
+    harvestStartDate,
+    harvestEndDate,
+    originSnapshot,
+    companyPrestige,
+    vineyardPrestige
+  } = input;
+
+  const grapeMetadata = GRAPE_CONST[grape];
+  const base = generateDefaultCharacteristics(grape);
+  const country = vineyard.country;
+  const region = vineyard.region;
+  const altitude = vineyard.altitude;
+  const countryAlt = (REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] ?? {}) as Record<string, readonly [number, number]>;
+  const altitudeRange = (countryAlt[region] ?? [0, 100]) as readonly [number, number];
+  const [minAlt, maxAlt] = altitudeRange;
+  const suitabilityMetrics = calculateGrapeSuitabilityMetrics(
+    grape,
+    region,
+    country,
+    altitude,
+    vineyard.aspect,
+    vineyard.soil
+  );
+  const suitability = suitabilityMetrics.overall;
+  const quality = calculateLandValueModifier(vineyard);
+  const wineAnchors = computeHarvestWineAnchors(vineyard, grape, {
+    minAltitude: minAlt,
+    maxAltitude: maxAlt,
+    ripeness: vineyard.ripeness || 0.5,
+    landValueModifier: quality
+  });
+
+  const { characteristics, breakdown } = modifyHarvestCharacteristics({
+    baseCharacteristics: base,
+    ripeness: vineyard.ripeness || 0.5,
+    qualityFactor: quality,
+    suitability,
+    altitude,
+    medianAltitude: (minAlt + maxAlt) / 2,
+    maxAltitude: maxAlt,
+    grapeColor: GRAPE_CONST[grape].grapeColor,
+    overgrowth: vineyard.overgrowth,
+    density: vineyard.density || 0,
+    wineAnchors
+  });
+
+  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+  const structureIndexResult = calculateStructureIndex(characteristics, structureRanges, RANGE_ADJUSTMENTS, RULES);
+  const harvestAnchorEffects = buildAnchorEffectsFromNeutral(
+    wineAnchors,
+    'Harvest anchor snapshot (grape + vineyard + ripeness/site at harvest)'
+  );
+
+  const baseBatch: WineBatch = {
+    id: uuidv4(),
+    vineyardId,
+    vineyardName,
+    grape,
+    quantity,
+    state: 'grapes',
+    fermentationProgress: 0,
+    landValueModifierHarvestSnapshot: quality,
+    structureIndexHarvestSnapshot: structureIndexResult.score,
+    landValueModifier: quality,
+    tasteQualityIndexHarvestSnapshot: DEFAULT_TASTE_QUALITY_INDEX,
+    tasteQualityIndex: DEFAULT_TASTE_QUALITY_INDEX,
+    structureIndex: structureIndexResult.score,
+    characteristics,
+    breakdown: {
+      effects: breakdown.effects,
+      anchorEffects: harvestAnchorEffects
+    },
+    estimatedPrice: 0,
+    grapeColor: grapeMetadata.grapeColor,
+    naturalYield: grapeMetadata.naturalYield,
+    fragile: grapeMetadata.fragile,
+    proneToOxidation: grapeMetadata.proneToOxidation,
+    features: initializeBatchFeatures(),
+    originSnapshot: originSnapshot ? cloneJsonValue(originSnapshot) : undefined,
+    harvestStartDate,
+    harvestEndDate,
+    wineAnchors
+  };
+
+  const batchWithEventFeatures = await processEventTrigger(baseBatch, 'harvest', vineyard);
+  const tasteQualityIndex = getTasteQualityIndex(batchWithEventFeatures);
+  const finalizedBatch: WineBatch = {
+    ...batchWithEventFeatures,
+    tasteQualityIndex,
+    tasteQualityIndexHarvestSnapshot: tasteQualityIndex
+  };
+
+  finalizedBatch.estimatedPrice = calculateEstimatedPrice(
+    finalizedBatch,
+    vineyard,
+    companyPrestige,
+    vineyardPrestige
+  );
+
+  return finalizedBatch;
+}
+
+async function applyCrushingProfileToBatch(
+  batch: WineBatch,
+  crushingOptions: CrushingOptions
+): Promise<WineBatch> {
+  const {
+    characteristics: modifiedCharacteristics,
+    breakdown: crushingBreakdown,
+    yieldMultiplier
+  } = modifyCrushingCharacteristics({
+    baseCharacteristics: batch.characteristics,
+    ...crushingOptions,
+    wineAnchors: resolveWineAnchors(batch.wineAnchors)
+  });
+
+  const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
+  const combinedBreakdown = {
+    effects: [
+      ...(batch.breakdown?.effects || []),
+      ...crushingBreakdown.effects
+    ],
+    anchorEffects: [...(batch.breakdown?.anchorEffects || [])]
+  };
+
+  const updatedBatch = {
+    ...batch,
+    characteristics: modifiedCharacteristics,
+    breakdown: combinedBreakdown,
+    quantity: finalQuantity,
+    tasteQualityIndex: getTasteQualityIndex(batch)
+  };
+
+  const batchWithEventFeatures = await processEventTrigger(
+    updatedBatch,
+    'crushing',
+    { options: crushingOptions, batch: updatedBatch }
+  );
+
+  const anchorsBeforeCrushing = resolveWineAnchors(batchWithEventFeatures.wineAnchors);
+  const wineAnchors = applyCrushingToWineAnchors(anchorsBeforeCrushing, crushingOptions);
+  const crushingAnchorEffects = diffAnchorEffects(
+    anchorsBeforeCrushing,
+    wineAnchors,
+    `Crushing (${crushingOptions.method})`
+  );
+
+  const charsAfterCrush = batchWithEventFeatures.characteristics || modifiedCharacteristics;
+  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+  const structureIndexResult = calculateStructureIndex(
+    charsAfterCrush,
+    structureRanges,
+    RANGE_ADJUSTMENTS,
+    RULES
+  );
+
+  const batchAfterCrush: WineBatch = {
+    ...batchWithEventFeatures,
+    state: 'must_ready',
+    characteristics: charsAfterCrush,
+    breakdown: appendAnchorEffects(batchWithEventFeatures.breakdown || combinedBreakdown, crushingAnchorEffects),
+    quantity: finalQuantity,
+    structureIndex: structureIndexResult.score,
+    tasteQualityIndex: getTasteQualityIndex({
+      ...batchWithEventFeatures,
+      characteristics: charsAfterCrush,
+      structureIndex: structureIndexResult.score,
+      wineAnchors
+    }),
+    wineAnchors
+  };
+
+  if (batchAfterCrush.originSnapshot) {
+    batchAfterCrush.originSnapshot = {
+      ...batchAfterCrush.originSnapshot,
+      previewState: 'must_ready'
+    };
+  }
+
+  return batchAfterCrush;
+}
+
+async function applyFermentationSetupToBatch(
+  batch: WineBatch,
+  fermentationOptions: FermentationOptions
+): Promise<WineBatch> {
+  const updatedBatch = {
+    ...batch,
+    state: 'must_fermenting' as const,
+    fermentationOptions
+  };
+  const batchWithEventFeatures = await processEventTrigger(
+    updatedBatch,
+    'fermentation',
+    { options: fermentationOptions, batch: updatedBatch }
+  );
+
+  const anchorsBeforeSetup = resolveWineAnchors(batchWithEventFeatures.wineAnchors);
+  const wineAnchors = applyFermentationSetupToWineAnchors(
+    anchorsBeforeSetup,
+    fermentationOptions
+  );
+  const setupAnchorEffects = diffAnchorEffects(
+    anchorsBeforeSetup,
+    wineAnchors,
+    `Fermentation setup (${fermentationOptions.method}, ${fermentationOptions.temperature})`
+  );
+
+  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+  const structureIndexResult = calculateStructureIndex(
+    batchWithEventFeatures.characteristics,
+    structureRanges,
+    RANGE_ADJUSTMENTS,
+    RULES
+  );
+
+  const batchAfterSetup: WineBatch = {
+    ...batchWithEventFeatures,
+    state: 'must_fermenting',
+    fermentationOptions,
+    breakdown: appendAnchorEffects(batchWithEventFeatures.breakdown, setupAnchorEffects),
+    structureIndex: structureIndexResult.score,
+    tasteQualityIndex: getTasteQualityIndex({
+      ...batchWithEventFeatures,
+      structureIndex: structureIndexResult.score,
+      wineAnchors
+    }),
+    wineAnchors
+  };
+
+  if (batchAfterSetup.originSnapshot) {
+    batchAfterSetup.originSnapshot = {
+      ...batchAfterSetup.originSnapshot,
+      previewState: 'must_fermenting'
+    };
+  }
+
+  return batchAfterSetup;
+}
+
+function applyFermentationContactWeeks(
+  batch: WineBatch,
+  weeks: number
+): WineBatch {
+  let current = batch;
+
+  for (let index = 0; index < weeks; index++) {
+    if (!current.fermentationOptions) break;
+
+    const { characteristics: newCharacteristics, breakdown } = applyWeeklyFermentationEffects({
+      baseCharacteristics: current.characteristics,
+      method: current.fermentationOptions.method,
+      temperature: current.fermentationOptions.temperature,
+      wineAnchors: resolveWineAnchors(current.wineAnchors)
+    });
+
+    const anchorsBeforeWeeklyContact = resolveWineAnchors(current.wineAnchors);
+    const wineAnchors = applyWeeklyFermentationContactToWineAnchors(
+      anchorsBeforeWeeklyContact,
+      current.fermentationOptions
+    );
+    const weeklyAnchorEffects = diffAnchorEffects(
+      anchorsBeforeWeeklyContact,
+      wineAnchors,
+      'Weekly fermentation contact'
+    );
+    const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+    const structureIndexResult = calculateStructureIndex(
+      newCharacteristics,
+      structureRanges,
+      RANGE_ADJUSTMENTS,
+      RULES
+    );
+
+    current = {
+      ...current,
+      characteristics: newCharacteristics,
+      tasteQualityIndex: getTasteQualityIndex({
+        ...current,
+        characteristics: newCharacteristics,
+        structureIndex: structureIndexResult.score,
+        wineAnchors
+      }),
+      structureIndex: structureIndexResult.score,
+      breakdown: {
+        effects: [
+          ...(current.breakdown?.effects || []),
+          ...breakdown.effects
+        ],
+        anchorEffects: [
+          ...(current.breakdown?.anchorEffects || []),
+          ...weeklyAnchorEffects
+        ]
+      },
+      wineAnchors
+    };
+  }
+
+  return current;
+}
+
+async function buildMarketStateBatch(input: CreateMarketWineBatchInput): Promise<WineBatch> {
+  const stateProfile = input.stateProfile ?? { state: 'grapes' };
+  const pseudoVineyardName = getPseudoVineyardName(input.supplierName, input.source.region);
+  const pseudoVineyard = buildPseudoVineyardFromMarketSource(input.source, pseudoVineyardName, input.grape);
+  const originSnapshot = buildMarketOriginSnapshot(
+    input.supplierId,
+    input.supplierName,
+    input.originTag,
+    stateProfile.state,
+    input.source
+  );
+
+  const prestigeData = await calculateCurrentPrestige();
+  let batch = await buildHarvestStageBatch({
+    vineyard: pseudoVineyard,
+    vineyardId: 'market_purchase',
+    vineyardName: input.supplierName,
+    grape: input.grape,
+    quantity: input.quantity,
+    harvestStartDate: input.harvestStartDate,
+    harvestEndDate: input.harvestEndDate,
+    originSnapshot,
+    companyPrestige: prestigeData.companyPrestige,
+    vineyardPrestige: 0
+  });
+
+  if (stateProfile.state === 'must_ready') {
+    if (!stateProfile.crushingOptions) {
+      throw new Error('Market must preview requires crushing options.');
+    }
+    batch = await applyCrushingProfileToBatch(batch, stateProfile.crushingOptions);
+  }
+
+  if (stateProfile.state === 'must_fermenting') {
+    if (!stateProfile.crushingOptions || !stateProfile.fermentationOptions) {
+      throw new Error('Market fermenting preview requires crushing and fermentation options.');
+    }
+    batch = await applyCrushingProfileToBatch(batch, stateProfile.crushingOptions);
+    batch = await applyFermentationSetupToBatch(batch, stateProfile.fermentationOptions);
+    batch = applyFermentationContactWeeks(batch, stateProfile.fermentationWeeksApplied ?? 0);
+    batch = {
+      ...batch,
+      fermentationProgress: stateProfile.fermentationProgress ?? 0
+    };
+  }
+
+  batch.estimatedPrice = calculateEstimatedPrice(batch, pseudoVineyard, prestigeData.companyPrestige, 0);
+  return batch;
+}
 
 /**
  * Inventory Service
@@ -179,161 +639,67 @@ export async function createWineBatchFromHarvest(
   harvestStartDate: GameDate,  // Required: activity start date
   harvestEndDate: GameDate     // Required: current harvest date for this batch
 ): Promise<WineBatch> {
-  // Get vineyard data for pricing calculations
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
-  
+
   if (!vineyard) {
     throw new Error(`Vineyard not found: ${vineyardId}`);
   }
-  
-  // Get grape metadata
-  const grapeMetadata = GRAPE_CONST[grape];
-  
-  // Derive starting characteristics from grape base + vineyard conditions
-  const base = generateDefaultCharacteristics(grape);
-  const country = vineyard.country;
-  const region = vineyard.region;
-  const altitude = vineyard.altitude;
-  const countryAlt = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] || {} as any;
-  const [minAlt, maxAlt] = (countryAlt[region as keyof typeof countryAlt] as [number, number]) || [0, 100];
-  const suitabilityMetrics = calculateGrapeSuitabilityMetrics(
-    grape,
-    region,
-    country,
-    altitude,
-    vineyard.aspect,
-    vineyard.soil
-  );
-  const suitability = suitabilityMetrics.overall;
-
-  const quality = calculateLandValueModifier(vineyard);
-
-  const wineAnchors = computeHarvestWineAnchors(vineyard, grape, {
-    minAltitude: minAlt,
-    maxAltitude: maxAlt,
-    ripeness: vineyard.ripeness || 0.5,
-    landValueModifier: quality
-  });
-
-  const { characteristics, breakdown } = modifyHarvestCharacteristics({
-    baseCharacteristics: base,
-    ripeness: vineyard.ripeness || 0.5,
-    qualityFactor: quality,
-    suitability,
-    altitude,
-    medianAltitude: (minAlt + maxAlt) / 2,
-    maxAltitude: maxAlt,
-    grapeColor: GRAPE_CONST[grape].grapeColor,
-    overgrowth: vineyard.overgrowth,
-    density: vineyard.density || 0,
-    wineAnchors
-  });
-
-  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
-  const structureIndexResult = calculateStructureIndex(characteristics, structureRanges, RANGE_ADJUSTMENTS, RULES);
-  
-  // Check for existing compatible wine batch
   const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestStartDate.year);
-  
+  const prestigeData = await calculateCurrentPrestige();
+
+  const incomingBatch = await buildHarvestStageBatch({
+    vineyard,
+    vineyardId,
+    vineyardName,
+    grape,
+    quantity,
+    harvestStartDate,
+    harvestEndDate,
+    companyPrestige: prestigeData.companyPrestige,
+    vineyardPrestige: vineyard.vineyardPrestige
+  });
+
   if (existingBatch) {
-    // Combine with existing batch
     const combinedBatch = combineWineBatches(
       existingBatch,
       quantity,
-      quality, // Use vineyard quality
-      characteristics,
-      wineAnchors
+      incomingBatch.landValueModifierHarvestSnapshot,
+      incomingBatch.characteristics,
+      incomingBatch.wineAnchors
     );
-    
-    // Recalculate estimated price for the combined batch with prestige multipliers
-    const prestigeData = await calculateCurrentPrestige();
+
     const estimatedPrice = calculateEstimatedPrice(
-      combinedBatch, 
-      vineyard, 
-      prestigeData.companyPrestige, 
-      vineyard.vineyardPrestige
-    );
-    combinedBatch.estimatedPrice = estimatedPrice;
-    
-    // Update harvest period bounds
-    const startCandidate = existingBatch.harvestStartDate;
-    const endCandidate = existingBatch.harvestEndDate;
-    
-    // Helper to compare dates as absolute weeks
-    const toAbs = (d: { week: number; season: string; year: number }): number => {
-      const idx = SEASON_ORDER.indexOf(d.season as typeof SEASON_ORDER[number]);
-      const safeIdx = idx >= 0 ? idx : 0;
-      return (d.year - 2024) * WEEKS_PER_YEAR + safeIdx * WEEKS_PER_SEASON + (d.week - 1);
-    };
-    const newStart = toAbs(harvestStartDate) < toAbs(startCandidate) ? harvestStartDate : startCandidate;
-    const newEnd = toAbs(harvestEndDate) > toAbs(endCandidate) ? harvestEndDate : endCandidate;
-    combinedBatch.harvestStartDate = newStart as any;
-    combinedBatch.harvestEndDate = newEnd as any;
-    
-    await saveWineBatch(combinedBatch);
-    triggerGameUpdate();
-    return combinedBatch;
-  } else {
-    // Create new wine batch
-    const harvestAnchorEffects = buildAnchorEffectsFromNeutral(
-      wineAnchors,
-      'Harvest anchor snapshot (grape + vineyard + ripeness/site at harvest)'
-    );
-    const wineBatch: WineBatch = {
-      id: uuidv4(),
-      vineyardId,
-      vineyardName,
-      grape,
-      quantity,
-      state: 'grapes',
-      fermentationProgress: 0,
-      // Set born values (immutable snapshots at harvest)
-      landValueModifierHarvestSnapshot: quality,
-      structureIndexHarvestSnapshot: structureIndexResult.score,
-      // Set current values
-      landValueModifier: quality,
-      tasteQualityIndexHarvestSnapshot: DEFAULT_TASTE_QUALITY_INDEX,
-      tasteQualityIndex: DEFAULT_TASTE_QUALITY_INDEX,
-      structureIndex: structureIndexResult.score,
-      characteristics,
-      breakdown: {
-        effects: breakdown.effects,
-        anchorEffects: harvestAnchorEffects
-      }, // Store breakdown data
-      estimatedPrice: 0, // Will be calculated below
-      grapeColor: grapeMetadata.grapeColor,
-      naturalYield: grapeMetadata.naturalYield,
-      fragile: grapeMetadata.fragile,
-      proneToOxidation: grapeMetadata.proneToOxidation,
-      features: initializeBatchFeatures(), // Initialize features array
-      harvestStartDate: harvestStartDate,
-      harvestEndDate: harvestEndDate,
-      wineAnchors
-    };
-
-    // Process harvest event triggers (e.g., green flavor from underripe grapes)
-    const batchWithEventFeatures = await processEventTrigger(wineBatch, 'harvest', vineyard);
-    const tasteQualityIndex = getTasteQualityIndex(batchWithEventFeatures);
-    const finalizedBatch = {
-      ...batchWithEventFeatures,
-      tasteQualityIndex: tasteQualityIndex,
-      tasteQualityIndexHarvestSnapshot: tasteQualityIndex
-    };
-
-    // Calculate estimated price using the pricing service with prestige multipliers
-    const prestigeData = await calculateCurrentPrestige();
-    finalizedBatch.estimatedPrice = calculateEstimatedPrice(
-      finalizedBatch,
+      combinedBatch,
       vineyard,
       prestigeData.companyPrestige,
       vineyard.vineyardPrestige
     );
+    combinedBatch.estimatedPrice = estimatedPrice;
+    const startCandidate = existingBatch.harvestStartDate;
+    const endCandidate = existingBatch.harvestEndDate;
+    combinedBatch.harvestStartDate = getAbsoluteWeek(harvestStartDate) < getAbsoluteWeek(startCandidate) ? harvestStartDate : startCandidate;
+    combinedBatch.harvestEndDate = getAbsoluteWeek(harvestEndDate) > getAbsoluteWeek(endCandidate) ? harvestEndDate : endCandidate;
 
-    await saveWineBatch(finalizedBatch);
+    await saveWineBatch(combinedBatch);
     triggerGameUpdate();
-    return finalizedBatch;
+    return combinedBatch;
   }
+
+  await saveWineBatch(incomingBatch);
+  triggerGameUpdate();
+  return incomingBatch;
+}
+
+export async function buildMarketPreviewBatch(input: CreateMarketWineBatchInput): Promise<WineBatch> {
+  return await buildMarketStateBatch(input);
+}
+
+export async function createWineBatchFromMarketSource(input: CreateMarketWineBatchInput): Promise<WineBatch> {
+  const batch = await buildMarketStateBatch(input);
+  await saveWineBatch(batch);
+  triggerGameUpdate();
+  return batch;
 }
 
 // Get all wine batches

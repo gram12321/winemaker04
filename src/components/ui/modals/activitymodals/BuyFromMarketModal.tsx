@@ -4,6 +4,8 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogH
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
 import { MarketQuickBuyRowAction } from '../../market/MarketQuickBuyRowAction';
+import { FeatureDisplay } from '../../components/FeatureDisplay';
+import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
@@ -63,6 +65,12 @@ function getOriginLabel(originTag: BuyGrapeMarketOffer['originTag']): string {
   if (originTag === 'trusted_carryover') return 'Trusted Carryover';
   if (originTag === 'country_special') return 'Country Special';
   return 'Seasonal Rotation';
+}
+
+function getProcessingContextLabel(offer: BuyGrapeMarketOffer): string {
+  if (offer.batchState === 'must_fermenting') return 'Supplier-crushed and already in fermentation';
+  if (offer.batchState === 'must_ready') return 'Supplier-crushed must, ready for fermentation';
+  return 'Fresh grapes at harvest-equivalent stage';
 }
 
 function getDemandPressureIndex(offer: Pick<BuyGrapeMarketOffer, 'demandFactors'>): number {
@@ -350,6 +358,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     if (!selectedOffer) return null;
     return getBuyOfferPriceBreakdown(selectedOffer);
   }, [selectedOffer]);
+  const selectedPreviewBatch = selectedOffer?.previewBatch ?? null;
 
   const selectedDemandPressureIndex = useMemo(() => {
     if (!selectedOffer) return 1;
@@ -717,6 +726,66 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               </select>
             </div>
           </div>
+
+          {selectedOffer && selectedPreviewBatch && (
+            <div className="rounded border border-emerald-800/60 bg-emerald-950/20 p-4 space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-emerald-200">Purchase Preview</div>
+                  <div className="mt-1 text-xs text-gray-300">{selectedPreviewBatch.originSnapshot?.terroirSummary ?? 'Origin snapshot unavailable'}</div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    {getOriginLabel(selectedOffer.originTag)} · {getBuyOfferStateLabel(selectedOffer.batchState)} · {getProcessingContextLabel(selectedOffer)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-right">
+                  <div className="text-gray-400">Structure</div>
+                  <div className="text-white">{Math.round(selectedPreviewBatch.structureIndex * 100)}%</div>
+                  <div className="text-gray-400">Taste Quality</div>
+                  <div className="text-white">{Math.round(selectedPreviewBatch.tasteQualityIndex * 100)}%</div>
+                  <div className="text-gray-400">Land Value</div>
+                  <div className="text-white">{Math.round(selectedPreviewBatch.landValueModifier * 100)}%</div>
+                  <div className="text-gray-400">Preview Version</div>
+                  <div className="text-white">v{selectedOffer.previewVersion}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <div className="rounded border border-gray-700/70 bg-gray-900/40 p-3">
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-300">Terroir</div>
+                  <div className="space-y-1 text-xs text-gray-300">
+                    <div>{selectedOffer.provenanceSnapshot.region}, {selectedOffer.provenanceSnapshot.country}</div>
+                    <div>{selectedOffer.provenanceSnapshot.soil.join(', ')}</div>
+                    <div>{selectedOffer.provenanceSnapshot.aspect} aspect · {selectedOffer.provenanceSnapshot.altitude}m · density {selectedOffer.provenanceSnapshot.density.toLocaleString()}</div>
+                    <div>Health {Math.round(selectedOffer.provenanceSnapshot.vineyardHealth * 100)}% · Ripeness {Math.round(selectedOffer.provenanceSnapshot.ripeness * 100)}% · Prestige {Math.round(selectedOffer.provenanceSnapshot.vineyardPrestige * 100)}%</div>
+                  </div>
+                </div>
+
+                <div className="rounded border border-gray-700/70 bg-gray-900/40 p-3">
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-300">Characteristics</div>
+                  <WineCharacteristicsDisplay
+                    characteristics={selectedPreviewBatch.characteristics}
+                    showValues={true}
+                    collapsible={false}
+                    title=""
+                    showStructureIndex={true}
+                    structureIndexValue={selectedPreviewBatch.structureIndex}
+                    className="text-white"
+                  />
+                </div>
+
+                <div className="rounded border border-gray-700/70 bg-gray-900/40 p-3">
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-300">Features and Risks</div>
+                  <FeatureDisplay
+                    batch={selectedPreviewBatch}
+                    showEvolving={true}
+                    showActive={true}
+                    showRisks={true}
+                    className="text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden">
             <div className="overflow-x-auto max-h-[56vh]">

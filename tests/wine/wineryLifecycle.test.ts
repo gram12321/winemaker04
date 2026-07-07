@@ -263,4 +263,60 @@ describe('winery harvest-to-bottle lifecycle', () => {
       state: 'bottled'
     }));
   });
+
+  it('creates a market-origin batch from pseudo-vineyard inputs with harvest-equivalent identity', async () => {
+    const { createWineBatchFromMarketSource } = await import('@/lib/services/wine/winery/inventoryService');
+
+    const harvestDate = { week: 3, season: 'Spring' as const, year: 2026 };
+    const batch = await createWineBatchFromMarketSource({
+      supplierId: 'bulk_supplier',
+      supplierName: 'Bulk Supply Syndicate',
+      originTag: 'country_special',
+      source: {
+        country: 'France',
+        region: 'Bourgogne',
+        soil: ['Clay', 'Limestone'],
+        aspect: 'Southeast',
+        altitude: 280,
+        density: 4800,
+        vineyardHealth: 0.84,
+        ripeness: 0.76,
+        vineAge: 18,
+        landValue: 210000,
+        vineyardPrestige: 0.58,
+        overgrowth: { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
+        pendingFeatures: [],
+        baseQualityScore: 0.76
+      },
+      grape: 'Pinot Noir',
+      quantity: 900,
+      harvestStartDate: harvestDate,
+      harvestEndDate: harvestDate
+    });
+
+    expect(batch).toMatchObject({
+      vineyardId: 'market_purchase',
+      vineyardName: 'Bulk Supply Syndicate',
+      grape: 'Pinot Noir',
+      quantity: 900,
+      state: 'grapes',
+      harvestStartDate: harvestDate,
+      harvestEndDate: harvestDate,
+      originSnapshot: expect.objectContaining({
+        sourceKind: 'market',
+        supplierId: 'bulk_supplier',
+        supplierName: 'Bulk Supply Syndicate',
+        originTag: 'country_special',
+        terroirSummary: expect.any(String)
+      })
+    });
+    expect(batch.characteristics).toBeDefined();
+    expect(batch.wineAnchors).toBeDefined();
+    expect(batch.breakdown?.anchorEffects?.length).toBeGreaterThan(0);
+    expect(batch.estimatedPrice).toBeGreaterThanOrEqual(0);
+    expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({
+      vineyardId: 'market_purchase',
+      originSnapshot: expect.objectContaining({ sourceKind: 'market' })
+    }));
+  });
 });
