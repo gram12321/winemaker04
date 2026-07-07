@@ -12,7 +12,7 @@ import {
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray, randomInt } from '../../utils';
 import { formatNumber } from '../../utils/utils';
-import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY, GRAPE_CONST } from '../../constants';
+import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, GRAPE_CONST } from '../../constants';
 import { addTransaction, getGameState } from '../index';
 import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
@@ -323,12 +323,6 @@ export async function completePlanting(vineyardId: string, targetDensity: number
 
   triggerGameUpdate();
   return true;
-}
-
-// Legacy function for backward compatibility (now calls initializePlanting + completePlanting)
-export async function plantVineyard(vineyardId: string, grape: GrapeVariety, density?: number): Promise<boolean> {
-  await initializePlanting(vineyardId, grape);
-  return await completePlanting(vineyardId, density || DEFAULT_VINE_DENSITY);
 }
 
 // Get all vineyards with refreshed prestige values

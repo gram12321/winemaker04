@@ -178,9 +178,6 @@ export const calculateCompanyValue = async (): Promise<number> => {
   }
 };
 
-// Legacy export for backwards compatibility (deprecated - use calculateCompanyValue)
-export const calculateNetWorth = calculateCompanyValue;
-
 export const calculateTotalAssets = async (): Promise<number> => {
   try {
     const financialData = await calculateFinancialData('year');
