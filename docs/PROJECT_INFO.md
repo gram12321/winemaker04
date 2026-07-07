@@ -68,9 +68,15 @@ This file is the ownership and module map for the current mainline codebase. Beh
 
 ## Current Boundary Rules
 
-- React pages, hooks, and reusable UI should read game data through service seams such as `getAllWineBatches()`, `getStoredVineyards()`, `getWineLogEntries()`, `getAllOrders()`, `getAllWineContracts()`, `getActiveCustomers()`, and `updateActivity()`.
-- Database modules remain CRUD-only and should not be imported directly into normal gameplay UI unless the surface is explicitly test/admin-only.
+- `*DB.ts` files own persistence and row mapping.
+- UI and hooks should not import database modules directly.
+- Higher-level services should prefer existing service seams over direct `database/*` imports when a clear domain seam already exists.
+- Compatibility exports should not remain in service files without active callers.
 - Static market tuning values belong in `src/lib/constants/`, not in service files. Service files may compose those constants but should not be the canonical source for reusable UI copy/tables.
+- React pages, hooks, and reusable UI should read game data through service seams such as `getAllWineBatches()`, `getStoredVineyards()`, `getWineLogEntries()`, `getAllOrders()`, `getAllWineContracts()`, `getActiveCustomers()`, and `updateActivity()`.
+- Removed dead compatibility exports such as `plantVineyard()` and `calculateNetWorth`.
+- Removed sales-service constant re-export shims after tests were updated to import from `@/lib/constants`.
+- Inventory persistence in buy-market and wine-sales flows now routes through `inventoryService`.
 
 ## Database Areas
 
