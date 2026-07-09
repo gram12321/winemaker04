@@ -75,8 +75,8 @@ This file is the ownership and module map for the current mainline codebase. Beh
 - Static market tuning values belong in `src/lib/constants/`, not in service files. Service files may compose those constants but should not be the canonical source for reusable UI copy/tables.
 - React pages, hooks, and reusable UI should read game data through service seams such as `getAllWineBatches()`, `getStoredVineyards()`, `getWineLogEntries()`, `getAllOrders()`, `getAllWineContracts()`, `getActiveCustomers()`, and `updateActivity()`.
 - Removed dead compatibility exports such as `plantVineyard()` and `calculateNetWorth`.
-- Removed sales-service constant re-export shims after tests were updated to import from `@/lib/constants`.
-- Inventory persistence in buy-market and wine-sales flows now routes through `inventoryService`.
+- Removed sales-service constant re-export shims; market tuning constants should be consumed from `@/lib/constants`.
+- Inventory persistence for buy-market purchases, sales-order fulfillment, and contract fulfillment now routes through `inventoryService`.
 
 ## Database Areas
 
