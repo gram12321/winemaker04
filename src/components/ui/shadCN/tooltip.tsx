@@ -128,7 +128,8 @@ export function TooltipRow({
   valueRating,
   icon, 
   monospaced = false,
-  badge = false
+  badge = false,
+  tone = 'default',
 }: { 
   label?: string; 
   value: React.ReactNode; 
@@ -136,16 +137,21 @@ export function TooltipRow({
   icon?: React.ReactNode; 
   monospaced?: boolean;
   badge?: boolean;
+  tone?: 'default' | 'danger';
 }) {
   const colorClass = valueRating !== undefined ? getColorClass(valueRating) : '';
   const badgeClasses = badge && valueRating !== undefined ? getBadgeColorClasses(valueRating) : { bg: '', text: '' };
+  const toneClasses = tone === 'danger'
+    ? { label: 'text-red-300', value: 'text-red-200 font-medium' }
+    : { label: '', value: '' };
   
   return (
     <div className="flex items-center justify-between gap-2">
-      {label && <span className={cn(tooltipStyles.text, tooltipStyles.muted)}>{label}</span>}
+      {label && <span className={cn(tooltipStyles.text, tooltipStyles.muted, toneClasses.label)}>{label}</span>}
       <span className={cn(
         tooltipStyles.text,
         colorClass,
+        toneClasses.value,
         badge ? badgeClasses.bg : '',
         badge && valueRating !== undefined ? badgeClasses.text : '',
         badge && 'px-1.5 py-0.5 rounded text-xs',

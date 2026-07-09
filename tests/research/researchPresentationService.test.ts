@@ -6,6 +6,7 @@ import {
   getResearchDependencyMetadata,
   getResearchDisplayGroup,
   getResearchGateChips,
+  getResearchRewardDetails,
 } from '@/lib/features/researchUpgrade/services/research/researchPresentationService';
 
 function projectById(id: string) {
@@ -45,6 +46,32 @@ describe('research presentation service', () => {
 
     const foundationGateTypes = getResearchGateChips(projectById('foundation_admin_methodology')).map(chip => chip.type);
     expect(foundationGateTypes).toEqual(expect.arrayContaining(['company', 'age']));
+  });
+
+  it('builds player-facing reward details for unlocks and effects', () => {
+    expect(getResearchRewardDetails(projectById('tech_fermentation'))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Fermentation method',
+          value: 'Unlock Temperature Controlled fermentation',
+        }),
+        expect.objectContaining({
+          label: 'Prestige',
+          value: expect.stringContaining('prestige'),
+        }),
+      ])
+    );
+
+    expect(getResearchRewardDetails(projectById('foundation_admin_baseline'))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Admin & research work',
+        }),
+        expect.objectContaining({
+          label: 'Prestige',
+        }),
+      ])
+    );
   });
 
   it('derives unlock-next titles and ladder footprint summaries', () => {

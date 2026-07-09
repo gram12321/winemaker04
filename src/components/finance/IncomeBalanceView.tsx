@@ -34,7 +34,8 @@ const DataRow: React.FC<{ label: string; value: string | number; valueClass?: st
 export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
   const financialData = useGameStateWithData(
     () => calculateFinancialData(period, filters),
-    DEFAULT_FINANCIAL_DATA
+    DEFAULT_FINANCIAL_DATA,
+    { deps: [period, filters.week, filters.season, filters.year] }
   );
 
   const loanPortfolio = useGameStateWithData(

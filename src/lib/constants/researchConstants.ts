@@ -4,7 +4,7 @@
  */
 
 import { GrapeVariety, GRAPE_VARIETIES } from '../types/types';
-import { calculateGrapeDifficulty } from '../services/wine/features/grapeDifficulty';
+import { calculateGrapeDifficulty, type GrapeDifficultyBreakdown } from '../services/wine/features/grapeDifficulty';
 import { getGrapeIconSrc } from '../utils/icons';
 import { type BuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 
@@ -96,8 +96,8 @@ export interface ResearchProject {
 }
 
 export interface ResearchProjectEconomics {
-      workAmount: number;
-      moneyCost: number;
+      workAmount: number; // Base workload anchor before research profile scaling
+      moneyCost: number; // Base budget anchor before research profile scaling
 }
 
 // Baseline gameplay caps used by services, UI constraints, and research ladder summaries.
@@ -107,86 +107,86 @@ export const BASE_VINEYARD_COUNT_LIMIT = 1;
 export const BASE_STAFF_LIMIT = 2;
 
 export const RESEARCH_PROJECT_ECONOMICS: Record<string, ResearchProjectEconomics> = {
-      foundation_admin_baseline: { workAmount: 177, moneyCost: 5300 },
-      foundation_admin_methodology: { workAmount: 302, moneyCost: 6200 },
-      foundation_admin_office: { workAmount: 1206, moneyCost: 18500 },
-      tech_experimental_cellar_lab: { workAmount: 4730, moneyCost: 93700 },
-      tech_innovation_program: { workAmount: 11683, moneyCost: 231300 },
-      tech_research_institute_network: { workAmount: 46107, moneyCost: 912900 },
-      foundation_grant_basic: { workAmount: 132, moneyCost: 3900 },
-      foundation_grant_programmatic: { workAmount: 620, moneyCost: 9800 },
-      foundation_grant_advanced: { workAmount: 1679, moneyCost: 10600 },
-      tech_soil_analysis: { workAmount: 1773, moneyCost: 35100 },
-      tech_fermentation: { workAmount: 3540, moneyCost: 70100 },
-      tech_fermentation_extended: { workAmount: 5361, moneyCost: 106100 },
-      tech_vineyard_health_monitoring: { workAmount: 3579, moneyCost: 70900 },
-      agri_barbera: { workAmount: 1396, moneyCost: 20100 },
-      agri_chardonnay: { workAmount: 2733, moneyCost: 39400 },
-      agri_pinot_noir: { workAmount: 3921, moneyCost: 56500 },
-      agri_primitivo: { workAmount: 2733, moneyCost: 39400 },
-      agri_sauvignon_blanc: { workAmount: 3921, moneyCost: 56500 },
-      agri_tempranillo: { workAmount: 2733, moneyCost: 39400 },
-      agri_sangiovese: { workAmount: 2733, moneyCost: 39400 },
-      eff_microplot_management: { workAmount: 320, moneyCost: 11900 },
-      eff_smallholding_operations: { workAmount: 430, moneyCost: 13900 },
-      eff_estate_foundations: { workAmount: 1118, moneyCost: 19100 },
-      eff_operational: { workAmount: 3619, moneyCost: 61900 },
-      eff_site_expansion: { workAmount: 4841, moneyCost: 82800 },
-      eff_estate_scale: { workAmount: 21946, moneyCost: 375300 },
-      eff_regional_holdings: { workAmount: 23100, moneyCost: 395000 },
-      eff_networked_estates: { workAmount: 45777, moneyCost: 782800 },
-      eff_industrial_fleet_management: { workAmount: 48007, moneyCost: 820900 },
-      eff_land_portfolio_management: { workAmount: 48582, moneyCost: 830800 },
-      eff_megavineyard_control: { workAmount: 51081, moneyCost: 873500 },
-      eff_agri_enterprise_planning: { workAmount: 51750, moneyCost: 884900 },
-      eff_global_land_network: { workAmount: 54559, moneyCost: 933000 },
-      eff_superestate_command: { workAmount: 55353, moneyCost: 946500 },
-      eff_total_land_budgeting: { workAmount: 425, moneyCost: 13900 },
-      eff_total_estate_area_2: { workAmount: 3536, moneyCost: 60500 },
-      eff_total_estate_area_4: { workAmount: 4754, moneyCost: 81300 },
-      eff_total_estate_area_8: { workAmount: 11490, moneyCost: 196500 },
-      eff_total_estate_area_16: { workAmount: 22053, moneyCost: 377100 },
-      eff_total_estate_area_32: { workAmount: 22365, moneyCost: 382400 },
-      eff_total_estate_area_64: { workAmount: 45564, moneyCost: 779100 },
-      eff_total_estate_area_128: { workAmount: 46112, moneyCost: 788500 },
-      eff_total_estate_area_256: { workAmount: 48817, moneyCost: 834800 },
-      eff_total_estate_area_512: { workAmount: 49463, moneyCost: 845800 },
-      eff_total_estate_area_1000: { workAmount: 52083, moneyCost: 890600 },
-      eff_total_estate_area_2000: { workAmount: 52836, moneyCost: 903500 },
-      eff_vineyard_registry: { workAmount: 433, moneyCost: 13900 },
-      eff_dual_estate_management: { workAmount: 1109, moneyCost: 19000 },
-      eff_vineyard_cluster_ops: { workAmount: 1686, moneyCost: 28800 },
-      eff_vineyard_dispatch: { workAmount: 3264, moneyCost: 55800 },
-      eff_vineyard_support_grid: { workAmount: 4898, moneyCost: 83800 },
-      eff_regional_site_supervision: { workAmount: 11503, moneyCost: 196700 },
-      eff_vineyard_network_coordination: { workAmount: 21993, moneyCost: 376100 },
-      eff_estate_grid_management: { workAmount: 22318, moneyCost: 381600 },
-      eff_holdings_command: { workAmount: 45740, moneyCost: 782200 },
-      eff_regional_hub_admin: { workAmount: 46310, moneyCost: 791900 },
-      eff_multi_region_estate_control: { workAmount: 49059, moneyCost: 838900 },
-      eff_global_vineyard_registry: { workAmount: 49733, moneyCost: 850400 },
-      mkt_research: { workAmount: 715, moneyCost: 11600 },
-      mkt_restaurant_program: { workAmount: 1234, moneyCost: 20000 },
-      mkt_collector_relations: { workAmount: 3520, moneyCost: 57000 },
-      mkt_chain_distribution: { workAmount: 8623, moneyCost: 139700 },
-      mkt_vintner_network: { workAmount: 2267, moneyCost: 36700 },
-      mkt_export_alliances: { workAmount: 8005, moneyCost: 129700 },
-      mkt_cross_border_buyer_network: { workAmount: 9155, moneyCost: 148300 },
-      mkt_transatlantic_buyer_desk: { workAmount: 17843, moneyCost: 289100 },
-      mkt_old_world_exchange: { workAmount: 37391, moneyCost: 605700 },
-      eff_bulk_chain_optimization: { workAmount: 3840, moneyCost: 65700 },
-      eff_contract_fulfillment_grid: { workAmount: 11490, moneyCost: 196500 },
-      tech_market_signal_engine: { workAmount: 5186, moneyCost: 102700 },
-      tech_negotiation_ai_cellar: { workAmount: 24169, moneyCost: 478500 },
-      foundation_staff_onboarding: { workAmount: 388, moneyCost: 7700 },
-      foundation_staff_training: { workAmount: 1451, moneyCost: 22200 },
-      foundation_staff_leadership: { workAmount: 4028, moneyCost: 61600 },
-      staff_operational_management: { workAmount: 9389, moneyCost: 143700 },
-      staff_department_structure: { workAmount: 9775, moneyCost: 149600 },
-      staff_operations_hub: { workAmount: 18015, moneyCost: 275600 },
-      staff_enterprise_coordination: { workAmount: 18876, moneyCost: 288800 },
-      staff_multiestate_hr: { workAmount: 37028, moneyCost: 566500 },
-      staff_corporate_scale: { workAmount: 38957, moneyCost: 596000 },
+      foundation_admin_baseline: { workAmount: 175, moneyCost: 6100 },
+      foundation_admin_methodology: { workAmount: 75, moneyCost: 5600 },
+      foundation_admin_office: { workAmount: 150, moneyCost: 15000 },
+      tech_experimental_cellar_lab: { workAmount: 550, moneyCost: 80000 },
+      tech_innovation_program: { workAmount: 1100, moneyCost: 188000 },
+      tech_research_institute_network: { workAmount: 2900, moneyCost: 680000 },
+      foundation_grant_basic: { workAmount: 75, moneyCost: 4400 },
+      foundation_grant_programmatic: { workAmount: 175, moneyCost: 10000 },
+      foundation_grant_advanced: { workAmount: 175, moneyCost: 9100 },
+      tech_soil_analysis: { workAmount: 325, moneyCost: 32000 },
+      tech_fermentation: { workAmount: 500, moneyCost: 61000 },
+      tech_fermentation_extended: { workAmount: 600, moneyCost: 88000 },
+      tech_vineyard_health_monitoring: { workAmount: 500, moneyCost: 61000 },
+      agri_barbera: { workAmount: 450, moneyCost: 20500 },
+      agri_chardonnay: { workAmount: 500, moneyCost: 37500 },
+      agri_pinot_noir: { workAmount: 550, moneyCost: 52000 },
+      agri_primitivo: { workAmount: 500, moneyCost: 37500 },
+      agri_sauvignon_blanc: { workAmount: 550, moneyCost: 52000 },
+      agri_tempranillo: { workAmount: 500, moneyCost: 37500 },
+      agri_sangiovese: { workAmount: 500, moneyCost: 37500 },
+      eff_microplot_management: { workAmount: 275, moneyCost: 13000 },
+      eff_smallholding_operations: { workAmount: 175, moneyCost: 14500 },
+      eff_estate_foundations: { workAmount: 300, moneyCost: 18500 },
+      eff_operational: { workAmount: 475, moneyCost: 55000 },
+      eff_site_expansion: { workAmount: 550, moneyCost: 69000 },
+      eff_estate_scale: { workAmount: 1600, moneyCost: 290000 },
+      eff_regional_holdings: { workAmount: 1650, moneyCost: 300000 },
+      eff_networked_estates: { workAmount: 2700, moneyCost: 575000 },
+      eff_industrial_fleet_management: { workAmount: 2800, moneyCost: 600000 },
+      eff_land_portfolio_management: { workAmount: 2800, moneyCost: 605000 },
+      eff_megavineyard_control: { workAmount: 2900, moneyCost: 630000 },
+      eff_agri_enterprise_planning: { workAmount: 2900, moneyCost: 635000 },
+      eff_global_land_network: { workAmount: 3000, moneyCost: 665000 },
+      eff_superestate_command: { workAmount: 3000, moneyCost: 670000 },
+      eff_total_land_budgeting: { workAmount: 175, moneyCost: 14500 },
+      eff_total_estate_area_2: { workAmount: 475, moneyCost: 53000 },
+      eff_total_estate_area_4: { workAmount: 550, moneyCost: 68000 },
+      eff_total_estate_area_8: { workAmount: 1050, moneyCost: 158000 },
+      eff_total_estate_area_16: { workAmount: 1600, moneyCost: 290000 },
+      eff_total_estate_area_32: { workAmount: 1600, moneyCost: 290000 },
+      eff_total_estate_area_64: { workAmount: 2700, moneyCost: 575000 },
+      eff_total_estate_area_128: { workAmount: 2700, moneyCost: 575000 },
+      eff_total_estate_area_256: { workAmount: 2800, moneyCost: 605000 },
+      eff_total_estate_area_512: { workAmount: 2800, moneyCost: 610000 },
+      eff_total_estate_area_1000: { workAmount: 2900, moneyCost: 635000 },
+      eff_total_estate_area_2000: { workAmount: 2900, moneyCost: 645000 },
+      eff_vineyard_registry: { workAmount: 200, moneyCost: 14500 },
+      eff_dual_estate_management: { workAmount: 300, moneyCost: 18500 },
+      eff_vineyard_cluster_ops: { workAmount: 325, moneyCost: 26500 },
+      eff_vineyard_dispatch: { workAmount: 475, moneyCost: 49000 },
+      eff_vineyard_support_grid: { workAmount: 550, moneyCost: 70000 },
+      eff_regional_site_supervision: { workAmount: 1050, moneyCost: 158000 },
+      eff_vineyard_network_coordination: { workAmount: 1600, moneyCost: 290000 },
+      eff_estate_grid_management: { workAmount: 1600, moneyCost: 290000 },
+      eff_holdings_command: { workAmount: 2700, moneyCost: 575000 },
+      eff_regional_hub_admin: { workAmount: 2700, moneyCost: 580000 },
+      eff_multi_region_estate_control: { workAmount: 2800, moneyCost: 605000 },
+      eff_global_vineyard_registry: { workAmount: 2800, moneyCost: 610000 },
+      mkt_research: { workAmount: 225, moneyCost: 12000 },
+      mkt_restaurant_program: { workAmount: 275, moneyCost: 19500 },
+      mkt_collector_relations: { workAmount: 475, moneyCost: 51000 },
+      mkt_chain_distribution: { workAmount: 900, moneyCost: 118000 },
+      mkt_vintner_network: { workAmount: 425, moneyCost: 35000 },
+      mkt_export_alliances: { workAmount: 800, moneyCost: 107000 },
+      mkt_cross_border_buyer_network: { workAmount: 900, moneyCost: 122000 },
+      mkt_transatlantic_buyer_desk: { workAmount: 1400, moneyCost: 226000 },
+      mkt_old_world_exchange: { workAmount: 2300, moneyCost: 450000 },
+      eff_bulk_chain_optimization: { workAmount: 500, moneyCost: 57000 },
+      eff_contract_fulfillment_grid: { workAmount: 1050, moneyCost: 158000 },
+      tech_market_signal_engine: { workAmount: 600, moneyCost: 86000 },
+      tech_negotiation_ai_cellar: { workAmount: 1750, moneyCost: 365000 },
+      foundation_staff_onboarding: { workAmount: 100, moneyCost: 6700 },
+      foundation_staff_training: { workAmount: 150, moneyCost: 18000 },
+      foundation_staff_leadership: { workAmount: 500, moneyCost: 53000 },
+      staff_operational_management: { workAmount: 950, moneyCost: 119000 },
+      staff_department_structure: { workAmount: 950, moneyCost: 123000 },
+      staff_operations_hub: { workAmount: 1400, moneyCost: 217000 },
+      staff_enterprise_coordination: { workAmount: 1450, moneyCost: 226000 },
+      staff_multiestate_hr: { workAmount: 2400, moneyCost: 425000 },
+      staff_corporate_scale: { workAmount: 2400, moneyCost: 445000 },
 };
 
 // Generic prestige scaling from research complexity, shared by all research types.
@@ -201,6 +201,16 @@ const GRAPE_DIFFICULTY_TO_COMPLEXITY_SCALE = 8;
 const GRAPE_DIFFICULTY_TO_COMPLEXITY_OFFSET = 2;
 const GRAPE_MIN_RESEARCH_COMPLEXITY = 2;
 const GRAPE_MAX_RESEARCH_COMPLEXITY = 10;
+const GRAPE_RESEARCH_SCOPE_PER_COMPLEXITY_BASE = 10;
+const GRAPE_RESEARCH_SCOPE_PER_COMPLEXITY_SCALE = 8;
+const GRAPE_RESEARCH_CATEGORY_MODIFIER_BASE = 0.04;
+const GRAPE_RESEARCH_CATEGORY_MODIFIER_SCALE = 0.12;
+const GRAPE_RESEARCH_EXTRA_INITIAL_WORK_BASE = 10;
+const GRAPE_RESEARCH_EXTRA_INITIAL_WORK_SCALE = 22;
+const GRAPE_RESEARCH_LINEAR_CURVE_MIN = 0.14;
+const GRAPE_RESEARCH_LINEAR_CURVE_MAX = 0.2;
+const GRAPE_RESEARCH_EXPONENTIAL_CURVE_MIN = 1.07;
+const GRAPE_RESEARCH_EXPONENTIAL_CURVE_MAX = 1.1;
 
 // ===== GRAPE RESEARCH HELPERS =====
 
@@ -235,6 +245,81 @@ function calculateResearchPrestigeFromComplexity(complexity: number): number {
       );
 }
 
+function clampNormalizedValue(value: number): number {
+      return Math.max(0, Math.min(1, value));
+}
+
+function roundToTwoDecimals(value: number): number {
+      return Math.round(value * 100) / 100;
+}
+
+function interpolate(min: number, max: number, ratio: number): number {
+      return min + ((max - min) * clampNormalizedValue(ratio));
+}
+
+function createGrapeResearchWorkProfile(
+      grapeDifficulty: GrapeDifficultyBreakdown,
+      complexity: number
+): ResearchWorkProfile {
+      const { components, score } = grapeDifficulty;
+      const normalizedDifficulty = clampNormalizedValue(score);
+      const specializationPressure = clampNormalizedValue((components.grapeSuitability + components.structure) / 2);
+      const operationalComplexity = clampNormalizedValue(
+            (components.handling + components.yield + components.aging) / 3
+      );
+
+      const scopeWorkAmountPerComplexity = Math.round(
+            GRAPE_RESEARCH_SCOPE_PER_COMPLEXITY_BASE
+            + (normalizedDifficulty * (GRAPE_RESEARCH_SCOPE_PER_COMPLEXITY_SCALE * 0.85))
+            + (specializationPressure * (GRAPE_RESEARCH_SCOPE_PER_COMPLEXITY_SCALE * 0.1))
+            + (operationalComplexity * (GRAPE_RESEARCH_SCOPE_PER_COMPLEXITY_SCALE * 0.05))
+      );
+
+      const categoryModifier = roundToTwoDecimals(
+            GRAPE_RESEARCH_CATEGORY_MODIFIER_BASE
+            + (normalizedDifficulty * (GRAPE_RESEARCH_CATEGORY_MODIFIER_SCALE * 0.8))
+            + (specializationPressure * (GRAPE_RESEARCH_CATEGORY_MODIFIER_SCALE * 0.15))
+            + (operationalComplexity * (GRAPE_RESEARCH_CATEGORY_MODIFIER_SCALE * 0.05))
+      );
+
+      const extraInitialWork = Math.round(
+            GRAPE_RESEARCH_EXTRA_INITIAL_WORK_BASE
+            + (normalizedDifficulty * (GRAPE_RESEARCH_EXTRA_INITIAL_WORK_SCALE * 0.6))
+            + (operationalComplexity * (GRAPE_RESEARCH_EXTRA_INITIAL_WORK_SCALE * 0.25))
+            + (specializationPressure * (GRAPE_RESEARCH_EXTRA_INITIAL_WORK_SCALE * 0.15))
+      );
+
+      const usesExponentialCurve = complexity >= 6 || specializationPressure >= 0.55;
+      const curveDifficultyBlend = (normalizedDifficulty * 0.85) + (specializationPressure * 0.15);
+
+      return {
+            scopeWorkAmountPerComplexity,
+            categoryModifier,
+            extraInitialWork,
+            complexityCurve: usesExponentialCurve
+                  ? {
+                        kind: 'exponential',
+                        base: roundToTwoDecimals(
+                              interpolate(
+                                    GRAPE_RESEARCH_EXPONENTIAL_CURVE_MIN,
+                                    GRAPE_RESEARCH_EXPONENTIAL_CURVE_MAX,
+                                    curveDifficultyBlend
+                              )
+                        )
+                  }
+                  : {
+                        kind: 'linear',
+                        multiplier: roundToTwoDecimals(
+                              interpolate(
+                                    GRAPE_RESEARCH_LINEAR_CURVE_MIN,
+                                    GRAPE_RESEARCH_LINEAR_CURVE_MAX,
+                                    curveDifficultyBlend
+                              )
+                        )
+                  }
+      };
+}
+
 /**
  * Create a grape research project based on grape variety
  * Automatically calculates complexity and prestige from difficulty
@@ -243,30 +328,32 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
       const grapeDifficulty = calculateGrapeDifficulty(grape);
       const complexity = mapGrapeDifficultyToResearchComplexity(grapeDifficulty.score);
       const prestigeReward = calculateResearchPrestigeFromComplexity(complexity);
-  const iconPath = getGrapeIconSrc(grape);
-  
-  // Create project ID from grape name (e.g., "Pinot Noir" -> "agri_pinot_noir")
-  const projectId = `agri_${grape.toLowerCase().replace(/\s+/g, '_')}`;
-  
-  // First-tier grape research is available from game start.
-  const requiredPrestige: number | undefined = undefined;
-  
-  return {
-    id: projectId,
-    title: `${grape} Grape Research`,
-    description: `Research and develop expertise in cultivating ${grape} grapes`,
-    complexity,
-    benefits: [
-      `Unlock ${grape} grape variety for planting`,
-      `Learn optimal growing conditions for ${grape}`,
-      `+${prestigeReward.toFixed(1)} Prestige points`
-    ],
-    category: 'agriculture',
-    icon: iconPath, // Use image path instead of emoji
-    prestigeReward,
-    unlocks: [{ type: 'grape', value: grape }],
-    ...(requiredPrestige !== undefined ? { requiredPrestige } : {})
-  };
+      const iconPath = getGrapeIconSrc(grape);
+      const workProfile = createGrapeResearchWorkProfile(grapeDifficulty, complexity);
+
+      // Create project ID from grape name (e.g., "Pinot Noir" -> "agri_pinot_noir")
+      const projectId = `agri_${grape.toLowerCase().replace(/\s+/g, '_')}`;
+
+      // First-tier grape research is available from game start.
+      const requiredPrestige: number | undefined = undefined;
+
+      return {
+            id: projectId,
+            title: `${grape} Grape Research`,
+            description: `Research and develop expertise in cultivating ${grape} grapes`,
+            complexity,
+            benefits: [
+                  `Unlock ${grape} grape variety for planting`,
+                  `Learn optimal growing conditions for ${grape}`,
+                  `+${prestigeReward.toFixed(1)} Prestige points`
+            ],
+            category: 'agriculture',
+            icon: iconPath, // Use image path instead of emoji
+            prestigeReward,
+            unlocks: [{ type: 'grape', value: grape }],
+            workProfile,
+            ...(requiredPrestige !== undefined ? { requiredPrestige } : {})
+      };
 }
 
 interface UnlockResearchProjectConfig {

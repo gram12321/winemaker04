@@ -112,6 +112,9 @@ export const addTransaction = async (
       // For same week transactions, sort by ID (newer transactions have higher IDs)
       return b.id.localeCompare(a.id);
     });
+
+    // Notify listeners again now that the persisted transaction is available to finance readers.
+    triggerGameUpdate();
     
     return result.data.id;
   } catch (error) {
