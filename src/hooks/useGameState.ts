@@ -30,7 +30,7 @@ export const useGameState = () => {
 export function useGameStateWithData<T>(
   loadData: () => Promise<T>,
   initialValue: T,
-  options?: { topic?: string }
+  options?: { topic?: string; deps?: readonly unknown[] }
 ): T {
   const [data, setData] = useState<T>(initialValue);
   const { subscribe, subscribeTopic } = useGameUpdates();
@@ -84,7 +84,7 @@ export function useGameStateWithData<T>(
     return () => {
       unsubscribe();
     };
-  }, [refreshData, subscribe, subscribeTopic, options?.topic]);
+  }, [refreshData, subscribe, subscribeTopic, options?.topic, ...(options?.deps ?? [])]);
 
   return data;
 };
