@@ -3,46 +3,12 @@ import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { companyService } from '../user/companyService';
 import { calculateCompanyValue } from '../finance/financeService';
-import {
-  BuyMarketOfferRow,
-  deleteBuyOfferRow,
-  getCompanyBuyOfferRow,
-  getCompanyBuyOfferRows,
-  upsertBuyOfferRows,
-  updateBuyOfferRow,
-} from '../../database/sales/buyMarketOffersDB';
+import { BuyMarketOfferRow, deleteBuyOfferRow, getCompanyBuyOfferRow, getCompanyBuyOfferRows, upsertBuyOfferRows, updateBuyOfferRow } from '../../database/sales/buyMarketOffersDB';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import {
-  BASE_BUY_MARKET_PRICE_PER_KG,
-  BUY_MARKET_FIXED_SPREAD,
-  BUY_MARKET_MAX_PRICE,
-  BUY_MARKET_MIN_PRICE,
-  BUYER_ECONOMY_PRICE_MULTIPLIERS,
-  BUYER_SEASON_PRICE_MULTIPLIERS,
-  BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER,
-  BUY_OFFER_COMPANY_VALUE_REFERENCE,
-  BUY_OFFER_MAX_AVAILABLE_KG,
-  BUY_OFFER_MIN_AVAILABLE_KG,
-  BUY_OFFER_PRESTIGE_MAX_DISCOUNT,
-  BUY_OFFER_PREVIEW_VERSION,
-  DEFAULT_BUY_MARKET_DEMAND_FACTORS,
-  GAME_INITIALIZATION,
-  MARKET_CRUSHING_PROFILE_BY_COLOR,
-  MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS,
-  MARKET_FERMENTATION_PROFILE_BY_COLOR,
-  MAX_SEASONAL_OFFERS,
-  MIN_SEASONAL_OFFERS,
-  SEASON_ORDER,
-  STATE_DISTRIBUTION,
-  STATE_PREMIUMS,
-  STATE_QUALITY_DECAY_PER_WEEK,
-  YEAR_PRICE_CYCLE,
-  type BuyMarketDemandFactors,
-  type BuyOfferBatchState
-} from '../../constants';
+import { BUY_MARKET_FIXED_SPREAD, BASE_BUY_MARKET_PRICE_PER_KG, BUY_MARKET_MAX_PRICE, BUY_MARKET_MIN_PRICE, BUYER_ECONOMY_PRICE_MULTIPLIERS, BUYER_SEASON_PRICE_MULTIPLIERS, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_MAX_AVAILABLE_KG, BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_PRESTIGE_MAX_DISCOUNT, BUY_OFFER_PREVIEW_VERSION, DEFAULT_BUY_MARKET_DEMAND_FACTORS, GAME_INITIALIZATION, MARKET_CRUSHING_PROFILE_BY_COLOR, MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS, MARKET_FERMENTATION_PROFILE_BY_COLOR, MAX_SEASONAL_OFFERS, MIN_SEASONAL_OFFERS, SEASON_ORDER, STATE_DISTRIBUTION, STATE_PREMIUMS, STATE_QUALITY_DECAY_PER_WEEK, YEAR_PRICE_CYCLE, type BuyMarketDemandFactors, type BuyOfferBatchState } from '../../constants';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_SOIL_TYPES } from '../../constants/vineyardConstants';
 import { NotificationCategory } from '../../types/types';
 import type { EconomyPhase, GrapeVariety, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Nationality, Season, WineBatch } from '../../types/types';
