@@ -2,18 +2,19 @@ import {
   GRAPE_CONST,
   BASE_BALANCED_RANGES,
   REGION_GRAPE_SUITABILITY,
-  REGION_ALTITUDE_RANGES,
-  REGION_ASPECT_RATINGS,
-  REGION_SOIL_TYPES,
   GRAPE_ALTITUDE_SUITABILITY,
   GRAPE_SUN_PREFERENCES,
   GRAPE_SOIL_PREFERENCES,
+} from '@/lib/constants/grapeConstants';
+import {
+  REGION_ALTITUDE_RANGES,
+  REGION_ASPECT_RATINGS,
+  REGION_SOIL_TYPES,
   REGION_HEAT_PROFILE,
   ASPECT_SUN_EXPOSURE_OFFSETS,
-  ALL_SOIL_TYPES
-} from '@/lib/constants';
+  ALL_SOIL_TYPES,
+} from '@/lib/constants/vineyardConstants';
 import { GrapeVariety, WineCharacteristics, Aspect } from '@/lib/types/types';
-import { clamp01 } from '@/lib/utils/utils';
 
 type DifficultyComponentKey =
   | 'handling'
@@ -96,6 +97,10 @@ const DIFFICULTY_TIERS: Array<{ max: number; tier: DifficultyTier }> = [
 ];
 
 const EPSILON = 1e-6;
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
 
 const GLOBAL_ALTITUDE_RANGE = (() => {
   let min = Number.POSITIVE_INFINITY;

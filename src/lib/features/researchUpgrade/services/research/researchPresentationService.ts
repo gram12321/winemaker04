@@ -1,9 +1,11 @@
 import {
   BASE_STAFF_LIMIT,
+  type ResearchPermanentEffect,
   type ResearchProject,
   type ResearchUnlock,
   type UnlockType,
 } from '@/lib/constants/researchConstants';
+import { ALL_ACHIEVEMENTS } from '@/lib/constants/achievementConstants';
 import {
   CHAINED_RESEARCH_UNLOCK_TYPES,
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
@@ -66,6 +68,16 @@ export interface ResearchGateChip {
   label: string;
 }
 
+export interface ResearchRequirementDetail {
+  label: string;
+  value: string;
+}
+
+export interface ResearchRewardDetail {
+  label: string;
+  value: string;
+}
+
 export interface ResearchDependencyLink {
   id: string;
   title: string;
@@ -86,6 +98,8 @@ export interface ResearchProjectPresentationRow {
   group: ResearchDisplayGroup;
   primaryImpact: string;
   gateChips: ResearchGateChip[];
+  rewardDetails: ResearchRewardDetail[];
+  requirementDetails: ResearchRequirementDetail[];
   prerequisiteLinks: ResearchDependencyLink[];
   prerequisiteTitles: string[];
   unlocksNextLinks: ResearchDependencyLink[];
@@ -216,34 +230,130 @@ export function getResearchDisplayGroup(project: ResearchProject): ResearchDispl
 export function getResearchGateChips(project: ResearchProject): ResearchGateChip[] {
   const chips: ResearchGateChip[] = [];
 
-  if (typeof project.requiredPrestige === 'number') {
-    chips.push({ type: 'prestige', label: `Prestige ${project.requiredPrestige}` });
+  if (typeof project.requiredPrestige === 'number' && project.requiredPrestige > 0) {
+    chips.push({ type: 'prestige', label: `Prestige ${project.requiredPrestige}+` });
   }
 
   if (project.prerequisites?.length) {
-    chips.push({ type: 'prerequisite', label: `Prereq ${project.prerequisites.length}` });
-  }
-
-  if (typeof project.requiredCompanyValue === 'number') {
     chips.push({
-      type: 'company',
-      label: `Company ${formatNumber(project.requiredCompanyValue, { currency: true, compact: true })}`,
+      type: 'prerequisite',
+      label: project.prerequisites.length === 1 ? '1 prerequisite' : `${project.prerequisites.length} prerequisites`,
     });
   }
 
-  if (typeof project.requiredCompanyAgeWeeks === 'number') {
-    chips.push({ type: 'age', label: `Age ${project.requiredCompanyAgeWeeks}w` });
+  if (typeof project.requiredCompanyValue === 'number' && project.requiredCompanyValue > 0) {
+    chips.push({
+      type: 'company',
+      label: `Value ${formatNumber(project.requiredCompanyValue, { currency: true, compact: true })}+`,
+    });
   }
 
-  if (typeof project.requiredBuyerLoyaltyLevel === 'number') {
-    chips.push({ type: 'loyalty', label: `Buyer L${project.requiredBuyerLoyaltyLevel}` });
+  if (typeof project.requiredCompanyAgeWeeks === 'number' && project.requiredCompanyAgeWeeks > 0) {
+    chips.push({ type: 'age', label: `Age ${project.requiredCompanyAgeWeeks}w+` });
+  }
+
+  if (typeof project.requiredBuyerLoyaltyLevel === 'number' && project.requiredBuyerLoyaltyLevel > 0) {
+    chips.push({ type: 'loyalty', label: `Buyer loyalty L${project.requiredBuyerLoyaltyLevel}+` });
   }
 
   if (project.requiredAchievementIds?.length) {
-    chips.push({ type: 'achievement', label: `Achievement ${project.requiredAchievementIds.length}` });
+    chips.push({
+      type: 'achievement',
+      label: project.requiredAchievementIds.length === 1 ? '1 achievement' : `${project.requiredAchievementIds.length} achievements`,
+    });
   }
 
   return chips;
+}
+
+export function getResearchRequirementDetails(
+  project: ResearchProject,
+  allProjects: ResearchProject[]
+): ResearchRequirementDetail[] {
+  const details: ResearchRequirementDetail[] = [];
+  const projectTitleById = new Map(allProjects.map((candidate) => [candidate.id, candidate.title]));
+  const achievementNameById = new Map(ALL_ACHIEVEMENTS.map((achievement) => [achievement.id, achievement.name]));
+
+  if (typeof project.requiredPrestige === 'number' && project.requiredPrestige > 0) {
+    details.push({
+      label: 'Company Prestige',
+      value: `At least ${formatNumber(project.requiredPrestige, { decimals: 0 })}`,
+    });
+  }
+
+  if (project.prerequisites?.length) {
+    const prerequisiteTitles = project.prerequisites.map((id) => projectTitleById.get(id) || id);
+    details.push({
+      label: 'Prerequisite Research',
+      value: prerequisiteTitles.join(', '),
+    });
+  }
+
+  if (typeof project.requiredCompanyValue === 'number' && project.requiredCompanyValue > 0) {
+    details.push({
+      label: 'Company Value',
+      value: `At least ${formatNumber(project.requiredCompanyValue, { currency: true, decimals: 0 })}`,
+    });
+  }
+
+  if (typeof project.requiredCompanyAgeWeeks === 'number' && project.requiredCompanyAgeWeeks > 0) {
+    details.push({
+      label: 'Company Age',
+      value: `At least ${project.requiredCompanyAgeWeeks} weeks`,
+    });
+  }
+
+  if (typeof project.requiredBuyerLoyaltyLevel === 'number' && project.requiredBuyerLoyaltyLevel > 0) {
+    details.push({
+      label: 'Best Buyer Loyalty',
+      value: `Level ${project.requiredBuyerLoyaltyLevel} or higher`,
+    });
+  }
+
+  if (project.requiredAchievementIds?.length) {
+    details.push({
+      label: project.requiredAchievementIds.length === 1 ? 'Required Achievement' : 'Required Achievements',
+      value: project.requiredAchievementIds
+        .map((id) => achievementNameById.get(id) || id)
+        .join(', '),
+    });
+  }
+
+  return details;
+}
+
+export function getResearchRewardDetails(project: ResearchProject): ResearchRewardDetail[] {
+  const details: ResearchRewardDetail[] = [];
+
+  for (const unlock of project.unlocks || []) {
+    const detail = formatResearchUnlockDetail(unlock);
+    if (detail) {
+      details.push(detail);
+    }
+  }
+
+  for (const effect of project.permanentEffects || []) {
+    details.push({
+      label: getPermanentEffectLabel(effect.kind),
+      value: effect.description || getPermanentEffectFallback(effect.kind, effect.multiplier),
+    });
+  }
+
+  if (typeof project.rewardAmount === 'number' && project.rewardAmount > 0) {
+    details.push({
+      label: 'Funding',
+      value: `Receive ${formatNumber(project.rewardAmount, { currency: true, decimals: 0 })} on completion`,
+    });
+  }
+
+  if (typeof project.prestigeReward === 'number' && project.prestigeReward > 0) {
+    details.push({
+      label: 'Prestige',
+      value: `Gain ${formatNumber(project.prestigeReward, { decimals: 1 })} prestige`,
+    });
+  }
+
+  return details;
 }
 
 export function getPrimaryResearchImpact(project: ResearchProject): string {
@@ -386,6 +496,8 @@ export function buildResearchPresentationRows(
       group: getResearchDisplayGroup(project),
       primaryImpact: getPrimaryResearchImpact(project),
       gateChips: getResearchGateChips(project),
+      rewardDetails: getResearchRewardDetails(project),
+      requirementDetails: getResearchRequirementDetails(project, allProjects),
       prerequisiteLinks: dependencyMetadata.prerequisiteLinks,
       prerequisiteTitles: dependencyMetadata.prerequisiteTitles,
       unlocksNextLinks: dependencyMetadata.unlocksNextLinks,
@@ -634,4 +746,76 @@ function formatChainValue(chainType: UnlockType, value: number): string {
   }
 
   return String(value);
+}
+
+function formatResearchUnlockDetail(unlock: ResearchUnlock): ResearchRewardDetail | null {
+  if (unlock.type === 'grape') {
+    return {
+      label: 'Planting',
+      value: `Unlock ${unlock.displayName || unlock.value} for planting`,
+    };
+  }
+
+  if (unlock.type === 'fermentation_technology') {
+    return {
+      label: 'Fermentation method',
+      value: `Unlock ${unlock.displayName || unlock.value}`,
+    };
+  }
+
+  if (unlock.type === 'staff_limit') {
+    return typeof unlock.value === 'number'
+      ? {
+          label: 'Staff capacity',
+          value: `Increase max to ${formatChainValue(unlock.type, unlock.value)}`,
+        }
+      : null;
+  }
+
+  if (CHAINED_VINEYARD_CAP_UNLOCK_TYPES.has(unlock.type as VineyardCapUnlockType)) {
+    return typeof unlock.value === 'number'
+      ? {
+          label: getChainLabel(unlock.type),
+          value: `Increase max to ${formatChainValue(unlock.type, unlock.value)}`,
+        }
+      : null;
+  }
+
+  return {
+    label: getUnlockTypeLabel(unlock.type),
+    value: String(unlock.displayName || unlock.value),
+  };
+}
+
+function getPermanentEffectLabel(kind: ResearchPermanentEffect['kind']): string {
+  switch (kind) {
+    case 'research_skill_multiplier':
+      return 'Research speed';
+    case 'administration_and_research_work_multiplier':
+      return 'Admin & research work';
+    case 'all_staff_work_multiplier':
+      return 'All staff work';
+    case 'vineyard_health_decay_multiplier':
+      return 'Vineyard resilience';
+    default:
+      return 'Permanent effect';
+  }
+}
+
+function getPermanentEffectFallback(
+  kind: ResearchPermanentEffect['kind'],
+  multiplier: number
+): string {
+  switch (kind) {
+    case 'research_skill_multiplier':
+      return `Research tasks run at x${formatNumber(multiplier, { decimals: 2 })} speed`;
+    case 'administration_and_research_work_multiplier':
+      return `Administration and research tasks use x${formatNumber(multiplier, { decimals: 2 })} work`;
+    case 'all_staff_work_multiplier':
+      return `All staff work runs at x${formatNumber(multiplier, { decimals: 2 })} speed`;
+    case 'vineyard_health_decay_multiplier':
+      return `Vineyard health decay changes to x${formatNumber(multiplier, { decimals: 2 })}`;
+    default:
+      return `Multiplier x${formatNumber(multiplier, { decimals: 2 })}`;
+  }
 }

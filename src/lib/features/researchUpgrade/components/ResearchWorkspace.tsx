@@ -393,6 +393,11 @@ export function ResearchWorkspace({
     [selectedProjectId, visibleModels]
   );
 
+  const projectById = useMemo(
+    () => new Map(projectModels.map((model) => [model.project.id, model] as const)),
+    [projectModels]
+  );
+
   const directChainByProjectId = useMemo(() => {
     const next = new Map<string, string[]>();
     for (const chain of footprintSummary.chainSummaries) {
@@ -432,6 +437,33 @@ export function ResearchWorkspace({
     await getResearchUpgradeFeature().workflow.startResearch(projectId);
     setRefreshVersion((current) => current + 1);
   };
+
+  const navigateToProject = (projectId: string) => {
+    const targetModel = projectById.get(projectId);
+    if (!targetModel) {
+      return;
+    }
+
+    setSearchTerm('');
+    setHideCompleted(false);
+    setStatusFilter('all');
+    setViewMode('full');
+    setGroupFilter(targetModel.presentation.group.id);
+    setSelectedProjectId(projectId);
+  };
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const targetElement = document.getElementById(`research-project-${selectedProjectId}`);
+      targetElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [selectedProjectId]);
 
   const { hasEffects, healthDecayReductionPercent, researchSkillBoostPercent } = getResearchViewSummary(permanentEffects);
 
@@ -525,7 +557,7 @@ export function ResearchWorkspace({
                 <SelectItem value="recommended">Recommended</SelectItem>
                 <SelectItem value="cost">Cost</SelectItem>
                 <SelectItem value="work">Work</SelectItem>
-                <SelectItem value="complexity">Complexity</SelectItem>
+                <SelectItem value="complexity">Difficulty</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | ResearchStatus)}>
@@ -608,8 +640,8 @@ export function ResearchWorkspace({
                         const stepLabel = chainStepLabel(model, projectModels);
                         const isDisabled = readOnly || model.status !== 'available';
                         const gateLabel = model.presentation.gateChips.length
-                          ? `${model.presentation.gateChips.length} gate${model.presentation.gateChips.length === 1 ? '' : 's'}`
-                          : 'No gates';
+                          ? `${model.presentation.gateChips.length} requirement${model.presentation.gateChips.length === 1 ? '' : 's'}`
+                          : 'No requirements';
                         const directChainIds = directChainByProjectId.get(model.project.id);
                         const directChainModels = directChainIds
                           ? directChainIds
@@ -626,6 +658,7 @@ export function ResearchWorkspace({
                         return (
                           <div
                             key={model.project.id}
+                            id={`research-project-${model.project.id}`}
                             className={`rounded-xl border px-4 py-3 transition-colors ${isSelected ? 'border-slate-900 bg-slate-50' : 'bg-background hover:bg-slate-50/70'}`}
                           >
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -664,19 +697,23 @@ export function ResearchWorkspace({
                                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                                   <span>{formatNumber(model.totalCost, { currency: true, decimals: 0 })}</span>
                                   <span>{model.totalWork.toLocaleString()} work</span>
-                                  <span>Complexity {model.project.complexity}/10</span>
+                                  <span>Difficulty {model.project.complexity}/10</span>
                                   {model.presentation.chainLabel ? <span>{model.presentation.chainLabel}{stepLabel ? ` (${stepLabel})` : ''}</span> : null}
                                   <UnifiedTooltip
                                     side="top"
                                     title={model.project.title}
                                     content={
                                       <TooltipSection title="Requirements">
-                                        {model.presentation.gateChips.length ? (
-                                          model.presentation.gateChips.map((gate) => (
-                                            <TooltipRow key={`${model.project.id}-${gate.type}`} label={gate.type} value={gate.label} />
+                                        {model.presentation.requirementDetails.length ? (
+                                          model.presentation.requirementDetails.map((requirement) => (
+                                            <TooltipRow
+                                              key={`${model.project.id}-${requirement.label}`}
+                                              label={requirement.label}
+                                              value={requirement.value}
+                                            />
                                           ))
                                         ) : (
-                                          <TooltipRow label="Requirements" value="No special gates" />
+                                          <TooltipRow label="Requirements" value="No special requirements" />
                                         )}
                                       </TooltipSection>
                                     }
@@ -721,7 +758,7 @@ export function ResearchWorkspace({
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Project Inspector</CardTitle>
-                <CardDescription>Dependencies, next unlocks, and chain context for the selected project.</CardDescription>
+                <CardDescription>Rewards, dependencies, next unlocks, and chain context for the selected project.</CardDescription>
               </CardHeader>
               <CardContent>
                 {selectedModel ? (
@@ -752,7 +789,7 @@ export function ResearchWorkspace({
                         <span>{selectedModel.totalWork.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <span>Complexity</span>
+                        <span>Difficulty</span>
                         <span>{selectedModel.project.complexity}/10</span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
@@ -764,12 +801,45 @@ export function ResearchWorkspace({
                     <Separator />
 
                     <div className="flex flex-col gap-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rewards</div>
+                      {selectedModel.presentation.rewardDetails.length ? (
+                        selectedModel.presentation.rewardDetails.map((reward, index) => (
+                          <div key={`${reward.label}-${index}`} className="rounded-lg border bg-slate-50 px-3 py-2 text-sm">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{reward.label}</div>
+                            <div className="mt-1 text-slate-700">{reward.value}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-lg border border-dashed px-3 py-3 text-sm text-slate-500">No direct rewards listed.</div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Requirements</div>
+                      {selectedModel.presentation.requirementDetails.length ? (
+                        selectedModel.presentation.requirementDetails.map((requirement) => (
+                          <div key={requirement.label} className="rounded-lg border bg-slate-50 px-3 py-2 text-sm">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{requirement.label}</div>
+                            <div className="mt-1 text-slate-700">{requirement.value}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-lg border border-dashed px-3 py-3 text-sm text-slate-500">No special requirements.</div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Prerequisites</div>
                       {selectedModel.presentation.prerequisiteLinks.length ? (
                         selectedModel.presentation.prerequisiteLinks.map((link) => (
-                          <div key={link.id} className="rounded-lg border bg-slate-50 px-3 py-2 text-sm">
+                          <button
+                            key={link.id}
+                            type="button"
+                            onClick={() => navigateToProject(link.id)}
+                            className="rounded-lg border bg-slate-50 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                          >
                             {link.title}
-                          </div>
+                          </button>
                         ))
                       ) : (
                         <div className="rounded-lg border border-dashed px-3 py-3 text-sm text-slate-500">No prerequisites.</div>
@@ -780,9 +850,14 @@ export function ResearchWorkspace({
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unlocks Next</div>
                       {selectedModel.presentation.unlocksNextLinks.length ? (
                         selectedModel.presentation.unlocksNextLinks.map((link) => (
-                          <div key={link.id} className="rounded-lg border bg-slate-50 px-3 py-2 text-sm">
+                          <button
+                            key={link.id}
+                            type="button"
+                            onClick={() => navigateToProject(link.id)}
+                            className="rounded-lg border bg-slate-50 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                          >
                             {link.title}
-                          </div>
+                          </button>
                         ))
                       ) : (
                         <div className="rounded-lg border border-dashed px-3 py-3 text-sm text-slate-500">No direct follow-up projects.</div>
@@ -795,15 +870,17 @@ export function ResearchWorkspace({
                         <ScrollArea className="max-h-64">
                           <div className="flex flex-col gap-2 pr-3">
                             {selectedChainModels.map((model) => (
-                              <div
+                              <button
                                 key={model.project.id}
-                                className={`rounded-lg border px-3 py-2 text-sm ${model.project.id === selectedModel.project.id ? 'border-slate-900 bg-slate-50' : 'bg-background'}`}
+                                type="button"
+                                onClick={() => navigateToProject(model.project.id)}
+                                className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 ${model.project.id === selectedModel.project.id ? 'border-slate-900 bg-slate-50' : 'bg-background hover:bg-slate-50'}`}
                               >
                                 <div className="font-medium text-slate-900">{model.project.title}</div>
                                 <div className="text-xs text-slate-500">
                                   {model.presentation.chainUnlockValue !== null ? `Unlock ${model.presentation.chainUnlockValue}` : model.presentation.chainLabel}
                                 </div>
-                              </div>
+                              </button>
                             ))}
                           </div>
                         </ScrollArea>
