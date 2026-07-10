@@ -40,7 +40,10 @@ After classifying the user request, route to the matching specialist skills.
 |---|---|---|
 | User asks for ideation, option analysis, or design-first discussion | `../superpowers/brainstorming/SKILL.md` | `../superpowers/writing-plans/SKILL.md` |
 | Feature design, option exploration, unclear requirements | `../superpowers/brainstorming/SKILL.md` | `../superpowers/writing-plans/SKILL.md` |
-| Multi-step implementation from an approved plan | `../superpowers/executing-plans/SKILL.md` | `../superpowers/dispatching-parallel-agents/SKILL.md` |
+| Multi-step implementation from an approved plan | `../superpowers/using-git-worktrees/SKILL.md` then `../superpowers/subagent-driven-development/SKILL.md` | `../superpowers/dispatching-parallel-agents/SKILL.md` |
+| Independent implementation tasks that can safely run concurrently | `../superpowers/dispatching-parallel-agents/SKILL.md` | `../superpowers/subagent-driven-development/SKILL.md` |
+| Execute an approved plan with one reviewed subagent per task | `../superpowers/subagent-driven-development/SKILL.md` | `../superpowers/using-git-worktrees/SKILL.md` |
+| Start isolated feature work or execute a plan that may modify many files | `../superpowers/using-git-worktrees/SKILL.md` | `../superpowers/finishing-a-development-branch/SKILL.md` |
 | React or TypeScript implementation details | `../best-practices/js-ts-best-practices/SKILL.md` | `../best-practices/react-best-practices/SKILL.md` |
 | ShadCN component composition and UI consistency | `../best-practices/shadcn-best-practices/SKILL.md` | `../best-practices/react-best-practices/SKILL.md` |
 | Rendered frontend QA, UI regression reproduction, interaction checks | `../superpowers/systematic-debugging/SKILL.md` | none |
@@ -75,6 +78,22 @@ The following are non-default here and should primarily be used via the superpow
 - `../superpowers/using-superpowers/SKILL.md`
 - `../superpowers/verification-before-completion/SKILL.md`
 - `../superpowers/writing-plans/SKILL.md`
+- `../superpowers/subagent-driven-development/SKILL.md`
+- `../superpowers/using-git-worktrees/SKILL.md`
+
+## Agent Workflow Order
+
+For substantial implementation work, use this sequence:
+
+1. Use `brainstorming` when requirements or design are unclear.
+2. Use `writing-plans` to produce an approved, bite-sized implementation plan.
+3. Use `using-git-worktrees` before implementation when isolation is needed or requested.
+4. Use `subagent-driven-development` when the plan has independently reviewable tasks.
+5. Use `dispatching-parallel-agents` only for genuinely independent work; keep dependent or shared-file work sequential.
+6. Use `verification-before-completion` before claiming the task is complete.
+7. Use `finishing-a-development-branch` only when the user asks to wrap up branch/merge/PR work.
+
+When dispatching a subagent, include the selected skill path, exact task scope, relevant repository context, expected verification, and files it may modify. A dispatched subagent should follow the task skill directly and should not re-route through the full repo workflow.
 
 ## Core Winemaker Rules
 

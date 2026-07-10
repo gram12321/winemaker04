@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent-Driven Development"
+  short_description: "Execute plans with reviewed subagent tasks"
+  default_prompt: "Use $subagent-driven-development to execute this implementation plan task by task."

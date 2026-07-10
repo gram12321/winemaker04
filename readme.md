@@ -68,6 +68,18 @@ npm run build
 | Cleanup/refactor guidance | `docs/AIdocs/AIpromt_codecleaning.md` |
 | Version history | `docs/versionlog.md` |
 
+## AI Agent Workflow
+
+Use `skills/winemaker-game/SKILL.md` as the repository router. For substantial implementation work, follow this order:
+
+1. Read this README, `CONTEXT.md`, `docs/AIdocs/AIDescriptions_coregame.md`, `docs/PROJECT_INFO.md`, and `docs/WineSystem_VariableRelationshipMap.md`.
+2. Clarify design with `skills/superpowers/brainstorming` when requirements are unclear, then write an approved plan with `skills/superpowers/writing-plans`.
+3. Use `skills/superpowers/using-git-worktrees` when isolated work is needed or requested.
+4. Use `skills/superpowers/subagent-driven-development` for independently reviewable plan tasks; use `skills/superpowers/dispatching-parallel-agents` only when tasks are genuinely independent.
+5. Run `skills/superpowers/verification-before-completion` before completion claims.
+
+Subagents should receive a focused task, repository context, allowed files, expected verification, and the relevant specialist skill path. They should not repeat the full repository-routing workflow for a narrowly delegated task.
+
 ## Version Log Workflow
 
 Use `docs/versionlog.md` as the canonical running change history for meaningful releases and merged feature trains.

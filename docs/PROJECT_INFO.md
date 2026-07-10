@@ -4,6 +4,8 @@ Last code-verified: 2026-07-07
 
 This file is the ownership and module map for the current mainline codebase. Behavior summaries belong in `docs/AIdocs/AIDescriptions_coregame.md`; stable terminology belongs in `CONTEXT.md`; variable relationships belong in `docs/WineSystem_VariableRelationshipMap.md`.
 
+Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read the repository entry docs before implementation, use the worktree/subagent skills for substantial planned work, and verify before claiming completion.
+
 ## Stack
 
 - React, Vite, TypeScript, Tailwind, ShadCN UI.

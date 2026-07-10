@@ -17,6 +17,8 @@ Use this when updating project documentation after implementation work.
 | `docs/superpowers/completed/` | Completed or superseded implementation docs kept for traceability. |
 | `docs/superpowers/plans/PublicCompanyPlan.md`, `docs/superpowers/plans/PublicCompanyImplementation.md` | Historical implemented public-company/share docs kept as reintroduction references; not current mainline runtime. |
 | `docs/versionlog.md` | Version history. |
+| `skills/winemaker-game/SKILL.md` | Repository routing, project guardrails, and required agent workflow. |
+| `skills/superpowers/` | Reusable planning, worktree, subagent, parallel-dispatch, review, and verification skills. |
 
 ## Update Rules
 
@@ -27,6 +29,8 @@ Use this when updating project documentation after implementation work.
 - Update `WineSystem_VariableRelationshipMap.md` when variable dependencies or game-flow relationships change.
 - Update research docs without deleting useful future ideas; mark them as implemented, superseded, or deferred.
 - Remove stale names instead of documenting compatibility branches that no longer exist.
+- Keep workflow references aligned between `readme.md`, `docs/AIdocs/AIpromt_newpromt.md`, and `skills/winemaker-game/SKILL.md`.
+- Keep `CONTEXT.md` focused on stable domain language; put agent workflow and documentation policy in the README or AI docs.
 
 ## Verification
 

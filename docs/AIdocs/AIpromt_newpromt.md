@@ -16,6 +16,14 @@ Core simulation logic should live in services; React components should stay focu
 4. `docs/PROJECT_INFO.md` - file structure and major module locations.
 5. `docs/WineSystem_VariableRelationshipMap.md` - wine variable relationships and game-flow diagrams.
 
+For implementation workflow, also use:
+
+- `skills/winemaker-game/SKILL.md` - repository routing and project guardrails.
+- `skills/superpowers/using-git-worktrees/SKILL.md` - isolated workspace setup.
+- `skills/superpowers/subagent-driven-development/SKILL.md` - one reviewed subagent per plan task.
+- `skills/superpowers/dispatching-parallel-agents/SKILL.md` - genuinely independent concurrent tasks.
+- `skills/superpowers/verification-before-completion/SKILL.md` - evidence required before completion claims.
+
 For taste, structure, or contracts work, also read:
 
 - `docs/superpowers/plans/TasteSystem_WineFolly_Research.md`
@@ -60,6 +68,8 @@ Keep detailed status updates in `docs/AIdocs/AIDescriptions_coregame.md` and fil
 | Taste constants | `src/lib/constants/taste/` |
 
 ## Development Rules
+
+For substantial work, use the workflow above in order: clarify and plan first, create or verify isolation, dispatch focused implementation/review tasks, then verify. Give each subagent exact scope, context, allowed files, and checks to run.
 
 - Keep business logic in `src/lib/services/`.
 - Keep Supabase reads/writes in `src/lib/database/`.
