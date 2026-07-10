@@ -47,6 +47,7 @@ const mocks = vi.hoisted(() => {
     calculateCurrentPrestige: vi.fn(async () => ({ companyPrestige: 0, vineyardPrestigeEvents: [] })),
     initializeBatchFeatures: vi.fn(() => []),
     processEventTrigger: vi.fn(async (batch: WineBatch) => batch),
+    simulateMarketFeatureLifecycle: vi.fn((batch: WineBatch) => batch),
     recordBottledWine: vi.fn(async () => undefined)
   };
 });
@@ -92,7 +93,8 @@ vi.mock('@/lib/services/prestige/prestigeService', () => ({
 
 vi.mock('@/lib/services/wine/features/featureService', () => ({
   initializeBatchFeatures: mocks.initializeBatchFeatures,
-  processEventTrigger: mocks.processEventTrigger
+  processEventTrigger: mocks.processEventTrigger,
+  simulateMarketFeatureLifecycle: mocks.simulateMarketFeatureLifecycle
 }));
 
 vi.mock('@/lib/services/user/wineLogService', () => ({

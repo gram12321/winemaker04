@@ -35,17 +35,22 @@ export function calculateLandValuePriceMultiplier(wineBatch: WineBatch): number 
     + ((SALES_CONSTANTS.PRICE_MULTIPLIERS.LAND_VALUE_MAX_MULTIPLIER - SALES_CONSTANTS.PRICE_MULTIPLIERS.LAND_VALUE_MIN_MULTIPLIER) * landValueModifier);
 }
 
-function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
+function calculateFeaturePriceMultiplierForSeverity(
+  wineBatch: WineBatch,
+  useRisk: boolean
+): number {
   const configs = getAllFeatureConfigs();
-  const presentFeatures = (wineBatch.features || []).filter((feature) => feature.isPresent);
+  const applicableFeatures = (wineBatch.features || []).filter((feature) => (
+    useRisk ? !feature.isPresent && (feature.risk ?? 0) > 0 : feature.isPresent
+  ));
 
   let multiplier = 1;
 
-  for (const feature of presentFeatures) {
+  for (const feature of applicableFeatures) {
     const config = configs.find((candidate) => candidate.id === feature.id);
     if (!config || !config.effects?.price) continue;
 
-    const severity = clamp01(feature.severity || 0);
+    const severity = clamp01(useRisk ? feature.risk ?? 0 : feature.severity || 0);
     const severityWeight = severity > 0 ? severity : 1;
     const priceEffect = config.effects.price;
 
@@ -73,6 +78,18 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
   }
 
   return multiplier;
+}
+
+export function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
+  return calculateFeaturePriceMultiplierForSeverity(wineBatch, false);
+}
+
+/**
+ * Pending feature risks affect market value only as downside. A possible positive
+ * feature should not command a premium until it has actually manifested.
+ */
+export function calculateFeatureRiskMarketPriceMultiplier(wineBatch: WineBatch): number {
+  return Math.min(1, calculateFeaturePriceMultiplierForSeverity(wineBatch, true));
 }
 
 export function calculateWineScore(wineBatch: WineBatch): number {

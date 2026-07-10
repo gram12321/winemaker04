@@ -225,6 +225,8 @@ describe('processGameTick', () => {
     expect(mocks.processWeeklyFermentation).toHaveBeenCalledOnce();
     expect(mocks.processWeeklyFeatureRisks).toHaveBeenCalledOnce();
     expect(mocks.updateCellarCollectionPrestige).toHaveBeenCalledOnce();
+    expect(mocks.refreshBuyGrapeMarketForSeason).toHaveBeenCalledOnce();
+    expect(mocks.processWeeklyBuyGrapeOfferDecay).not.toHaveBeenCalled();
     expect(mocks.boardWeekAdvanced).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
     expect(mocks.boardSeasonStart).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
     expect(mocks.checkAndTriggerBookkeeping).toHaveBeenCalledWith(

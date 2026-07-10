@@ -156,7 +156,7 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | `nextWeekForecastState` / `nextWeekForecastIntensity` | Forecasted next-week weather shown to the player. |
 | Vineyard weather impact | Weather modifies vineyard ripeness and health as bounded deviations from seasonal baselines. Site response uses aspect, altitude, terroir, and soil response. |
 | Grape buyer market | Sell-side market for grapes/must/batches, with bulk fallback buyer plus seasonal buyers. Price and limit pressure depend on season, economy, weather, buyer type, loyalty, research, and batch quality/state. |
-| Grape supplier market | Buy-side market for purchasing grapes, with bulk supplier fallback plus seasonal suppliers. Offers are persisted and decay/update over time. |
+| Grape supplier market | Buy-side market for purchasing grapes, with bulk supplier fallback plus seasonal suppliers. Offers persist, expire, decay weekly, and refresh seasonally; previews simulate bounded state/age feature evolution and risk accumulation without creating player notifications or prestige events. Pricing combines source quality with the preview batch's structure, taste, site value, manifested features, and downside feature risks. |
 | Buyer/supplier loyalty | Relationship progression that improves price/limits or supply persistence. |
 
 Weather is currently active for vineyard health/ripeness, Weather Center reporting, Winepedia reference content, and grape-market volatility. Severe weather event chains, mitigation actions, weather research upgrades, and weather achievements remain future layers.

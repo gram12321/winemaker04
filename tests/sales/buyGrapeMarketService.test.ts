@@ -278,6 +278,20 @@ describe('buy grape market service', () => {
     expect(getBuyOfferStateLabel('must_fermenting')).toBe('Fermenting');
   });
 
+  it('recreates active-company offers without touching supplier relationships', async () => {
+    mocks.getCompanyBuyOfferRows
+      .mockResolvedValueOnce({ data: [{ offer_id: 'stale-offer' }] as never, error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+
+    const { recreateBuyGrapeMarketOffers } = await import('@/lib/services/sales/buyGrapeMarketService');
+    await recreateBuyGrapeMarketOffers();
+
+    expect(mocks.deleteBuyOfferRow).toHaveBeenCalledWith('company-1', 'stale-offer');
+    expect(mocks.upsertBuyOfferRows).toHaveBeenCalledOnce();
+    expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('buy_grape_market');
+    expect(mocks.recordSupplierPurchase).not.toHaveBeenCalled();
+  });
+
   it('creates inventory, writes transaction, and updates offer volume after successful purchase', async () => {
     const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
 

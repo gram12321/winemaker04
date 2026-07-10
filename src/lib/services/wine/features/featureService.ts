@@ -939,10 +939,15 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
  * For harvest events, also merges vineyard pendingFeatures into batch features
  * Applies feature effects to ALL present features after event processing
  */
+export interface ProcessEventTriggerOptions {
+  suppressSideEffects?: boolean;
+}
+
 export async function processEventTrigger(
   batch: WineBatch,
   event: 'harvest' | 'crushing' | 'fermentation' | 'bottling',
-  context: any
+  context: any,
+  options: ProcessEventTriggerOptions = {}
 ): Promise<WineBatch> {
   const eventConfigs = getEventTriggeredFeatures(event);
   let updatedFeatures = [...(batch.features || [])];
@@ -974,7 +979,9 @@ export async function processEventTrigger(
     
     for (const trigger of triggers) {
       if (trigger.event === event) {
-        const triggerContext = { options: context, batch };
+        const triggerContext = context?.options
+          ? { options: context.options, batch: context.batch ?? batch }
+          : { options: context, batch };
         const conditionMet = trigger.condition(triggerContext);
 
         if (conditionMet) {
@@ -987,7 +994,8 @@ export async function processEventTrigger(
             config, 
             updatedFeatures, 
             riskIncrease, 
-            vineyard
+            vineyard,
+            options
           );
           updatedFeatures = newFeatures;
           
@@ -1341,6 +1349,57 @@ function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature:
   return baseRate * stateMultiplier * compoundMultiplier * oxidationMultiplier;
 }
 
+/**
+ * Advance an in-memory market preview through a bounded number of lifecycle weeks.
+ * This deliberately does not persist batches, roll random manifestations, or create
+ * notifications/prestige events. It gives supplier offers meaningful evolving
+ * features and accumulating risks without treating them as player-owned inventory.
+ */
+export function simulateMarketFeatureLifecycle(batch: WineBatch, weeks: number): WineBatch {
+  const simulationWeeks = Math.max(0, Math.floor(weeks));
+  if (simulationWeeks === 0) return batch;
+
+  let features = [...(batch.features || [])];
+
+  for (let index = 0; index < simulationWeeks; index++) {
+    const currentBatch = { ...batch, features };
+
+    for (const config of getTimeBasedFeatures()) {
+      // Vineyard-owned lifecycle (for example Noble Rot) is resolved before
+      // harvest and should not be invented by an in-market supplier preview.
+      if (config.processVineyardFeatures) continue;
+
+      const feature = getOrCreateFeature(features, config);
+
+      if (config.behavior === 'evolving') {
+        if (!feature.isPresent || config.id === 'bottle_aging') continue;
+
+        const behaviorConfig = config.behaviorConfig as { severityGrowth?: { rate?: number; cap?: number; stateMultipliers?: Record<WineBatchState, number | ((batch: WineBatch) => number)> } };
+        const baseRate = behaviorConfig.severityGrowth?.rate ?? 0;
+        const stateMultiplier = resolveStateMultiplier(behaviorConfig.severityGrowth?.stateMultipliers, currentBatch);
+        const cap = behaviorConfig.severityGrowth?.cap ?? 1;
+        features = updateFeatureInArray(features, {
+          ...feature,
+          severity: Math.min(cap, feature.severity + (baseRate * stateMultiplier)),
+        });
+        continue;
+      }
+
+      if (config.behavior !== 'accumulation' || feature.isPresent) continue;
+
+      const behaviorConfig = config.behaviorConfig as AccumulationConfig;
+      if (resolveStateMultiplier(behaviorConfig.stateMultipliers, currentBatch) <= 0) continue;
+
+      features = updateFeatureInArray(features, {
+        ...feature,
+        risk: Math.min(1, (feature.risk ?? 0) + calculateRiskIncrease(currentBatch, config, feature)),
+      });
+    }
+  }
+
+  return applyFeatureEffectsToBatch({ ...batch, features });
+}
+
 function checkManifestation(batch: WineBatch, config: FeatureConfig, risk: number): boolean {
   if (risk <= 0) return false;
   
@@ -1586,7 +1645,8 @@ async function applyRiskIncrease(
   config: FeatureConfig,
   features: WineFeature[],
   riskIncrease: number,
-  vineyard?: any
+  vineyard?: any,
+  options: ProcessEventTriggerOptions = {}
 ): Promise<{ features: WineFeature[]; manifested: boolean }> {
   const feature = getOrCreateFeature(features, config);
   
@@ -1608,7 +1668,9 @@ async function applyRiskIncrease(
       } else {
         severity = newRisk;
       }
-      await handleManifestation(batch, config, vineyard);
+      if (!options.suppressSideEffects) {
+        await handleManifestation(batch, config, vineyard);
+      }
       manifested = true;
     }
   }

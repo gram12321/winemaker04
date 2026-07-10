@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { processWeeklyBuyGrapeOfferDecay } from '@/lib/services/sales/buyGrapeMarketService';
 
 const mocks = vi.hoisted(() => {
   const rows: any[] = [];
@@ -172,16 +173,40 @@ describe('buy grape market weekly decay', () => {
         last_refreshed_year: 2026,
         last_refreshed_season: 'Spring',
         last_refreshed_week: 2,
+      },
+      {
+        company_id: 'company-1',
+        offer_id: 'time-expired-offer',
+        ware_group: 'grapes',
+        supplier_id: 'supplier-a',
+        supplier_name: 'Supplier A',
+        origin_tag: 'seasonal_rotation',
+        grape_variety: 'Chardonnay',
+        available_kg: 250,
+        quality_score: 0.7,
+        quality_decay_per_week: 0.01,
+        min_quality_floor: 0.5,
+        base_price_per_kg: 3,
+        batch_state: 'grapes',
+        weeks_on_market: 0,
+        created_year: 2026,
+        created_season: 'Spring',
+        created_week: 1,
+        last_refreshed_year: 2026,
+        last_refreshed_season: 'Spring',
+        last_refreshed_week: 2,
+        expires_year: 2026,
+        expires_season: 'Spring',
+        expires_week: 3,
       }
     );
   });
 
   it('deletes empty offers and decays active offer quality with floor protection', async () => {
-    const { processWeeklyBuyGrapeOfferDecay } = await import('@/lib/services/sales/buyGrapeMarketService');
-
     await processWeeklyBuyGrapeOfferDecay();
 
     expect(mocks.deleteBuyOfferRow).toHaveBeenCalledWith('company-1', 'expired-offer');
+    expect(mocks.deleteBuyOfferRow).toHaveBeenCalledWith('company-1', 'time-expired-offer');
     expect(mocks.updateBuyOfferRow).toHaveBeenCalledWith(
       'company-1',
       'active-offer',

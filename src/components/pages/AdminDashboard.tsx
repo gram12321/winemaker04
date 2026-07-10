@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle
 } from '../ui';
-import { Settings, Users, AlertTriangle, Trash2, TestTube2 } from 'lucide-react';
+import { Settings, Users, AlertTriangle, Trash2, TestTube2, RefreshCw } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import TestLabPage from './admin/TestLabPage';
 import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
@@ -26,7 +26,8 @@ import {
   adminClearCompanyValueHighscores,
   adminClearCompanyValuePerWeekHighscores,
   adminFullDatabaseReset,
-  adminRecreateCustomers
+  adminRecreateCustomers,
+  recreateBuyGrapeMarketOffers
 } from '@/lib/services';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
@@ -85,6 +86,10 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
   const handleClearAllAchievements = () => withLoading(async () => {
     await adminClearAllAchievements();
+  });
+
+  const handleRecreateBuyGrapeOffers = () => withLoading(async () => {
+    await recreateBuyGrapeMarketOffers();
   });
 
   const handleFullDatabaseReset = () => withLoading(async () => {
@@ -191,6 +196,21 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   className="w-full"
                 >
                   Clear Company Value Per Week Highscores
+                </Button>
+              </SimpleCard>
+
+              <SimpleCard
+                title="Bulk Grape Market"
+                description="Regenerate all current-company supplier offers without changing inventory or supplier loyalty"
+              >
+                <Button
+                  variant="outline"
+                  onClick={handleRecreateBuyGrapeOffers}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Recreate Bulk Offers
                 </Button>
               </SimpleCard>
             </div>

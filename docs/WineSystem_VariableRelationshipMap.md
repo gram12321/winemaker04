@@ -64,7 +64,7 @@ flowchart LR
 - Land value affects price and contracts as site/static quality; it is not taste quality.
 - Sales-channel research affects customer/contract access and pricing opportunities; it is not a structure or taste variable.
 - Weather affects vineyard health/ripeness and market pressure as explicit deviations; it should not be hidden inside wine score formulas.
-- Grape buyer/supplier markets are market overlays. They can use wine/grape state and quality, economy, weather, loyalty, and research unlocks, but they should not mutate historical wine snapshots.
+- Grape buyer/supplier markets are market overlays. They can use wine/grape state and quality, previewed structure/taste/site/features/risks, economy, weather, loyalty, and research unlocks, but they should not mutate historical wine snapshots. Buy-offer previews use a bounded in-memory lifecycle simulation for their implied state and age, with notifications and prestige events suppressed.
 - Grape market tuning baselines such as state premiums, spread, buyer limits, supplier supply, and cooperative floors should live in dedicated constants modules; services consume them, and UI should not reach into service-local constants.
 - Founder economy is a finance/staff ownership layer. It affects wages, yearly distributions, buyout, and cash flow; it does not replace the archived public-company/share-market design.
 - The current `boardShare` feature seam is no-op in mainline. Share/board constants and database scaffolding are not active share-market runtime.

@@ -328,15 +328,6 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Apply weekly decay to buy market offers.
-    (async () => {
-      try {
-        await processWeeklyBuyGrapeOfferDecay();
-      } catch (error) {
-        console.warn('Error processing buy market weekly decay:', error);
-      }
-    })(),
-
     // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
     (async () => {
       try {
@@ -410,6 +401,16 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
           await getLoanLenderFeature().ticks.processSeasonalLoanPayments();
         } catch (error) {
           console.warn('Error during seasonal loan payments:', error);
+        }
+      })()
+    );
+  } else {
+    weeklyTasks.push(
+      (async () => {
+        try {
+          await processWeeklyBuyGrapeOfferDecay();
+        } catch (error) {
+          console.warn('Error processing buy market weekly decay:', error);
         }
       })()
     );

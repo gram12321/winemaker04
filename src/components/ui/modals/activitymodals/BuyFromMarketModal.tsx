@@ -4,8 +4,6 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogH
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
 import { MarketQuickBuyRowAction } from '../../market/MarketQuickBuyRowAction';
-import { FeatureDisplay } from '../../components/FeatureDisplay';
-import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
@@ -22,6 +20,8 @@ import {
 } from '@/lib/services/sales/grapeSupplierLoyaltyService';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
+import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import type { WineFeature } from '@/lib/types/wineFeatures';
 
 type SortDirection = 'asc' | 'desc' | null;
 
@@ -72,6 +72,56 @@ function getProcessingContextLabel(offer: BuyGrapeMarketOffer): string {
   if (offer.batchState === 'must_ready') return 'Supplier-crushed must, ready for fermentation';
   return 'Fresh grapes at harvest-equivalent stage';
 }
+
+function getActiveFeatureSignalClass(feature: WineFeature): string {
+  const badgeColor = getFeatureConfig(feature.id)?.badgeColor;
+  if (badgeColor === 'destructive') return 'border-red-700/70 bg-red-950/40 text-red-200';
+  if (badgeColor === 'warning') return 'border-amber-700/70 bg-amber-950/40 text-amber-200';
+  if (badgeColor === 'success') return 'border-emerald-700/70 bg-emerald-950/40 text-emerald-200';
+  return 'border-blue-700/70 bg-blue-950/40 text-blue-200';
+}
+
+function formatFeatureSignalPercent(value: number): string {
+  return `${formatNumber(value * 100, { smartDecimals: true })}%`;
+}
+
+const MarketFeatureSignals: React.FC<{ offer: BuyGrapeMarketOffer }> = ({ offer }) => {
+  const activeFeatures = offer.previewBatch.features.filter((feature) => feature.isPresent);
+  const riskFeatures = offer.previewBatch.features.filter((feature) => !feature.isPresent && (feature.risk ?? 0) > 0);
+
+  if (activeFeatures.length === 0 && riskFeatures.length === 0) {
+    return <span className="text-[11px] text-gray-500">Clear</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap justify-end gap-1">
+      {activeFeatures.map((feature) => (
+        <UnifiedTooltip
+          key={`feature-${feature.id}`}
+          title={feature.name}
+          content={<span className="text-xs leading-snug">Active feature · severity {formatFeatureSignalPercent(feature.severity)}</span>}
+        >
+          <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${getActiveFeatureSignalClass(feature)}`}>
+            <span>{feature.icon}</span>
+            <span>{formatFeatureSignalPercent(feature.severity)}</span>
+          </span>
+        </UnifiedTooltip>
+      ))}
+      {riskFeatures.map((feature) => (
+        <UnifiedTooltip
+          key={`risk-${feature.id}`}
+          title={`${feature.name} risk`}
+          content={<span className="text-xs leading-snug">Pending risk · {formatFeatureSignalPercent(feature.risk ?? 0)} chance</span>}
+        >
+          <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-950/40 px-1.5 py-0.5 text-[10px] text-amber-200">
+            <span>{feature.icon}</span>
+            <span>{formatFeatureSignalPercent(feature.risk ?? 0)}</span>
+          </span>
+        </UnifiedTooltip>
+      ))}
+    </div>
+  );
+};
 
 function getDemandPressureIndex(offer: Pick<BuyGrapeMarketOffer, 'demandFactors'>): number {
   return (
@@ -221,8 +271,8 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       return next;
     });
 
-    await loadOffers();
-  }, [loadOffers]);
+    onClose();
+  }, [onClose]);
 
   const grapeFilterOptions = useMemo(() => {
     return Array.from(new Set(offers.map((offer) => offer.grapeVariety))).sort();
@@ -358,7 +408,6 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     if (!selectedOffer) return null;
     return getBuyOfferPriceBreakdown(selectedOffer);
   }, [selectedOffer]);
-  const selectedPreviewBatch = selectedOffer?.previewBatch ?? null;
 
   const selectedDemandPressureIndex = useMemo(() => {
     if (!selectedOffer) return 1;
@@ -382,6 +431,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       * priceBreakdown.buyerSensitivityMultiplier
       * priceBreakdown.supplierRelationshipMultiplier
       * priceBreakdown.companyPrestigeMultiplier
+      * priceBreakdown.previewValueMultiplier
       * priceBreakdown.statePremiumMultiplier
       * priceBreakdown.marketSpreadMultiplier
     );
@@ -415,7 +465,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       key: 'offer',
       header: 'Offer',
       sortable: true,
-      className: 'w-[26%] min-w-[220px]',
+      className: 'w-[23%] min-w-[205px]',
       render: (offer) => (
         <div className="space-y-1">
           <div className="font-medium text-white leading-tight">{offer.supplierName}</div>
@@ -455,13 +505,23 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       key: 'quality',
       header: headerWithTooltip('Quality', 'Grape quality score. Higher quality increases effective price and usually means better processing potential.'),
       sortable: true,
-      className: 'w-[12%] text-right min-w-[110px]',
+      className: 'w-[13%] text-right min-w-[130px]',
       render: (offer) => (
         <div>
           <div className={`font-medium ${getColorClass(offer.qualityScore)}`}>{Math.round(offer.qualityScore * 100)}%</div>
           <div className="text-[11px] text-gray-400 whitespace-nowrap">{getQualityCategory(offer.qualityScore)}</div>
+          <div className="mt-0.5 text-[10px] text-emerald-200 whitespace-nowrap">
+            Struct {Math.round(offer.previewBatch.structureIndex * 100)}% · Taste {Math.round(offer.previewBatch.tasteQualityIndex * 100)}%
+          </div>
         </div>
       ),
+    },
+    {
+      key: 'features',
+      header: headerWithTooltip('Features & Risks', 'Manifested features show severity in green. Pending risks show their chance in amber.'),
+      sortable: false,
+      className: 'w-[13%] text-right min-w-[130px]',
+      render: (offer) => <MarketFeatureSignals offer={offer} />,
     },
     {
       key: 'price',
@@ -624,10 +684,21 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             {priceBreakdown && selectedOffer ? (
               <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70">
                 <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Price Summary</div>
+                <div className="mb-3 rounded border border-emerald-800/60 bg-emerald-950/20 p-2 text-xs text-gray-300">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                    <div><span className="text-gray-400">Origin:</span> {selectedOffer.provenanceSnapshot.region}, {selectedOffer.provenanceSnapshot.country}</div>
+                    <div><span className="text-gray-400">Processing:</span> {getProcessingContextLabel(selectedOffer)}</div>
+                    <div><span className="text-gray-400">Terroir:</span> {selectedOffer.provenanceSnapshot.aspect} aspect · {selectedOffer.provenanceSnapshot.altitude}m · {selectedOffer.provenanceSnapshot.soil.join(', ')}</div>
+                    <div><span className="text-gray-400">Land Value:</span> {Math.round(selectedOffer.previewBatch.landValueModifier * 100)}% · Preview v{selectedOffer.previewVersion}</div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier</span><span className="text-right">{selectedOffer.supplierName}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Base Price</span><span className="text-right">{formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}/kg</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">×{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Preview Quality ({Math.round(priceBreakdown.previewQualityScore * 100)}%)</span><span className="text-right">×{priceBreakdown.previewQualityMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Preview Features</span><span className="text-right">×{priceBreakdown.previewFeatureMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Preview Risks</span><span className="text-right">×{priceBreakdown.previewRiskMultiplier.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">×{selectedDemandPressureIndex.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">×{selectedVolatilityRiskIndex.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{priceBreakdown.supplierRelationshipMultiplier.toFixed(2)}</span></div>
@@ -652,6 +723,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                     {' × '}{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.supplierRelationshipMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.companyPrestigeMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.previewValueMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.statePremiumMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.marketSpreadMultiplier.toFixed(3)}
                     {' = '}{formatNumber(selectedRawPricePerKg, { currency: true, decimals: 3 })}/kg
@@ -686,6 +758,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{priceBreakdown.supplierRelationshipMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">×{priceBreakdown.companyPrestigeMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Preview Value Factor</span><span className="text-right">×{priceBreakdown.previewValueMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{priceBreakdown.marketSpreadMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Market Floor</span><span className="text-right">{formatNumber(priceBreakdown.marketFloorPrice, { currency: true, decimals: 2 })}/kg</span></div>
                     </div>
@@ -726,66 +799,6 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               </select>
             </div>
           </div>
-
-          {selectedOffer && selectedPreviewBatch && (
-            <div className="rounded border border-emerald-800/60 bg-emerald-950/20 p-4 space-y-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-emerald-200">Purchase Preview</div>
-                  <div className="mt-1 text-xs text-gray-300">{selectedPreviewBatch.originSnapshot?.terroirSummary ?? 'Origin snapshot unavailable'}</div>
-                  <div className="mt-1 text-xs text-gray-400">
-                    {getOriginLabel(selectedOffer.originTag)} · {getBuyOfferStateLabel(selectedOffer.batchState)} · {getProcessingContextLabel(selectedOffer)}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-right">
-                  <div className="text-gray-400">Structure</div>
-                  <div className="text-white">{Math.round(selectedPreviewBatch.structureIndex * 100)}%</div>
-                  <div className="text-gray-400">Taste Quality</div>
-                  <div className="text-white">{Math.round(selectedPreviewBatch.tasteQualityIndex * 100)}%</div>
-                  <div className="text-gray-400">Land Value</div>
-                  <div className="text-white">{Math.round(selectedPreviewBatch.landValueModifier * 100)}%</div>
-                  <div className="text-gray-400">Preview Version</div>
-                  <div className="text-white">v{selectedOffer.previewVersion}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <div className="rounded border border-gray-700/70 bg-gray-900/40 p-3">
-                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-300">Terroir</div>
-                  <div className="space-y-1 text-xs text-gray-300">
-                    <div>{selectedOffer.provenanceSnapshot.region}, {selectedOffer.provenanceSnapshot.country}</div>
-                    <div>{selectedOffer.provenanceSnapshot.soil.join(', ')}</div>
-                    <div>{selectedOffer.provenanceSnapshot.aspect} aspect · {selectedOffer.provenanceSnapshot.altitude}m · density {selectedOffer.provenanceSnapshot.density.toLocaleString()}</div>
-                    <div>Health {Math.round(selectedOffer.provenanceSnapshot.vineyardHealth * 100)}% · Ripeness {Math.round(selectedOffer.provenanceSnapshot.ripeness * 100)}% · Prestige {Math.round(selectedOffer.provenanceSnapshot.vineyardPrestige * 100)}%</div>
-                  </div>
-                </div>
-
-                <div className="rounded border border-gray-700/70 bg-gray-900/40 p-3">
-                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-300">Characteristics</div>
-                  <WineCharacteristicsDisplay
-                    characteristics={selectedPreviewBatch.characteristics}
-                    showValues={true}
-                    collapsible={false}
-                    title=""
-                    showStructureIndex={true}
-                    structureIndexValue={selectedPreviewBatch.structureIndex}
-                    className="text-white"
-                  />
-                </div>
-
-                <div className="rounded border border-gray-700/70 bg-gray-900/40 p-3">
-                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-300">Features and Risks</div>
-                  <FeatureDisplay
-                    batch={selectedPreviewBatch}
-                    showEvolving={true}
-                    showActive={true}
-                    showRisks={true}
-                    className="text-white"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden">
             <div className="overflow-x-auto max-h-[56vh]">

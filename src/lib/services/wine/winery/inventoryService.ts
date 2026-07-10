@@ -12,7 +12,7 @@ import { calculateLandValueModifier } from '../winescore/landValueModifierCalcul
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
-import { initializeBatchFeatures, processEventTrigger } from '../features/featureService';
+import { initializeBatchFeatures, processEventTrigger, simulateMarketFeatureLifecycle, type ProcessEventTriggerOptions } from '../features/featureService';
 import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 import { calculateGrapeSuitabilityMetrics } from '../../vineyard/vineyardValueCalc';
 import {
@@ -35,6 +35,7 @@ export interface MarketBatchStateProfile {
   fermentationOptions?: FermentationOptions;
   fermentationProgress?: number;
   fermentationWeeksApplied?: number;
+  featureLifecycleWeeks?: number;
 }
 
 export interface CreateMarketWineBatchInput {
@@ -126,6 +127,7 @@ interface BuildHarvestStageBatchInput {
   originSnapshot?: WineBatchOriginSnapshot;
   companyPrestige?: number;
   vineyardPrestige?: number;
+  eventTriggerOptions?: ProcessEventTriggerOptions;
 }
 
 async function buildHarvestStageBatch(input: BuildHarvestStageBatchInput): Promise<WineBatch> {
@@ -219,7 +221,7 @@ async function buildHarvestStageBatch(input: BuildHarvestStageBatchInput): Promi
     wineAnchors
   };
 
-  const batchWithEventFeatures = await processEventTrigger(baseBatch, 'harvest', vineyard);
+  const batchWithEventFeatures = await processEventTrigger(baseBatch, 'harvest', vineyard, input.eventTriggerOptions);
   const tasteQualityIndex = getTasteQualityIndex(batchWithEventFeatures);
   const finalizedBatch: WineBatch = {
     ...batchWithEventFeatures,
@@ -239,7 +241,8 @@ async function buildHarvestStageBatch(input: BuildHarvestStageBatchInput): Promi
 
 async function applyCrushingProfileToBatch(
   batch: WineBatch,
-  crushingOptions: CrushingOptions
+  crushingOptions: CrushingOptions,
+  eventTriggerOptions?: ProcessEventTriggerOptions
 ): Promise<WineBatch> {
   const {
     characteristics: modifiedCharacteristics,
@@ -271,7 +274,8 @@ async function applyCrushingProfileToBatch(
   const batchWithEventFeatures = await processEventTrigger(
     updatedBatch,
     'crushing',
-    { options: crushingOptions, batch: updatedBatch }
+    { options: crushingOptions, batch: updatedBatch },
+    eventTriggerOptions
   );
 
   const anchorsBeforeCrushing = resolveWineAnchors(batchWithEventFeatures.wineAnchors);
@@ -319,7 +323,8 @@ async function applyCrushingProfileToBatch(
 
 async function applyFermentationSetupToBatch(
   batch: WineBatch,
-  fermentationOptions: FermentationOptions
+  fermentationOptions: FermentationOptions,
+  eventTriggerOptions?: ProcessEventTriggerOptions
 ): Promise<WineBatch> {
   const updatedBatch = {
     ...batch,
@@ -329,7 +334,8 @@ async function applyFermentationSetupToBatch(
   const batchWithEventFeatures = await processEventTrigger(
     updatedBatch,
     'fermentation',
-    { options: fermentationOptions, batch: updatedBatch }
+    { options: fermentationOptions, batch: updatedBatch },
+    eventTriggerOptions
   );
 
   const anchorsBeforeSetup = resolveWineAnchors(batchWithEventFeatures.wineAnchors);
@@ -449,6 +455,7 @@ async function buildMarketStateBatch(input: CreateMarketWineBatchInput): Promise
   );
 
   const prestigeData = await calculateCurrentPrestige();
+  const silentMarketEventTrigger: ProcessEventTriggerOptions = { suppressSideEffects: true };
   let batch = await buildHarvestStageBatch({
     vineyard: pseudoVineyard,
     vineyardId: 'market_purchase',
@@ -459,28 +466,31 @@ async function buildMarketStateBatch(input: CreateMarketWineBatchInput): Promise
     harvestEndDate: input.harvestEndDate,
     originSnapshot,
     companyPrestige: prestigeData.companyPrestige,
-    vineyardPrestige: 0
+    vineyardPrestige: 0,
+    eventTriggerOptions: silentMarketEventTrigger
   });
 
   if (stateProfile.state === 'must_ready') {
     if (!stateProfile.crushingOptions) {
       throw new Error('Market must preview requires crushing options.');
     }
-    batch = await applyCrushingProfileToBatch(batch, stateProfile.crushingOptions);
+    batch = await applyCrushingProfileToBatch(batch, stateProfile.crushingOptions, silentMarketEventTrigger);
   }
 
   if (stateProfile.state === 'must_fermenting') {
     if (!stateProfile.crushingOptions || !stateProfile.fermentationOptions) {
       throw new Error('Market fermenting preview requires crushing and fermentation options.');
     }
-    batch = await applyCrushingProfileToBatch(batch, stateProfile.crushingOptions);
-    batch = await applyFermentationSetupToBatch(batch, stateProfile.fermentationOptions);
+    batch = await applyCrushingProfileToBatch(batch, stateProfile.crushingOptions, silentMarketEventTrigger);
+    batch = await applyFermentationSetupToBatch(batch, stateProfile.fermentationOptions, silentMarketEventTrigger);
     batch = applyFermentationContactWeeks(batch, stateProfile.fermentationWeeksApplied ?? 0);
     batch = {
       ...batch,
       fermentationProgress: stateProfile.fermentationProgress ?? 0
     };
   }
+
+  batch = simulateMarketFeatureLifecycle(batch, stateProfile.featureLifecycleWeeks ?? 0);
 
   batch.estimatedPrice = calculateEstimatedPrice(batch, pseudoVineyard, prestigeData.companyPrestige, 0);
   return batch;

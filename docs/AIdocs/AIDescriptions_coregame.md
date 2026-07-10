@@ -122,7 +122,7 @@ Deferred wine layers:
 - Sell-side grape market is implemented through `sellGrapesService.ts`, `grapeBuyerMarketService.ts`, and buyer loyalty.
 - Buy-side grape market is implemented through `buyGrapeMarketService.ts`, supplier market services, buy-market offers, and supplier loyalty.
 - Bulk fallback channels and seasonal buyers/suppliers exist.
-- Grape market pricing and seasonal hard limits respond to season, economy phase, weather state/intensity, grape/state quality, relationships, and research unlocks.
+- Grape market pricing and seasonal hard limits respond to season, economy phase, weather state/intensity, grape/state quality, previewed structure/taste/site/features/risks, relationships, and research unlocks. Buy-offer previews simulate bounded feature evolution and risk accumulation from each offer's implied processing state and age, without player notification or prestige-event side effects.
 - Bulk grape achievements and research gates are wired into achievement and research services.
 
 Forward pre-sale contracts are implemented:
