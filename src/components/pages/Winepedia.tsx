@@ -40,7 +40,7 @@ export default function Winepedia({ view }: WinepediaProps) {
       { id: 'grapeVarieties', label: 'Grape Variety', component: GrapeVarietiesTab },
       { id: 'customers', label: 'Customers', component: CustomersTab },
       { id: 'yieldProjection', label: 'Yield Production', component: YieldProjectionTab },
-      { id: 'landValueModifier', label: 'Land Value Modifier', component: WineQualityTab },
+      { id: 'landValueModifier', label: 'Wine Quality & Value', component: WineQualityTab },
       { id: 'dynamicRange', label: 'Dynamic Range', component: DynamicRangeTab },
       { id: 'crossTraitPenalty', label: 'Cross-Trait Penalty', component: CrossTraitPenaltyTab },
       { id: 'customerTypes', label: 'Customer Types', component: CustomerTypesTab },
