@@ -38,6 +38,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 |---|---|
 | `loanLender` | Active; owns loan/lender services, UI, and activities. |
 | `researchUpgrade` | Active; owns research integration, selectors/view models, and admin inspector. |
+| `admin` | Dev-only compatible-Winemaker slice; host seam exposes availability and page rendering while commands/Test Lab collaborators remain internal. |
 | `boardShare` | No-op by default; public-company/share runtime is not wired. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
 
@@ -45,6 +46,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 
 - `*DB.ts` owns CRUD and row mapping; services own rules and orchestration.
 - UI/hooks do not import database modules directly; use service seams and shared hooks.
+- Admin-only destructive database adapters stay under `database/admin/` and are not re-exported from the general database barrel.
 - Prefer barrels such as `@/lib/constants`, `@/lib/services`, and `@/lib/database`.
 - Reusable market tuning belongs in `src/lib/constants/`; service-local constants and compatibility re-exports are not canonical.
 - Inventory persistence for market purchases, order fulfillment, and contract fulfillment routes through `inventoryService`.

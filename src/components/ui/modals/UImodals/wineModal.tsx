@@ -104,7 +104,7 @@ export const WineModal: React.FC<WineModalProps> = ({
     },
     [wineBatch, vineyard, prestige]
   );
-  const showDevAnchorDebug = getAdminFeature().gate.isAvailable();
+  const showDevAnchorDebug = getAdminFeature().isAvailable();
   const anchorDebug = useMemo(() => {
     if (!wineBatch) return null;
     return analyzeWineAnchorDownstreamImpact(

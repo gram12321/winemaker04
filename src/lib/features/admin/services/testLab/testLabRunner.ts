@@ -1,18 +1,18 @@
 import { getTestLabScenario } from './testLabScenarios';
 import type { TestLabParamField, TestLabRunRequest, TestLabScenarioResult, TestLabScenarioStatus } from './types';
 import { createTestLabRunId } from './runId';
-import { cleanupTestLabRun } from './testLabCleanupService';
 import type { Season } from '@/lib/types/types';
-import type { AdminTestLabOperations } from '../../featureTypes';
-import {
+import type { AdminTestLabOperations } from '../../internalTypes';
+import type { cleanupTestLabRun } from './testLabCleanupService';
+import type {
   createBottledWine,
   createFermentingBatch,
   createGrapeBatch,
   createHarvestReadyVineyard,
   createMustReadyBatch,
   createTestLabCompany,
-  type TestLabBatchResult,
-  type TestLabVineyardResult
+  TestLabBatchResult,
+  TestLabVineyardResult
 } from './testLabFixtureService';
 
 interface NormalizedParams {
@@ -20,23 +20,17 @@ interface NormalizedParams {
   warnings: string[];
 }
 
-async function resolveAdminOperations(operations?: AdminTestLabOperations): Promise<AdminTestLabOperations> {
-  if (operations) return operations;
-  const service = await import('@/lib/features/admin/services/adminService');
-  return {
-    setGoldToCompany: service.adminSetGoldToCompany,
-    setPlayerBalance: service.adminSetPlayerBalance,
-    addPrestigeToCompany: service.adminAddPrestigeToCompany,
-    setGameDate: service.adminSetGameDate,
-    grantAllResearch: service.adminGrantAllResearch,
-    removeAllResearch: service.adminRemoveAllResearch,
-    generateTestOrders: service.adminGenerateTestOrders,
-    generateTestContract: service.adminGenerateTestContract,
-    generateTestBottlePresaleContract: service.adminGenerateTestBottlePresaleContract,
-    generateTestForwardPresaleContract: service.adminGenerateTestForwardPresaleContract,
-    recreateBuyGrapeMarketOffers: async () => {},
-    setStaffXP: service.adminSetStaffXP
-  };
+export interface TestLabRunnerDependencies {
+  operations: AdminTestLabOperations;
+  cleanupTestLabRun: typeof cleanupTestLabRun;
+  createTestLabCompany: typeof createTestLabCompany;
+  createHarvestReadyVineyard: typeof createHarvestReadyVineyard;
+  createGrapeBatch: typeof createGrapeBatch;
+  createMustReadyBatch: typeof createMustReadyBatch;
+  createFermentingBatch: typeof createFermentingBatch;
+  createBottledWine: typeof createBottledWine;
+  completeActivityNow: (activityId: string) => Promise<{ success: boolean; error?: string; activity?: { id: string; title: string } }>;
+  getCurrentUserId: () => string | null;
 }
 
 const normalizeFieldValue = (
@@ -146,10 +140,9 @@ async function runSalesOrdersScenario(
   runId: string,
   scenarioId: string,
   warnings: string[],
-  operations?: AdminTestLabOperations
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
-  const admin = await resolveAdminOperations(operations);
-  const data = await admin.generateTestOrders();
+  const data = await dependencies.operations.generateTestOrders();
   const createdOrders = data.totalOrdersCreated || 0;
   const status: TestLabScenarioStatus = createdOrders > 0 ? 'passed' : 'blocked';
 
@@ -174,9 +167,9 @@ async function runSalesContractScenario(
   runId: string,
   scenarioId: string,
   warnings: string[],
-  operations?: AdminTestLabOperations
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
-  const admin = await resolveAdminOperations(operations);
+  const admin = dependencies.operations;
 
   const data = scenarioId === 'sales.generate-bottle-presale-contract'
     ? await admin.generateTestBottlePresaleContract()
@@ -201,10 +194,10 @@ async function runFinanceScenario(
   scenarioId: string,
   params: Record<string, string | number | boolean>,
   warnings: string[],
-  operations?: AdminTestLabOperations
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
   const amount = Number(params.amount ?? 0);
-  const admin = await resolveAdminOperations(operations);
+  const admin = dependencies.operations;
 
   if (scenarioId === 'finance.set-company-money') {
     await admin.setGoldToCompany(amount);
@@ -221,10 +214,9 @@ async function runFinanceScenario(
   }
 
   if (scenarioId === 'finance.set-player-balance') {
-    const { authService } = await import('@/lib/services/user/authService');
-    const currentUser = authService.getCurrentUser();
+    const currentUserId = dependencies.getCurrentUserId();
 
-    if (!currentUser) {
+    if (!currentUserId) {
       return {
         runId,
         scenarioId,
@@ -237,7 +229,7 @@ async function runFinanceScenario(
       };
     }
 
-    const data = await admin.setPlayerBalance(amount, currentUser.id);
+    const data = await admin.setPlayerBalance(amount, currentUserId);
     return {
       runId,
       scenarioId,
@@ -267,9 +259,9 @@ async function runResearchScenario(
   runId: string,
   scenarioId: string,
   warnings: string[],
-  operations?: AdminTestLabOperations
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
-  const admin = await resolveAdminOperations(operations);
+  const admin = dependencies.operations;
 
   if (scenarioId === 'research.grant-all') {
     const data = await admin.grantAllResearch();
@@ -303,7 +295,7 @@ async function runStaffXpScenario(
   scenarioId: string,
   params: Record<string, string | number | boolean>,
   warnings: string[],
-  operations?: AdminTestLabOperations
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
   const staffId = String(params.staffId || '').trim();
   const xpCategory = String(params.xpCategory || '').trim();
@@ -321,7 +313,7 @@ async function runStaffXpScenario(
     };
   }
 
-  const admin = await resolveAdminOperations(operations);
+  const admin = dependencies.operations;
   const data = await admin.setStaffXP(staffId, xpCategory, xpAmount);
 
   return {
@@ -340,7 +332,8 @@ async function runCompleteActivityScenario(
   runId: string,
   scenarioId: string,
   params: Record<string, string | number | boolean>,
-  warnings: string[]
+  warnings: string[],
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
   const activityId = String(params.activityId || '').trim();
 
@@ -356,8 +349,7 @@ async function runCompleteActivityScenario(
     };
   }
 
-  const { completeActivityNow } = await import('@/lib/services/activity/activitymanagers/activityManager');
-  const data = await completeActivityNow(activityId);
+  const data = await dependencies.completeActivityNow(activityId);
 
   return {
     runId,
@@ -375,7 +367,8 @@ async function runCompleteActivityScenario(
   };
 }
 
-export async function runTestLabScenario(request: TestLabRunRequest, operations?: AdminTestLabOperations): Promise<TestLabScenarioResult> {
+export function createTestLabRunner(dependencies: TestLabRunnerDependencies) {
+  return async function runTestLabScenario(request: TestLabRunRequest): Promise<TestLabScenarioResult> {
   const scenario = getTestLabScenario(request.scenarioId);
   const runId = request.scenarioId === 'cleanup.by-run-id'
     ? String(request.params.runId || '')
@@ -417,19 +410,19 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
     }
 
     if (scenario.id === 'sales.generate-orders') {
-      return await runSalesOrdersScenario(runId, scenario.id, warnings, operations);
+      return await runSalesOrdersScenario(runId, scenario.id, warnings, dependencies);
     }
 
     if (scenario.id === 'sales.generate-contract') {
-      return await runSalesContractScenario(runId, scenario.id, warnings, operations);
+      return await runSalesContractScenario(runId, scenario.id, warnings, dependencies);
     }
 
     if (scenario.id === 'sales.generate-bottle-presale-contract') {
-      return await runSalesContractScenario(runId, scenario.id, warnings, operations);
+      return await runSalesContractScenario(runId, scenario.id, warnings, dependencies);
     }
 
     if (scenario.id === 'sales.generate-grape-forward-contract') {
-      return await runSalesContractScenario(runId, scenario.id, warnings, operations);
+      return await runSalesContractScenario(runId, scenario.id, warnings, dependencies);
     }
 
     if (
@@ -437,19 +430,19 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
       scenario.id === 'finance.set-player-balance' ||
       scenario.id === 'finance.add-prestige'
     ) {
-      return await runFinanceScenario(runId, scenario.id, params, warnings, operations);
+      return await runFinanceScenario(runId, scenario.id, params, warnings, dependencies);
     }
 
     if (scenario.id === 'research.grant-all' || scenario.id === 'research.remove-all') {
-      return await runResearchScenario(runId, scenario.id, warnings, operations);
+      return await runResearchScenario(runId, scenario.id, warnings, dependencies);
     }
 
     if (scenario.id === 'staff.set-xp') {
-      return await runStaffXpScenario(runId, scenario.id, params, warnings, operations);
+      return await runStaffXpScenario(runId, scenario.id, params, warnings, dependencies);
     }
 
     if (scenario.id === 'activity.complete-now') {
-      return await runCompleteActivityScenario(runId, scenario.id, params, warnings);
+      return await runCompleteActivityScenario(runId, scenario.id, params, warnings, dependencies);
     }
 
     if (scenario.id === 'cleanup.by-run-id') {
@@ -466,7 +459,7 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
         };
       }
 
-      const cleanup = await cleanupTestLabRun(targetRunId);
+      const cleanup = await dependencies.cleanupTestLabRun(targetRunId);
       return {
         runId: targetRunId,
         scenarioId: scenario.id,
@@ -481,7 +474,7 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
     }
 
     if (scenario.id === 'company.create-isolated') {
-      const company = await createTestLabCompany(runId, params);
+      const company = await dependencies.createTestLabCompany(runId, params);
       return {
         runId,
         scenarioId: scenario.id,
@@ -498,8 +491,7 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
     let fixtureResult: TestLabVineyardResult | TestLabBatchResult | null = null;
     switch (scenario.id) {
       case 'company.set-game-date': {
-        const admin = await resolveAdminOperations(operations);
-        await admin.setGameDate({
+        await dependencies.operations.setGameDate({
           week: Number(params.week),
           season: params.season as Season,
           year: Number(params.year)
@@ -520,26 +512,25 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
         };
       }
       case 'vineyard.harvest-ready': {
-        const admin = await resolveAdminOperations(operations);
-        await admin.setGameDate({
+        await dependencies.operations.setGameDate({
           week: Number(params.week),
           season: params.season as Season,
           year: Number(params.year)
         });
-        fixtureResult = await createHarvestReadyVineyard(runId, params);
+        fixtureResult = await dependencies.createHarvestReadyVineyard(runId, params);
         break;
       }
       case 'winery.grapes-batch':
-        fixtureResult = await createGrapeBatch(runId, params);
+        fixtureResult = await dependencies.createGrapeBatch(runId, params);
         break;
       case 'winery.must-ready-batch':
-        fixtureResult = await createMustReadyBatch(runId, params);
+        fixtureResult = await dependencies.createMustReadyBatch(runId, params);
         break;
       case 'winery.fermenting-batch':
-        fixtureResult = await createFermentingBatch(runId, params);
+        fixtureResult = await dependencies.createFermentingBatch(runId, params);
         break;
       case 'winery.bottled-wine':
-        fixtureResult = await createBottledWine(runId, params);
+        fixtureResult = await dependencies.createBottledWine(runId, params);
         break;
       default:
         fixtureResult = null;
@@ -602,4 +593,5 @@ export async function runTestLabScenario(request: TestLabRunRequest, operations?
       }
     };
   }
+  };
 }

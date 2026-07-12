@@ -11,7 +11,7 @@ const runnerMocks = vi.hoisted(() => ({
   createTestLabRunId: vi.fn(() => 'testlab_run_1'),
   cleanupTestLabRun: vi.fn(async () => ({
     runId: 'testlab_run_1',
-    status: 'passed',
+    status: 'passed' as const,
     deletedByEntity: {},
     warnings: []
   })),
@@ -95,6 +95,35 @@ vi.mock('@/lib/services/activity/activitymanagers/activityManager', () => ({
   completeActivityNow: runnerMocks.completeActivityNow
 }));
 
+const getTestLabRunner = async () => {
+  const { createTestLabRunner } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+  return createTestLabRunner({
+    operations: {
+      setGoldToCompany: runnerMocks.adminSetGoldToCompany,
+      setPlayerBalance: runnerMocks.adminSetPlayerBalance,
+      addPrestigeToCompany: runnerMocks.adminAddPrestigeToCompany,
+      setGameDate: runnerMocks.adminSetGameDate,
+      grantAllResearch: runnerMocks.adminGrantAllResearch,
+      removeAllResearch: runnerMocks.adminRemoveAllResearch,
+      generateTestOrders: runnerMocks.adminGenerateTestOrders,
+      generateTestContract: runnerMocks.adminGenerateTestContract,
+      generateTestBottlePresaleContract: runnerMocks.adminGenerateTestBottlePresaleContract,
+      generateTestForwardPresaleContract: runnerMocks.adminGenerateTestForwardPresaleContract,
+      recreateBuyGrapeMarketOffers: vi.fn(),
+      setStaffXP: runnerMocks.adminSetStaffXP
+    },
+    cleanupTestLabRun: runnerMocks.cleanupTestLabRun,
+    createTestLabCompany: runnerMocks.createTestLabCompany,
+    createHarvestReadyVineyard: runnerMocks.createHarvestReadyVineyard,
+    createGrapeBatch: runnerMocks.createGrapeBatch,
+    createMustReadyBatch: runnerMocks.createMustReadyBatch,
+    createFermentingBatch: runnerMocks.createFermentingBatch,
+    createBottledWine: runnerMocks.createBottledWine,
+    completeActivityNow: runnerMocks.completeActivityNow,
+    getCurrentUserId: () => 'user_1'
+  });
+};
+
 describe('Admin Test Lab behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -116,7 +145,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('normalizes number, boolean, select, and unknown parameters before running a dry run', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const result = await runTestLabScenario({
       scenarioId: 'winery.must-ready-batch',
@@ -168,7 +197,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('blocks cleanup without a run id before mutating persisted data', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const result = await runTestLabScenario({
       scenarioId: 'cleanup.by-run-id',
@@ -227,7 +256,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('runs sales shortcut scenarios through the active company admin services', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const orderResult = await runTestLabScenario({
       scenarioId: 'sales.generate-orders',
@@ -273,7 +302,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('runs finance and research scenarios through active-company admin services', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     await runTestLabScenario({
       scenarioId: 'finance.set-company-money',
@@ -298,7 +327,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('blocks staff XP scenarios without a selected staff member', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const result = await runTestLabScenario({
       scenarioId: 'staff.set-xp',
@@ -312,7 +341,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('sets staff XP through the active company admin service', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const result = await runTestLabScenario({
       scenarioId: 'staff.set-xp',
@@ -326,7 +355,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('completes an existing activity immediately through the shared activity manager', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const result = await runTestLabScenario({
       scenarioId: 'activity.complete-now',
@@ -343,7 +372,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('blocks instant completion when no activity is selected', async () => {
-    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
+    const runTestLabScenario = await getTestLabRunner();
 
     const result = await runTestLabScenario({
       scenarioId: 'activity.complete-now',

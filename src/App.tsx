@@ -164,7 +164,7 @@ function App() {
           />
         );
       case 'admin': {
-        const adminPage = getAdminFeature().ui.renderPage({
+        const adminPage = getAdminFeature().renderPage({
           onBack: () => setCurrentPage('company-overview'),
           onNavigateToLogin: handleBackToLogin
         });

@@ -1,4 +1,4 @@
-import { cleanupTestLabRecords } from '@/lib/database';
+import { cleanupTestLabRecords } from '@/lib/database/admin/testLabCleanupDB';
 import type { TestLabCleanupReport } from './types';
 import { formatTestLabPrefix } from './runId';
 

@@ -15,16 +15,11 @@ import {
 } from '@/components/ui';
 import { Settings, Users, AlertTriangle, Trash2, TestTube2, RefreshCw } from 'lucide-react';
 import { PageProps, NavigationProps } from '@/lib/types/UItypes';
-import type { AdminCheatOps, AdminDatabaseOps, AdminStaffOps } from '../featureTypes';
+import type { AdminDashboardDependencies } from '../internalTypes';
 import TestLabPage from './TestLabPage';
-import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
-interface AdminDashboardProps extends PageProps, NavigationProps {
-  database: AdminDatabaseOps;
-  cheats: AdminCheatOps;
-  staff: AdminStaffOps;
-}
+interface AdminDashboardProps extends PageProps, NavigationProps, AdminDashboardDependencies {}
 
-export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, staff }: AdminDashboardProps) {
+export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, testLab, renderResearchInspector }: AdminDashboardProps) {
   const { isLoading, withLoading } = useLoadingState();
   const [showAllResearch, setShowAllResearch] = useState(false);
 
@@ -296,7 +291,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, st
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResearchAdminInspector />
+                    {renderResearchInspector()}
                   </CardContent>
                 </Card>
               </div>
@@ -318,7 +313,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, st
               </CardHeader>
             </Card>
 
-            <TestLabPage cheats={cheats} staff={staff} />
+            <TestLabPage testLab={testLab} />
           </div>
         </TabsContent>
       </Tabs>

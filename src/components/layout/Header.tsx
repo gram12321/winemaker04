@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   
   // Get current company once instead of multiple calls
   const currentCompany = getCurrentCompany();
-  const showAdminDashboard = getAdminFeature().gate.isAvailable();
+  const showAdminDashboard = getAdminFeature().isAvailable();
 
   // Use consolidated hook for reactive prestige loading
   const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);

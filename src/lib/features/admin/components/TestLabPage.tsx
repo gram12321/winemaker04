@@ -28,20 +28,14 @@ import {
   TabsTrigger
 } from '@/components/ui';
 import { useLoadingState } from '@/hooks';
-import { isDevAdminSurfaceAvailable } from '../services/testLab/devAdminGate';
 import {
   AUTOMATED_TEST_TARGET_PRESETS,
   getAutomatedTestTargetPreset
 } from '../services/testLab/automatedTestTargets';
-import { getTestLabScenarios, VINEYARD_CONFIG_PARAM_KEYS } from '../services/testLab/testLabScenarios';
-import { runTestLabScenario } from '../services/testLab/testLabRunner';
+import { VINEYARD_CONFIG_PARAM_KEYS } from '../services/testLab/testLabScenarios';
 import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '../services/testLab/types';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { getAllStaff } from '@/lib/services/user/staffService';
-import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
-import type { Activity, Staff, Vineyard } from '@/lib/types/types';
-import type { AdminCheatOps, AdminStaffOps } from '../featureTypes';
+import type { AdminTestLab } from '../internalTypes';
 
 interface RecentRun {
   runId: string;
@@ -104,9 +98,8 @@ const clampAltitudeToRegion = (altitude: number, country: string, region: string
   return Math.round((min + max) / 2 / 10) * 10;
 };
 
-export default function TestLabPage({ cheats, staff }: { cheats: AdminCheatOps; staff: AdminStaffOps }) {
-  const testLabOperations = { ...cheats, setStaffXP: staff.setStaffXP };
-  const scenarios = useMemo(() => getTestLabScenarios(), []);
+export default function TestLabPage({ testLab }: { testLab: AdminTestLab }) {
+  const scenarios = useMemo(() => testLab.getScenarios(), [testLab]);
   const regressionScenario = useMemo(
     () => scenarios.find(scenario => scenario.id === 'regression.full-suite') || null,
     [scenarios]
@@ -136,22 +129,16 @@ export default function TestLabPage({ cheats, staff }: { cheats: AdminCheatOps; 
   );
   const [result, setResult] = useState<TestLabScenarioResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
-  const [existingVineyards, setExistingVineyards] = useState<Vineyard[]>([]);
-  const [existingStaff, setExistingStaff] = useState<Staff[]>([]);
-  const [existingActivities, setExistingActivities] = useState<Activity[]>([]);
+  const [existingVineyards, setExistingVineyards] = useState<Awaited<ReturnType<AdminTestLab['loadDynamicOptions']>>['vineyards']>([]);
+  const [existingStaff, setExistingStaff] = useState<Awaited<ReturnType<AdminTestLab['loadDynamicOptions']>>['staff']>([]);
+  const [existingActivities, setExistingActivities] = useState<Awaited<ReturnType<AdminTestLab['loadDynamicOptions']>>['activities']>([]);
   const { isLoading, withLoading } = useLoadingState();
-  const devAvailable = isDevAdminSurfaceAvailable();
 
   const refreshDynamicOptions = async () => {
-    const [vineyards, staff, activities] = await Promise.all([
-      loadVineyards().catch(() => []),
-      getAllStaff().catch(() => []),
-      getAllActivities().catch(() => [])
-    ]);
-
-    setExistingVineyards(vineyards);
-    setExistingStaff(staff);
-    setExistingActivities(activities);
+    const options = await testLab.loadDynamicOptions();
+    setExistingVineyards(options.vineyards);
+    setExistingStaff(options.staff);
+    setExistingActivities(options.activities);
   };
 
   useEffect(() => {
@@ -183,11 +170,11 @@ export default function TestLabPage({ cheats, staff }: { cheats: AdminCheatOps; 
   const runScenario = (mode: TestLabRunMode = 'run') => withLoading(async () => {
     if (!selectedScenario) return;
 
-    const scenarioResult = await runTestLabScenario({
+    const scenarioResult = await testLab.runScenario({
       scenarioId: selectedScenario.id,
       params,
       mode
-    }, testLabOperations);
+    });
     await refreshDynamicOptions();
     setResult(scenarioResult);
     rememberRun(scenarioResult);
@@ -196,21 +183,21 @@ export default function TestLabPage({ cheats, staff }: { cheats: AdminCheatOps; 
   const runAutomatedSuite = (mode: TestLabRunMode = 'run') => withLoading(async () => {
     if (!regressionScenario) return;
 
-    const scenarioResult = await runTestLabScenario({
+    const scenarioResult = await testLab.runScenario({
       scenarioId: 'regression.full-suite',
       mode,
       params: { target: automatedTarget }
-    }, testLabOperations);
+    });
     setResult(scenarioResult);
     rememberRun(scenarioResult);
   });
 
   const cleanupRun = (runId: string) => withLoading(async () => {
-    const cleanupResult = await runTestLabScenario({
+    const cleanupResult = await testLab.runScenario({
       scenarioId: 'cleanup.by-run-id',
       mode: 'run',
       params: { runId }
-    }, testLabOperations);
+    });
     await refreshDynamicOptions();
     setResult(cleanupResult);
     rememberRun(cleanupResult);
@@ -354,22 +341,6 @@ export default function TestLabPage({ cheats, staff }: { cheats: AdminCheatOps; 
       </div>
     );
   };
-
-  if (!devAvailable) {
-    return (
-      <Card className="border-amber-300 bg-amber-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-900">
-            <ShieldCheck className="h-5 w-5" />
-            Admin Test Lab Unavailable
-          </CardTitle>
-          <CardDescription className="text-amber-800">
-            The Test Lab only renders during development on localhost or loopback hosts.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">

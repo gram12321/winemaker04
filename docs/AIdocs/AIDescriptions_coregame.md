@@ -9,12 +9,12 @@ Current implementation orientation for agents and maintainers. `CONTEXT.md` is a
 - React/Vite/TypeScript/Tailwind/ShadCN frontend with Supabase persistence and company-scoped state.
 - Weekly progression runs through `processGameTick()` in `src/lib/services/core/gameTick.ts`.
 - Services/features own rules, calculations, validation, and orchestration. `src/lib/database/` owns CRUD/mapping. Components own presentation and interaction.
-- Active seams: `loanLender`, `researchUpgrade`; `boardShare` is a no-op shell.
+- Active seams: `loanLender`, `researchUpgrade`, and development-only `admin`; `boardShare` is a no-op shell.
 - Core persistence areas cover game state, staff, activities, inventory, customers/orders, contracts, grape markets, forward contracts, research, loans, prestige, achievements, and highscores.
 
 ## Player Surfaces
 
-Main pages: Login, Company Overview, Vineyard, Winery, Sales, Finance, Research, Staff, Weather Center, Wine Log, Winepedia, Achievements, Highscores, Profile, Settings, and dev-only Admin Dashboard.
+Main pages: Login, Company Overview, Vineyard, Winery, Sales, Finance, Research, Staff, Weather Center, Wine Log, Winepedia, Achievements, Highscores, Profile, Settings, and dev-only Admin Dashboard. The Admin feature has a small host seam and dynamically loads its active implementation only in Vite development mode.
 
 Winepedia provides technical reference tabs for grapes, customers, economy, markets, weather, winemaking, quality, yield, and scoring. Admin Test Systems separates the shared Vitest suite from Gameflow Lab fixture tools.
 

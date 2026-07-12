@@ -54,7 +54,7 @@ npm run build
 
 ## Admin Test Systems
 
-The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixtures. It is loopback-gated; fixture cleanup uses durable `testlab_...` run IDs. `test-viewer/` is legacy reference material.
+The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixtures. It is loopback-gated, dynamically loaded only in Vite development builds, and fixture cleanup uses durable `testlab_...` run IDs. Its compatible-host requirements live in `src/lib/features/admin/README.md`; `test-viewer/` is legacy reference material.
 
 ## Agent Workflow
 
