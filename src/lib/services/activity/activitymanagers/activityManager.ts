@@ -203,10 +203,6 @@ export async function createActivityWithResult(options: ActivityCreationOptions)
         weather: createWeatherWeekContext(gameState),
         operation,
         season,
-        vineyard: {
-          status: vineyard.status,
-          ripeness: vineyard.ripeness,
-        },
       });
 
       if (!impact.allowed) {
@@ -591,12 +587,6 @@ function getWeatherWorkImpact(
     weather,
     operation,
     season,
-    // Runtime work limits currently depend on weather and season only. Preserve the
-    // resolver's complete operation context without adding a vineyard lookup to ticks.
-    vineyard: {
-      status: activity.category === WorkCategory.PLANTING ? 'Planting' : 'Growing',
-      ripeness: 0,
-    },
   });
 
   return { workMultiplier: impact.allowed ? impact.workMultiplier : 0 };

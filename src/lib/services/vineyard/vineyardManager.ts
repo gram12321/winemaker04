@@ -14,7 +14,7 @@ import {
   isRipenessGrowthActiveForWeek,
   calculateWinterRipenessDegradation
 } from './vineyardProgressionService';
-import { projectVineyardWeek, type WeatherWeekContext } from '@/lib/features/weather';
+import { createWeatherWeekContext, projectVineyardWeek, type WeatherWeekContext } from '@/lib/features/weather';
 
 export {
   calculateDynamicRipenessIncrease,
@@ -151,17 +151,12 @@ export async function updateVineyardRipeness(
     const currentYear = weatherContext?.date.year || currentState.currentYear || 1;
     const companyId = getCurrentCompanyId() || 'default-company';
     const permanentEffects = await getResearchPermanentEffects(companyId);
-    const effectiveWeather = weatherContext ?? {
-      date: { year: currentYear, season: season as Season, week },
-      state: currentState.weatherState || 'Clear',
-      intensity: currentState.weatherIntensity || 'Mild',
-      seasonalPattern: currentState.weatherForecastPattern || 'Stable',
-      forecast: {
-        state: currentState.nextWeekForecastState || 'Clear',
-        intensity: currentState.nextWeekForecastIntensity || 'Mild',
-        confidence: currentState.weatherForecastConfidence || 'Medium',
-      },
-    } satisfies WeatherWeekContext;
+    const effectiveWeather = weatherContext ?? createWeatherWeekContext({
+      ...currentState,
+      currentYear,
+      season: season as Season,
+      week,
+    });
     const vineyardsToUpdate: Vineyard[] = [];
     const activitiesToCancel: string[] = [];
     const cancelledActivityVineyards: string[] = [];
@@ -512,17 +507,12 @@ export async function updateVineyardHealthDegradation(
     const companyId = getCurrentCompanyId();
     const currentState = getGameState();
     const contextYear = weatherContext?.date.year || currentState.currentYear || 1;
-    const effectiveWeather = weatherContext ?? {
-      date: { year: contextYear, season: season as Season, week: _week },
-      state: currentState.weatherState || 'Clear',
-      intensity: currentState.weatherIntensity || 'Mild',
-      seasonalPattern: currentState.weatherForecastPattern || 'Stable',
-      forecast: {
-        state: currentState.nextWeekForecastState || 'Clear',
-        intensity: currentState.nextWeekForecastIntensity || 'Mild',
-        confidence: currentState.weatherForecastConfidence || 'Medium',
-      },
-    } satisfies WeatherWeekContext;
+    const effectiveWeather = weatherContext ?? createWeatherWeekContext({
+      ...currentState,
+      currentYear: contextYear,
+      season: season as Season,
+      week: _week,
+    });
     const permanentEffects = await getResearchPermanentEffects(companyId || undefined);
     const vineyardsToUpdate: Vineyard[] = [];
     

@@ -21,8 +21,8 @@ import {
   PRICE_SEASON_THEME,
   type BuyerMarketCountryKey
 } from '@/lib/constants';
-import { getWeatherMarketContext, type WeatherMarketContext, type WeatherWeekContext } from '@/lib/features/weather';
-import { GRAPE_VARIETIES, type EconomyPhase, type GrapeVariety, type Season, type WeatherForecastConfidence, type WeatherForecastPattern, type WeatherIntensity, type WeatherState } from '../../types/types';
+import { createWeatherWeekContext, getWeatherMarketContext, type WeatherMarketContext } from '@/lib/features/weather';
+import { GRAPE_VARIETIES, type EconomyPhase, type GrapeVariety, type Season, type WeatherIntensity, type WeatherState } from '../../types/types';
 import {
   getBuyerLoyalty,
   getBuyerRelationshipPriceMultiplier,
@@ -155,26 +155,7 @@ function getYearCycleMultiplier(year: number, cycle: readonly number[]): number 
 }
 
 function getCurrentWeatherMarketContext(): WeatherMarketContext {
-  const gameState = getGameState();
-  const state = (gameState.weatherState ?? 'Clear') as WeatherState;
-  const intensity = (gameState.weatherIntensity ?? 'Moderate') as WeatherIntensity;
-  const weather: WeatherWeekContext = {
-    date: {
-      year: gameState.currentYear ?? 2024,
-      season: (gameState.season ?? 'Spring') as Season,
-      week: gameState.week ?? 1,
-    },
-    state,
-    intensity,
-    seasonalPattern: (gameState.weatherForecastPattern ?? 'Stable') as WeatherForecastPattern,
-    forecast: {
-      state: (gameState.nextWeekForecastState ?? state) as WeatherState,
-      intensity: (gameState.nextWeekForecastIntensity ?? intensity) as WeatherIntensity,
-      confidence: (gameState.weatherForecastConfidence ?? 'Medium') as WeatherForecastConfidence,
-    },
-  };
-
-  return getWeatherMarketContext(weather);
+  return getWeatherMarketContext(createWeatherWeekContext(getGameState()));
 }
 
 function getDemandVolatilityMultipliers(

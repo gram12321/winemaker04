@@ -5,6 +5,8 @@ import {
   buildVineyardWeatherTooltip,
   buildWeatherReference,
   createWeatherWeekContext,
+  getNextWeatherDate,
+  projectVineyardWeek,
 } from '@/lib/features/weather';
 import type { Vineyard } from '@/lib/types/types';
 
@@ -52,6 +54,32 @@ describe('weather presentation service', () => {
     }));
     expect(model.siteNote).toBeTruthy();
     expect(model.siteSummary).toContain('facing');
+  });
+
+  it('projects the forecast using next week\'s calendar date, including season rollover', () => {
+    const rolloverWeather = createWeatherWeekContext({
+      currentYear: 2026, season: 'Fall', week: 12,
+      weatherState: 'Rain', weatherIntensity: 'Moderate', weatherForecastPattern: 'Wet',
+      weatherForecastConfidence: 'High', nextWeekForecastState: 'Frost', nextWeekForecastIntensity: 'Severe',
+    });
+    const expected = projectVineyardWeek({
+      companyId: 'company-1',
+      vineyard: vineyard(),
+      weather: {
+        ...rolloverWeather,
+        date: getNextWeatherDate(rolloverWeather.date),
+        state: rolloverWeather.forecast.state,
+        intensity: rolloverWeather.forecast.intensity,
+      },
+    });
+
+    const center = buildWeatherCenterPresentation({ companyId: 'company-1', weather: rolloverWeather, vineyards: [vineyard()] });
+    const tooltip = buildVineyardWeatherTooltip({ companyId: 'company-1', vineyard: vineyard(), weather: rolloverWeather });
+
+    expect(center.rows[0].ripeness.normalChange).toBeCloseTo(expected.ripeness.normalDelta, 10);
+    expect(center.rows[0].health.normalChange).toBeCloseTo(expected.health.normalDelta, 10);
+    expect(tooltip.ripeness.normalChange).toBeCloseTo(expected.ripeness.normalDelta, 10);
+    expect(tooltip.health.normalChange).toBeCloseTo(expected.health.normalDelta, 10);
   });
 
   it('builds a complete Winepedia reference with all state and intensity matrices', () => {

@@ -89,6 +89,37 @@ export const WEATHER_OPERATION_LIMITS = {
   forcedPauseStates: readonly WeatherState[];
 };
 
+export const WEATHER_MARKET_PRESSURE: Record<WeatherState, { price: number; supply: number }> = {
+  Clear: { price: 1, supply: 1 },
+  Rain: { price: 1.04, supply: 1.06 },
+  Heat: { price: 1.07, supply: 1.11 },
+  Frost: { price: 1.09, supply: 1.14 },
+  Storm: { price: 1.13, supply: 1.2 },
+  Snow: { price: 1.1, supply: 1.17 },
+};
+
+export const WEATHER_INTENSITY_MARKET_MULTIPLIER: Record<WeatherIntensity, number> = {
+  VeryMild: 0.92,
+  Mild: 0.96,
+  Moderate: 1,
+  Severe: 1.08,
+  Extreme: 1.16,
+};
+
+export const WEATHER_MARKET_THEME: Record<WeatherState, string> = {
+  Clear: 'Stable weather keeps logistics predictable this week.',
+  Rain: 'Rainfall variability introduces moderate logistics friction.',
+  Heat: 'Heat pressure increases handling and spoilage risk.',
+  Frost: 'Frost risk tightens procurement timing and flexibility.',
+  Storm: 'Storm disruptions create sharp short-term buying uncertainty.',
+  Snow: 'Snowy transport constraints amplify delivery uncertainty.',
+};
+
+export const WEATHER_MARKET_MULTIPLIER_BOUNDS = {
+  price: { min: 0.7, max: 1.35 },
+  supply: { min: 0.65, max: 1.45 },
+} as const;
+
 export const WEATHER_VINEYARD_MULTIPLIERS: Record<
   'ripeness' | 'health',
   Record<WeatherState, Record<WeatherIntensity, number>>

@@ -15,7 +15,6 @@ function buildInput(overrides: Partial<ResolveWeatherOperationImpactInput> = {})
     },
     operation: 'planting',
     season: 'Spring',
-    vineyard: { status: 'Growing', ripeness: 0.7 },
     ...overrides,
   };
 }

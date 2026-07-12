@@ -24,7 +24,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 
 - Weekly tick advances activities, orders/contracts, forward contracts, vines, prestige decay, economy/weather, and seasonal/yearly finance hooks.
 - Weather state, intensity, seasonal pattern/confidence, and next-week forecast persist in company-scoped `GameState`.
-- `src/lib/features/weather/` resolves weather and supplies shared vineyard projection, market context, and presentation models.
+- `src/lib/features/weather/` resolves weather and supplies shared vineyard projection, market context, planting/harvesting operation impacts, and presentation models.
 - Vineyard weather is a bounded modifier of normal health/ripeness progression, including planting progress, research health-decay multiplier, aspect, altitude, suitability, and soil response. It does not directly modify yield, harvest anchors, or wine score.
 - Weather Center is operational; Vineyard shows site-aware forecast explanations; Winepedia contains formulas/matrices. Severe events, mitigation, weather research, and weather achievements are deferred.
 

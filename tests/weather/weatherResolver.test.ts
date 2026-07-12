@@ -22,7 +22,7 @@ vi.mock('@/lib/utils/companyUtils', () => ({
 }));
 
 import { WEATHER_INTENSITIES, WEATHER_STATES } from '@/lib/constants/weatherConstants';
-import { resolveWeatherWeek, type ResolveWeatherWeekInput } from '@/lib/features/weather';
+import { getNextWeatherDate, resolveWeatherWeek, type ResolveWeatherWeekInput } from '@/lib/features/weather';
 import { loadGameState, saveGameState } from '@/lib/database/core/gamestateDB';
 
 const input: ResolveWeatherWeekInput = {
@@ -34,6 +34,11 @@ const input: ResolveWeatherWeekInput = {
 };
 
 describe('weather resolver', () => {
+  it('advances forecast dates across seasonal and yearly boundaries', () => {
+    expect(getNextWeatherDate({ year: 2026, season: 'Fall', week: 12 })).toEqual({ year: 2026, season: 'Winter', week: 1 });
+    expect(getNextWeatherDate({ year: 2026, season: 'Winter', week: 12 })).toEqual({ year: 2027, season: 'Spring', week: 1 });
+  });
+
   it('resolves the same persisted weather context for the same weekly input', () => {
     expect(resolveWeatherWeek(input)).toEqual(resolveWeatherWeek(input));
   });

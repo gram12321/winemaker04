@@ -17,7 +17,7 @@
 - Tick, previews, and harvest use the same complete projection inputs, including planting progress and research health-decay multiplier.
 - Persist current weather, forecast, seasonal pattern, and confidence company-scoped in `game_state`.
 - Operational UI shows outcomes only. Winepedia contains formulas, matrices, factors, bounds, and market derivation.
-- No weather events, actions, research, achievements, or activity-work effects.
+- Original redesign scope excluded weather events, mitigation actions, research, achievements, and activity-work effects. The later operation-limits plan intentionally added planting/harvesting work effects.
 - Do not commit. The user authorized work in the current `main` workspace.
 
 ## Planned file structure

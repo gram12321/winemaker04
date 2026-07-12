@@ -115,10 +115,6 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
       weather: createWeatherWeekContext(gameState),
       operation: 'planting',
       season,
-      vineyard: {
-        status: vineyard.status,
-        ripeness: vineyard.ripeness,
-      },
     });
   }, [vineyard, isOpen]);
 

@@ -425,10 +425,6 @@ const Vineyard: React.FC = () => {
         weather: weatherContext ?? createWeatherWeekContext(liveGameState),
         operation: 'planting',
         season,
-        vineyard: {
-          status: vineyard.status,
-          ripeness: vineyard.ripeness,
-        },
       });
       const plantDisabled = hasActivePlanting || !plantingImpact.allowed;
       const plantTitle = !plantingImpact.allowed
@@ -488,7 +484,6 @@ const Vineyard: React.FC = () => {
           weather: weatherContext ?? createWeatherWeekContext(liveGameState),
           operation: 'harvesting',
           season: gameState.season ?? 'Spring',
-          vineyard: { status: vineyard.status, ripeness: vineyard.ripeness },
         });
         return (
           <div className="space-y-1">
@@ -543,7 +538,6 @@ const Vineyard: React.FC = () => {
           weather: weatherContext ?? createWeatherWeekContext(liveGameState),
           operation: 'harvesting',
           season: gameState.season ?? 'Spring',
-          vineyard: { status: vineyard.status, ripeness: vineyard.ripeness },
         });
         return (
           <div className="space-y-1">

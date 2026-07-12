@@ -12,8 +12,6 @@ export type WeatherOperation = 'planting' | 'harvesting';
 
 export type WeatherOperationSeverity = 'normal' | 'slowed' | 'paused' | 'blocked';
 
-export type WeatherOperationVineyardState = Pick<Vineyard, 'status' | 'ripeness'>;
-
 export interface WeatherOperationImpact {
   allowed: boolean;
   workMultiplier: number;
@@ -26,7 +24,6 @@ export interface ResolveWeatherOperationImpactInput {
   weather: WeatherWeekContext;
   operation: WeatherOperation;
   season: Season;
-  vineyard: WeatherOperationVineyardState;
 }
 
 export interface WeatherWeekContext {
@@ -47,6 +44,14 @@ export interface ResolveWeatherWeekInput {
   seasonalPattern: WeatherForecastPattern;
   forecastConfidence: WeatherForecastConfidence;
   previousState?: WeatherState;
+}
+
+export interface WeatherMarketContext {
+  state: WeatherState;
+  intensity: WeatherIntensity;
+  priceMultiplier: number;
+  supplyMultiplier: number;
+  reason: string;
 }
 
 export interface VineyardMetricProjection {

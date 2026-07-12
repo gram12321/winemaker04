@@ -8,8 +8,43 @@ import {
   WEATHER_STATE_BY_SEASON,
   type WeightedChoice,
 } from '@/lib/constants/weatherConstants';
-import type { Season, WeatherForecastConfidence, WeatherForecastPattern, WeatherIntensity, WeatherState } from '@/lib/types/types';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
+import type { GameDate, GameState, Season, WeatherForecastConfidence, WeatherForecastPattern, WeatherIntensity, WeatherState } from '@/lib/types/types';
 import type { ResolveWeatherWeekInput, WeatherWeekContext } from './weatherTypes';
+
+export function createWeatherWeekContext(gameState: Partial<GameState>): WeatherWeekContext {
+  const state = gameState.weatherState ?? 'Clear';
+  const intensity = gameState.weatherIntensity ?? 'Mild';
+  return {
+    date: {
+      year: gameState.currentYear ?? 2024,
+      season: gameState.season ?? 'Spring',
+      week: gameState.week ?? 1,
+    },
+    state,
+    intensity,
+    seasonalPattern: gameState.weatherForecastPattern ?? 'Stable',
+    forecast: {
+      state: gameState.nextWeekForecastState ?? state,
+      intensity: gameState.nextWeekForecastIntensity ?? intensity,
+      confidence: gameState.weatherForecastConfidence ?? 'Medium',
+    },
+  };
+}
+
+export function getNextWeatherDate(date: GameDate): GameDate {
+  if (date.week < WEEKS_PER_SEASON) {
+    return { ...date, week: date.week + 1 };
+  }
+
+  const seasonIndex = SEASON_ORDER.indexOf(date.season);
+  const nextSeason = SEASON_ORDER[(seasonIndex + 1) % SEASON_ORDER.length] as Season;
+  return {
+    year: nextSeason === 'Spring' ? date.year + 1 : date.year,
+    season: nextSeason,
+    week: 1,
+  };
+}
 
 function seededUnit(seed: string): number {
   let hash = 2166136261;
@@ -45,14 +80,19 @@ export function resolveSeasonalWeatherForecast(
   };
 }
 
-function resolveActualWeather(input: ResolveWeatherWeekInput, week: number, previousState?: WeatherState): Pick<WeatherWeekContext, 'state' | 'intensity'> {
-  const choices = WEATHER_STATE_BY_SEASON[input.date.season].map((choice) => ({
+function resolveActualWeather(
+  input: ResolveWeatherWeekInput,
+  date: GameDate,
+  seasonalPattern: WeatherForecastPattern,
+  previousState?: WeatherState,
+): Pick<WeatherWeekContext, 'state' | 'intensity'> {
+  const choices = WEATHER_STATE_BY_SEASON[date.season].map((choice) => ({
     ...choice,
     weight: choice.weight
       * (previousState === choice.value ? 1.16 : 1)
-      * patternWeight(input.seasonalPattern, choice.value),
+      * patternWeight(seasonalPattern, choice.value),
   }));
-  const seed = `${input.companyId}:${input.date.year}:${input.date.season}:${week}`;
+  const seed = `${input.companyId}:${date.year}:${date.season}:${date.week}`;
   const state = pickWeighted(`${seed}:state`, choices);
   const intensity = pickWeighted(`${seed}:${state}:intensity`, WEATHER_INTENSITY_BY_STATE[state]);
 
@@ -88,8 +128,12 @@ function resolveForecast(input: ResolveWeatherWeekInput, actualNext: Pick<Weathe
 }
 
 export function resolveWeatherWeek(input: ResolveWeatherWeekInput): WeatherWeekContext {
-  const current = resolveActualWeather(input, input.date.week, input.previousState);
-  const next = resolveActualWeather(input, input.date.week + 1, current.state);
+  const current = resolveActualWeather(input, input.date, input.seasonalPattern, input.previousState);
+  const nextDate = getNextWeatherDate(input.date);
+  const nextSeasonalForecast = nextDate.season === input.date.season
+    ? { pattern: input.seasonalPattern, confidence: input.forecastConfidence }
+    : resolveSeasonalWeatherForecast(input.companyId, nextDate.year, nextDate.season);
+  const next = resolveActualWeather(input, nextDate, nextSeasonalForecast.pattern, current.state);
   const forecast = resolveForecast(input, next);
 
   return {

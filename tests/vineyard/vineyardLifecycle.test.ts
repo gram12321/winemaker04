@@ -34,6 +34,17 @@ const mocks = vi.hoisted(() => {
     updateGameState: vi.fn(async () => undefined),
     createWineBatchFromHarvest: vi.fn(async () => undefined),
     getResearchPermanentEffects: vi.fn(async () => ({ vineyardHealthDecayMultiplier: 0.8, activeEffects: [] })),
+    createWeatherWeekContext: vi.fn((state: any) => ({
+      date: { year: state.currentYear ?? 2024, season: state.season ?? 'Spring', week: state.week ?? 1 },
+      state: state.weatherState ?? 'Clear',
+      intensity: state.weatherIntensity ?? 'Mild',
+      seasonalPattern: state.weatherForecastPattern ?? 'Stable',
+      forecast: {
+        state: state.nextWeekForecastState ?? state.weatherState ?? 'Clear',
+        intensity: state.nextWeekForecastIntensity ?? state.weatherIntensity ?? 'Mild',
+        confidence: state.weatherForecastConfidence ?? 'Medium',
+      },
+    })),
     projectVineyardWeek: vi.fn((input: any) => ({
       ripeness: {
         finalDelta: input.ripenessGrowthActive ? 0.01 : -0.05,
@@ -91,6 +102,7 @@ vi.mock('@/lib/features/researchUpgrade/services/research/researchPermanentEffec
 }));
 
 vi.mock('@/lib/features/weather', () => ({
+  createWeatherWeekContext: mocks.createWeatherWeekContext,
   projectVineyardWeek: mocks.projectVineyardWeek,
 }));
 

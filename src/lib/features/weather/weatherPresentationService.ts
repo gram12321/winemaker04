@@ -1,13 +1,16 @@
 import {
   WEATHER_FORECAST_HIT_RATE,
   WEATHER_INTENSITIES,
+  WEATHER_INTENSITY_MARKET_MULTIPLIER,
+  WEATHER_MARKET_PRESSURE,
   WEATHER_OPERATION_LIMITS,
   WEATHER_SITE_EXPOSURE_BOUNDS,
   WEATHER_STATES,
   WEATHER_VINEYARD_MULTIPLIERS,
 } from '@/lib/constants/weatherConstants';
-import type { GameState, Vineyard, WeatherIntensity, WeatherState } from '@/lib/types/types';
-import { getWeatherMarketContext, WEATHER_INTENSITY_MARKET_MULTIPLIER, WEATHER_MARKET_PRESSURE } from './weatherMarketService';
+import type { Vineyard, WeatherIntensity, WeatherState } from '@/lib/types/types';
+import { getWeatherMarketContext } from './weatherMarketService';
+import { getNextWeatherDate } from './weatherResolver';
 import type { VineyardMetricProjection, VineyardWeeklyProjection, WeatherOperation, WeatherOperationImpact, WeatherWeekContext } from './weatherTypes';
 import { projectVineyardWeek } from './weatherVineyardService';
 
@@ -71,26 +74,6 @@ export function getWeatherLabel(state: WeatherState, intensity: WeatherIntensity
   return `${state} (${intensity})`;
 }
 
-export function createWeatherWeekContext(gameState: Partial<GameState>): WeatherWeekContext {
-  const state = gameState.weatherState ?? 'Clear';
-  const intensity = gameState.weatherIntensity ?? 'Mild';
-  return {
-    date: {
-      year: gameState.currentYear ?? 2024,
-      season: gameState.season ?? 'Spring',
-      week: gameState.week ?? 1,
-    },
-    state,
-    intensity,
-    seasonalPattern: gameState.weatherForecastPattern ?? 'Stable',
-    forecast: {
-      state: gameState.nextWeekForecastState ?? state,
-      intensity: gameState.nextWeekForecastIntensity ?? intensity,
-      confidence: gameState.weatherForecastConfidence ?? 'Medium',
-    },
-  };
-}
-
 function toMetricPresentation(metric: VineyardMetricProjection): VineyardWeatherMetricPresentation {
   return {
     current: metric.current,
@@ -132,10 +115,19 @@ function buildOutlooks(weather: WeatherWeekContext): WeatherCenterPresentation['
   ];
 }
 
+function getForecastWeatherContext(weather: WeatherWeekContext): WeatherWeekContext {
+  return {
+    ...weather,
+    date: getNextWeatherDate(weather.date),
+    state: weather.forecast.state,
+    intensity: weather.forecast.intensity,
+  };
+}
+
 export function buildWeatherCenterPresentation(input: { companyId: string; weather: WeatherWeekContext; vineyards: Vineyard[] }): WeatherCenterPresentation {
   const rows = input.vineyards
     .filter((vineyard) => vineyard.grape)
-    .map((vineyard) => toRow(vineyard, projectVineyardWeek({ companyId: input.companyId, vineyard, weather: { ...input.weather, state: input.weather.forecast.state, intensity: input.weather.forecast.intensity } })))
+    .map((vineyard) => toRow(vineyard, projectVineyardWeek({ companyId: input.companyId, vineyard, weather: getForecastWeatherContext(input.weather) })))
     .sort((left, right) => (left.health.weatherContribution + left.ripeness.weatherContribution) - (right.health.weatherContribution + right.ripeness.weatherContribution));
 
   return {
@@ -155,7 +147,7 @@ export function buildWeatherCenterPresentation(input: { companyId: string; weath
 }
 
 export function buildVineyardWeatherTooltip(input: { companyId: string; vineyard: Vineyard; weather: WeatherWeekContext }): VineyardWeatherTooltipPresentation {
-  const forecastWeather = { ...input.weather, state: input.weather.forecast.state, intensity: input.weather.forecast.intensity };
+  const forecastWeather = getForecastWeatherContext(input.weather);
   const projection = projectVineyardWeek({ companyId: input.companyId, vineyard: input.vineyard, weather: forecastWeather });
   return {
     label: 'Next-week forecast',
@@ -217,6 +209,6 @@ export function buildWeatherReference() {
       `Planting is blocked in ${WEATHER_OPERATION_LIMITS.plantingUnavailableSeasons.join(', ')}. Weather is checked each week, so completion estimates can change.`,
     ],
     forecastBehavior: `Week-ahead forecasts are labeled with their confidence. Typical hit rates are High ${WEATHER_FORECAST_HIT_RATE.High * 100}%, Medium ${WEATHER_FORECAST_HIT_RATE.Medium * 100}%, and Low ${WEATHER_FORECAST_HIT_RATE.Low * 100}%.`,
-    scope: 'Weather modifies weekly vineyard ripeness and health and grape-market volatility. It does not currently create events, actions, research, or direct wine-score effects.',
+    scope: 'Weather modifies weekly vineyard ripeness and health, grape-market volatility, and planting/harvesting work pace. It does not currently create event chains, mitigation actions, research, or direct wine-score effects.',
   };
 }

@@ -65,10 +65,6 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       weather: createWeatherWeekContext(gameState),
       operation: 'harvesting',
       season,
-      vineyard: {
-        status: vineyard.status,
-        ripeness: vineyard.ripeness,
-      },
     });
   }, [vineyard, isOpen]);
 
