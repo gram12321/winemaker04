@@ -38,7 +38,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 |---|---|
 | `loanLender` | Active; owns loan/lender services, UI, and activities. |
 | `researchUpgrade` | Active; owns research integration, selectors/view models, and admin inspector. |
-| `admin` | Dev-only compatible-Winemaker slice; host seam exposes availability and page rendering while commands/Test Lab collaborators remain internal. |
+| `admin` | Dev-only compatible-Winemaker slice; the two-function host seam exposes availability/page rendering, `createAdminFeature.ts` owns construction, and `active.ts` assembles the canonical Winemaker adapter. |
 | `boardShare` | No-op by default; public-company/share runtime is not wired. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
 

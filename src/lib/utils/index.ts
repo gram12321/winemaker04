@@ -22,5 +22,8 @@ export * from './modalState';
 // Consistency and volatility utilities
 export * from './consistencyUtils';
 
+// Development-only browser surface gating
+export * from './devSurfaceGate';
+
 // Types
 export { NotificationCategory } from '@/lib/types/types';

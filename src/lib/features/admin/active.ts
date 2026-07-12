@@ -1,13 +1,16 @@
 import React from 'react';
 import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
-import { recreateBuyGrapeMarketOffers } from '@/lib/services';
-import { authService } from '@/lib/services/user/authService';
-import { getAllStaff } from '@/lib/services/user/staffService';
-import { getAllActivities, completeActivityNow } from '@/lib/services/activity/activitymanagers/activityManager';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import type { AdminFeature, AdminPageProps } from './featureTypes';
-import type { AdminCheatOps, AdminDashboardDependencies, AdminDatabaseOps, AdminStaffOps, AdminTestLab } from './internalTypes';
-import { AdminDashboard } from './components/AdminDashboard';
+import {
+  authService,
+  completeActivityNow,
+  getAllActivities,
+  getAllStaff,
+  getStoredVineyards,
+  recreateBuyGrapeMarketOffers
+} from '@/lib/services';
+import type { AdminFeature } from './featureTypes';
+import type { AdminCheatOps, AdminDashboardDependencies, AdminDatabaseOps, AdminTestLab } from './internalTypes';
+import { createAdminFeature } from './createAdminFeature';
 import {
   adminAddPrestigeToCompany,
   adminClearAllAchievements,
@@ -28,10 +31,9 @@ import {
   adminSetGameDate,
   adminSetGoldToCompany,
   adminSetPlayerBalance,
-  adminSetStaffXP,
-  adminAddStaffXP
+  adminSetStaffXP
 } from './services/adminService';
-import { isDevAdminSurfaceAvailable } from './services/testLab/devAdminGate';
+import { isDevSurfaceAvailable } from '@/lib/utils';
 import { cleanupTestLabRun } from './services/testLab/testLabCleanupService';
 import {
   createBottledWine,
@@ -41,8 +43,18 @@ import {
   createMustReadyBatch,
   createTestLabCompany
 } from './services/testLab/testLabFixtureService';
-import { createTestLabRunner } from './services/testLab/testLabRunner';
+import { createTestLabRunner, type AutomatedTestRunResult } from './services/testLab/testLabRunner';
 import { getTestLabScenarios } from './services/testLab/testLabScenarios';
+
+const runAutomatedTests = async (target?: string): Promise<AutomatedTestRunResult> => {
+  const response = await fetch('/api/test-run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(target ? { target } : {})
+  });
+  const data = await response.json() as Omit<AutomatedTestRunResult, 'ok'>;
+  return { ...data, ok: response.ok };
+};
 
 const database: AdminDatabaseOps = {
   clearAllHighscores: adminClearAllHighscores,
@@ -70,17 +82,12 @@ const cheats: AdminCheatOps = {
   recreateBuyGrapeMarketOffers
 };
 
-const staff: AdminStaffOps = {
-  setStaffXP: adminSetStaffXP,
-  addStaffXP: adminAddStaffXP
-};
-
-const testLabOperations = { ...cheats, setStaffXP: staff.setStaffXP };
+const testLabOperations = { ...cheats, setStaffXP: adminSetStaffXP };
 const testLab: AdminTestLab = {
   getScenarios: getTestLabScenarios,
   async loadDynamicOptions() {
     const [vineyards, staffMembers, activities] = await Promise.all([
-      loadVineyards().catch(() => []),
+      getStoredVineyards().catch(() => []),
       getAllStaff().catch(() => []),
       getAllActivities().catch(() => [])
     ]);
@@ -96,24 +103,21 @@ const testLab: AdminTestLab = {
     createFermentingBatch,
     createBottledWine,
     completeActivityNow,
-    getCurrentUserId: () => authService.getCurrentUser()?.id ?? null
+    getCurrentUserId: () => authService.getCurrentUser()?.id ?? null,
+    runAutomatedTests
   })
 };
 
-const dashboard: AdminDashboardDependencies = {
-  database,
-  cheats,
-  staff,
-  testLab,
-  renderResearchInspector: () => React.createElement(ResearchAdminInspector)
-};
+export function createWinemakerAdminDashboardDependencies(): AdminDashboardDependencies {
+  return {
+    database,
+    cheats,
+    testLab,
+    renderResearchInspector: () => React.createElement(ResearchAdminInspector)
+  };
+}
 
-export const activeAdminFeature: AdminFeature = {
-  isAvailable() {
-    return isDevAdminSurfaceAvailable();
-  },
-  renderPage(props: AdminPageProps) {
-    if (!isDevAdminSurfaceAvailable()) return null;
-    return React.createElement(AdminDashboard, { ...props, ...dashboard });
-  }
-};
+export const activeAdminFeature: AdminFeature = createAdminFeature({
+  isAvailable: isDevSurfaceAvailable,
+  dashboard: createWinemakerAdminDashboardDependencies()
+});

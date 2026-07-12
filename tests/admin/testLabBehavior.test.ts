@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TEST_LAB_SCENARIOS, getTestLabScenario, getTestLabScenarios } from '@/lib/features/admin/services/testLab/testLabScenarios';
-import { isDevAdminSurfaceAvailable, isLoopbackHostname as isBrowserLoopbackHostname } from '@/lib/features/admin/services/testLab/devAdminGate';
+import { isDevSurfaceAvailable, isLoopbackHostname as isBrowserLoopbackHostname } from '@/lib/utils';
 import {
   getHostnameFromHostHeader,
   isLoopbackHostname as isServerLoopbackHostname,
@@ -32,6 +32,14 @@ const runnerMocks = vi.hoisted(() => ({
   adminGrantAllResearch: vi.fn(async () => ({ success: true, unlocked: 3, alreadyUnlocked: 1 })),
   adminRemoveAllResearch: vi.fn(async () => ({ success: true, removed: 4 })),
   adminSetStaffXP: vi.fn(async () => ({ success: true, message: 'Set staff XP' })),
+  runAutomatedTests: vi.fn(async () => ({
+    ok: true,
+    status: 'passed',
+    passed: 29,
+    failed: 0,
+    skipped: 1,
+    exitCode: 0
+  })),
   getAllActivities: vi.fn(async () => ([
     {
       id: 'activity-1',
@@ -120,7 +128,8 @@ const getTestLabRunner = async () => {
     createFermentingBatch: runnerMocks.createFermentingBatch,
     createBottledWine: runnerMocks.createBottledWine,
     completeActivityNow: runnerMocks.completeActivityNow,
-    getCurrentUserId: () => 'user_1'
+    getCurrentUserId: () => 'user_1',
+    runAutomatedTests: runnerMocks.runAutomatedTests
   });
 };
 
@@ -216,6 +225,22 @@ describe('Admin Test Lab behavior', () => {
       mutatesData: true
     }));
     expect(getTestLabScenario('missing.scenario')).toBeUndefined();
+  });
+
+  it('runs the automated suite through the host adapter', async () => {
+    const runTestLabScenario = await getTestLabRunner();
+
+    const result = await runTestLabScenario({
+      scenarioId: 'regression.full-suite',
+      mode: 'run',
+      params: { target: 'tests/admin' }
+    });
+
+    expect(runnerMocks.runAutomatedTests).toHaveBeenCalledWith('tests/admin');
+    expect(result).toMatchObject({
+      status: 'passed',
+      summary: '29 passed, 0 failed, 1 skipped'
+    });
   });
 
   it('registers active-company scenario families beyond vineyard and winery setup', () => {
@@ -392,9 +417,9 @@ describe('dev admin loopback gates', () => {
     expect(isBrowserLoopbackHostname('[::1]')).toBe(true);
     expect(isBrowserLoopbackHostname('example.com')).toBe(false);
 
-    expect(isDevAdminSurfaceAvailable({ hostname: 'localhost' } as Location, true)).toBe(true);
-    expect(isDevAdminSurfaceAvailable({ hostname: 'localhost' } as Location, false)).toBe(false);
-    expect(isDevAdminSurfaceAvailable({ hostname: '192.168.1.10' } as Location, true)).toBe(false);
+    expect(isDevSurfaceAvailable({ hostname: 'localhost' } as Location, true)).toBe(true);
+    expect(isDevSurfaceAvailable({ hostname: 'localhost' } as Location, false)).toBe(false);
+    expect(isDevSurfaceAvailable({ hostname: '192.168.1.10' } as Location, true)).toBe(false);
   });
 
   it('parses server host headers and accepts only loopback requests', () => {

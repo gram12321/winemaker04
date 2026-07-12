@@ -14,7 +14,7 @@ Current implementation orientation for agents and maintainers. `CONTEXT.md` is a
 
 ## Player Surfaces
 
-Main pages: Login, Company Overview, Vineyard, Winery, Sales, Finance, Research, Staff, Weather Center, Wine Log, Winepedia, Achievements, Highscores, Profile, Settings, and dev-only Admin Dashboard. The Admin feature has a small host seam and dynamically loads its active implementation only in Vite development mode.
+Main pages: Login, Company Overview, Vineyard, Winery, Sales, Finance, Research, Staff, Weather Center, Wine Log, Winepedia, Achievements, Highscores, Profile, Settings, and dev-only Admin Dashboard. The Admin feature has a two-function host seam, constructs fork adapters from internal collaborators, and dynamically loads the canonical Winemaker adapter only in Vite development mode.
 
 Winepedia provides technical reference tabs for grapes, customers, economy, markets, weather, winemaking, quality, yield, and scoring. Admin Test Systems separates the shared Vitest suite from Gameflow Lab fixture tools.
 

@@ -10,7 +10,7 @@ export function isLoopbackHostname(hostname: string | undefined | null): boolean
   return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
 }
 
-export function isDevAdminSurfaceAvailable(
+export function isDevSurfaceAvailable(
   locationLike: Pick<Location, 'hostname'> | undefined = typeof window !== 'undefined' ? window.location : undefined,
   isDev = import.meta.env.DEV
 ): boolean {
