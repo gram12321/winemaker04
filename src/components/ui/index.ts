@@ -21,6 +21,7 @@ export * from './shadCN/avatar';
 export * from './shadCN/dropdown-menu';
 // Component exports (wildcard exports)
 export * from './components/characteristicBar';
+export * from './components/TasteBar';
 export * from './components/landValueModifierBar';
 export * from './components/StructureIndexBreakdown';
 export * from './components/landValueModifierBreakdown';

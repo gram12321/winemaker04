@@ -47,6 +47,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   
   // Use adjustedRanges (always provided from structure calculation)
   const [rMin, rMax] = adjustedRanges;
+  const idealDisplay = (rMin + rMax) / 2;
 
   // Build tooltip content JSX
   const buildTooltipContent = () => {
@@ -93,6 +94,16 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
             label="Range:" 
             value={`${formatNumber(rMin, { decimals: 2, forceDecimals: true })} - ${formatNumber(rMax, { decimals: 2, forceDecimals: true })}`}
           />
+          <TooltipRow
+            label="Ideal Target:"
+            value={formatNumber(idealDisplay, { decimals: 2, forceDecimals: true })}
+          />
+          {baseDisplay !== undefined && (
+            <TooltipRow
+              label="Base Grape Value:"
+              value={formatNumber(baseDisplay, { decimals: 2, forceDecimals: true })}
+            />
+          )}
           <TooltipRow 
             label="Status:" 
             value={status}
@@ -189,16 +200,22 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
               }}
             ></div>
 
+            {/* Ideal target: the midpoint used by the structure-index calculation */}
+            <div
+              className="absolute top-0 bottom-0 w-1 -translate-x-1/2 bg-blue-700 z-[5] rounded-full"
+              style={{ left: `${idealDisplay * 100}%` }}
+            ></div>
+
             {/* Value marker */}
             <div 
-              className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
+              className="absolute top-0 bottom-0 w-1 -translate-x-1/2 bg-black z-10 rounded-full"
               style={{ left: `${displayValue * 100}%` }}
             ></div>
 
             {/* Base grape value marker (if provided) */}
             {typeof baseDisplay === 'number' && (
               <div 
-                className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
+                className="absolute top-0 bottom-0 w-1 -translate-x-1/2 bg-violet-600 z-[15] rounded-full"
                 style={{ left: `${baseDisplay * 100}%` }}
               ></div>
             )}
@@ -299,7 +316,7 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
           />
           );
         })}
-      <CharacteristicBarLegend />
+      <CharacteristicBarLegend showBaseReference={Boolean(baseValues && Object.keys(baseValues).length > 0)} />
     </div>
   );
 
@@ -329,7 +346,7 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
 };
 
 // Legend component for explaining the colors
-export const CharacteristicBarLegend: React.FC = () => {
+export const CharacteristicBarLegend: React.FC<{ showBaseReference?: boolean }> = ({ showBaseReference = false }) => {
   return (
     <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
       <div className="flex items-center gap-1">
@@ -342,8 +359,14 @@ export const CharacteristicBarLegend: React.FC = () => {
       </div>
       <div className="flex items-center gap-1">
         <div className="w-1 h-2 bg-blue-700 rounded"></div>
-        <span>Base (Grape)</span>
+        <span>Ideal Target</span>
       </div>
+      {showBaseReference && (
+        <div className="flex items-center gap-1">
+          <div className="w-1 h-2 bg-violet-600 rounded"></div>
+          <span>Base (Grape)</span>
+        </div>
+      )}
     </div>
   );
 };

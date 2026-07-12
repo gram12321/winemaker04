@@ -166,6 +166,25 @@ describe('tasteQualityIndexService', () => {
     expect(result.tasteQualityIndex).toBeLessThanOrEqual(1);
   });
 
+  it('reports the weighted family-fit average shown by the taste index UI', () => {
+    const result = calculateTasteQualityIndexFromProfile(
+      tasteProfile({
+        flower: 0.24,
+        citrus: 0.64,
+        tropicalFruit: 0.52,
+        redFruit: 0.62,
+        blackFruit: 0.76,
+        faults: 0.03
+      }),
+      redContext
+    );
+    const families = Object.values(result.families);
+    const expectedIndex = families.reduce((sum, family) => sum + family.score * family.weight, 0)
+      / families.reduce((sum, family) => sum + family.weight, 0);
+
+    expect(result.tasteQualityIndex).toBeCloseTo(expectedIndex, 12);
+  });
+
   it('uses computed taste quality in wine score instead of the fixed placeholder', () => {
     const batch = wineBatch();
     const tasteQualityIndex = getTasteQualityIndex(batch);

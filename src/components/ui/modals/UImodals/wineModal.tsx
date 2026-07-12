@@ -20,6 +20,7 @@ import { useWineBatchStructureIndex, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
 import { analyzeWineAnchorDownstreamImpact } from '@/lib/services/wine/debug/wineAnchorImpactDebugService';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 
 interface WineModalProps extends DialogProps {
   wineBatch: WineBatch | null;
@@ -118,6 +119,7 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch || !estimatedPriceBreakdown) return null;
 
   const displayName = wineName || getWineBatchDisplayName(wineBatch);
+  const baseGrapeCharacteristics = GRAPE_CONST[wineBatch.grape]?.baseCharacteristics;
   const currentTasteQualityIndex: number = estimatedPriceBreakdown.tasteQualityIndex;
   const landValueModifier: number = wineBatch.landValueModifier;
   const currentWineScore = estimatedPriceBreakdown.wineScore;
@@ -941,6 +943,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                     <WineCharacteristicsDisplay 
                       characteristics={wineBatch.characteristics}
                       adjustedRanges={batchStructureResult?.adjustedRanges}
+                      baseValues={baseGrapeCharacteristics}
                       structureIndexValue={currentStructureIndex}
                       showValues={true}
                       collapsible={false}
