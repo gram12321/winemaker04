@@ -3,9 +3,9 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { BarChart3, Grape, HeartPulse } from 'lucide-react';
 import { useLoadingState, useGameState, useGameStateWithData } from '@/hooks';
 import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, getCurrentCompany, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
-import { buildVineyardWeatherTooltip, createWeatherWeekContext, getWeatherIcon } from '@/lib/features/weather';
+import { buildVineyardWeatherTooltip, createWeatherWeekContext, getWeatherIcon, resolveWeatherOperationImpact } from '@/lib/features/weather';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal, VineyardStatusBadge } from '../ui';
+import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal, VineyardStatusBadge, WeatherOperationStatusNotice } from '../ui';
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
@@ -420,10 +420,19 @@ const Vineyard: React.FC = () => {
     if (!vineyard.grape) {
       const hasActivePlanting = vineyardsWithActiveActivities.planting.has(vineyard.id);
       const hasActiveClearing = vineyardsWithActiveActivities.clearing.has(vineyard.id);
-      const isWinter = gameState.season === 'Winter';
-      const plantDisabled = hasActivePlanting || isWinter;
-      const plantTitle = isWinter 
-        ? 'Planting is not allowed in Winter. Plant in Spring, Summer, or Fall.' 
+      const season = gameState.season ?? 'Spring';
+      const plantingImpact = resolveWeatherOperationImpact({
+        weather: weatherContext ?? createWeatherWeekContext(liveGameState),
+        operation: 'planting',
+        season,
+        vineyard: {
+          status: vineyard.status,
+          ripeness: vineyard.ripeness,
+        },
+      });
+      const plantDisabled = hasActivePlanting || !plantingImpact.allowed;
+      const plantTitle = !plantingImpact.allowed
+        ? plantingImpact.reason
         : hasActivePlanting 
           ? 'Planting in progress...' 
           : 'Plant vines in this vineyard';
@@ -436,6 +445,7 @@ const Vineyard: React.FC = () => {
             title: plantTitle,
             onClick: (e) => { e.stopPropagation(); setSelectedVineyard(vineyard); setShowPlantDialog(true); }
           })}
+          <WeatherOperationStatusNotice operation="planting" impact={plantingImpact} compact />
           {renderActionButton({
             label: hasActiveClearing ? 'Clearing...' : 'Clear',
             disabled: hasActiveClearing,
@@ -474,20 +484,29 @@ const Vineyard: React.FC = () => {
         // Fall through to Growing status handling
         const hasActiveHarvesting = vineyardsWithActiveActivities.harvesting.has(vineyard.id);
         const hasActiveClearingGrowing = vineyardsWithActiveActivities.clearing.has(vineyard.id);
+        const harvestImpact = resolveWeatherOperationImpact({
+          weather: weatherContext ?? createWeatherWeekContext(liveGameState),
+          operation: 'harvesting',
+          season: gameState.season ?? 'Spring',
+          vineyard: { status: vineyard.status, ripeness: vineyard.ripeness },
+        });
         return (
           <div className="space-y-1">
           {renderActionButton({
             label: hasActiveHarvesting ? 'Harvesting...' : 'Harvest',
-            disabled: hasActiveHarvesting,
+            disabled: hasActiveHarvesting || !harvestImpact.allowed,
             primary: 'harvest',
             fullWidth: true,
             title: hasActiveHarvesting
                   ? 'Harvesting in progress...'
+                  : !harvestImpact.allowed
+                    ? harvestImpact.reason
                   : (vineyard.ripeness || 0) < 0.3 
                     ? 'Low ripeness - will yield very little' 
-                : 'Ready to harvest',
+                    : harvestImpact.reason,
             onClick: (e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }
           })}
+          {!hasActiveHarvesting && <WeatherOperationStatusNotice operation="harvesting" impact={harvestImpact} compact />}
           {renderActionButton({
             label: hasActiveClearingGrowing ? 'Clearing...' : 'Clear',
             disabled: hasActiveClearingGrowing,
@@ -520,20 +539,29 @@ const Vineyard: React.FC = () => {
     if (vineyard.status === 'Growing') {
         const hasActiveHarvesting = vineyardsWithActiveActivities.harvesting.has(vineyard.id);
         const hasActiveClearingGrowing = vineyardsWithActiveActivities.clearing.has(vineyard.id);
+        const harvestImpact = resolveWeatherOperationImpact({
+          weather: weatherContext ?? createWeatherWeekContext(liveGameState),
+          operation: 'harvesting',
+          season: gameState.season ?? 'Spring',
+          vineyard: { status: vineyard.status, ripeness: vineyard.ripeness },
+        });
         return (
           <div className="space-y-1">
           {renderActionButton({
             label: hasActiveHarvesting ? 'Harvesting...' : 'Harvest',
-            disabled: hasActiveHarvesting,
+            disabled: hasActiveHarvesting || !harvestImpact.allowed,
             primary: 'harvest',
             fullWidth: true,
             title: hasActiveHarvesting
                   ? 'Harvesting in progress...'
+                  : !harvestImpact.allowed
+                    ? harvestImpact.reason
                   : (vineyard.ripeness || 0) < 0.3 
                     ? 'Low ripeness - will yield very little' 
-                : 'Ready to harvest',
+                    : harvestImpact.reason,
             onClick: (e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }
           })}
+          {!hasActiveHarvesting && <WeatherOperationStatusNotice operation="harvesting" impact={harvestImpact} compact />}
           {renderActionButton({
             label: hasActiveClearingGrowing ? 'Clearing...' : 'Clear',
             disabled: hasActiveClearingGrowing,
@@ -582,7 +610,7 @@ const Vineyard: React.FC = () => {
       return <div className="text-xs text-purple-600 font-medium">{vineyard.status}</div>;
         }
         return null;
-  }, [activities, handleShowHarvestDialog, vineyardsWithActiveActivities, gameState.season]);
+  }, [activities, handleShowHarvestDialog, liveGameState, vineyardsWithActiveActivities, gameState.season, weatherContext]);
 
   // Memoize summary statistics
   const { totalHectares, totalValue, plantedVineyards, activeVineyards } = useMemo(() => {

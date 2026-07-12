@@ -1,6 +1,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import type { WeatherOperation, WeatherOperationImpact } from '@/lib/features/weather';
 
 const mocks = vi.hoisted(() => ({
   gameState: { currentYear: 2026, week: 5, season: 'Summer' },
@@ -11,6 +12,11 @@ vi.mock('@/hooks', () => ({ useGameState: () => mocks.gameState, useGameStateWit
 vi.mock('@/lib/services', () => ({ getAllVineyards: vi.fn(() => []), getCurrentCompany: vi.fn(() => ({ id: 'company-1' })) }));
 vi.mock('@/lib/features/weather', () => ({
   createWeatherWeekContext: vi.fn(() => ({})),
+  buildWeatherOperationPresentation: vi.fn((operation: WeatherOperation, impact: WeatherOperationImpact) => ({
+    label: `${operation === 'planting' ? 'Planting' : 'Harvesting'}: ${impact.severity}`,
+    consequence: `${impact.severity} consequence.`,
+    estimateNote: 'Completion estimates can change as weather changes.',
+  })),
   buildWeatherCenterPresentation: vi.fn(() => ({
     currentWeather: { label: 'Current weather', icon: '☀️', description: 'Clear (Mild)' },
     forecast: { label: 'Next-week forecast', icon: '🌡️', description: 'Heat (Severe)', confidence: 'High' },
@@ -30,6 +36,7 @@ vi.mock('@/components/ui', () => {
 });
 
 import { WeatherCenterPage } from '@/components/pages/WeatherCenter';
+import { WeatherOperationStatusNotice } from '@/components/ui/components/WeatherOperationStatusNotice';
 
 describe('WeatherCenterPage', () => {
   beforeEach(() => { mocks.rows = []; });
@@ -53,5 +60,23 @@ describe('WeatherCenterPage', () => {
     expect(html).toContain('North Field');
     expect(html).toContain('Site buffers this weather.');
     expect(html).toContain('Why this forecast?');
+  });
+
+  it.each(['normal', 'slowed', 'paused', 'blocked'] as const)('renders the %s operation reason and consequence', (severity) => {
+    const html = renderToStaticMarkup(React.createElement(WeatherOperationStatusNotice, {
+      operation: 'harvesting',
+      compact: true,
+      impact: {
+        allowed: severity !== 'blocked',
+        paused: severity === 'paused',
+        workMultiplier: severity === 'paused' || severity === 'blocked' ? 0 : 1,
+        severity,
+        reason: `${severity} weather reason.`,
+      },
+    }));
+
+    expect(html).toContain(`Harvesting: ${severity}`);
+    expect(html).toContain(`${severity} weather reason.`);
+    expect(html).toContain(`${severity} consequence.`);
   });
 });

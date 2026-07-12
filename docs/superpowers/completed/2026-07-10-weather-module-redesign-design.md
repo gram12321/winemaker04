@@ -22,6 +22,7 @@ Weather must have one authoritative calculation path shared by the weekly tick, 
 - Site differentiation through aspect, altitude, grape-site suitability, and soil.
 - Weather's current indirect vineyard consequences: health and ripeness affect yield; health and ripeness are captured in harvest quality/anchor calculations.
 - Current grape buyer and grape supplier market volatility as a separate weather consumer.
+- Weather-owned operation limits for planting and harvesting: Winter prevents starting planting, severe weather slows outdoor work, and extreme conditions can pause a week's work. Harvest remains soft-limited outside its existing lifecycle rules.
 
 ### Remove or replace
 
@@ -35,7 +36,7 @@ Weather must have one authoritative calculation path shared by the weekly tick, 
 ### Non-goals
 
 - Severe event chains, mitigation actions, weather research, weather achievements, or direct weather-to-taste/wine-score effects.
-- New weather penalties for activity work.
+- Weather-based annual limits for clearing; clearing's once-per-year availability remains a vineyard-maintenance rule outside the weather module.
 - Changes to market design beyond replacing its direct weather-table dependency with the weather module's market context.
 
 ## 3. Authoritative Weekly Model
@@ -106,6 +107,7 @@ resolveSeasonalWeatherForecast(companyId, year, season): SeasonalWeatherForecast
 getWeatherForecast(gameState): WeatherWeekContext['forecast'];
 projectVineyardWeek(input): VineyardWeeklyProjection;
 getWeatherMarketContext(weather): WeatherMarketContext;
+getWeatherOperationImpact(input): WeatherOperationImpact;
 buildWeatherCenterModel(input): WeatherCenterModel;
 ```
 
@@ -114,6 +116,7 @@ Exact signatures may be finalized in the implementation plan, but the ownership 
 - `core/gameTick.ts` resolves and persists weather, then passes `WeatherWeekContext` onward.
 - Vineyard services request a complete weekly projection; they do not access weather factors, site formulas, or clamps.
 - Market services request `WeatherMarketContext`; they do not import weather constants directly.
+- Activity and vineyard services request `WeatherOperationImpact` for planting and harvesting availability, work speed, and forced pauses; clearing retains its separate annual maintenance rule.
 - UI requests presentation models and does not import calculation constants or reconstruct formulas.
 - Database reads/writes remain under `src/lib/database/`; the weather module owns no direct UI persistence code.
 
@@ -160,7 +163,8 @@ Winepedia owns the durable reference material:
 - the baseline × weather multiplier equation;
 - site-exposure inputs, bounds, and activation rules;
 - current-weather market pressure derivation;
-- explicit scope statement: weather affects vineyards and grape markets, not direct wine score.
+- planting and harvesting operation limits, including the exclusion of clearing's annual rule;
+- explicit scope statement: weather affects vineyards, grape markets, and planting/harvesting operations, not direct wine score.
 
 Winepedia may read module-provided reference models. It must not import raw implementation constants from private weather files.
 

@@ -13,6 +13,7 @@ import { formatNumber } from '@/lib/utils';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
+import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 
 
 
@@ -179,16 +180,47 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
 /**
  * Create a new activity with optional auto-assignment
  */
-export async function createActivity(options: ActivityCreationOptions): Promise<string | null> {
+export interface ActivityCreationResult {
+  activityId: string | null;
+  reason?: string;
+}
+
+export async function createActivityWithResult(options: ActivityCreationOptions): Promise<ActivityCreationResult> {
   try {
     const gameState = getGameState();
+
+    if (options.category === WorkCategory.PLANTING || options.category === WorkCategory.HARVESTING) {
+      const vineyard = (await loadVineyards()).find(candidate => candidate.id === options.targetId);
+      if (!vineyard) {
+        const reason = `Cannot create ${options.category.toLowerCase()} activity without a vineyard target.`;
+        console.warn(reason);
+        return { activityId: null, reason };
+      }
+
+      const operation = options.category === WorkCategory.PLANTING ? 'planting' : 'harvesting';
+      const season = gameState.season ?? 'Spring';
+      const impact = resolveWeatherOperationImpact({
+        weather: createWeatherWeekContext(gameState),
+        operation,
+        season,
+        vineyard: {
+          status: vineyard.status,
+          ripeness: vineyard.ripeness,
+        },
+      });
+
+      if (!impact.allowed) {
+        console.warn(`Cannot create ${operation} activity: ${impact.reason}`);
+        return { activityId: null, reason: impact.reason };
+      }
+    }
 
     // Check for conflicting activities
     if (options.targetId) {
       const hasConflict = await hasActiveActivity(options.targetId, options.category);
       if (hasConflict) {
         console.warn(`An activity of type ${options.category} is already in progress for this target.`);
-        return null;
+        return { activityId: null };
       }
     }
 
@@ -241,14 +273,19 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
 
         notificationService.addMessage(assignmentMessage, 'activity.creation', 'Activity Creation', NotificationCategory.ACTIVITIES_TASKS);
       }
-      return activity.id;
+      return { activityId: activity.id };
     }
 
-    return null;
+    return { activityId: null };
   } catch (error) {
     console.error('Error creating activity:', error);
-    return null;
+    return { activityId: null };
   }
+}
+
+/** Create an activity and return its ID for existing callers. */
+export async function createActivity(options: ActivityCreationOptions): Promise<string | null> {
+  return (await createActivityWithResult(options)).activityId;
 }
 
 /**
@@ -427,6 +464,8 @@ export async function progressActivities(): Promise<void> {
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
     const researchEffects = await getResearchPermanentEffects();
+    const weather = createWeatherWeekContext(gameState);
+    const season = gameState.season ?? 'Spring';
 
     // Build staff task count map from active activities only
     const staffTaskCounts = new Map<string, number>();
@@ -446,11 +485,18 @@ export async function progressActivities(): Promise<void> {
         allStaffWorkMultiplier: researchEffects.allStaffWorkMultiplier,
         ...(isResearchActivity(activity) ? { researchSkillMultiplier: researchEffects.researchSkillMultiplier } : {}),
       };
+      const weatherImpact = getWeatherWorkImpact(activity, weather, season);
 
       // Calculate work contribution from staff (0 if no staff assigned)
       let workThisTick = 0;
-      if (assignedStaff.length > 0) {
-        workThisTick = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety, staffContributionOptions);
+      if (assignedStaff.length > 0 && weatherImpact.workMultiplier > 0) {
+        workThisTick = calculateStaffWorkContribution(
+          assignedStaff,
+          activity.category,
+          staffTaskCounts,
+          grapeVariety,
+          staffContributionOptions,
+        ) * weatherImpact.workMultiplier;
 
         // Award XP to assigned staff
         const relevantSkill = WORK_CATEGORY_INFO[activity.category].skill;
@@ -462,7 +508,13 @@ export async function progressActivities(): Promise<void> {
         }
 
         for (const staff of assignedStaff) {
-          const contribution = calculateIndividualStaffContribution(staff, activity.category, staffTaskCounts, grapeVariety, staffContributionOptions);
+          const contribution = calculateIndividualStaffContribution(
+            staff,
+            activity.category,
+            staffTaskCounts,
+            grapeVariety,
+            staffContributionOptions,
+          ) * weatherImpact.workMultiplier;
           // Award XP equal to contribution
           await awardExperience(staff.id, contribution, xpCategories);
         }
@@ -523,6 +575,31 @@ export async function progressActivities(): Promise<void> {
   } catch (error) {
     console.error('Error progressing activities:', error);
   }
+}
+
+function getWeatherWorkImpact(
+  activity: Activity,
+  weather: ReturnType<typeof createWeatherWeekContext>,
+  season: NonNullable<ReturnType<typeof getGameState>['season']>,
+): { workMultiplier: number } {
+  if (activity.category !== WorkCategory.PLANTING && activity.category !== WorkCategory.HARVESTING) {
+    return { workMultiplier: 1 };
+  }
+
+  const operation = activity.category === WorkCategory.PLANTING ? 'planting' : 'harvesting';
+  const impact = resolveWeatherOperationImpact({
+    weather,
+    operation,
+    season,
+    // Runtime work limits currently depend on weather and season only. Preserve the
+    // resolver's complete operation context without adding a vineyard lookup to ticks.
+    vineyard: {
+      status: activity.category === WorkCategory.PLANTING ? 'Planting' : 'Growing',
+      ripeness: 0,
+    },
+  });
+
+  return { workMultiplier: impact.allowed ? impact.workMultiplier : 0 };
 }
 
 /**

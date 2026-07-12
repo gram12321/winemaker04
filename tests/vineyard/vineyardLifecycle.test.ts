@@ -276,4 +276,19 @@ describe('vineyard lifecycle services', () => {
       status: 'Growing'
     }));
   }, 15000);
+
+  it('keeps harvest yield calculations independent from the current weather work pace', async () => {
+    const { calculateVineyardYield } = await import('@/lib/services/vineyard/vineyardManager');
+    const target = vineyard({ ripeness: 0.85, vineyardHealth: 0.9 });
+
+    mocks.getGameState.mockReturnValue({
+      week: 5, season: 'Fall', currentYear: 2026, weatherState: 'Clear', weatherIntensity: 'Mild',
+    } as any);
+    const clearYield = calculateVineyardYield(target);
+
+    mocks.getGameState.mockReturnValue({
+      week: 5, season: 'Fall', currentYear: 2026, weatherState: 'Storm', weatherIntensity: 'Extreme',
+    } as any);
+    expect(calculateVineyardYield(target)).toBe(clearYield);
+  });
 });

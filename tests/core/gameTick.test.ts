@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => {
   let state: any = {};
   const calls: string[] = [];
+  let weatherSeenByActivityProgress: { state: string | undefined; intensity: string | undefined } | undefined;
 
   return {
     calls,
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => {
       state = nextState;
     },
     getGameState: vi.fn(() => state),
+    getWeatherSeenByActivityProgress: () => weatherSeenByActivityProgress,
     updateGameState: vi.fn(async updates => {
       calls.push('updateGameState');
       state = { ...state, ...updates };
@@ -26,6 +28,10 @@ const mocks = vi.hoisted(() => {
     notificationAddMessage: vi.fn(async () => undefined),
     progressActivities: vi.fn(async () => {
       calls.push('progressActivities');
+      weatherSeenByActivityProgress = {
+        state: state.weatherState,
+        intensity: state.weatherIntensity
+      };
     }),
     checkAndTriggerBookkeeping: vi.fn(async () => {
       calls.push('checkAndTriggerBookkeeping');
@@ -182,6 +188,7 @@ describe('processGameTick', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.calls.length = 0;
+    mocks.progressActivities.mockClear();
     mocks.setState({
       week: 12,
       season: 'Winter',
@@ -193,6 +200,31 @@ describe('processGameTick', () => {
     });
     mocks.hasMinimizedModals.mockReturnValue(false);
     mocks.loadWineBatches.mockResolvedValue([]);
+  });
+
+  it('makes newly resolved weather available to activity progress after vineyard progression', async () => {
+    mocks.resolveWeatherWeek.mockReturnValueOnce({
+      date: { year: 2027, season: 'Spring', week: 1 },
+      state: 'Storm',
+      intensity: 'Extreme',
+      seasonalPattern: 'Storm-prone',
+      forecast: { state: 'Rain', intensity: 'Severe', confidence: 'Medium' }
+    });
+    const { processGameTick } = await import('@/lib/services/core/gameTick');
+
+    await processGameTick();
+
+    expect(mocks.updateVineyardRipeness).toHaveBeenCalledWith('Spring', 1, expect.objectContaining({
+      state: 'Storm',
+      intensity: 'Extreme'
+    }));
+    expect(mocks.updateVineyardHealthDegradation).toHaveBeenCalledWith('Spring', 1, expect.objectContaining({
+      state: 'Storm',
+      intensity: 'Extreme'
+    }));
+    expect(mocks.getWeatherSeenByActivityProgress()).toEqual({ state: 'Storm', intensity: 'Extreme' });
+    expect(mocks.calls.indexOf('updateVineyardRipeness')).toBeLessThan(mocks.calls.indexOf('progressActivities'));
+    expect(mocks.calls.indexOf('updateVineyardHealthDegradation')).toBeLessThan(mocks.calls.indexOf('progressActivities'));
   });
 
   it('restores minimized modals without advancing game time', async () => {

@@ -60,6 +60,145 @@ Use this structure for every new entry:
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.324-0.3241 - Weather Module Redesign and Site-Aware Forecast Explanations
+**Date:** 2026-07-12 | **Commit(s):** 580df2c, ce46fba | **Stats:** 2,608 insertions(+), 3,259 deletions(-)
+
+### Summary
+- Replaced the older weather service split with a feature-oriented weather module covering resolution, vineyard projection, market effects, and presentation.
+- Added persisted weather context, shared constants/types, integrated weekly-tick behavior, and migrated Vineyard, Weather Center, Winepedia, and grape-market consumers.
+- Made forecast explanations site-aware by showing aspect, elevation, soil, and weather-specific exposure reasons; removed incorrect Research Workspace auto-scroll behavior.
+
+### Changes
+- **NEW FILE:** `src/lib/features/weather/weatherConstants.ts`, `weatherResolver.ts`, `weatherMarketService.ts`, `weatherVineyardService.ts`, `weatherPresentationService.ts`, and `weatherTypes.ts` - central weather domain and presentation architecture.
+- `src/lib/services/core/gameTick.ts`, `src/lib/services/core/gameState.ts`, `src/lib/services/vineyard/vineyardManager.ts`, and `src/lib/services/vineyard/vineyardProgressionService.ts` - migrated simulation and vineyard progression to the new weather flow.
+- `src/components/pages/Vineyard.tsx`, `src/components/pages/WeatherCenter.tsx`, and `src/components/pages/winepedia/WeatherTab.tsx` - consolidated weather UI and explainable site projections.
+- **NEW FILE:** `migrations/20260710100000_add_game_state_weather_context.sql` (7 lines) - persists weather context required by the redesigned state flow.
+- `tests/weather/*` and `tests/vineyard/*` - regression coverage for resolver, market, tick integration, presentation, and site modifiers.
+
+### Notes
+- `ce46fba` is a follow-up on top of the redesign and includes the exact site-modifier explanation coverage.
+
+---
+## Version 0.323-0.323a - Bulk-Buy Lifecycle and Winepedia Improvements
+**Date:** 2026-07-10 | **Commit(s):** 3af1323, 30baf1e | **Stats:** 720 insertions(+), 332 deletions(-)
+
+### Summary
+- Improved bulk grape buying across offer generation, decay, inventory handling, wine-feature lifecycle effects, and admin/test support.
+- Added a Wine Quality Winepedia reference surface and simplified the buy-market modal for clearer user information.
+
+### Changes
+- `src/lib/services/sales/buyGrapeMarketService.ts`, `src/components/ui/modals/activitymodals/BuyFromMarketModal.tsx`, and `src/lib/services/core/gameTick.ts` - bulk-buy behavior, offer lifecycle, and UI updates.
+- `src/lib/services/wine/features/featureService.ts`, `src/lib/services/wine/winery/inventoryService.ts`, and `src/lib/services/wine/winescore/wineScoreCalculation.ts` - market-feature and inventory/scoring integration.
+- **NEW FILE:** `tests/wine/marketFeatureLifecycle.test.ts` - regression coverage for feature effects across market inventory lifecycle.
+- `src/components/pages/winepedia/WineQualityTab.tsx` (+97) and `src/components/pages/Winepedia.tsx` - new quality reference content and navigation alignment.
+
+### Notes
+- The two commits are one short bulk-buy/UI iteration and are grouped as a single release train.
+
+---
+## Version 0.321-0.322a - Research Workspace and Finance Refresh
+**Date:** 2026-07-09 | **Commit(s):** 935b1bf, 2a79b51, 2bcc4a4 | **Stats:** 1,690 insertions(+), 814 deletions(-)
+
+### Summary
+- Fixed stale finance totals by correcting game-state refresh behavior and finance-service update handling.
+- Reworked research work calculations, presentation shaping, project economics, and the Research Workspace UI.
+
+### Changes
+- `src/lib/services/finance/financeService.ts`, `src/hooks/useGameState.ts`, and `src/components/finance/IncomeBalanceView.tsx` - finance refresh correctness.
+- `src/lib/constants/researchConstants.ts`, `src/lib/services/activity/workcalculators/researchWorkCalculator.ts`, and `src/lib/services/research/researchPresentationService.ts` - research cost/progression and presentation rules.
+- `src/lib/features/researchUpgrade/components/ResearchWorkspace.tsx` and `src/components/ui/shadCN/tooltip.tsx` - expanded research workspace and interaction polish.
+- `tests/research/grapeResearchEconomics.test.ts` and `researchPresentationService.test.ts` - regression coverage for the updated calculations and view model.
+
+### Notes
+- `package-lock.json` churn in `935b1bf` is dependency-lock maintenance bundled with the finance fix.
+
+---
+## Version 0.31-0.31a - Bulk-Buy Architecture and Service-Boundary Cleanup
+**Date:** 2026-07-07 to 2026-07-09 | **Commit(s):** 8f00b01, 400e8eb, 2f839ac, ca876f0, d784ea0, 190ef80, 8267566, c5363d1, 0f85099, 282df34, 5a38eac, 4b575f1, c75017c, cae739c | **Stats:** 3,456 insertions(+), 1,551 deletions(-)
+
+### Summary
+- Expanded bulk-buy previews, inventory transitions, offer snapshots, and lifecycle tests.
+- Narrowed service/database boundaries by removing dead compatibility APIs and moving shared constants/database seams to their intended layers.
+- Cleaned and reorganized research, finance, sales, authentication, and project documentation while merging the service-cleanup and workdesktop branches.
+
+### Changes
+- `src/lib/services/sales/buyGrapeMarketService.ts`, `src/lib/services/wine/winery/inventoryService.ts`, and `src/components/ui/modals/activitymodals/BuyFromMarketModal.tsx` - market batch preview and inventory lifecycle architecture.
+- **NEW FILE:** `migrations/20260707194000_add_market_batch_preview_snapshots.sql` (7 lines) - persists market preview snapshots.
+- `src/lib/services/sales/contractService.ts`, `salesService.ts`, and `src/lib/services/wine/winery/inventoryService.ts` - explicit inventory seams used by sales flows.
+- `src/lib/services/finance/financeService.ts` and `src/lib/services/vineyard/vineyardService.ts` - removed dead compatibility APIs.
+- `docs/PROJECT_INFO.md`, `docs/codexplans/`, and the affected constants/database modules - boundary and project-structure cleanup.
+
+### Notes
+- Duplicate branch-equivalent commits are represented once; merge commits `c75017c` and `cae739c` are retained because they document the branch integration.
+
+---
+## Version 0.3 - Research Workspace Migration
+**Date:** 2026-07-07 | **Commit(s):** 28af11e | **Stats:** 1,088 insertions(+), 1,968 deletions(-)
+
+### Summary
+- Replaced the older ResearchPanel/Winepedia research surfaces with a feature-owned Research Workspace.
+- Moved research orchestration toward the `researchUpgrade` feature seam while retaining eligibility, permanent effects, and activity integration.
+
+### Changes
+- **NEW FILE:** `src/lib/features/researchUpgrade/components/ResearchWorkspace.tsx` (884 lines) - primary research workspace UI.
+- `src/components/finance/ResearchPanel.tsx` (-1,155) and `src/components/pages/winepedia/ResearchTab.tsx` (-505) - removed superseded research surfaces.
+- `src/lib/features/researchUpgrade/`, `src/lib/services/research/`, and research activity services - feature-boundary and orchestration migration.
+- `tests/research/*`, `tests/core/gameTick.test.ts`, and `tests/vineyard/vineyardLifecycle.test.ts` - updated integration expectations.
+
+### Notes
+- This is an architectural/UI migration rather than a new research mechanic.
+
+---
+## Version X.X - Wine Anchor Debugging, Weather UI, and Skills Reorganization
+**Date:** 2026-05-30 | **Commit(s):** 5575302, e0bbce9, 9635728, 5e281c6, 00abd8f, 978e2aa | **Stats:** 1,854 insertions(+), 4,187 deletions(-)
+
+### Summary
+- Added wine-anchor impact debugging and improved prestige-decay visibility for development and testing.
+- Reorganized the repository skill catalog, moving and consolidating skills into the current superpowers/toolsskills structure.
+
+### Changes
+- `src/lib/services/wine/debug/wineAnchorImpactDebugService.ts`, `wineAnchorEffectUtils.ts`, `wineModal.tsx`, and wine lifecycle services - anchor-effect inspection and display.
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` and `src/lib/services/prestige/prestigeService.ts` - prestige decay presentation and behavior support.
+- `skills/`, `.github/skills/`, and `docs/versionlog.md` - skill catalog migration, cleanup, and supporting guidance.
+
+### Notes
+- The `X.X` commits are primarily repository tooling maintenance; they are grouped with the adjacent player-facing weather/debug stabilization because they form the same missing history window.
+
+---
+## Version 0.292-0.292a - Vineyard Simulation and Research Guard Fixes
+**Date:** 2026-05-28 | **Commit(s):** a1aacef, 8077e7b | **Stats:** 1,181 insertions(+), 401 deletions(-)
+
+### Summary
+- Corrected vineyard progression precision, state refresh behavior, land-search guards, and research-dependent capacity handling.
+- Expanded weather/vineyard service tests and aligned the core-game mechanics documentation with the implemented runtime.
+
+### Changes
+- `src/lib/services/vineyard/vineyardProgressionService.ts`, `vineyardManager.ts`, `src/lib/database/activities/vineyardDB.ts`, and `src/hooks/useGameState.ts` - simulation/state correctness.
+- **NEW FILE:** `migrations/20260528090000_preserve_vineyard_simulation_precision.sql` (28 lines) - preserves required vineyard simulation precision.
+- `src/lib/services/vineyard/landSearchService.ts`, `landSearchManager.ts`, and `landSearchWorkCalculator.ts` - research guards and land-search behavior.
+- `tests/hooks/useGameStateWithData.test.ts`, `tests/vineyard/*`, and updated research tests - regression coverage for the fixes.
+
+### Notes
+- These are paired stabilization commits across the vineyard, weather, and research systems.
+
+---
+## Version 0.293 - Weather Impact, Bottle Aging, and Forecast UI
+**Date:** 2026-05-29 to 2026-05-30 | **Commit(s):** a28b6cf, 848df75, 7448498 | **Stats:** 1,760 insertions(+), 181 deletions(-)
+
+### Summary
+- Applied weather impact as a multiplier and corrected bottle-aging progression behavior.
+- Expanded forecast UI explanations, vineyard weather-center behavior, and weather reference presentation.
+
+### Changes
+- `src/lib/services/core/gameTick.ts`, `src/lib/services/vineyard/vineyardProgressionService.ts`, and weather services - tick/progression and multiplier corrections.
+- `src/components/pages/WeatherCenter.tsx` and `src/components/pages/winepedia/WeatherTab.tsx` - richer forecast and weather-reference UI.
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` and wine debug modal/services - adjacent prestige and anchor inspection improvements.
+- `tests/core/gameTick.test.ts`, `tests/vineyard/weatherCenter*.test.ts`, and `tests/prestige/prestigeService.test.ts` - regression coverage.
+
+### Notes
+- `0.293b` is the UI-focused follow-up and is included in this grouped weather stabilization entry.
+
+---
 ## Version 0.281a - Documentation Sync For Research/Founder Updates
 **Date:** 2026-05-25 | **Commit(s):** 4621f07 | **Stats:** 10 insertions(+), 6 deletions(-)
 

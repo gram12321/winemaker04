@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Vineyard, NotificationCategory } from '@/lib/types/types';
-import { createActivity } from '@/lib/services';
+import { createActivityWithResult, getGameState } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculateHarvestWork } from '@/lib/services/activity';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
+import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WeatherOperationStatusNotice } from '@/components/ui';
 import { notificationService } from '@/lib/services';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, getFeatureConfig } from '@/lib/services';
+import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 
 /**
  * Harvest Options Modal
@@ -56,12 +57,26 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     return { workEstimate: { totalWork }, workFactors: factors, expectedYield };
   }, [vineyard]);
 
+  const weatherImpact = useMemo(() => {
+    if (!vineyard) return null;
+    const gameState = getGameState();
+    const season = gameState.season ?? 'Spring';
+    return resolveWeatherOperationImpact({
+      weather: createWeatherWeekContext(gameState),
+      operation: 'harvesting',
+      season,
+      vineyard: {
+        status: vineyard.status,
+        ripeness: vineyard.ripeness,
+      },
+    });
+  }, [vineyard, isOpen]);
+
   // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
     if (!vineyard || !harvestCalculation) return;
-    
     // Create harvesting activity
-    const activityId = await createActivity({
+    const creation = await createActivityWithResult({
       category: WorkCategory.HARVESTING,
       title: `Harvesting ${vineyard.name}`,
       totalWork: harvestCalculation.workEstimate.totalWork,
@@ -76,10 +91,15 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       isCancellable: true
     });
     
-    if (activityId) {
+    if (creation.activityId) {
       // Success handled by notificationService in activityManager
     } else {
-      await notificationService.addMessage('Failed to create harvesting activity.', 'harvestOptionsModal.handleStartHarvest', 'Harvest Error', NotificationCategory.SYSTEM);
+      await notificationService.addMessage(
+        creation.reason || 'Failed to create harvesting activity.',
+        'harvestOptionsModal.handleStartHarvest',
+        creation.reason ? 'Harvest Unavailable' : 'Harvest Error',
+        NotificationCategory.SYSTEM
+      );
     }
     
     onClose();
@@ -93,6 +113,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
   const canSubmit = () => {
     if (!vineyard || !vineyard.grape) return false;
     if (vineyard.status !== 'Growing') return false;
+    if (!weatherImpact?.allowed) return false;
     return true;
   };
 
@@ -143,10 +164,11 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
         onSubmit={handleSubmit}
         submitLabel="Start Harvesting Activity"
         canSubmit={canSubmit}
-        disabledMessage="Cannot harvest: vineyard must be in Growing status with planted grapes"
+        disabledMessage={weatherImpact && !weatherImpact.allowed ? weatherImpact.reason : 'Cannot harvest: vineyard must be in Growing status with planted grapes'}
         options={options}
         onOptionsChange={handleOptionsChange}
       >
+        {weatherImpact && <WeatherOperationStatusNotice operation="harvesting" impact={weatherImpact} />}
         {/* Storage Selection Placeholder */}
         <div className="bg-gray-50 p-4 rounded mb-4">
           <h4 className="font-medium text-gray-700 mb-2">Storage Options</h4>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildWeatherCenterPresentation,
+  buildWeatherOperationPresentation,
   buildVineyardWeatherTooltip,
   buildWeatherReference,
   createWeatherWeekContext,
@@ -65,7 +66,32 @@ describe('weather presentation service', () => {
       priceMultiplier: expect.any(Number), supplyMultiplier: expect.any(Number),
     }));
     expect(reference.siteRules).toBeTruthy();
+    expect(reference.operationRules).toEqual(expect.arrayContaining([
+      expect.stringContaining('60% pace'),
+      expect.stringContaining('35% pace'),
+      expect.stringContaining('Planting is blocked in Winter'),
+      expect.stringContaining('completion estimates can change'),
+    ]));
     expect(reference.forecastBehavior).toBeTruthy();
     expect(reference.scope).toBeTruthy();
+  });
+
+  it.each([
+    ['normal', 'Field work proceeds normally this week.'],
+    ['slowed', 'Field work progresses more slowly this week.'],
+    ['paused', 'No field work progresses while these conditions continue.'],
+    ['blocked', 'This operation cannot be started under the current conditions.'],
+  ] as const)('gives %s operations a concise player-facing consequence', (severity, consequence) => {
+    const presentation = buildWeatherOperationPresentation('planting', {
+      allowed: severity !== 'blocked',
+      paused: severity === 'paused',
+      workMultiplier: severity === 'paused' || severity === 'blocked' ? 0 : 1,
+      severity,
+      reason: 'Test weather reason.',
+    });
+
+    expect(presentation.label).toBe(`Planting: ${severity}`);
+    expect(presentation.consequence).toBe(consequence);
+    expect(presentation.estimateNote).toContain('Completion estimates can change');
   });
 });

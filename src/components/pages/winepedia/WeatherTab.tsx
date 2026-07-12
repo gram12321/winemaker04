@@ -18,6 +18,13 @@ export function WeatherTab() {
       <section><p className="font-medium">Vineyard calculation</p><p className="text-slate-500">{reference.formula}</p><p className="mt-1 text-slate-500">{reference.siteRules}</p></section>
 
       <section>
+        <p className="font-medium">Outdoor operations</p>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-500">
+          {reference.operationRules.map((rule) => <li key={rule}>{rule}</li>)}
+        </ul>
+      </section>
+
+      <section>
         <p className="mb-1 font-medium">Vineyard weather multipliers</p>
         <p className="mb-2 text-xs text-slate-500">Each cell is ripeness / health multiplier applied to the normal weekly seasonal change.</p>
         <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="border-b"><th className="p-1">State</th>{reference.vineyardMatrix[0].intensities.map((cell) => <th className="p-1" key={cell.intensity}>{cell.intensity}</th>)}</tr></thead><tbody>{reference.vineyardMatrix.map((row) => <tr className="border-b" key={row.state}><td className="p-1 font-medium">{getWeatherIcon(row.state)} {row.state}</td>{row.intensities.map((cell) => <td className="p-1" key={cell.intensity}>×{cell.ripenessMultiplier.toFixed(2)} / ×{cell.healthMultiplier.toFixed(2)}</td>)}</tr>)}</tbody></table></div>

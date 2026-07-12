@@ -75,6 +75,20 @@ export const WEATHER_FORECAST_NEIGHBORS: Record<WeatherState, readonly WeatherSt
   Frost: ['Snow', 'Clear'], Storm: ['Rain', 'Heat', 'Snow'], Snow: ['Frost', 'Rain'],
 };
 
+export const WEATHER_OPERATION_LIMITS = {
+  normalWorkMultiplier: 1,
+  severeWorkMultiplier: 0.6,
+  extremeWorkMultiplier: 0.35,
+  plantingUnavailableSeasons: ['Winter'] as readonly Season[],
+  forcedPauseStates: ['Frost', 'Storm', 'Snow'] as readonly WeatherState[],
+} as const satisfies {
+  normalWorkMultiplier: number;
+  severeWorkMultiplier: number;
+  extremeWorkMultiplier: number;
+  plantingUnavailableSeasons: readonly Season[];
+  forcedPauseStates: readonly WeatherState[];
+};
+
 export const WEATHER_VINEYARD_MULTIPLIERS: Record<
   'ripeness' | 'health',
   Record<WeatherState, Record<WeatherIntensity, number>>

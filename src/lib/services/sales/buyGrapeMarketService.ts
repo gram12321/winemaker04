@@ -8,7 +8,7 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { BUY_MARKET_FIXED_SPREAD, BASE_BUY_MARKET_PRICE_PER_KG, BUY_MARKET_MAX_PRICE, BUY_MARKET_MIN_PRICE, BUYER_ECONOMY_PRICE_MULTIPLIERS, BUYER_SEASON_PRICE_MULTIPLIERS, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_MAX_AVAILABLE_KG, BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_PRESTIGE_MAX_DISCOUNT, BUY_OFFER_PREVIEW_LAND_VALUE_WEIGHT, BUY_OFFER_PREVIEW_QUALITY_MAX_MULTIPLIER, BUY_OFFER_PREVIEW_QUALITY_MIN_MULTIPLIER, BUY_OFFER_PREVIEW_VERSION, BUY_OFFER_PREVIEW_WINE_SCORE_WEIGHT, DEFAULT_BUY_MARKET_DEMAND_FACTORS, GAME_INITIALIZATION, MARKET_CRUSHING_PROFILE_BY_COLOR, MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS, MARKET_FERMENTATION_PROFILE_BY_COLOR, MAX_SEASONAL_OFFERS, MIN_SEASONAL_OFFERS, SEASON_ORDER, STATE_DISTRIBUTION, STATE_PREMIUMS, STATE_QUALITY_DECAY_PER_WEEK, WEEKS_PER_SEASON, YEAR_PRICE_CYCLE, type BuyMarketDemandFactors, type BuyOfferBatchState } from '../../constants';
+import { BUY_MARKET_FIXED_SPREAD, BASE_BUY_MARKET_PRICE_PER_KG, BUY_MARKET_MAX_PRICE, BUY_MARKET_MIN_PRICE, BUYER_ECONOMY_PRICE_MULTIPLIERS, BUYER_SEASON_PRICE_MULTIPLIERS, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_PRESTIGE_MAX_DISCOUNT, BUY_OFFER_PREVIEW_LAND_VALUE_WEIGHT, BUY_OFFER_PREVIEW_QUALITY_MAX_MULTIPLIER, BUY_OFFER_PREVIEW_QUALITY_MIN_MULTIPLIER, BUY_OFFER_PREVIEW_VERSION, BUY_OFFER_PREVIEW_WINE_SCORE_WEIGHT, DEFAULT_BUY_MARKET_DEMAND_FACTORS, GAME_INITIALIZATION, MARKET_CRUSHING_PROFILE_BY_COLOR, MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS, MARKET_FERMENTATION_PROFILE_BY_COLOR, MAX_SEASONAL_OFFERS, MIN_SEASONAL_OFFERS, SEASON_ORDER, STATE_DISTRIBUTION, STATE_PREMIUMS, STATE_QUALITY_DECAY_PER_WEEK, WEEKS_PER_SEASON, YEAR_PRICE_CYCLE, type BuyMarketDemandFactors, type BuyOfferBatchState } from '../../constants';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_SOIL_TYPES } from '../../constants/vineyardConstants';
 import { NotificationCategory, type EconomyPhase, type GrapeVariety, type MarketBatchProvenanceSnapshot, type MarketOfferOriginTag, type Nationality, type Season, type WineBatch } from '../../types/types';
 import { getBulkBuyer } from './grapeBuyerMarketService';
@@ -126,7 +126,7 @@ function computeBuyOfferAvailableKg(companyValue: number, prestige: number): num
   return clamp(
     Math.round(baseQuantity * companyValueMultiplier * prestigeMultiplier),
     BUY_OFFER_MIN_AVAILABLE_KG,
-    BUY_OFFER_MAX_AVAILABLE_KG
+    Number.MAX_SAFE_INTEGER
   );
 }
 
@@ -141,7 +141,7 @@ function computeOfferAvailableKgForSupplier(supplier: BuyMarketSupplierProfile, 
 
   const baseAvailableKg = computeBuyOfferAvailableKg(companyValue, prestige);
   const supplyScale = clamp(supplier.effectiveSeasonSupplyKg / 3000, 0.75, 4);
-  const scaled = clamp(Math.round(baseAvailableKg * supplyScale), BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_MAX_AVAILABLE_KG);
+  const scaled = Math.max(BUY_OFFER_MIN_AVAILABLE_KG, Math.round(baseAvailableKg * supplyScale));
   return Math.max(1, Math.min(scaled, supplier.remainingSeasonSupplyKg));
 }
 

@@ -1,11 +1,33 @@
 import type {
   GameDate,
+  Season,
   Vineyard,
   WeatherForecastConfidence,
   WeatherForecastPattern,
   WeatherIntensity,
   WeatherState,
 } from '@/lib/types/types';
+
+export type WeatherOperation = 'planting' | 'harvesting';
+
+export type WeatherOperationSeverity = 'normal' | 'slowed' | 'paused' | 'blocked';
+
+export type WeatherOperationVineyardState = Pick<Vineyard, 'status' | 'ripeness'>;
+
+export interface WeatherOperationImpact {
+  allowed: boolean;
+  workMultiplier: number;
+  paused: boolean;
+  severity: WeatherOperationSeverity;
+  reason: string;
+}
+
+export interface ResolveWeatherOperationImpactInput {
+  weather: WeatherWeekContext;
+  operation: WeatherOperation;
+  season: Season;
+  vineyard: WeatherOperationVineyardState;
+}
 
 export interface WeatherWeekContext {
   date: GameDate;

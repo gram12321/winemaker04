@@ -134,8 +134,8 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
     skill: 'administrationAndResearch'
   },
   [WorkCategory.ADMINISTRATION_AND_RESEARCH]: {
-    displayName: 'Maintenance',
-    icon: 'icon_maintenance.webp',
+    displayName: 'Administration & Research',
+    icon: 'icon_administration.webp',
     isDensityBased: false,
     skill: 'administrationAndResearch'
   },

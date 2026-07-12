@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { GrapeVariety, Vineyard, NotificationCategory } from '@/lib/types/types';
-import { createActivity } from '@/lib/services';
+import { cancelActivity, createActivityWithResult, getGameState, initializePlanting } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculatePlantingWork } from '@/lib/services/activity';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WarningModal } from '@/components/ui';
+import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WarningModal, WeatherOperationStatusNotice } from '@/components/ui';
 import { notificationService } from '@/lib/services';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
@@ -11,6 +11,7 @@ import { calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 
 
 /**
@@ -106,24 +107,29 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     return { workEstimate: { totalWork }, workFactors: factors };
   }, [vineyard, options.grape, options.density]);
 
+  const weatherImpact = useMemo(() => {
+    if (!vineyard) return null;
+    const gameState = getGameState();
+    const season = gameState.season ?? 'Spring';
+    return resolveWeatherOperationImpact({
+      weather: createWeatherWeekContext(gameState),
+      operation: 'planting',
+      season,
+      vineyard: {
+        status: vineyard.status,
+        ripeness: vineyard.ripeness,
+      },
+    });
+  }, [vineyard, isOpen]);
+
   // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
     if (!vineyard || !workCalculation) return;
-    
     const grape = submittedOptions.grape as GrapeVariety;
     const density = submittedOptions.density as number;
-    
-    // Initialize planting immediately (set grape variety, status='Planting', density=0)
-    const { initializePlanting } = await import('@/lib/services');
-    const initialized = await initializePlanting(vineyard.id, grape);
-    
-    if (!initialized) {
-      await notificationService.addMessage('Failed to initialize planting.', 'plantingOptionsModal.handlePlant', 'Planting Error', NotificationCategory.SYSTEM);
-      return;
-    }
-    
-    // Create activity for progressive density increase
-    const activityId = await createActivity({
+
+    // Create against fresh service-side weather validation before mutating the vineyard.
+    const creation = await createActivityWithResult({
       category: WorkCategory.PLANTING,
       title: `Planting ${vineyard.name}`,
       totalWork: workCalculation.workEstimate.totalWork,
@@ -137,10 +143,22 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
       isCancellable: true
     });
     
-    if (activityId) {
-      // Success handled by notificationService in activityManager
-    } else {
-      await notificationService.addMessage('Failed to create planting activity.', 'plantingOptionsModal.handlePlant', 'Planting Error', NotificationCategory.SYSTEM);
+    if (!creation.activityId) {
+      await notificationService.addMessage(
+        creation.reason || 'Failed to create planting activity.',
+        'plantingOptionsModal.handlePlant',
+        creation.reason ? 'Planting Unavailable' : 'Planting Error',
+        NotificationCategory.SYSTEM
+      );
+      return;
+    }
+
+    // Initialize planting only after the authoritative service validation succeeds.
+    const initialized = await initializePlanting(vineyard.id, grape);
+    if (!initialized) {
+      await cancelActivity(creation.activityId);
+      await notificationService.addMessage('Failed to initialize planting.', 'plantingOptionsModal.handlePlant', 'Planting Error', NotificationCategory.SYSTEM);
+      return;
     }
     
     onClose();
@@ -181,9 +199,12 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
         workFactors={workCalculation?.workFactors}
         onSubmit={handleSubmit}
         submitLabel="Start Planting Activity"
+        canSubmit={() => Boolean(vineyard && unlockedGrapes.length > 0 && weatherImpact?.allowed)}
+        disabledMessage={weatherImpact && !weatherImpact.allowed ? weatherImpact.reason : 'Cannot plant: select an unlocked grape variety.'}
         options={options}
         onOptionsChange={handleOptionsChange}
       >
+        {weatherImpact && <WeatherOperationStatusNotice operation="planting" impact={weatherImpact} />}
         {/* Grape Suitability Info */}
         {grapeSuitability !== null && grapeSuitabilityMetrics && (() => {
           const colors = getBadgeColorClasses(grapeSuitability);

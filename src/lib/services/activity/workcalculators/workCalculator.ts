@@ -234,7 +234,7 @@ export function getRelevantSkillName(category: WorkCategory): string {
     winery: 'Winery',
     administration: 'Administration',
     sales: 'Sales',
-    maintenance: 'Maintenance'
+    administrationAndResearch: 'Administration & Research'
   };
 
   return skillNames[skillKey] || 'General';

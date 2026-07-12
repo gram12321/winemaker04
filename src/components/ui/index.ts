@@ -30,6 +30,7 @@ export * from './components/FeatureDisplay';
 export * from './components/VineyardStatusBadge';
 export * from './components/WineTasteProfilePanel';
 export * from './components/WineTasteWheel';
+export * from './components/WeatherOperationStatusNotice';
 export * from './constraints/ConstraintDisplay';
 
 // Modal exports (wildcard exports where possible)

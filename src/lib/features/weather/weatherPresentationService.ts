@@ -1,13 +1,14 @@
 import {
   WEATHER_FORECAST_HIT_RATE,
   WEATHER_INTENSITIES,
+  WEATHER_OPERATION_LIMITS,
   WEATHER_SITE_EXPOSURE_BOUNDS,
   WEATHER_STATES,
   WEATHER_VINEYARD_MULTIPLIERS,
 } from '@/lib/constants/weatherConstants';
 import type { GameState, Vineyard, WeatherIntensity, WeatherState } from '@/lib/types/types';
 import { getWeatherMarketContext, WEATHER_INTENSITY_MARKET_MULTIPLIER, WEATHER_MARKET_PRESSURE } from './weatherMarketService';
-import type { VineyardMetricProjection, VineyardWeeklyProjection, WeatherWeekContext } from './weatherTypes';
+import type { VineyardMetricProjection, VineyardWeeklyProjection, WeatherOperation, WeatherOperationImpact, WeatherWeekContext } from './weatherTypes';
 import { projectVineyardWeek } from './weatherVineyardService';
 
 const WEATHER_ICONS: Record<WeatherState, string> = {
@@ -54,6 +55,12 @@ export interface VineyardWeatherTooltipPresentation {
   siteNote: string;
   ripeness: VineyardWeatherMetricPresentation;
   health: VineyardWeatherMetricPresentation;
+}
+
+export interface WeatherOperationPresentation {
+  label: string;
+  consequence: string;
+  estimateNote: string;
 }
 
 export function getWeatherIcon(state: WeatherState): string {
@@ -160,6 +167,29 @@ export function buildVineyardWeatherTooltip(input: { companyId: string; vineyard
   };
 }
 
+/**
+ * Player-facing wording for an operation impact. Limits and thresholds remain in
+ * the operation resolver; callers only render this already-classified result.
+ */
+export function buildWeatherOperationPresentation(
+  operation: WeatherOperation,
+  impact: WeatherOperationImpact,
+): WeatherOperationPresentation {
+  const operationName = operation === 'planting' ? 'Planting' : 'Harvesting';
+  const consequenceBySeverity = {
+    normal: 'Field work proceeds normally this week.',
+    slowed: 'Field work progresses more slowly this week.',
+    paused: 'No field work progresses while these conditions continue.',
+    blocked: 'This operation cannot be started under the current conditions.',
+  } as const;
+
+  return {
+    label: `${operationName}: ${impact.severity}`,
+    consequence: consequenceBySeverity[impact.severity],
+    estimateNote: 'Completion estimates can change as weather changes.',
+  };
+}
+
 export function buildWeatherReference() {
   return {
     formula: 'final weekly change = normal seasonal change × weather multiplier; weather contribution = final weekly change − normal seasonal change.',
@@ -180,6 +210,12 @@ export function buildWeatherReference() {
       })),
     })),
     siteRules: `Site exposure combines aspect, altitude, grape suitability, and soil response, bounded from ${WEATHER_SITE_EXPOSURE_BOUNDS.min} to ${WEATHER_SITE_EXPOSURE_BOUNDS.max}.`,
+    operationRules: [
+      `Normal conditions: outdoor planting and harvesting work at ${WEATHER_OPERATION_LIMITS.normalWorkMultiplier * 100}% pace.`,
+      `Severe weather: outdoor work progresses at ${WEATHER_OPERATION_LIMITS.severeWorkMultiplier * 100}% pace.`,
+      `Extreme weather: outdoor work progresses at ${WEATHER_OPERATION_LIMITS.extremeWorkMultiplier * 100}% pace, except extreme ${WEATHER_OPERATION_LIMITS.forcedPauseStates.join(', ')} pauses it completely.`,
+      `Planting is blocked in ${WEATHER_OPERATION_LIMITS.plantingUnavailableSeasons.join(', ')}. Weather is checked each week, so completion estimates can change.`,
+    ],
     forecastBehavior: `Week-ahead forecasts are labeled with their confidence. Typical hit rates are High ${WEATHER_FORECAST_HIT_RATE.High * 100}%, Medium ${WEATHER_FORECAST_HIT_RATE.Medium * 100}%, and Low ${WEATHER_FORECAST_HIT_RATE.Low * 100}%.`,
     scope: 'Weather modifies weekly vineyard ripeness and health and grape-market volatility. It does not currently create events, actions, research, or direct wine-score effects.',
   };
