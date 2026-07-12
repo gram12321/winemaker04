@@ -39,6 +39,7 @@ export interface VineyardWeeklyProjection {
   ripeness: VineyardMetricProjection;
   health: VineyardMetricProjection;
   siteExposure: number;
+  siteSummary: string;
   siteNote: string;
 }
 

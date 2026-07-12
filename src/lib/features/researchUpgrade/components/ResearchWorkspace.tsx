@@ -601,19 +601,6 @@ export function ResearchWorkspace({
     setSelectedProjectId(projectId);
   };
 
-  useEffect(() => {
-    if (!selectedProjectId) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      const targetElement = document.getElementById(`research-project-${selectedProjectId}`);
-      targetElement?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [selectedProjectId]);
-
   const { hasEffects, healthDecayReductionPercent, researchSkillBoostPercent } = getResearchViewSummary(permanentEffects);
   const runningModels = projectModels.filter((model) => model.status === 'in-progress');
 

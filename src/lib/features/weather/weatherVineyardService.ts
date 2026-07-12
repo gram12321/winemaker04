@@ -110,6 +110,54 @@ function getSiteNote(siteExposure: number): string {
   return 'Site exposure is neutral.';
 }
 
+function getSiteSummary(input: VineyardWeekProjectionInput): string {
+  const soil = input.vineyard.soil?.length ? input.vineyard.soil.join(', ') : 'unspecified soil';
+  return `${input.vineyard.aspect}-facing • ${input.vineyard.altitude}m elevation • ${soil}`;
+}
+
+function getWeatherSiteDetails(input: VineyardWeekProjectionInput): string[] {
+  const { vineyard, weather } = input;
+  const details: string[] = [];
+  const coldWeather = weather.state === 'Frost' || weather.state === 'Snow';
+  const heatWeather = weather.state === 'Heat';
+  const warmAspects = ['South', 'Southeast', 'Southwest'];
+  const coolAspects = ['North', 'Northeast', 'Northwest'];
+
+  if (heatWeather && warmAspects.includes(vineyard.aspect)) {
+    details.push(`${vineyard.aspect}-facing exposure increases heat impact.`);
+  } else if (heatWeather && coolAspects.includes(vineyard.aspect)) {
+    details.push(`${vineyard.aspect}-facing exposure helps reduce heat impact.`);
+  } else if (coldWeather && coolAspects.includes(vineyard.aspect)) {
+    details.push(`${vineyard.aspect}-facing exposure increases cold impact.`);
+  } else if (coldWeather && warmAspects.includes(vineyard.aspect)) {
+    details.push(`${vineyard.aspect}-facing exposure helps reduce cold impact.`);
+  }
+
+  if (heatWeather || coldWeather) {
+    if (vineyard.altitude >= WEATHER_ALTITUDE_EXPOSURE.reference + WEATHER_ALTITUDE_EXPOSURE.range * 0.35) {
+      details.push(heatWeather ? 'Higher elevation provides some cooling.' : 'Higher elevation increases cold exposure.');
+    } else if (vineyard.altitude <= WEATHER_ALTITUDE_EXPOSURE.reference - WEATHER_ALTITUDE_EXPOSURE.range * 0.35) {
+      details.push(heatWeather ? 'Lower elevation increases heat exposure.' : 'Lower elevation provides some cold protection.');
+    }
+  }
+
+  const soils = vineyard.soil?.map((soil) => soil.toLowerCase()) ?? [];
+  const hasHighRetention = soils.some((soil) => WEATHER_SOIL_RESPONSE_KEYWORDS.highRetention.some((keyword) => soil.includes(keyword)));
+  const hasFastDrain = soils.some((soil) => WEATHER_SOIL_RESPONSE_KEYWORDS.fastDrain.some((keyword) => soil.includes(keyword)));
+  const hasHighInertia = soils.some((soil) => WEATHER_SOIL_RESPONSE_KEYWORDS.highInertia.some((keyword) => soil.includes(keyword)));
+  const hasLowInertia = soils.some((soil) => WEATHER_SOIL_RESPONSE_KEYWORDS.lowInertia.some((keyword) => soil.includes(keyword)));
+
+  if (weather.state === 'Rain' || weather.state === 'Snow') {
+    if (hasHighRetention) details.push('Water-retentive soil increases wet-weather exposure.');
+    else if (hasFastDrain) details.push('Free-draining soil helps reduce wet-weather exposure.');
+  } else if (heatWeather || weather.state === 'Frost') {
+    if (hasHighInertia) details.push('Dense soil helps moderate temperature swings.');
+    else if (hasLowInertia) details.push('Fast-warming soil increases temperature swings.');
+  }
+
+  return details;
+}
+
 export function projectVineyardWeek(input: VineyardWeekProjectionInput): VineyardWeeklyProjection {
   const { vineyard, weather } = input;
   const plantingProgressRatio = input.plantingProgressRatio ?? 1;
@@ -156,6 +204,7 @@ export function projectVineyardWeek(input: VineyardWeekProjectionInput): Vineyar
       MAX_VINEYARD_HEALTH,
     ),
     siteExposure,
-    siteNote: getSiteNote(siteExposure),
+    siteSummary: getSiteSummary(input),
+    siteNote: [getSiteNote(siteExposure), ...getWeatherSiteDetails(input)].join(' '),
   };
 }

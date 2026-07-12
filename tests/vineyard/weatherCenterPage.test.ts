@@ -47,7 +47,7 @@ describe('WeatherCenterPage', () => {
   });
 
   it('renders concise vineyard outcomes and an empty state', () => {
-    mocks.rows = [{ id: 'v-1', name: 'North Field', status: 'Growing', siteNote: 'Site buffers this weather.', explanation: 'Normal progression is adjusted by the forecast.', ripeness: { current: 0.6, normalChange: 0.01, weatherContribution: 0.002, projected: 0.612 }, health: { current: 0.8, normalChange: -0.01, weatherContribution: -0.003, projected: 0.787 } }];
+    mocks.rows = [{ id: 'v-1', name: 'North Field', status: 'Growing', siteSummary: 'North-facing • 300m elevation • Limestone', siteNote: 'Site buffers this weather.', explanation: 'Normal progression is adjusted by the forecast.', ripeness: { current: 0.6, normalChange: 0.01, weatherContribution: 0.002, projected: 0.612 }, health: { current: 0.8, normalChange: -0.01, weatherContribution: -0.003, projected: 0.787 } }];
     const html = renderToStaticMarkup(React.createElement(WeatherCenterPage));
 
     expect(html).toContain('North Field');

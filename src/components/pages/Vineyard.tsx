@@ -52,6 +52,7 @@ const buildTooltipContent = (type: string, data: any) => {
           </TooltipSection>
           {forecast && metric && <TooltipSection title={forecast.label}>
             <TooltipRow label="Weather" value={forecast.weather} />
+            <TooltipRow label="Site" value={forecast.siteSummary} />
             <TooltipRow label="Normal change" value={formatSignedPercentPoints(metric.normalChange)} monospaced />
             <TooltipRow label="Weather contribution" value={formatSignedPercentPoints(metric.weatherContribution)} monospaced />
             <TooltipRow label="Projected level" value={formatPercentValue(metric.projected)} monospaced />
@@ -897,6 +898,7 @@ const Vineyard: React.FC = () => {
                                       <div className={tooltipStyles.text}>
                                         <TooltipSection title={weatherRow.label}>
                                           <TooltipRow label="Weather" value={weatherRow.weather} />
+                                          <TooltipRow label="Site" value={weatherRow.siteSummary} />
                                           <TooltipRow label="Ripeness projection" value={formatPercentValue(weatherRow.ripeness.projected)} monospaced />
                                           <TooltipRow label="Health projection" value={formatPercentValue(weatherRow.health.projected)} monospaced />
                                           <p className={tooltipStyles.muted}>{weatherRow.siteNote}</p>

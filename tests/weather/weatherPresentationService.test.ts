@@ -34,7 +34,7 @@ describe('weather presentation service', () => {
     expect(model.seasonalOutlook).toContain('Heat');
     expect(model.outlooks).toHaveLength(3);
     expect(model.rows).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'North Field', siteNote: expect.any(String), explanation: expect.any(String) }),
+      expect.objectContaining({ name: 'North Field', siteSummary: expect.any(String), siteNote: expect.any(String), explanation: expect.any(String) }),
     ]));
   });
 
@@ -50,6 +50,7 @@ describe('weather presentation service', () => {
       normalChange: expect.any(Number), weatherContribution: expect.any(Number), projected: expect.any(Number),
     }));
     expect(model.siteNote).toBeTruthy();
+    expect(model.siteSummary).toContain('facing');
   });
 
   it('builds a complete Winepedia reference with all state and intensity matrices', () => {

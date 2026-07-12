@@ -32,6 +32,7 @@ export interface VineyardWeatherRowPresentation {
   id: string;
   name: string;
   status: string;
+  siteSummary: string;
   siteNote: string;
   explanation: string;
   ripeness: VineyardWeatherMetricPresentation;
@@ -49,6 +50,7 @@ export interface WeatherCenterPresentation {
 export interface VineyardWeatherTooltipPresentation {
   label: string;
   weather: string;
+  siteSummary: string;
   siteNote: string;
   ripeness: VineyardWeatherMetricPresentation;
   health: VineyardWeatherMetricPresentation;
@@ -96,6 +98,7 @@ function toRow(vineyard: Vineyard, projection: VineyardWeeklyProjection): Vineya
     id: vineyard.id,
     name: vineyard.name,
     status: vineyard.status,
+    siteSummary: projection.siteSummary,
     siteNote: projection.siteNote,
     explanation: `Normal weekly vineyard progression is adjusted by the forecast. ${projection.siteNote}`,
     ripeness: toMetricPresentation(projection.ripeness),
@@ -150,6 +153,7 @@ export function buildVineyardWeatherTooltip(input: { companyId: string; vineyard
   return {
     label: 'Next-week forecast',
     weather: getWeatherLabel(forecastWeather.state, forecastWeather.intensity),
+    siteSummary: projection.siteSummary,
     siteNote: projection.siteNote,
     ripeness: toMetricPresentation(projection.ripeness),
     health: toMetricPresentation(projection.health),

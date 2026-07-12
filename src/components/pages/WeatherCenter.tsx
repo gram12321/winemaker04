@@ -76,7 +76,7 @@ export function WeatherCenterPage() {
                   <TableCell><VineyardStatusBadge status={row.status as any} /></TableCell>
                   <TableCell><div>{percent(row.ripeness.current)} → {percent(row.ripeness.projected)}</div><div className={`text-xs ${deltaClass(row.ripeness.weatherContribution)}`}>Weather {signedPercent(row.ripeness.weatherContribution)}</div></TableCell>
                   <TableCell><div>{percent(row.health.current)} → {percent(row.health.projected)}</div><div className={`text-xs ${deltaClass(row.health.weatherContribution)}`}>Weather {signedPercent(row.health.weatherContribution)}</div></TableCell>
-                  <TableCell className="text-sm text-slate-600"><p>{row.siteNote}</p><button type="button" className="mt-1 text-left underline decoration-dotted underline-offset-2" onClick={() => setExpandedVineyardId(expandedVineyardId === row.id ? null : row.id)}>{expandedVineyardId === row.id ? 'Hide explanation' : 'Why this forecast?'}</button>{expandedVineyardId === row.id && <p className="mt-1">{row.explanation}</p>}</TableCell>
+                  <TableCell className="text-sm text-slate-600"><p className="font-medium text-slate-700">{row.siteSummary}</p><p className="mt-1">{row.siteNote}</p><button type="button" className="mt-1 text-left underline decoration-dotted underline-offset-2" onClick={() => setExpandedVineyardId(expandedVineyardId === row.id ? null : row.id)}>{expandedVineyardId === row.id ? 'Hide explanation' : 'Why this forecast?'}</button>{expandedVineyardId === row.id && <p className="mt-1">{row.explanation}</p>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

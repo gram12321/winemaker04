@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => {
         projected: Math.max(0.1, input.vineyard.vineyardHealth - 0.02),
       },
       siteExposure: 1,
+      siteSummary: 'East-facing • 300m elevation • Limestone',
       siteNote: 'Site exposure is neutral.',
     })),
     getCurrentCompanyId: vi.fn(() => 'company-1'),

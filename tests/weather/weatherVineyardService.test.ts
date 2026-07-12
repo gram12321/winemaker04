@@ -115,8 +115,20 @@ describe('projectVineyardWeek', () => {
       vineyard: { ...vineyard, aspect: 'North', altitude: 1000, soil: ['Clay', 'Limestone', 'Marl'] },
     }));
 
-    expect(amplified.siteNote).toBe('Site amplifies this weather.');
-    expect(buffered.siteNote).toBe('Site buffers this weather.');
+    expect(amplified.siteNote).toContain('Site amplifies this weather.');
+    expect(buffered.siteNote).toContain('Site buffers this weather.');
+  });
+
+  it('includes the site characteristics and weather-specific reasons in the projection', () => {
+    const projection = projectVineyardWeek(buildInput({
+      vineyard: { ...vineyard, aspect: 'South', altitude: 0, soil: ['Sand'] },
+      weather: { ...buildInput().weather, state: 'Heat', intensity: 'Severe' },
+    }));
+
+    expect(projection.siteSummary).toBe('South-facing • 0m elevation • Sand');
+    expect(projection.siteNote).toContain('South-facing exposure increases heat impact.');
+    expect(projection.siteNote).toContain('Lower elevation increases heat exposure.');
+    expect(projection.siteNote).toContain('Fast-warming soil increases temperature swings.');
   });
 
   it('scales normal ripeness growth by active planting progress before weather', () => {
