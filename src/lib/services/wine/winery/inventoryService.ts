@@ -1,7 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics, GameDate, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Vineyard, WineBatchOriginSnapshot, WineBatchState } from '../../../types/types';
-import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
+import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById, deleteWineBatch } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
@@ -745,6 +745,14 @@ export function getWineBatchDisplayName(batch: WineBatch): string {
 // Update wine batch
 export async function updateInventoryBatch(batchId: string, updates: Partial<WineBatch>): Promise<boolean> {
   const success = await updateWineBatch(batchId, updates);
+  if (success) {
+    triggerGameUpdate();
+  }
+  return success;
+}
+
+export async function deleteInventoryBatch(batchId: string): Promise<boolean> {
+  const success = await deleteWineBatch(batchId);
   if (success) {
     triggerGameUpdate();
   }

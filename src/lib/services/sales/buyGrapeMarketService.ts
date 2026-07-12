@@ -3,7 +3,14 @@ import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { companyService } from '../user/companyService';
 import { calculateCompanyValue } from '../finance/financeService';
-import { BuyMarketOfferRow, deleteBuyOfferRow, getCompanyBuyOfferRow, getCompanyBuyOfferRows, upsertBuyOfferRows, updateBuyOfferRow } from '../../database/sales/buyMarketOffersDB';
+import {
+  type BuyMarketOfferRow,
+  deleteBuyOfferRow,
+  getCompanyBuyOfferRow,
+  getCompanyBuyOfferRows,
+  upsertBuyOfferRows,
+  updateBuyOfferRow,
+} from '../market/grapes/grapeMarketOfferPersistence';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';

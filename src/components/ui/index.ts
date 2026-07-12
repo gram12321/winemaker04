@@ -53,7 +53,7 @@ export { default as PlantingOptionsModal } from './modals/activitymodals/Plantin
 export { default as HarvestOptionsModal } from './modals/activitymodals/HarvestOptionsModal';
 export { default as CrushingOptionsModal } from './modals/activitymodals/CrushingOptionsModal';
 export { default as SellGrapesModal } from './modals/activitymodals/SellGrapesModal';
-export { default as BuyFromMarketModal } from './modals/activitymodals/BuyFromMarketModal';
+export { default as BuyMarketModal } from './market/BuyMarketModal';
 export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
 export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
 export { default as StaffModal } from './modals/UImodals/StaffModal';
@@ -63,6 +63,8 @@ export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
 export { MarketWindow } from './market/MarketWindow';
 export { MarketOfferTable } from './market/MarketOfferTable.tsx';
 export { MarketQuickBuyRowAction } from './market/MarketQuickBuyRowAction';
+export { StorageVesselMarketModal } from './market/StorageVesselMarketModal';
+export { StorageVesselInventory } from './wine/StorageVesselInventory';
 
 // Type exports (for default exports that also export types)
 export type { ActivityOptionField, ActivityWorkEstimate } from './activities/activityOptionsModal';

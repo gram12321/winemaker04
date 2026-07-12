@@ -3,7 +3,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
 import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
-import { Button, BuyFromMarketModal, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
+import { Button, BuyMarketModal, CrushingOptionsModal, WineModal, SellGrapesModal, StorageVesselInventory } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
@@ -182,12 +182,14 @@ const Winery: React.FC = () => {
                 className="mt-2 bg-emerald-600 text-white hover:bg-emerald-700"
                 onClick={() => setIsBuyMarketOpen(true)}
               >
-                Buy Grapes
+                Buy from Market
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      <StorageVesselInventory />
       
       {/* Summary Cards - Desktop/Tablet (hidden on mobile) */}
       <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -391,7 +393,7 @@ const Winery: React.FC = () => {
         batch={modals.sellGrapes}
       />
 
-      <BuyFromMarketModal
+      <BuyMarketModal
         isOpen={isBuyMarketOpen}
         onClose={() => setIsBuyMarketOpen(false)}
       />

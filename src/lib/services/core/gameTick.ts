@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
@@ -355,7 +355,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   let wageMessage: string | null = null;
   if (currentWeek === 1) {
     try {
-      await refreshBuyGrapeMarketForSeason();
+      await refreshBuyMarketForSeason();
     } catch (error) {
       console.warn('Error refreshing buy market for season:', error);
     }
@@ -395,7 +395,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     weeklyTasks.push(
       (async () => {
         try {
-          await processWeeklyBuyGrapeOfferDecay();
+          await processWeeklyBuyMarketLifecycle();
         } catch (error) {
           console.warn('Error processing buy market weekly decay:', error);
         }

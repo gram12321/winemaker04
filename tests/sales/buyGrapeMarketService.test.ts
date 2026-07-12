@@ -187,7 +187,7 @@ vi.mock('@/lib/services/sales/grapeBuyerMarketService', async () => {
   };
 });
 
-vi.mock('@/lib/database/sales/buyMarketOffersDB', () => ({
+vi.mock('@/lib/services/market/grapes/grapeMarketOfferPersistence', () => ({
   getCompanyBuyOfferRow: mocks.getCompanyBuyOfferRow,
   getCompanyBuyOfferRows: mocks.getCompanyBuyOfferRows,
   updateBuyOfferRow: mocks.updateBuyOfferRow,

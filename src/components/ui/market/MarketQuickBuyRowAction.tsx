@@ -6,6 +6,7 @@ interface MarketQuickBuyRowActionProps {
   maxQuantity: number;
   onQuantityChange: (quantity: number) => void;
   disabled?: boolean;
+  unitLabel?: string;
 }
 
 export const MarketQuickBuyRowAction: React.FC<MarketQuickBuyRowActionProps> = ({
@@ -13,6 +14,7 @@ export const MarketQuickBuyRowAction: React.FC<MarketQuickBuyRowActionProps> = (
   maxQuantity,
   onQuantityChange,
   disabled = false,
+  unitLabel = 'kg',
 }) => {
   const parsedQuantity = useMemo(() => Math.max(1, Math.round(quantity)), [quantity]);
 
@@ -29,7 +31,7 @@ export const MarketQuickBuyRowAction: React.FC<MarketQuickBuyRowActionProps> = (
         />
       </div>
       <div className="flex items-center justify-end gap-1">
-        <span className="text-[11px] text-gray-400 whitespace-nowrap">{parsedQuantity} kg</span>
+        <span className="text-[11px] text-gray-400 whitespace-nowrap">{parsedQuantity} {unitLabel}</span>
       </div>
     </div>
   );

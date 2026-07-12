@@ -3,7 +3,7 @@ import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { addTransaction } from '../finance/financeService';
-import { getWineBatchById, deleteWineBatch, updateWineBatch } from '../../database/activities/inventoryDB';
+import { deleteInventoryBatch, getInventoryBatchById, updateInventoryBatch } from '../wine/winery/inventoryService';
 import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
@@ -198,7 +198,7 @@ export async function sellGrapes(
   buyer: GrapeBuyer,
   quantityKgOverride?: number
 ): Promise<{ success: boolean; revenue: number; error?: string }> {
-  const batch = await getWineBatchById(batchId);
+  const batch = await getInventoryBatchById(batchId);
   if (!batch) return { success: false, revenue: 0, error: 'Batch not found' };
   if (!SELLABLE_BATCH_STATES.includes(batch.state as Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>)) {
     return { success: false, revenue: 0, error: 'Batch is not in a sellable state' };
@@ -244,8 +244,8 @@ export async function sellGrapes(
   // Remove sold grapes from inventory, preserving the remainder when partially sold.
   const remainingQuantity = batch.quantity - quantityKg;
   const inventoryUpdated = remainingQuantity > 0
-    ? await updateWineBatch(batchId, { quantity: remainingQuantity })
-    : await deleteWineBatch(batchId);
+    ? await updateInventoryBatch(batchId, { quantity: remainingQuantity })
+    : await deleteInventoryBatch(batchId);
   if (!inventoryUpdated) return { success: false, revenue: 0, error: 'Failed to update grape inventory' };
 
   // Record the transaction

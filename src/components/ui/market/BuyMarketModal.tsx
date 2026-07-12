@@ -2,15 +2,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
-import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
-import { MarketQuickBuyRowAction } from '../../market/MarketQuickBuyRowAction';
+import { MarketOfferTable, type MarketOfferTableColumn } from './MarketOfferTable';
+import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
   getBuyOfferStateLabel,
-  purchaseBuyGrapeOffer,
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
+import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
 import {
   estimateSupplierTrustPointGain,
   SUPPLIER_LOYALTY_LEVELS,
@@ -24,10 +24,11 @@ import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUti
 import type { WineFeature } from '@/lib/types/wineFeatures';
 import type { WeatherState } from '@/lib/types/types';
 import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
+import { StorageVesselMarketModal } from './StorageVesselMarketModal';
 
 type SortDirection = 'asc' | 'desc' | null;
 
-interface BuyFromMarketModalProps {
+interface BuyMarketModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
@@ -234,7 +235,8 @@ const SupplierTrustPanel: React.FC<{
   );
 };
 
-const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose }) => {
+const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
+  const [showStorageVessels, setShowStorageVessels] = useState(false);
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorByOfferId, setErrorByOfferId] = useState<Record<string, string>>({});
@@ -275,7 +277,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
   }, [grapeFilter, stateFilter, sortKey, sortDirection]);
 
   const handleBuy = useCallback(async (offerId: string, quantityKg: number) => {
-    const result = await purchaseBuyGrapeOffer(offerId, quantityKg);
+    const result = await purchaseBuyMarketOffer(offerId, quantityKg);
 
     if (!result.success) {
       setErrorByOfferId((current) => ({
@@ -545,6 +547,10 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     },
   ], [errorByOfferId, getOfferQuantity, headerWithTooltip, loading]);
 
+  if (showStorageVessels) {
+    return <StorageVesselMarketModal isOpen={isOpen} onClose={onClose} onShowGrapes={() => setShowStorageVessels(false)} />;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
@@ -554,6 +560,11 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             Browse and purchase grape market offers, compare quality and pricing pressure, and buy directly from each row.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex gap-2">
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-500">Grapes</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowStorageVessels(true)}>Casks</Button>
+        </div>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
@@ -743,4 +754,4 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
   );
 };
 
-export default BuyFromMarketModal;
+export default BuyMarketModal;

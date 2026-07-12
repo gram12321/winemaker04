@@ -60,6 +60,12 @@ export * from './sales/contractService';
 export * from './sales/forwardContractService';
 export * from './sales/expirationService';
 export * from './sales/buyGrapeMarketService';
+export * from './market/buyMarketService';
+export * from './market/buyMarketLifecycleService';
+export * from './market/storageVessels/storageVesselMarketAdapter';
+export * from './wine/winery/storageVesselService';
+export * from './wine/winery/storageVesselAllocationService';
+export * from './wine/winery/storageVesselEffectService';
 
 // Prestige services
 export * from './prestige/prestigeService';
