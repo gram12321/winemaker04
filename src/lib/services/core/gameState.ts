@@ -10,7 +10,7 @@ import { initializeStaffSystem } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { initializeEconomyPhase } from '../finance/economyService';
-import { buildWeeklyWeatherBundle, rollSeasonalWeatherForecast } from '../finance/weatherService';
+import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
 
 // Current active company and game state
 let currentCompany: Company | null = null;
@@ -123,8 +123,16 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
     }
   }
 
-  // Persist economyPhase to game_state table if it changed
-  if (updates.economyPhase !== undefined) {
+  // Persist state owned by game_state, including the resolved weather facts.
+  if (
+    updates.economyPhase !== undefined ||
+    updates.weatherForecastPattern !== undefined ||
+    updates.weatherForecastConfidence !== undefined ||
+    updates.weatherState !== undefined ||
+    updates.weatherIntensity !== undefined ||
+    updates.nextWeekForecastState !== undefined ||
+    updates.nextWeekForecastIntensity !== undefined
+  ) {
     try {
       await saveGameState({
         week: gameState.week,
@@ -132,10 +140,16 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
         currentYear: gameState.currentYear,
         money: gameState.money,
         prestige: gameState.prestige,
-        economyPhase: updates.economyPhase
+        economyPhase: gameState.economyPhase,
+        weatherForecastPattern: gameState.weatherForecastPattern,
+        weatherForecastConfidence: gameState.weatherForecastConfidence,
+        weatherState: gameState.weatherState,
+        weatherIntensity: gameState.weatherIntensity,
+        nextWeekForecastState: gameState.nextWeekForecastState,
+        nextWeekForecastIntensity: gameState.nextWeekForecastIntensity,
       });
     } catch (error) {
-      console.error('Failed to save economy phase to game_state:', error);
+      console.error('Failed to save game state to game_state:', error);
       // Continue even if persistence fails
     }
   }
@@ -185,15 +199,29 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   const initialSeason = company.currentSeason;
   const initialYear = company.currentYear;
   const initialWeek = company.currentWeek;
-  const seasonalForecast = rollSeasonalWeatherForecast(company.id, initialYear, initialSeason);
-  const weatherBundle = buildWeeklyWeatherBundle({
-    companyId: company.id,
-    year: initialYear,
-    season: initialSeason,
-    week: initialWeek,
-    pattern: seasonalForecast.pattern,
-    confidence: seasonalForecast.confidence,
-  });
+  const seasonalForecast = persisted?.weatherForecastPattern && persisted.weatherForecastConfidence
+    ? { pattern: persisted.weatherForecastPattern, confidence: persisted.weatherForecastConfidence }
+    : resolveSeasonalWeatherForecast(company.id, initialYear, initialSeason);
+  const hasPersistedWeather = Boolean(
+    persisted?.weatherState && persisted.weatherIntensity &&
+    persisted.nextWeekForecastState && persisted.nextWeekForecastIntensity,
+  );
+  const weatherContext = hasPersistedWeather
+    ? {
+        state: persisted!.weatherState!,
+        intensity: persisted!.weatherIntensity!,
+        forecast: {
+          state: persisted!.nextWeekForecastState!,
+          intensity: persisted!.nextWeekForecastIntensity!,
+          confidence: seasonalForecast.confidence,
+        },
+      }
+    : resolveWeatherWeek({
+        companyId: company.id,
+        date: { year: initialYear, season: initialSeason, week: initialWeek },
+        seasonalPattern: seasonalForecast.pattern,
+        forecastConfidence: seasonalForecast.confidence,
+      });
 
   gameState = {
     week: company.currentWeek,
@@ -206,11 +234,15 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     economyPhase: ensuredEconomyPhase,
     weatherForecastPattern: seasonalForecast.pattern,
     weatherForecastConfidence: seasonalForecast.confidence,
-    weatherState: weatherBundle.currentState,
-    weatherIntensity: weatherBundle.currentIntensity,
-    nextWeekForecastState: weatherBundle.nextForecastState,
-    nextWeekForecastIntensity: weatherBundle.nextForecastIntensity,
+    weatherState: weatherContext.state,
+    weatherIntensity: weatherContext.intensity,
+    nextWeekForecastState: weatherContext.forecast.state,
+    nextWeekForecastIntensity: weatherContext.forecast.intensity,
   };
+
+  if (!hasPersistedWeather || !persisted?.weatherForecastPattern || !persisted.weatherForecastConfidence) {
+    await saveGameState(gameState);
+  }
   
   // Initialize prestige system for this company
   try {

@@ -1167,6 +1167,7 @@ export interface GameState {
   prestige: number; // Company prestige for order generation scaling
   creditRating: number; // NEW: 0-100 scale, affects loan availability
   economyPhase: EconomyPhase; // NEW: Current economy phase
+  // Persisted company-scoped weather context for the resolved current week and next-week forecast.
   weatherForecastPattern?: WeatherForecastPattern;
   weatherForecastConfidence?: WeatherForecastConfidence;
   weatherState?: WeatherState;

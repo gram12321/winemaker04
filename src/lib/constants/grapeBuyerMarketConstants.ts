@@ -1,4 +1,4 @@
-import type { EconomyPhase, Nationality, Season, WeatherIntensity, WeatherState } from '@/lib/types/types';
+import type { EconomyPhase, Nationality, Season } from '@/lib/types/types';
 
 export const BASE_SEASONAL_BUYER_COUNT = 3;
 export const MAX_SEASONAL_BUYER_COUNT = 7;
@@ -60,23 +60,6 @@ export const BUYER_ECONOMY_VOLATILITY_PRESSURE: Record<EconomyPhase, number> = {
   Boom: 1.16,
 };
 
-export const BUYER_WEATHER_VOLATILITY_PRESSURE: Record<WeatherState, { price: number; limit: number }> = {
-  Clear: { price: 1.0, limit: 1.0 },
-  Rain: { price: 1.04, limit: 1.06 },
-  Heat: { price: 1.07, limit: 1.11 },
-  Frost: { price: 1.09, limit: 1.14 },
-  Storm: { price: 1.13, limit: 1.2 },
-  Snow: { price: 1.1, limit: 1.17 },
-};
-
-export const WEATHER_INTENSITY_MULTIPLIER: Record<WeatherIntensity, number> = {
-  VeryMild: 0.92,
-  Mild: 0.96,
-  Moderate: 1.0,
-  Severe: 1.08,
-  Extreme: 1.16,
-};
-
 export const PRICE_SEASON_THEME: Record<Season, string> = {
   Spring: 'Spring planting optimism supports premium contracts.',
   Summer: 'Summer heat stress softens average grape spot prices.',
@@ -89,15 +72,6 @@ export const LIMIT_SEASON_THEME: Record<Season, string> = {
   Summer: 'Heat-related handling constraints reduce intake appetite.',
   Fall: 'Cellar congestion during harvest tightens intake limits.',
   Winter: 'Off-season replenishment programs increase buyer intake plans.',
-};
-
-export const WEATHER_THEME: Record<WeatherState, string> = {
-  Clear: 'Stable weather keeps logistics predictable this week.',
-  Rain: 'Rainfall variability introduces moderate logistics friction.',
-  Heat: 'Heat pressure increases handling and spoilage risk.',
-  Frost: 'Frost risk tightens procurement timing and flexibility.',
-  Storm: 'Storm disruptions create sharp short-term buying uncertainty.',
-  Snow: 'Snowy transport constraints amplify delivery uncertainty.',
 };
 
 export type BuyerMarketCountryKey = Nationality;

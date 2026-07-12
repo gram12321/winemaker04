@@ -229,8 +229,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  TIME["Week/season/year"] --> WTH["Weather state,\nintensity, forecast"]
-  WTH --> VIMP["Vineyard weather impact"]
+  TIME["Week/season/year"] --> WTH["Persisted weather fact,\nforecast, and confidence"]
+  WTH --> VIMP["Shared vineyard projection\n(normal delta × weather)"]
   SITE["Aspect, altitude,\nterroir, soil"] --> VIMP
   VIMP --> VINE["Vineyard health\nand ripeness"]
   VINE --> HARVEST["Harvest output\nand anchors"]
@@ -281,7 +281,8 @@ flowchart LR
 | Land value tab | Vineyard factors behind the land value modifier. |
 | Origins tab | Characteristic changes grouped by source/effect. |
 | Wine log and vineyard analytics | Bottling snapshots and historical production records. |
-| Weather Center | Current weather context, per-vineyard health/ripeness impact, site-response explanation. |
+| Weather Center | Operational current/next-week outlook and per-vineyard projected health/ripeness outcomes. |
+| Winepedia Weather | Technical weather formulas, all state × intensity matrices, site bounds, forecast behavior, and market derivation. |
 | Research page | Chain-first progression, unlock gates, permanent capability summary, and project inspector for long-range progression. |
 | Grape market modals | Buyer/supplier options, economy/weather pressure, price/limit factors, loyalty context, using service-prepared snapshots instead of direct database lookups. |
 | Finance Founder Panel | Active founders, yearly profit-share explanation, buyout cost/action. |
@@ -296,7 +297,7 @@ flowchart LR
 | Wine log snapshots | Wine log and wine highscores use bottling snapshots for taste quality, structure, land value, and wine score. |
 | Achievement wine score | `wine_score_threshold` achievements use finite persisted `WineLogEntry.wineScore`; missing or non-finite scores do not derive a fallback. |
 | Contract quality split | `tasteQuality` and `landValue` are separate requirements. |
-| Weather vineyard integration | Weather state/intensity create bounded health and ripeness deviations through `weatherImpactService`; Weather Center exposes the breakdown. |
+| Weather vineyard integration | The weather module persists weekly facts and applies a shared bounded projection to seasonal health/ripeness deltas; Weather Center shows outcomes and Winepedia exposes technical detail. |
 | Grape markets | Sell-side buyers and buy-side suppliers are active, including bulk fallback channels, seasonal rows, loyalty, economy/weather volatility, and research unlock scaling. |
 | Market tuning ownership | Static grape-market and cooperative baselines now live in dedicated constants modules under `src/lib/constants/`; gameplay UI reads them through constants/service seams rather than service-local definitions. |
 | Founder economy | Founders are staff with `isFounder`, zero wages, yearly positive-profit Founder Returns, and buyout conversion to salaried employees. |
@@ -311,7 +312,7 @@ This table follows the practical gameflow from land purchase through sales and p
 | Game phase | Player/state inputs | Main variables produced | Main downstream consumers | Player-visible effect |
 |---|---|---|---|---|
 | Land search and vineyard ownership | Country, region, soil, altitude, aspect, hectares, land value | Site Factors | Suitability, land value modifier, contracts | Land choice changes crop fit, site quality, and future market eligibility. |
-| Weather tick | Season, year, previous weather, forecast pattern/confidence | Weather state, intensity, next-week forecast | Vineyard health/ripeness, grape markets, Weather Center | Weather changes vineyard outlook and market pressure without changing historical snapshots. |
+| Weather tick | Season, year, previous weather, forecast pattern/confidence | Persisted state, intensity, seasonal outlook, next-week forecast | Shared vineyard projection, grape markets, Weather Center | Weather changes vineyard outlook and market pressure without changing historical snapshots. |
 | Vineyard maintenance | Health, overgrowth, density, vine age, grape planted | Updated Site Factors and yield conditions | Harvest yield, anchors, land value modifier | Good maintenance improves harvest potential and reduces penalties. |
 | Grape identity | Grape constants and planted variety | Intrinsic Grape Traits | Anchors, base characteristics, taste color rules, yield, risk | Variety changes wine style, risks, and customer fit. |
 | Harvest | Ripeness, site factors, grape traits | Harvest anchors, harvest snapshots, initial wine batch | Winery processing, structure, taste, lifecycle | Harvest timing freezes the starting identity of the wine. |

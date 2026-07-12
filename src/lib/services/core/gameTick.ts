@@ -12,7 +12,7 @@ import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
-import { buildWeeklyWeatherBundle, rollSeasonalWeatherForecast } from '@/lib/services/finance/weatherService';
+import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -90,30 +90,19 @@ const executeGameTick = async (): Promise<void> => {
 
   const shouldRefreshForecast = !!newSeason || !currentState.weatherForecastPattern || !currentState.weatherForecastConfidence;
   const seasonalForecast = shouldRefreshForecast
-    ? rollSeasonalWeatherForecast(companyId, currentYear, season as any)
+    ? resolveSeasonalWeatherForecast(companyId, currentYear, season as any)
     : {
         pattern: currentState.weatherForecastPattern!,
         confidence: currentState.weatherForecastConfidence!,
       };
 
-  const weatherBundle = buildWeeklyWeatherBundle({
+  const weatherContext = resolveWeatherWeek({
     companyId,
-    year: currentYear,
-    season: season as any,
-    week,
-    pattern: seasonalForecast.pattern,
-    confidence: seasonalForecast.confidence,
+    date: { year: currentYear, season: season as any, week },
+    seasonalPattern: seasonalForecast.pattern,
+    forecastConfidence: seasonalForecast.confidence,
     previousState: currentState.weatherState,
   });
-
-  const weatherContext = {
-    companyId,
-    year: currentYear,
-    season: season as any,
-    week,
-    weatherState: weatherBundle.currentState,
-    weatherIntensity: weatherBundle.currentIntensity,
-  };
 
   // Update game state with new time values and weekly weather context
   await updateGameState({
@@ -122,11 +111,15 @@ const executeGameTick = async (): Promise<void> => {
     currentYear,
     weatherForecastPattern: seasonalForecast.pattern,
     weatherForecastConfidence: seasonalForecast.confidence,
-    weatherState: weatherBundle.currentState,
-    weatherIntensity: weatherBundle.currentIntensity,
-    nextWeekForecastState: weatherBundle.nextForecastState,
-    nextWeekForecastIntensity: weatherBundle.nextForecastIntensity,
+    weatherState: weatherContext.state,
+    weatherIntensity: weatherContext.intensity,
+    nextWeekForecastState: weatherContext.forecast.state,
+    nextWeekForecastIntensity: weatherContext.forecast.intensity,
   });
+
+  // Weather affects vineyard conditions before staff progress activities such as harvesting.
+  await updateVineyardRipeness(season, week, weatherContext);
+  await updateVineyardHealthDegradation(season, week, weatherContext);
 
   // Progress all activities based on assigned staff work contribution
   await progressActivities();
@@ -146,12 +139,6 @@ const executeGameTick = async (): Promise<void> => {
       console.warn('Error running board/share season-start hooks:', error);
     }
   }
-
-  // Update vineyard ripeness and status based on current season and week
-  await updateVineyardRipeness(season, week, weatherContext);
-
-  // Apply health degradation to vineyards
-  await updateVineyardHealthDegradation(season, week, weatherContext);
 
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);

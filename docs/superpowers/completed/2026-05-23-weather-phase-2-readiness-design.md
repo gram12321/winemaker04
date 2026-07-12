@@ -1,6 +1,8 @@
 # Weather Phase 2 Final Design: Vineyard Integration
 **Date:** 2026-05-23  
-**Status:** Core Phase 2 implementation shipped; active edge-test and future-mechanics follow-up remains. Code-verified on 2026-05-25.
+**Status:** Historical superseded design (2026-07-11 weather module redesign replaced its runtime implementation).
+
+> Historical record only. The active weather owner is `src/lib/features/weather/`; references below to former service files and raw deviation tables do not describe current runtime.
 
 Implementation note: deterministic vineyard health/ripeness impact, site coupling, Weather Center, and planned-alert shell are implemented. Severe weather event mechanics, recommended action engine, research/weather upgrades, weather achievements, and additional boundary/deterministic fixture tests remain deferred or active follow-up.
 

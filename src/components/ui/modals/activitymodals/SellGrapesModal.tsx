@@ -1,14 +1,16 @@
 ﻿import React, { useCallback, useState, useMemo, useEffect } from 'react';
-import { WineBatch, type GrapeVariety } from '@/lib/types/types';
+import { WineBatch, type GrapeVariety, type WeatherState } from '@/lib/types/types';
+import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { DialogProps } from '@/lib/types/UItypes';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Slider, UnifiedTooltip } from '@/components/ui';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
-import { BASE_GRAPE_PRICE_PER_KG, COOPERATIVE_LEVELS } from '@/lib/constants';
+import { COOPERATIVE_LEVELS } from '@/lib/constants';
 import {
   GrapeBuyer,
   GrapeSalePricing,
   getAvailableBuyers,
   calculateGrapeSalePrice,
+  getGrapeBuyerMarketIndex,
   sellGrapes,
 } from '@/lib/services/sales/sellGrapesService';
 import {
@@ -51,40 +53,6 @@ function getEconomyVolatilityIcon(phase?: string): string {
   return '⚖';
 }
 
-function getWeatherVolatilityIcon(state?: string): string {
-  if (state === 'Rain') return '🌧';
-  if (state === 'Heat') return '🌡';
-  if (state === 'Frost') return '🧊';
-  if (state === 'Storm') return '⛈';
-  if (state === 'Snow') return '❄';
-  return '☀';
-}
-
-function formatVolatilityDelta(multiplier: number): string {
-  const deltaPercent = (multiplier - 1) * 100;
-  const rounded = Math.round(deltaPercent * 10) / 10;
-  const display = rounded.toFixed(1).replace(/\.0$/, '');
-  return `${rounded >= 0 ? '+' : ''}${display}%`;
-}
-
-function getDemandPressureIndex(buyer?: GrapeBuyer): number {
-  if (!buyer?.demandFactors) return 1;
-  return (
-    buyer.demandFactors.seasonPriceMultiplier
-    * buyer.demandFactors.economyPriceMultiplier
-    * buyer.demandFactors.yearCyclePriceMultiplier
-    * buyer.demandFactors.volatilityPriceMultiplier
-    * (buyer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1)
-  );
-}
-
-function getVolatilityRiskIndex(buyer?: GrapeBuyer): number {
-  if (!buyer?.demandFactors) return 1;
-  return (
-    buyer.demandFactors.volatilityPriceMultiplier
-    * (buyer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1)
-  );
-}
 interface SellGrapesModalProps extends DialogProps {
   batch: WineBatch | null;
 }
@@ -244,11 +212,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   const [membership, setMembership] = useState<CooperativeMembership | null>(null);
   const [buyerLoyaltyById, setBuyerLoyaltyById] = useState<Record<string, BuyerLoyaltyRecord>>({});
   const [companyValue, setCompanyValue] = useState(0);
-  const [showFormulaDetails, setShowFormulaDetails] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setShowFormulaDetails(false);
       setSalePercentageByBuyerId({});
     }
   }, [isOpen, batch?.id]);
@@ -313,8 +279,8 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
       const rightCaps = right.remainingSeasonLimitKg ?? Number.MAX_SAFE_INTEGER;
       const leftQuantity = Math.max(1, Math.min(batch?.quantity ?? 0, left.remainingSeasonLimitKg ?? batch?.quantity ?? 0));
       const rightQuantity = Math.max(1, Math.min(batch?.quantity ?? 0, right.remainingSeasonLimitKg ?? batch?.quantity ?? 0));
-      const leftMarket = getDemandPressureIndex(left) + getVolatilityRiskIndex(left);
-      const rightMarket = getDemandPressureIndex(right) + getVolatilityRiskIndex(right);
+      const leftMarket = getGrapeBuyerMarketIndex(left);
+      const rightMarket = getGrapeBuyerMarketIndex(right);
 
       const leftValue = sortKey === 'offer' ? left.name
         : sortKey === 'batch' ? (batch?.state ?? '')
@@ -451,11 +417,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   const economyIcon = getEconomyVolatilityIcon(volatilityEconomyPhase);
   const volatilityWeatherState = selectedBuyer?.demandFactors?.volatilityWeatherState;
   const volatilityWeatherIntensity = selectedBuyer?.demandFactors?.volatilityWeatherIntensity;
-  const weatherIcon = getWeatherVolatilityIcon(volatilityWeatherState);
-  const volatilityPrice = selectedBuyer?.demandFactors?.volatilityPriceMultiplier ?? 1;
-  const volatilityLimit = selectedBuyer?.demandFactors?.volatilityLimitMultiplier ?? 1;
-  const selectedDemandPressureIndex = getDemandPressureIndex(selectedBuyer);
-  const selectedVolatilityRiskIndex = getVolatilityRiskIndex(selectedBuyer);
+  const weatherIcon = getWeatherIcon((volatilityWeatherState ?? 'Clear') as WeatherState);
 
   const buyerColumns = useMemo<MarketOfferTableColumn<GrapeBuyer>[]>(() => {
     if (!batch) return [];
@@ -561,19 +523,12 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
       },
       {
         key: 'market',
-        header: columnHeader('Market', 'Market pressure and volatility risk used in the price calculation.'),
+        header: columnHeader('Market', 'The current economy and weather context for this buyer.'),
         sortable: true,
         className: 'w-[14%] min-w-[135px] text-right',
         render: (buyer) => {
-          const pressure = getDemandPressureIndex(buyer);
-          const risk = getVolatilityRiskIndex(buyer);
           return (
             <div className="space-y-0.5 text-[11px]">
-              <div>
-                <span className="text-blue-300 font-medium">Pressure {pressure.toFixed(2)}x</span>
-                <span className="text-gray-500"> · </span>
-                <span className="text-purple-300 font-medium">Risk {risk.toFixed(2)}x</span>
-              </div>
               <div className="text-gray-400">{buyer.demandFactors?.volatilityEconomyPhase ?? 'Economy'} / {buyer.demandFactors?.volatilityWeatherState ?? 'Weather'}</div>
             </div>
           );
@@ -662,7 +617,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             {selectedBuyer?.demandFactors ? (
               <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-cyan-200 font-medium">Market volatility outlook</span>
+                  <span className="text-cyan-200 font-medium">Market outlook</span>
                   <span className="inline-flex items-center gap-1 rounded border border-sky-700/70 bg-sky-900/30 px-2 py-1 text-sky-200">
                     <span>{seasonIcon}</span>
                     <span>{volatilitySeason ?? 'Season'}</span>
@@ -673,26 +628,8 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                   </span>
                   <span className="inline-flex items-center gap-1 rounded border border-blue-700/70 bg-blue-900/30 px-2 py-1 text-blue-200">
                     <span>{weatherIcon}</span>
-                    <span>{volatilityWeatherState ?? 'Weather'} {volatilityWeatherIntensity ? `(${volatilityWeatherIntensity})` : ''}</span>
+                    <span>{getWeatherLabel((volatilityWeatherState ?? 'Clear') as WeatherState, volatilityWeatherIntensity ?? 'Mild')}</span>
                   </span>
-                  <UnifiedTooltip
-                    title="Price Volatility Factor"
-                    content={<span className="text-xs leading-snug">This is the volatility price multiplier. It contributes to Risk, then combines with season, economy, and cycle factors for Pressure.</span>}
-                  >
-                    <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
-                      <span>💶</span>
-                      <span>Price {formatVolatilityDelta(volatilityPrice)}</span>
-                    </span>
-                  </UnifiedTooltip>
-                  <UnifiedTooltip
-                    title="Supply Volatility Factor"
-                    content={<span className="text-xs leading-snug">This is the volatility supply multiplier. It signals market tightness and availability pressure, but it is not multiplied directly into final price/kg.</span>}
-                  >
-                    <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
-                      <span>📦</span>
-                      <span>Supply {formatVolatilityDelta(volatilityLimit)}</span>
-                    </span>
-                  </UnifiedTooltip>
                 </div>
                 <div className="mt-2 space-y-1 text-[11px] text-gray-300">
                   {selectedBuyer.demandFactors.volatilityPriceReason && (
@@ -729,15 +666,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer</span><span className="text-right">{selectedBuyer?.name ?? 'Buyer'}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Base Price</span><span className="text-right">{formatNumber(BASE_GRAPE_PRICE_PER_KG, { currency: true, decimals: 2 })}/kg</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({qualityPercent}%)</span><span className="text-right">×{pricing.qualityMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">×{selectedDemandPressureIndex.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">×{selectedVolatilityRiskIndex.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{(pricing.relationshipMultiplier ?? 1).toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">×{pricing.prestigeBonus.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Floor</span><span className="text-right">{formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg</span></div>
                     <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Final Price per kg</span><span className="text-right text-white">{formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Sale quantity</span><span className="text-right">{pricing.quantityKg.toLocaleString()} kg</span></div>
                   </div>
@@ -748,52 +676,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                     </div>
                   )}
 
-                  <div className="rounded border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-gray-300 space-y-1">
-                    <div className="text-gray-400">Exact calculation (raw)</div>
-                    <div className="leading-snug break-words">
-                      {formatNumber(BASE_GRAPE_PRICE_PER_KG, { currency: true, decimals: 2 })}
-                      {' × '}{pricing.qualityMultiplier.toFixed(3)}
-                      {' × '}{pricing.prestigeBonus.toFixed(3)}
-                      {' × '}{pricing.stateMultiplier.toFixed(3)}
-                      {' × '}{pricing.marketContextMultiplier.toFixed(3)}
-                      {' × '}{pricing.marketSensitivityMultiplier.toFixed(3)}
-                      {' × '}{pricing.marketPenaltyMultiplier.toFixed(3)}
-                      {' × '}{pricing.buyerMultiplier.toFixed(3)}
-                      {' × '}{pricing.relationshipMultiplier.toFixed(3)}
-                      {' = '}{formatNumber(pricing.rawPricePerKg, { currency: true, decimals: 3 })}/kg
-                      {pricing.appliedFloor
-                        ? ` (floor raises to ${formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg)`
-                        : ''}
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      Rounded display price: {formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}/kg
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-700/70 pt-2">
-                    <button
-                      type="button"
-                      className="text-xs text-cyan-300 hover:text-cyan-200"
-                      onClick={() => setShowFormulaDetails((current) => !current)}
-                    >
-                      {showFormulaDetails ? 'Hide detailed formula factors' : 'Show detailed formula factors'}
-                    </button>
-
-                    {showFormulaDetails && (
-                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Factor</span><span className="text-right">×{pricing.qualityMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Prestige Factor</span><span className="text-right">×{pricing.prestigeBonus.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Market Context Factor</span><span className="text-right">×{pricing.marketContextMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{pricing.marketSensitivityMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer Market Multiplier</span><span className="text-right">×{pricing.buyerMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{pricing.relationshipMultiplier.toFixed(3)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Favorite Grape Bonus</span><span className="text-right">+{pricing.favoriteGrapeBonusMultiplier.toFixed(3)}×</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-gray-400">Floor Price</span><span className="text-right">{formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg</span></div>
-                      </div>
-                    )}
-                  </div>
 
                   <div className="flex justify-between font-bold text-amber-400 text-base border-t border-gray-600 pt-2">
                     <span>Total Revenue</span>

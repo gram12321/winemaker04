@@ -30,7 +30,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Core game state and tick | `src/lib/services/core/` | `src/components/layout/Header.tsx`, page routing in `src/App.tsx` | `src/lib/database/core/gamestateDB.ts`, `src/lib/constants/timeConstants.ts` |
 | Starting conditions | `src/lib/services/core/startingConditionsService.ts` | Login/company creation flow | `src/lib/constants/startingConditions.ts`, `src/lib/database/activities/vineyardDB.ts` (`createStartingVineyard`) |
 | Vineyard | `src/lib/services/vineyard/` | `src/components/pages/Vineyard.tsx`, vineyard modals | `src/lib/database/activities/vineyardDB.ts`, `src/lib/constants/vineyardConstants.ts`, grape constants |
-| Weather | `src/lib/services/finance/weatherService.ts`, `src/lib/services/vineyard/weatherImpactService.ts`, `src/lib/services/vineyard/weatherCenterService.ts` | `src/components/pages/WeatherCenter.tsx`, `src/components/pages/winepedia/WeatherTab.tsx` | weather fields on `GameState` in `src/lib/types/types.ts` |
+| Weather | `src/lib/features/weather/` (public facade), `src/lib/constants/weatherConstants.ts` | `src/components/pages/WeatherCenter.tsx` (operational), `src/components/pages/winepedia/WeatherTab.tsx` (technical reference) | persisted weather fields on company-scoped `GameState` in `src/lib/types/types.ts` and `gamestateDB.ts` |
 | Winery and inventory | `src/lib/services/wine/winery/`, `src/lib/services/wine/anchors/`, `src/lib/services/wine/features/` | `src/components/pages/Winery.tsx`, wine modals | `src/lib/database/activities/inventoryDB.ts`, wine feature constants |
 | Structure, taste, and score | `src/lib/wineStructure/`, `src/lib/services/wine/taste/`, `src/lib/services/wine/winescore/` | wine modal tabs, taste/structure breakdown components | `src/lib/constants/taste/`, `src/lib/constants/wineFeatures/` |
 | Sales orders | `src/lib/services/sales/generateOrder.ts`, `salesOrderService.ts`, `salesService.ts`, `relationshipService.ts` | `src/components/pages/Sales.tsx`, `src/components/pages/sales/OrdersTab.tsx` | `src/lib/database/customers/salesDB.ts`, customer DB |
@@ -95,7 +95,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 
 - Current public-company/share-market runtime is not active in mainline. Existing share/board database and constants are scaffolding plus a no-op feature seam.
 - Founder economy is active and intentionally smaller than the public-company/share system.
-- Weather is active for forecast state, grape market volatility, and vineyard health/ripeness impact.
+- Weather is active as a persisted weekly fact/forecast, shared vineyard health/ripeness projection, and grape-market context. It retains all five intensity tiers.
 - Research gates are active for grapes, fermentation, staff/vineyard caps, contracts, and grape buyer progression; equipment and vineyard-technique tracks remain future work.
 - Completed or superseded implementation docs live under `docs/superpowers/completed/`.
 - Active design/planning docs remain under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
@@ -112,7 +112,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Research | `tests/research/`, `tests/user/research*.test.ts` |
 | Sales/contracts/grape markets | `tests/sales/` |
 | User/company/staff/achievements | `tests/user/` |
-| Vineyard/weather | `tests/vineyard/` |
+| Vineyard/weather | `tests/vineyard/`, `tests/weather/` |
 | Wine/taste/aging/winery | `tests/wine/` |
 
 ## Documentation Map
@@ -125,7 +125,8 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Wine variable flow | `docs/WineSystem_VariableRelationshipMap.md` |
 | Research status/design | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
 | Founder economy | `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` |
-| Weather phase 2 | `docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md` |
+| Active weather module design | `docs/superpowers/specs/2026-07-10-weather-module-redesign-design.md` |
+| Historical weather phase 2 | `docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md` |
 | Public-company/share reintroduction references | `docs/superpowers/plans/PublicCompanyPlan.md`, `docs/superpowers/plans/PublicCompanyImplementation.md` |
 | Completed implementation records | `docs/superpowers/completed/` |
 

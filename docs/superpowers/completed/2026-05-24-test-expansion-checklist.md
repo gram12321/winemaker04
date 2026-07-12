@@ -1,6 +1,8 @@
 # Test Expansion Checklist (From 2026-05-24 Audit)
 
-Status: Active checklist. Rechecked on 2026-05-25; most market/weather-center/research-unlock slices are complete, while Priority A weather boundary/deterministic fixture coverage remains open. Current full test suite has two failing `researchPanelVisibility` expectations.
+Status: Historical/superseded for weather coverage as of 2026-07-11. The weather module redesign replaced the former weather-impact and Weather Center services and their tests; see `docs/superpowers/specs/2026-07-10-weather-module-redesign-design.md`. Non-weather checklist entries remain historical audit context only.
+
+> Historical record only. References below to the former weather-impact service and Weather Center service do not describe current runtime or active test ownership.
 
 Source: coverage gaps listed in `docs/superpowers/plans/2026-05-24-founder-economy-implementation-audit.md`.
 

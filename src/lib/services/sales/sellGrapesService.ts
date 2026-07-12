@@ -94,6 +94,25 @@ export interface GrapeSalePricing {
   quantityKg: number;
 }
 
+/**
+ * A relative, UI-safe indication of how strongly current market conditions
+ * affect a buyer. It is deliberately only for comparing offers, not pricing.
+ */
+export function getGrapeBuyerMarketIndex(buyer?: GrapeBuyer): number {
+  if (!buyer?.demandFactors) return 2;
+
+  const factors = buyer.demandFactors;
+  const demandPressure = factors.seasonPriceMultiplier
+    * factors.economyPriceMultiplier
+    * factors.yearCyclePriceMultiplier
+    * factors.volatilityPriceMultiplier
+    * (factors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
+  const volatilityRisk = factors.volatilityPriceMultiplier
+    * (factors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
+
+  return demandPressure + volatilityRisk;
+}
+
 function getFavoriteGrapeBonusMultiplier(buyer: GrapeBuyer, batch: WineBatch): number {
   const favorites = buyer.favoriteGrapes || [];
   if (favorites.length === 0) return 0;

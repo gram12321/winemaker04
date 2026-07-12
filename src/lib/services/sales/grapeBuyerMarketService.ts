@@ -13,18 +13,16 @@ import {
   BUYER_SEASON_LIMIT_MULTIPLIERS,
   BUYER_SEASON_PRICE_MULTIPLIERS,
   BUYER_SEASON_VOLATILITY_PRESSURE,
-  BUYER_WEATHER_VOLATILITY_PRESSURE,
   BUYER_YEAR_LIMIT_CYCLE,
   BUYER_YEAR_PRICE_CYCLE,
   COUNTRY_MULTIPLIER_RANGE,
   LIMIT_SEASON_THEME,
   MAX_SEASONAL_BUYER_COUNT,
   PRICE_SEASON_THEME,
-  WEATHER_INTENSITY_MULTIPLIER,
-  WEATHER_THEME,
   type BuyerMarketCountryKey
 } from '@/lib/constants';
-import { GRAPE_VARIETIES, type EconomyPhase, type GrapeVariety, type Season, type WeatherIntensity, type WeatherState } from '../../types/types';
+import { getWeatherMarketContext, type WeatherMarketContext, type WeatherWeekContext } from '@/lib/features/weather';
+import { GRAPE_VARIETIES, type EconomyPhase, type GrapeVariety, type Season, type WeatherForecastConfidence, type WeatherForecastPattern, type WeatherIntensity, type WeatherState } from '../../types/types';
 import {
   getBuyerLoyalty,
   getBuyerRelationshipPriceMultiplier,
@@ -156,13 +154,35 @@ function getYearCycleMultiplier(year: number, cycle: readonly number[]): number 
   return cycle[index] ?? 1;
 }
 
+function getCurrentWeatherMarketContext(): WeatherMarketContext {
+  const gameState = getGameState();
+  const state = (gameState.weatherState ?? 'Clear') as WeatherState;
+  const intensity = (gameState.weatherIntensity ?? 'Moderate') as WeatherIntensity;
+  const weather: WeatherWeekContext = {
+    date: {
+      year: gameState.currentYear ?? 2024,
+      season: (gameState.season ?? 'Spring') as Season,
+      week: gameState.week ?? 1,
+    },
+    state,
+    intensity,
+    seasonalPattern: (gameState.weatherForecastPattern ?? 'Stable') as WeatherForecastPattern,
+    forecast: {
+      state: (gameState.nextWeekForecastState ?? state) as WeatherState,
+      intensity: (gameState.nextWeekForecastIntensity ?? intensity) as WeatherIntensity,
+      confidence: (gameState.weatherForecastConfidence ?? 'Medium') as WeatherForecastConfidence,
+    },
+  };
+
+  return getWeatherMarketContext(weather);
+}
+
 function getDemandVolatilityMultipliers(
   companyId: string,
   currentYear: number,
   currentSeason: Season,
   economyPhase: EconomyPhase,
-  weatherState?: WeatherState,
-  weatherIntensity?: WeatherIntensity
+  weather: WeatherMarketContext
 ): {
   price: number;
   limit: number;
@@ -181,12 +201,8 @@ function getDemandVolatilityMultipliers(
   const yearLimitCycle = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
   const seasonPressure = BUYER_SEASON_VOLATILITY_PRESSURE[currentSeason];
   const economyPressure = BUYER_ECONOMY_VOLATILITY_PRESSURE[economyPhase];
-  const resolvedWeatherState: WeatherState = weatherState ?? 'Clear';
-  const resolvedWeatherIntensity: WeatherIntensity = weatherIntensity ?? 'Moderate';
-  const weatherBase = BUYER_WEATHER_VOLATILITY_PRESSURE[resolvedWeatherState];
-  const weatherIntensityScale = WEATHER_INTENSITY_MULTIPLIER[resolvedWeatherIntensity] ?? 1;
-  const weatherPricePressure = weatherBase.price * weatherIntensityScale;
-  const weatherLimitPressure = weatherBase.limit * weatherIntensityScale;
+  const weatherPricePressure = weather.priceMultiplier;
+  const weatherLimitPressure = weather.supplyMultiplier;
 
   // Deterministic per company/year/season so volatility stays stable for all buyers within the season.
   const volatilitySeedBase = `${companyId}:${currentYear}:${currentSeason}:${economyPhase}`;
@@ -208,7 +224,7 @@ function getDemandVolatilityMultipliers(
   const limitCycleTheme = yearLimitCycle >= 1
     ? 'Cycle timing points to stronger replenishment demand.'
     : 'Cycle timing points to softer replenishment demand.';
-  const weatherReason = `${WEATHER_THEME[resolvedWeatherState]} Intensity is ${resolvedWeatherIntensity.toLowerCase()}.`;
+  const weatherReason = weather.reason;
   const priceReason = `${PRICE_SEASON_THEME[currentSeason]} ${weatherReason} ${priceCycleTheme} ${priceShock}`;
   const limitReason = `${LIMIT_SEASON_THEME[currentSeason]} ${weatherReason} ${limitCycleTheme} ${limitShock}`;
 
@@ -232,8 +248,7 @@ function getDemandFactorComponents(
   currentYear: number,
   currentSeason: Season,
   economyPhase: EconomyPhase,
-  weatherState?: WeatherState,
-  weatherIntensity?: WeatherIntensity
+  weather: WeatherMarketContext
 ): {
   volatilitySeason: Season;
   volatilityEconomyPhase: EconomyPhase;
@@ -268,17 +283,14 @@ function getDemandFactorComponents(
     currentYear,
     currentSeason,
     economyPhase,
-    weatherState,
-    weatherIntensity
+    weather
   );
-  const resolvedWeatherState: WeatherState = weatherState ?? 'Clear';
-  const resolvedWeatherIntensity: WeatherIntensity = weatherIntensity ?? 'Moderate';
 
   return {
     volatilitySeason: currentSeason,
     volatilityEconomyPhase: economyPhase,
-    volatilityWeatherState: resolvedWeatherState,
-    volatilityWeatherIntensity: resolvedWeatherIntensity,
+    volatilityWeatherState: weather.state,
+    volatilityWeatherIntensity: weather.intensity,
     seasonPriceMultiplier,
     seasonLimitMultiplier,
     economyPriceMultiplier,
@@ -570,8 +582,7 @@ function rowToBuyer(
   companyValue: number,
   currentSeason: Season,
   economyPhase: EconomyPhase,
-  weatherState: WeatherState | undefined,
-  weatherIntensity: WeatherIntensity | undefined,
+  weather: WeatherMarketContext,
   limitResearchMultiplier: number,
   multiplierResearchBonus: number,
   originTag: BuyerOriginTag,
@@ -585,8 +596,7 @@ function rowToBuyer(
     currentYear,
     currentSeason,
     economyPhase,
-    weatherState,
-    weatherIntensity
+    weather
   );
   const relationshipMultiplier = getBuyerRelationshipPriceMultiplier(loyaltyLevel);
   const relationshipLimitBonus = getBuyerRelationshipYearlyLimitBonus(loyaltyLevel);
@@ -652,8 +662,7 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
   const currentYear = gameState.currentYear ?? 2024;
   const currentSeason = gameState.season ?? 'Spring';
   const economyPhase = (gameState.economyPhase ?? 'Stable') as EconomyPhase;
-  const weatherState = gameState.weatherState as WeatherState | undefined;
-  const weatherIntensity = gameState.weatherIntensity as WeatherIntensity | undefined;
+  const weather = getCurrentWeatherMarketContext();
   const seasonalBuyerCount = await getSeasonalBuyerCountFromResearch();
 
   const { data: currentSeasonRowsRaw } = await getSeasonBuyerRowsForCountries(
@@ -757,8 +766,7 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
       companyValue,
       currentSeason,
       economyPhase,
-      weatherState,
-      weatherIntensity,
+      weather,
       limitResearchMultiplier,
       multiplierResearchBonus,
       origin.tag,
@@ -778,8 +786,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
   const currentYear = gameState.currentYear ?? 2024;
   const currentSeason = gameState.season ?? 'Spring';
   const economyPhase = (gameState.economyPhase ?? 'Stable') as EconomyPhase;
-  const weatherState = gameState.weatherState as WeatherState | undefined;
-  const weatherIntensity = gameState.weatherIntensity as WeatherIntensity | undefined;
+  const weather = getCurrentWeatherMarketContext();
 
   const row = await ensureBulkBuyer(companyId, country, currentYear, currentSeason);
   if (!row) return null;
@@ -794,8 +801,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     currentYear,
     currentSeason,
     economyPhase,
-    weatherState,
-    weatherIntensity
+    weather
   );
   const volatilitySensitivity = getBuyerVolatilitySensitivity('bulk', 'spot', 'Country special');
   const effectiveSeasonLimitKg = Math.max(

@@ -22,6 +22,8 @@ import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import type { WineFeature } from '@/lib/types/wineFeatures';
+import type { WeatherState } from '@/lib/types/types';
+import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 
 type SortDirection = 'asc' | 'desc' | null;
 
@@ -43,22 +45,6 @@ function getEconomyVolatilityIcon(phase?: string): string {
   if (phase === 'Expansion') return '📈';
   if (phase === 'Boom') return '🚀';
   return '⚖';
-}
-
-function getWeatherVolatilityIcon(state?: string): string {
-  if (state === 'Rain') return '🌧';
-  if (state === 'Heat') return '🌡';
-  if (state === 'Frost') return '🧊';
-  if (state === 'Storm') return '⛈';
-  if (state === 'Snow') return '❄';
-  return '☀';
-}
-
-function formatVolatilityDelta(multiplier: number): string {
-  const deltaPercent = (multiplier - 1) * 100;
-  const rounded = Math.round(deltaPercent * 10) / 10;
-  const display = rounded.toFixed(1).replace(/\.0$/, '');
-  return `${rounded >= 0 ? '+' : ''}${display}%`;
 }
 
 function getOriginLabel(originTag: BuyGrapeMarketOffer['originTag']): string {
@@ -574,7 +560,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             {selectedOffer?.demandFactors ? (
               <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-cyan-200 font-medium">Market volatility outlook</span>
+                  <span className="text-cyan-200 font-medium">Market outlook</span>
                   <span className="inline-flex items-center gap-1 rounded border border-emerald-700/70 bg-emerald-900/30 px-2 py-1 text-emerald-200">
                     <span>{getSeasonVolatilityIcon(selectedOffer.demandFactors.volatilitySeason)}</span>
                     <span>{selectedOffer.demandFactors.volatilitySeason}</span>
@@ -584,27 +570,9 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                     <span>{selectedOffer.demandFactors.volatilityEconomyPhase}</span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded border border-blue-700/70 bg-blue-900/30 px-2 py-1 text-blue-200">
-                    <span>{getWeatherVolatilityIcon(selectedOffer.demandFactors.volatilityWeatherState)}</span>
-                    <span>{selectedOffer.demandFactors.volatilityWeatherState} ({selectedOffer.demandFactors.volatilityWeatherIntensity})</span>
+                    <span>{getWeatherIcon((selectedOffer.demandFactors.volatilityWeatherState ?? 'Clear') as WeatherState)}</span>
+                    <span>{getWeatherLabel((selectedOffer.demandFactors.volatilityWeatherState ?? 'Clear') as WeatherState, selectedOffer.demandFactors.volatilityWeatherIntensity ?? 'Mild')}</span>
                   </span>
-                  <UnifiedTooltip
-                    title="Price Volatility Factor"
-                    content={<span className="text-xs leading-snug">This is the volatility price multiplier. It flows into Risk, and then into Pressure with season, economy, and cycle factors.</span>}
-                  >
-                    <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
-                      <span>💶</span>
-                      <span>Price {formatVolatilityDelta(selectedOffer.demandFactors.volatilityPriceMultiplier)}</span>
-                    </span>
-                  </UnifiedTooltip>
-                  <UnifiedTooltip
-                    title="Supply Volatility Factor"
-                    content={<span className="text-xs leading-snug">This is the volatility supply multiplier. It signals market tightness and availability pressure, but it is not multiplied directly into final price/kg.</span>}
-                  >
-                    <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
-                      <span>📦</span>
-                      <span>Supply {formatVolatilityDelta(selectedOffer.demandFactors.volatilityLimitMultiplier)}</span>
-                    </span>
-                  </UnifiedTooltip>
                 </div>
                 <div className="mt-2 space-y-1 text-[11px] text-gray-300">
                   {selectedOffer.demandFactors.volatilityPriceReason && (

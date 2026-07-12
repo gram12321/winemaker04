@@ -40,7 +40,9 @@ const mocks = vi.hoisted(() => {
     }),
     updateVineyardAges: vi.fn(async () => undefined),
     updateVineyardVineYields: vi.fn(async () => undefined),
-    updateVineyardHealthDegradation: vi.fn(async () => undefined),
+    updateVineyardHealthDegradation: vi.fn(async () => {
+      calls.push('updateVineyardHealthDegradation');
+    }),
     getAllStaff: vi.fn(async () => []),
     processWeeklyFeatureRisks: vi.fn(async () => undefined),
     processWeeklyFermentation: vi.fn(async () => undefined),
@@ -67,9 +69,22 @@ const mocks = vi.hoisted(() => {
     boardYearStart: vi.fn(async () => undefined),
     processSeasonalLoanPayments: vi.fn(async () => undefined),
     enforceEmergencyQuickLoanIfNeeded: vi.fn(async () => undefined),
-    restructureForcedLoansIfNeeded: vi.fn(async () => undefined)
+    restructureForcedLoansIfNeeded: vi.fn(async () => undefined),
+    resolveWeatherWeek: vi.fn(() => ({
+      date: { year: 2027, season: 'Spring', week: 1 },
+      state: 'Clear',
+      intensity: 'Mild',
+      seasonalPattern: 'Stable',
+      forecast: { state: 'Rain', intensity: 'Moderate', confidence: 'Medium' }
+    })),
+    resolveSeasonalWeatherForecast: vi.fn(() => ({ pattern: 'Stable', confidence: 'Medium' }))
   };
 });
+
+vi.mock('@/lib/features/weather', () => ({
+  resolveWeatherWeek: mocks.resolveWeatherWeek,
+  resolveSeasonalWeatherForecast: mocks.resolveSeasonalWeatherForecast,
+}));
 
 vi.mock('@/lib/services', () => ({
   getGameState: mocks.getGameState,
@@ -209,6 +224,7 @@ describe('processGameTick', () => {
       nextWeekForecastState: expect.any(String),
       nextWeekForecastIntensity: expect.any(String),
     }));
+    expect(mocks.resolveWeatherWeek).toHaveBeenCalledOnce();
     expect(mocks.updateVineyardAges).toHaveBeenCalledOnce();
     expect(mocks.updateVineyardVineYields).toHaveBeenCalledOnce();
     expect(mocks.boardYearStart).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
@@ -235,16 +251,14 @@ describe('processGameTick', () => {
       'Seasonal wages paid'
     );
     expect(mocks.updateVineyardRipeness).toHaveBeenCalledWith('Spring', 1, expect.objectContaining({
-      season: 'Spring',
-      week: 1,
-      weatherState: expect.any(String),
-      weatherIntensity: expect.any(String),
+      date: { year: 2027, season: 'Spring', week: 1 },
+      state: 'Clear',
+      intensity: 'Mild',
     }));
     expect(mocks.updateVineyardHealthDegradation).toHaveBeenCalledWith('Spring', 1, expect.objectContaining({
-      season: 'Spring',
-      week: 1,
-      weatherState: expect.any(String),
-      weatherIntensity: expect.any(String),
+      date: { year: 2027, season: 'Spring', week: 1 },
+      state: 'Clear',
+      intensity: 'Mild',
     }));
     expect(mocks.submitCompanyHighscores).toHaveBeenCalledWith(
       'company-1',
@@ -259,8 +273,9 @@ describe('processGameTick', () => {
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
     expect(mocks.triggerGameUpdate).toHaveBeenCalledTimes(2);
     expect(mocks.calls.indexOf('updateGameState')).toBeLessThan(mocks.calls.indexOf('progressActivities'));
+    expect(mocks.calls.indexOf('updateVineyardRipeness')).toBeLessThan(mocks.calls.indexOf('progressActivities'));
+    expect(mocks.calls.indexOf('updateVineyardHealthDegradation')).toBeLessThan(mocks.calls.indexOf('progressActivities'));
     expect(mocks.calls.indexOf('progressActivities')).toBeLessThan(mocks.calls.indexOf('checkAndTriggerBookkeeping'));
-    expect(mocks.calls.indexOf('checkAndTriggerBookkeeping')).toBeLessThan(mocks.calls.indexOf('updateVineyardRipeness'));
   });
 
   it('defers bottled aging persistence until feature-risk processing completes', async () => {

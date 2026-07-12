@@ -34,6 +34,20 @@ const mocks = vi.hoisted(() => {
     updateGameState: vi.fn(async () => undefined),
     createWineBatchFromHarvest: vi.fn(async () => undefined),
     getResearchPermanentEffects: vi.fn(async () => ({ vineyardHealthDecayMultiplier: 0.8, activeEffects: [] })),
+    projectVineyardWeek: vi.fn((input: any) => ({
+      ripeness: {
+        finalDelta: input.ripenessGrowthActive ? 0.01 : -0.05,
+        projected: input.ripenessGrowthActive
+          ? Math.min(1, (input.vineyard.ripeness || 0) + 0.01)
+          : Math.max(0, (input.vineyard.ripeness || 0) - 0.05),
+      },
+      health: {
+        finalDelta: -0.02,
+        projected: Math.max(0.1, input.vineyard.vineyardHealth - 0.02),
+      },
+      siteExposure: 1,
+      siteNote: 'Site exposure is neutral.',
+    })),
     getCurrentCompanyId: vi.fn(() => 'company-1'),
     updateBaseVineyardPrestigeEvent: vi.fn(async () => undefined)
   };
@@ -73,6 +87,10 @@ vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
 
 vi.mock('@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService', () => ({
   getResearchPermanentEffects: mocks.getResearchPermanentEffects
+}));
+
+vi.mock('@/lib/features/weather', () => ({
+  projectVineyardWeek: mocks.projectVineyardWeek,
 }));
 
 vi.mock('@/lib/utils/companyUtils', () => ({
@@ -179,6 +197,45 @@ describe('vineyard lifecycle services', () => {
     expect(updatedHealth).toBeLessThan(0.9);
     expect(updatedHealth).toBeGreaterThan(0.86);
   }, 15000);
+
+  it('passes planting progress and research decay to every vineyard projection', async () => {
+    mocks.setVineyards([vineyard({ status: 'Planting', density: 2500 })]);
+    mocks.setActivities([activity({
+      category: WorkCategory.PLANTING,
+      targetId: 'vineyard-1',
+      params: { density: 5000 },
+    })]);
+    const { updateVineyardRipeness, updateVineyardHealthDegradation } = await import('@/lib/services/vineyard/vineyardManager');
+
+    await updateVineyardRipeness('Fall', 2);
+    await updateVineyardHealthDegradation('Fall', 2);
+
+    expect(mocks.projectVineyardWeek).toHaveBeenCalledTimes(2);
+    for (const [input] of mocks.projectVineyardWeek.mock.calls) {
+      expect(input).toEqual(expect.objectContaining({
+        plantingProgressRatio: 0.5,
+        healthDecayMultiplier: 0.8,
+      }));
+    }
+  });
+
+  it('keeps planting progress when projecting winter ripeness decline', async () => {
+    mocks.setVineyards([vineyard({ status: 'Planting', density: 2500, ripeness: 0.6 })]);
+    mocks.setActivities([activity({
+      category: WorkCategory.PLANTING,
+      targetId: 'vineyard-1',
+      params: { density: 5000 },
+    })]);
+    const { updateVineyardRipeness } = await import('@/lib/services/vineyard/vineyardManager');
+
+    await updateVineyardRipeness('Winter', 2);
+
+    expect(mocks.projectVineyardWeek).toHaveBeenCalledWith(expect.objectContaining({
+      plantingProgressRatio: 0.5,
+      healthDecayMultiplier: 0.8,
+      ripenessGrowthActive: false,
+    }));
+  });
 
   it('refreshes base vineyard prestige when vine age advances at the new year', async () => {
     const { updateVineyardAges } = await import('@/lib/services/vineyard/vineyardManager');

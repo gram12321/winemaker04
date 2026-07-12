@@ -19,7 +19,13 @@ export const saveGameState = async (gameState: Partial<GameState>): Promise<void
       current_year: gameState.currentYear,
       money: gameState.money || 0,
       prestige: gameState.prestige,
-      economy_phase: (gameState as any).economyPhase
+      economy_phase: gameState.economyPhase,
+      weather_forecast_pattern: gameState.weatherForecastPattern,
+      weather_forecast_confidence: gameState.weatherForecastConfidence,
+      weather_state: gameState.weatherState,
+      weather_intensity: gameState.weatherIntensity,
+      next_week_forecast_state: gameState.nextWeekForecastState,
+      next_week_forecast_intensity: gameState.nextWeekForecastIntensity,
     };
     
     const { error } = await supabase
@@ -55,7 +61,13 @@ export const loadGameState = async (): Promise<Partial<GameState> | null> => {
       currentYear: record.current_year,
       money: record.money,
       prestige: record.prestige,
-      economyPhase: record.economy_phase
+      economyPhase: record.economy_phase,
+      weatherForecastPattern: record.weather_forecast_pattern,
+      weatherForecastConfidence: record.weather_forecast_confidence,
+      weatherState: record.weather_state,
+      weatherIntensity: record.weather_intensity,
+      nextWeekForecastState: record.next_week_forecast_state,
+      nextWeekForecastIntensity: record.next_week_forecast_intensity,
     };
   } catch (error) {
     return null;

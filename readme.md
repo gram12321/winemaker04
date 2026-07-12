@@ -26,7 +26,7 @@ npm run build
 | Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, research, staff, Weather Center, Winepedia, highscores. |
 | Shared UI | `src/components/ui/` | ShadCN wrappers, modals, reusable game UI. |
 | Hooks | `src/hooks/` | Game state, loading, sorting, mobile detection, reactive updates. |
-| Services | `src/lib/services/` and `src/lib/features/` | Domain logic for core game, vineyard/weather, wine, sales/grape markets, finance/founders, activities, prestige, and active feature-owned modules such as research and loans. |
+| Services | `src/lib/services/` and `src/lib/features/` | Domain logic for core game and vineyard baselines, plus feature-owned weather, wine, sales/grape markets, finance/founders, activities, prestige, research, and loans. |
 | Database | `src/lib/database/` | Supabase access grouped by domain. |
 | Types | `src/lib/types/` | Shared TypeScript domain and UI interfaces. |
 | Constants | `src/lib/constants/` | Grapes, vineyards, economy, staff, wine features, taste labels. |
@@ -57,7 +57,8 @@ npm run build
 | Taste Quality implementation plan | `docs/superpowers/completed/2026-05-20-taste-quality-index.md` |
 | Contract taste/site UI plan | `docs/superpowers/completed/2026-05-20-contract-taste-site-ui.md` |
 | Research unified design, rollout status, and handoff pipeline | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
-| Weather vineyard integration and follow-up design | `docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md` |
+| Active weather module design | `docs/superpowers/specs/2026-07-10-weather-module-redesign-design.md` |
+| Historical weather phase-2 design | `docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md` |
 | Grape market completed rollout docs | `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-design.md`, `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-execution.md` |
 | Founder economy active plan | `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` |
 | Public-company/share reintroduction references | `docs/superpowers/plans/PublicCompanyPlan.md`, `docs/superpowers/plans/PublicCompanyImplementation.md` |
@@ -105,7 +106,7 @@ Use `docs/versionlog.md` as the canonical running change history for meaningful 
 
 ## Current Systems Snapshot
 
-- Weather is active for weekly state/forecast, Weather Center visibility, vineyard health/ripeness deviations, and grape market volatility.
+- Weather is active as a persisted weekly state/forecast, a shared bounded vineyard projection, and grape-market context. Weather Center is operational; Winepedia preserves technical mechanics.
 - Sell-side and buy-side grape markets are active with bulk fallback channels, seasonal buyers/suppliers, loyalty, economy/weather pressure, and research unlock scaling.
 - Founder economy is active as a light ownership slice: founders have zero wages, receive yearly profit-share returns when profitable, and can be bought out into salaried staff.
 - Public-company/share-market runtime is not active in mainline; the public company docs are retained as historical implemented-feature and reintroduction references.

@@ -7,7 +7,8 @@ import { NotificationCenter, useNotifications } from '@/components/layout/Notifi
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
 import { PrestigeModal } from '@/components/ui';
-import { calculateCurrentPrestige, getCurrentCompany, getWeatherIcon } from '@/lib/services';
+import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
+import { createWeatherWeekContext, getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
@@ -23,6 +24,7 @@ interface HeaderProps extends NavigationProps, CompanyProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance, onBackToLogin }) => {
   const gameState = useGameState();
+  const weather = useMemo(() => createWeatherWeekContext(gameState), [gameState]);
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isLoading: isAdvancingTime, withLoading } = useLoadingState();
@@ -217,9 +219,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               content={
                 <div className="space-y-1">
                   <p className="font-semibold">Weather Outlook</p>
-                  <p className="text-xs text-gray-300">Now: {gameState.weatherState || 'Clear'} ({gameState.weatherIntensity || 'Mild'})</p>
-                  <p className="text-xs text-gray-300">Week-ahead: {gameState.nextWeekForecastState || 'Clear'} ({gameState.nextWeekForecastIntensity || 'Mild'})</p>
-                  <p className="text-xs text-gray-400">Seasonal forecast: {gameState.weatherForecastPattern || 'Stable'} ({gameState.weatherForecastConfidence || 'Medium'} confidence)</p>
+                  <p className="text-xs text-gray-300">Current: {getWeatherLabel(weather.state, weather.intensity)}</p>
+                  <p className="text-xs text-gray-300">Next-week forecast: {getWeatherLabel(weather.forecast.state, weather.forecast.intensity)} ({weather.forecast.confidence} confidence)</p>
                 </div>
               }
               side="bottom"
@@ -238,8 +239,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   handleNavigation('weather-center');
                 }}
               >
-                <span className="mr-1.5">{getWeatherIcon(gameState.weatherState)}</span>
-                <span className="font-medium">{gameState.weatherState || 'Clear'}</span>
+                <span className="mr-1.5">{getWeatherIcon(weather.state)}</span>
+                <span className="font-medium">{weather.state}</span>
               </Badge>
             </UnifiedTooltip>
 
@@ -250,8 +251,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 handleNavigation('weather-center');
               }}
             >
-              <span className="mr-1">{getWeatherIcon(gameState.weatherState)}</span>
-              <span className="font-medium text-xs">{gameState.weatherState || 'Clear'}</span>
+              <span className="mr-1">{getWeatherIcon(weather.state)}</span>
+              <span className="font-medium text-xs">{weather.state}</span>
             </Badge>
             
             {/* Console button - responsive */}

@@ -150,16 +150,16 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | Variable or concept | Description |
 |---|---|
 | `WeatherState` | Current weekly weather state: `Clear`, `Rain`, `Heat`, `Frost`, `Storm`, or `Snow`. |
-| `WeatherIntensity` | Current weather intensity: `Mild`, `Moderate`, or `Severe`. |
+| `WeatherIntensity` | Current weather intensity: `VeryMild`, `Mild`, `Moderate`, `Severe`, or `Extreme`. |
 | `WeatherForecastPattern` | Seasonal forecast pattern used to bias current and future weather: `Stable`, `Wet`, `Dry`, `Cold`, `Heat`, or `Storm-prone`. |
 | `WeatherForecastConfidence` | Forecast confidence tier. UI communicates forecast reliability; actual weather can still differ. |
-| `nextWeekForecastState` / `nextWeekForecastIntensity` | Forecasted next-week weather shown to the player. |
-| Vineyard weather impact | Weather modifies vineyard ripeness and health as bounded deviations from seasonal baselines. Site response uses aspect, altitude, terroir, and soil response. |
+| Persisted weather context | Current state/intensity, seasonal pattern/confidence, and next-week forecast are company-scoped `GameState` facts. Persisted values remain authoritative after reload. |
+| Vineyard weather projection | Weather is a bounded multiplier of normal seasonal ripeness and health deltas. One shared projection applies planting progress, research health decay, and bounded aspect/altitude/suitability/soil exposure. |
 | Grape buyer market | Sell-side market for grapes/must/batches, with bulk fallback buyer plus seasonal buyers. Price and limit pressure depend on season, economy, weather, buyer type, loyalty, research, and batch quality/state. |
 | Grape supplier market | Buy-side market for purchasing grapes, with bulk supplier fallback plus seasonal suppliers. Offers persist, expire, decay weekly, and refresh seasonally; previews simulate bounded state/age feature evolution and risk accumulation without creating player notifications or prestige events. Pricing combines source quality with the preview batch's structure, taste, site value, manifested features, and downside feature risks. |
 | Buyer/supplier loyalty | Relationship progression that improves price/limits or supply persistence. |
 
-Weather is currently active for vineyard health/ripeness, Weather Center reporting, Winepedia reference content, and grape-market volatility. Severe weather event chains, mitigation actions, weather research upgrades, and weather achievements remain future layers.
+Weather is currently active for vineyard health/ripeness, grape-market volatility, and forecast surfaces. Weather Center is the operational forecast and projection view; Winepedia is the technical reference for formulas, matrices, bounds, and market derivation. Severe weather event chains, mitigation actions, weather research upgrades, and weather achievements remain future layers.
 
 ## Research Progression Variables
 

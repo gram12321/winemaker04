@@ -20,6 +20,7 @@ export * from './grapeBuyerMarketConstants';
 export * from './grapeSupplierMarketConstants';
 export * from './buyGrapeMarketConstants';
 export * from './sellGrapesConstants';
+export * from './weatherConstants';
 
 // Wine features
 export * from './wineFeatures/oxidation';

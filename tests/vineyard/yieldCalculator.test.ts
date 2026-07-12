@@ -18,7 +18,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateVineyardYield, calculateBaselineVineYieldForAge } from '@/lib/services/vineyard/vineyardManager';
+import { calculateVineyardYield, calculateVineyardYieldBreakdown, calculateBaselineVineYieldForAge } from '@/lib/services/vineyard/vineyardManager';
+import { calculateVineyardExpectedYield } from '@/lib/services/vineyard/vineyardService';
 import { type Vineyard } from '@/lib/types/types';
 
 // Base test vineyard: 1 hectare of Sangiovese in Tuscany
@@ -45,6 +46,12 @@ const baseVineyard: Vineyard = {
 };
 
 describe('calculateVineyardYield - Core Yield Formula', () => {
+  it('derives actual and expected yield from the same breakdown', () => {
+    const breakdown = calculateVineyardYieldBreakdown(baseVineyard);
+
+    expect(breakdown?.totalYield).toBe(calculateVineyardYield(baseVineyard));
+    expect(calculateVineyardExpectedYield(baseVineyard)).toEqual(breakdown);
+  });
   
   describe('Edge Cases - Prevents Game-Breaking Bugs', () => {
     it('returns 0 kg when vineyard has no grape variety planted (cannot harvest barren land)', () => {

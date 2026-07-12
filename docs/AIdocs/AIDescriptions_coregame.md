@@ -80,10 +80,10 @@ Testing and dev support:
 - Game time tracks week, season, and year.
 - Weekly tick advances activities, orders, contracts, forward contracts, vines, prestige decay, economy/weather state, and seasonal/yearly finance hooks.
 - Economy phases influence finance, contracts, and market behavior.
-- Weather has current state, intensity, forecast pattern, forecast confidence, and next-week forecast fields.
-- Weather affects grape market price/limit pressure and vineyard health/ripeness deviations.
-- Weather Center summarizes current vineyard weather impact through `weatherCenterService.ts` and `WeatherCenter.tsx`.
-- Winepedia includes weather reference material.
+- Weather has persisted company-scoped current state/intensity, seasonal pattern/confidence, and next-week forecast fields; reloads retain resolved weather facts.
+- The `src/lib/features/weather/` facade resolves weather and provides the shared bounded vineyard projection plus grape-market context.
+- Weather affects grape market price/limit pressure and normal vineyard health/ripeness progression; it has no direct yield, harvest-anchor, or wine-score input.
+- Weather Center is the operational forecast/projection view, while Winepedia contains the technical weather reference material.
 
 Deferred weather layers:
 
@@ -93,7 +93,7 @@ Deferred weather layers:
 
 - Land search, vineyard buying, planting, clearing, uprooting/replanting pressure, health, overgrowth, ripeness, vine age, and yield calculation are implemented.
 - Vineyard suitability uses country/region, altitude, aspect, soil, grape metadata, density, health, and ripeness.
-- Vineyard weather impact is deterministic and explainable through `weatherImpactService.ts` and `weatherCenterService.ts`.
+- Vineyard weather impact uses the deterministic shared projection from `src/lib/features/weather/`, including planting progress and research health-decay inputs.
 - Research gates enforce vineyard size, total-hectare, and vineyard-count caps.
 - Vineyard prestige contributes to land value modifier, vineyard pricing, achievements, and UI presentation.
 
@@ -223,7 +223,7 @@ Research limitations:
 | Core state/tick | `src/lib/services/core/` |
 | Activity lifecycle/work | `src/lib/services/activity/`, `src/components/ui/activities/` |
 | Vineyard | `src/lib/services/vineyard/`, `src/components/pages/Vineyard.tsx`, vineyard modals |
-| Weather | `src/lib/services/finance/weatherService.ts`, `src/lib/services/vineyard/weatherImpactService.ts`, `src/lib/services/vineyard/weatherCenterService.ts`, `src/components/pages/WeatherCenter.tsx` |
+| Weather | `src/lib/features/weather/`, `src/lib/constants/weatherConstants.ts`, `src/components/pages/WeatherCenter.tsx`, `src/components/pages/winepedia/WeatherTab.tsx` |
 | Wine production | `src/lib/services/wine/`, `src/components/pages/Winery.tsx`, wine modals |
 | Wine scoring/taste | `src/lib/wineStructure/`, `src/lib/services/wine/taste/`, `src/lib/services/wine/winescore/`, wine score UI components |
 | Sales/orders/contracts | `src/lib/services/sales/`, `src/components/pages/Sales.tsx`, `src/components/pages/sales/` |

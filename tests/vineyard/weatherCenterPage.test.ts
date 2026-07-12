@@ -1,167 +1,57 @@
 import React from 'react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const mocks = vi.hoisted(() => ({
+  gameState: { currentYear: 2026, week: 5, season: 'Summer' },
   rows: [] as any[],
-  summary: {
-    avgRipenessDelta: 0,
-    avgHealthDelta: 0,
-    avgWeatherRipenessDelta: 0,
-    avgWeatherHealthDelta: 0,
-    highStressCount: 0,
-    avgSiteResponse: 1,
-    weatherSignalLabel: 'Mixed' as const,
-    weatherSignalDetail: 'No planted vineyards available for weather signal.',
-  },
-  gameState: {
-    week: 5,
-    season: 'Summer',
-    weatherState: 'Clear',
-    weatherIntensity: 'Mild',
-    nextWeekForecastState: 'Heat',
-    nextWeekForecastIntensity: 'Moderate',
-    weatherForecastPattern: 'Volatile',
-    weatherForecastConfidence: 'High',
-  },
-  vineyards: [] as any[],
-  company: { id: 'company-1' as string | null },
 }));
 
-vi.mock('@/hooks', () => ({
-  useGameState: () => mocks.gameState,
-  useGameStateWithData: () => mocks.vineyards,
+vi.mock('@/hooks', () => ({ useGameState: () => mocks.gameState, useGameStateWithData: () => [] }));
+vi.mock('@/lib/services', () => ({ getAllVineyards: vi.fn(() => []), getCurrentCompany: vi.fn(() => ({ id: 'company-1' })) }));
+vi.mock('@/lib/features/weather', () => ({
+  createWeatherWeekContext: vi.fn(() => ({})),
+  buildWeatherCenterPresentation: vi.fn(() => ({
+    currentWeather: { label: 'Current weather', icon: '☀️', description: 'Clear (Mild)' },
+    forecast: { label: 'Next-week forecast', icon: '🌡️', description: 'Heat (Severe)', confidence: 'High' },
+    seasonalOutlook: 'Heat seasonal outlook',
+    outlooks: [
+      { label: 'Ripening outlook', detail: 'Next week accelerates ripening.' },
+      { label: 'Vine-health outlook', detail: 'Next week adds vine stress.' },
+      { label: 'Grape-market outlook', detail: 'Heat pressure increases handling risk.' },
+    ],
+    rows: mocks.rows,
+  })),
 }));
-
-vi.mock('@/lib/services', () => ({
-  buildWeatherContext: vi.fn(() => ({ companyId: 'company-1', year: 2026, season: 'Summer', week: 5 })),
-  buildVineyardWeatherRows: vi.fn(() => mocks.rows),
-  calculateWeatherImpactSummary: vi.fn(() => mocks.summary),
-  getAllVineyards: vi.fn(() => []),
-  getCurrentCompany: vi.fn(() => (mocks.company.id ? { id: mocks.company.id } : null)),
-  getSoilResponseLabel: vi.fn((source: string) => source),
-  getWeatherIcon: vi.fn(() => ''),
-}));
-
-vi.mock('@/lib/utils', () => ({
-  formatNumber: (value: number) => String(value),
-  formatSigned: (value: number) => (value > 0 ? `+${value}` : String(value)),
-}));
-
 vi.mock('@/components/ui', () => {
   const h = React.createElement;
   const Wrap = ({ children }: any) => h('div', null, children);
-  const TableWrap = ({ children }: any) => h('table', null, children);
-  const TableRowWrap = ({ children }: any) => h('tr', null, children);
-  const TableCellWrap = ({ children, colSpan }: any) => h('td', { colSpan }, children);
-  const TableHeadWrap = ({ children }: any) => h('th', null, children);
-
-  return {
-    Badge: Wrap,
-    Card: Wrap,
-    CardContent: Wrap,
-    CardDescription: Wrap,
-    CardHeader: Wrap,
-    CardTitle: Wrap,
-    Table: TableWrap,
-    TableBody: ({ children }: any) => h('tbody', null, children),
-    TableCell: TableCellWrap,
-    TableHead: TableHeadWrap,
-    TableHeader: ({ children }: any) => h('thead', null, children),
-    TableRow: TableRowWrap,
-    TooltipRow: Wrap,
-    TooltipSection: Wrap,
-    UnifiedTooltip: ({ children }: any) => children,
-    VineyardStatusBadge: ({ status }: any) => h('span', null, status),
-  };
+  return { Badge: Wrap, Card: Wrap, CardContent: Wrap, CardDescription: Wrap, CardHeader: Wrap, CardTitle: Wrap, Table: ({ children }: any) => h('table', null, children), TableBody: ({ children }: any) => h('tbody', null, children), TableCell: ({ children, colSpan }: any) => h('td', { colSpan }, children), TableHead: ({ children }: any) => h('th', null, children), TableHeader: ({ children }: any) => h('thead', null, children), TableRow: ({ children }: any) => h('tr', null, children), VineyardStatusBadge: ({ status }: any) => h('span', null, status) };
 });
 
 import { WeatherCenterPage } from '@/components/pages/WeatherCenter';
 
 describe('WeatherCenterPage', () => {
-  beforeEach(() => {
-    mocks.rows = [];
-    mocks.summary = {
-      avgRipenessDelta: 0,
-      avgHealthDelta: 0,
-      avgWeatherRipenessDelta: 0,
-      avgWeatherHealthDelta: 0,
-      highStressCount: 0,
-      avgSiteResponse: 1,
-      weatherSignalLabel: 'Mixed',
-      weatherSignalDetail: 'No planted vineyards available for weather signal.',
-    };
-    mocks.company.id = 'company-1';
-  });
+  beforeEach(() => { mocks.rows = []; });
 
-  it('renders key metric cards and empty-state row when no planted vineyards exist', () => {
+  it('renders only decision surfaces and correctly distinguishes current weather from the forecast', () => {
     const html = renderToStaticMarkup(React.createElement(WeatherCenterPage));
 
     expect(html).toContain('Weather Center');
-    expect(html).toContain('Avg Ripeness Net Δ');
-    expect(html).toContain('Avg Health Net Δ');
-    expect(html).toContain('High Stress Vineyards');
-    expect(html).toContain('No planted vineyards available for weather preview.');
+    expect(html).toContain('Current weather');
+    expect(html).toContain('Next-week forecast');
+    expect(html).toContain('High');
+    expect(html).toContain('Vineyard Weather Impact Preview');
+    expect(html).not.toContain('Trigger Matrix');
+    expect(html).not.toContain('Formula');
   });
 
-  it('renders weather rows and summary values when data is available', () => {
-    mocks.rows = [
-      {
-        id: 'v-1',
-        name: 'Cote South Block',
-        state: 'Growing',
-        weatherState: 'Heat',
-        weatherIntensity: 'Moderate',
-        weatherStateImpact: 'Heat supports ripening and adds vine stress before site modifiers.',
-        weatherIntensityImpact: 'Moderate intensity applies a meaningful weather pressure this week.',
-        ripenessCurrent: 0.66,
-        ripenessProjected: 0.67,
-        ripenessNormalDelta: 0.01,
-        ripenessWeatherDelta: 0,
-        ripenessDelta: 0.01,
-        healthCurrent: 0.83,
-        healthProjected: 0.82,
-        healthNormalDelta: -0.01,
-        healthWeatherDelta: 0,
-        healthDelta: -0.01,
-        siteResponse: 1.08,
-        reason: 'Heat (Moderate) with site amplified impact',
-        breakdown: {
-          weatherState: 'Heat',
-          weatherIntensity: 'Moderate',
-          baseRipenessDeviation: 0.001,
-          baseHealthDeviation: -0.001,
-          adjustedBaseHealthDeviation: -0.001,
-          seasonAdjustmentMultiplier: 1,
-          aspectResponse: 1,
-          altitudeResponse: 1,
-          terroirResponse: 1,
-          soilResponse: 1,
-          soilResponseSource: 'neutral',
-          siteResponseRaw: 1.08,
-          siteResponseClamped: false,
-          ripenessRawDelta: 0.01,
-          ripenessClamped: false,
-          healthRawDelta: -0.01,
-          healthClamped: false,
-        },
-      },
-    ];
-    mocks.summary = {
-      avgRipenessDelta: 0.01,
-      avgHealthDelta: -0.01,
-      avgWeatherRipenessDelta: 0.002,
-      avgWeatherHealthDelta: -0.001,
-      highStressCount: 1,
-      avgSiteResponse: 1.08,
-      weatherSignalLabel: 'Mixed',
-      weatherSignalDetail: 'Weather helps one side of progression while pressuring the other.',
-    };
-
+  it('renders concise vineyard outcomes and an empty state', () => {
+    mocks.rows = [{ id: 'v-1', name: 'North Field', status: 'Growing', siteNote: 'Site buffers this weather.', explanation: 'Normal progression is adjusted by the forecast.', ripeness: { current: 0.6, normalChange: 0.01, weatherContribution: 0.002, projected: 0.612 }, health: { current: 0.8, normalChange: -0.01, weatherContribution: -0.003, projected: 0.787 } }];
     const html = renderToStaticMarkup(React.createElement(WeatherCenterPage));
 
-    expect(html).toContain('Cote South Block');
-    expect(html).toContain('Heat (Moderate) with site amplified impact');
-    expect(html).toContain('1');
+    expect(html).toContain('North Field');
+    expect(html).toContain('Site buffers this weather.');
+    expect(html).toContain('Why this forecast?');
   });
 });

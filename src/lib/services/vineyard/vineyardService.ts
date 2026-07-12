@@ -1,18 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety, Aspect, ASPECTS } from '../../types/types';
+import { calculateVineyardYieldBreakdown, type VineyardYieldBreakdown } from './vineyardManager';
 import { saveVineyard, loadVineyards } from '../../database/activities/vineyardDB';
 import { deleteVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
-import {
-  calculateLandValue,
-  calculateGrapeSuitabilityMetrics,
-  type GrapeSuitabilityMetrics
-} from './vineyardValueCalc';
+import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray, randomInt } from '../../utils';
 import { formatNumber } from '../../utils/utils';
-import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, GRAPE_CONST } from '../../constants';
+import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES } from '../../constants';
 import { addTransaction, getGameState } from '../index';
 import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
@@ -350,68 +347,14 @@ export async function getStoredVineyards(): Promise<Vineyard[]> {
  * Expected yield breakdown interface
  * Used for tooltips and detailed displays in Vineyard and VineyardModal
  */
-export interface ExpectedYieldBreakdown {
-  totalYield: number;
-  baseYieldPerVine: number;
-  totalVines: number;
-  breakdown: {
-    baseKg: number;
-    grapeSuitability: number;
-    grapeSuitabilityComponents: GrapeSuitabilityMetrics;
-    naturalYield: number;
-    ripeness: number;
-    vineYield: number;
-    health: number;
-    finalMultiplier: number;
-  };
-}
+export type ExpectedYieldBreakdown = VineyardYieldBreakdown;
 
 /**
  * Calculate expected yield for a vineyard with detailed breakdown
  * This is the shared calculation used by both Vineyard.tsx and vineyardModal.tsx
  */
 export function calculateVineyardExpectedYield(vineyard: Vineyard): ExpectedYieldBreakdown | null {
-  if (!vineyard.grape) return null;
-
-  // Base yield: ~1.5 kg per vine (realistic baseline for mature vines)
-  const baseYieldPerVine = 1.5;
-  const totalVines = vineyard.hectares * vineyard.density;
-  const baseKg = totalVines * baseYieldPerVine;
-
-  // Get grape metadata and suitability
-  const grapeMetadata = GRAPE_CONST[vineyard.grape];
-  if (!grapeMetadata) return null;
-
-  const naturalYield = grapeMetadata.naturalYield;
-  const grapeSuitabilityComponents = calculateGrapeSuitabilityMetrics(
-    vineyard.grape,
-    vineyard.region,
-    vineyard.country,
-    vineyard.altitude,
-    vineyard.aspect,
-    vineyard.soil
-  );
-  const grapeSuitability = grapeSuitabilityComponents.overall;
-
-  // Calculate final multipliers
-  const finalMultiplier = grapeSuitability * naturalYield * (vineyard.ripeness || 0) * (vineyard.vineYield || 0.02) * (vineyard.vineyardHealth || 1.0);
-  const totalYield = Math.round(baseKg * finalMultiplier);
-
-  return {
-    totalYield,
-    baseYieldPerVine,
-    totalVines,
-    breakdown: {
-      baseKg,
-      grapeSuitability,
-      grapeSuitabilityComponents,
-      naturalYield,
-      ripeness: vineyard.ripeness || 0,
-      vineYield: vineyard.vineYield || 0.02,
-      health: vineyard.vineyardHealth || 1.0,
-      finalMultiplier
-    }
-  };
+  return calculateVineyardYieldBreakdown(vineyard);
 }
 
 // Purchase a vineyard from a purchase option
