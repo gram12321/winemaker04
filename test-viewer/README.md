@@ -2,8 +2,8 @@
 
 `test-viewer/` contains the old Admin Dashboard test viewer and standalone HTML viewer files. The active implementation is now the Admin Test Lab mounted in:
 
-- `src/components/pages/admin/TestLabPage.tsx`
-- `src/lib/services/admin/testLab/`
+- `src/lib/features/admin/components/TestLabPage.tsx`
+- `src/lib/features/admin/services/testLab/`
 - `server/test-api.ts`
 
 ## Current Admin Test Lab Path
@@ -28,4 +28,4 @@ The Admin Dashboard link and `/api/test-run` endpoint are hidden or rejected out
 - `TestViewer.tsx` and `TestViewerPage.tsx` are retained for reference during migration.
 - `index.html` and `viewer.js` are standalone legacy files and are not the active Admin Dashboard path.
 
-Do not add new scenario metadata to this folder. Add new Test Lab scenarios under `src/lib/services/admin/testLab/`.
+Do not add new scenario metadata to this folder. Add new Test Lab scenarios under `src/lib/features/admin/services/testLab/`.

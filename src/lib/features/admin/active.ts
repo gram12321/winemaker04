@@ -68,7 +68,12 @@ export const activeAdminFeature: AdminFeature = {
   ui: {
     renderPage(props: AdminPageProps) {
       if (!isDevAdminSurfaceAvailable()) return null;
-      return React.createElement(AdminDashboard, props);
+      return React.createElement(AdminDashboard, {
+        ...props,
+        database: activeAdminFeature.database,
+        cheats: activeAdminFeature.cheats,
+        staff: activeAdminFeature.staff
+      });
     }
   }
 };

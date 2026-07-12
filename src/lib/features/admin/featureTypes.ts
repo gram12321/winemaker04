@@ -84,3 +84,5 @@ export interface AdminFeature {
   staff: AdminStaffOps;
   ui: AdminUI;
 }
+
+export type AdminTestLabOperations = AdminCheatOps & Pick<AdminStaffOps, 'setStaffXP'>;

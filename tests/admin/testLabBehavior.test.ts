@@ -76,7 +76,7 @@ vi.mock('@/lib/features/admin/services/testLab/testLabFixtureService', () => ({
   createBottledWine: runnerMocks.createBottledWine
 }));
 
-vi.mock('@/lib/services/admin/adminService', () => ({
+vi.mock('@/lib/features/admin/services/adminService', () => ({
   adminGenerateTestOrders: runnerMocks.adminGenerateTestOrders,
   adminGenerateTestContract: runnerMocks.adminGenerateTestContract,
   adminGenerateTestBottlePresaleContract: runnerMocks.adminGenerateTestBottlePresaleContract,

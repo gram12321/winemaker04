@@ -41,6 +41,7 @@ import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { getAllStaff } from '@/lib/services/user/staffService';
 import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
 import type { Activity, Staff, Vineyard } from '@/lib/types/types';
+import type { AdminCheatOps, AdminStaffOps } from '../featureTypes';
 
 interface RecentRun {
   runId: string;
@@ -103,7 +104,8 @@ const clampAltitudeToRegion = (altitude: number, country: string, region: string
   return Math.round((min + max) / 2 / 10) * 10;
 };
 
-export default function TestLabPage() {
+export default function TestLabPage({ cheats, staff }: { cheats: AdminCheatOps; staff: AdminStaffOps }) {
+  const testLabOperations = { ...cheats, setStaffXP: staff.setStaffXP };
   const scenarios = useMemo(() => getTestLabScenarios(), []);
   const regressionScenario = useMemo(
     () => scenarios.find(scenario => scenario.id === 'regression.full-suite') || null,
@@ -185,7 +187,7 @@ export default function TestLabPage() {
       scenarioId: selectedScenario.id,
       params,
       mode
-    });
+    }, testLabOperations);
     await refreshDynamicOptions();
     setResult(scenarioResult);
     rememberRun(scenarioResult);
@@ -198,7 +200,7 @@ export default function TestLabPage() {
       scenarioId: 'regression.full-suite',
       mode,
       params: { target: automatedTarget }
-    });
+    }, testLabOperations);
     setResult(scenarioResult);
     rememberRun(scenarioResult);
   });
@@ -208,7 +210,7 @@ export default function TestLabPage() {
       scenarioId: 'cleanup.by-run-id',
       mode: 'run',
       params: { runId }
-    });
+    }, testLabOperations);
     await refreshDynamicOptions();
     setResult(cleanupResult);
     rememberRun(cleanupResult);

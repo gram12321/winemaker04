@@ -21,7 +21,7 @@ npm run build
 | Persistence | `src/lib/database/`, `migrations/` |
 | Types/constants | `src/lib/types/`, `src/lib/constants/` |
 | Wine structure | `src/lib/wineStructure/` |
-| Tests/admin tools | `tests/`, `src/lib/services/admin/testLab/`, `server/` |
+| Tests/admin tools | `tests/`, `src/lib/features/admin/`, `server/` |
 
 ## Architecture Rules
 

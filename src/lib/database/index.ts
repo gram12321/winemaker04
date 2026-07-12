@@ -15,6 +15,8 @@ export * from './customers/customerDB';
 export * from './customers/relationshipBoostsDB';
 export * from './customers/prestigeEventsDB';
 export * from './core/researchUnlocksDB';
+export * from './admin/adminDB';
+export * from './admin/testLabCleanupDB';
 export * from './sales/grapeBuyerMarketDB';
 export * from './sales/grapeSupplierMarketDB';
 export * from './sales/grapeBuyerLoyaltyDB';

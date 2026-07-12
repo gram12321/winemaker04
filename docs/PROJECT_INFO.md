@@ -13,7 +13,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 - Shared types/constants: `src/lib/types/`, `src/lib/constants/`.
 - Domain logic: `src/lib/services/`, `src/lib/features/`.
 - Persistence/migrations: `src/lib/database/`, `migrations/`.
-- Tests/admin: `tests/`, `src/lib/services/admin/testLab/`, `server/`.
+- Tests/admin: `tests/`, `src/lib/features/admin/`, `server/`.
 
 ## Domain Ownership
 

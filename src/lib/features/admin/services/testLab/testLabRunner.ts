@@ -3,6 +3,7 @@ import type { TestLabParamField, TestLabRunRequest, TestLabScenarioResult, TestL
 import { createTestLabRunId } from './runId';
 import { cleanupTestLabRun } from './testLabCleanupService';
 import type { Season } from '@/lib/types/types';
+import type { AdminTestLabOperations } from '../../featureTypes';
 import {
   createBottledWine,
   createFermentingBatch,
@@ -17,6 +18,25 @@ import {
 interface NormalizedParams {
   params: Record<string, string | number | boolean>;
   warnings: string[];
+}
+
+async function resolveAdminOperations(operations?: AdminTestLabOperations): Promise<AdminTestLabOperations> {
+  if (operations) return operations;
+  const service = await import('@/lib/features/admin/services/adminService');
+  return {
+    setGoldToCompany: service.adminSetGoldToCompany,
+    setPlayerBalance: service.adminSetPlayerBalance,
+    addPrestigeToCompany: service.adminAddPrestigeToCompany,
+    setGameDate: service.adminSetGameDate,
+    grantAllResearch: service.adminGrantAllResearch,
+    removeAllResearch: service.adminRemoveAllResearch,
+    generateTestOrders: service.adminGenerateTestOrders,
+    generateTestContract: service.adminGenerateTestContract,
+    generateTestBottlePresaleContract: service.adminGenerateTestBottlePresaleContract,
+    generateTestForwardPresaleContract: service.adminGenerateTestForwardPresaleContract,
+    recreateBuyGrapeMarketOffers: async () => {},
+    setStaffXP: service.adminSetStaffXP
+  };
 }
 
 const normalizeFieldValue = (
@@ -125,10 +145,11 @@ async function runRegressionScenario(
 async function runSalesOrdersScenario(
   runId: string,
   scenarioId: string,
-  warnings: string[]
+  warnings: string[],
+  operations?: AdminTestLabOperations
 ): Promise<TestLabScenarioResult> {
-  const { adminGenerateTestOrders } = await import('@/lib/features/admin/services/adminService');
-  const data = await adminGenerateTestOrders();
+  const admin = await resolveAdminOperations(operations);
+  const data = await admin.generateTestOrders();
   const createdOrders = data.totalOrdersCreated || 0;
   const status: TestLabScenarioStatus = createdOrders > 0 ? 'passed' : 'blocked';
 
@@ -152,19 +173,16 @@ async function runSalesOrdersScenario(
 async function runSalesContractScenario(
   runId: string,
   scenarioId: string,
-  warnings: string[]
+  warnings: string[],
+  operations?: AdminTestLabOperations
 ): Promise<TestLabScenarioResult> {
-  const {
-    adminGenerateTestContract,
-    adminGenerateTestBottlePresaleContract,
-    adminGenerateTestForwardPresaleContract
-  } = await import('@/lib/features/admin/services/adminService');
+  const admin = await resolveAdminOperations(operations);
 
   const data = scenarioId === 'sales.generate-bottle-presale-contract'
-    ? await adminGenerateTestBottlePresaleContract()
+    ? await admin.generateTestBottlePresaleContract()
     : scenarioId === 'sales.generate-grape-forward-contract'
-      ? await adminGenerateTestForwardPresaleContract()
-      : await adminGenerateTestContract();
+      ? await admin.generateTestForwardPresaleContract()
+      : await admin.generateTestContract();
 
   return {
     runId,
@@ -182,17 +200,14 @@ async function runFinanceScenario(
   runId: string,
   scenarioId: string,
   params: Record<string, string | number | boolean>,
-  warnings: string[]
+  warnings: string[],
+  operations?: AdminTestLabOperations
 ): Promise<TestLabScenarioResult> {
   const amount = Number(params.amount ?? 0);
-  const {
-    adminAddPrestigeToCompany,
-    adminSetGoldToCompany,
-    adminSetPlayerBalance
-  } = await import('@/lib/features/admin/services/adminService');
+  const admin = await resolveAdminOperations(operations);
 
   if (scenarioId === 'finance.set-company-money') {
-    await adminSetGoldToCompany(amount);
+    await admin.setGoldToCompany(amount);
     return {
       runId,
       scenarioId,
@@ -222,7 +237,7 @@ async function runFinanceScenario(
       };
     }
 
-    const data = await adminSetPlayerBalance(amount, currentUser.id);
+    const data = await admin.setPlayerBalance(amount, currentUser.id);
     return {
       runId,
       scenarioId,
@@ -235,7 +250,7 @@ async function runFinanceScenario(
     };
   }
 
-  await adminAddPrestigeToCompany(amount);
+  await admin.addPrestigeToCompany(amount);
   return {
     runId,
     scenarioId,
@@ -251,12 +266,13 @@ async function runFinanceScenario(
 async function runResearchScenario(
   runId: string,
   scenarioId: string,
-  warnings: string[]
+  warnings: string[],
+  operations?: AdminTestLabOperations
 ): Promise<TestLabScenarioResult> {
-  const { adminGrantAllResearch, adminRemoveAllResearch } = await import('@/lib/features/admin/services/adminService');
+  const admin = await resolveAdminOperations(operations);
 
   if (scenarioId === 'research.grant-all') {
-    const data = await adminGrantAllResearch();
+    const data = await admin.grantAllResearch();
     return {
       runId,
       scenarioId,
@@ -269,7 +285,7 @@ async function runResearchScenario(
     };
   }
 
-  const data = await adminRemoveAllResearch();
+  const data = await admin.removeAllResearch();
   return {
     runId,
     scenarioId,
@@ -286,7 +302,8 @@ async function runStaffXpScenario(
   runId: string,
   scenarioId: string,
   params: Record<string, string | number | boolean>,
-  warnings: string[]
+  warnings: string[],
+  operations?: AdminTestLabOperations
 ): Promise<TestLabScenarioResult> {
   const staffId = String(params.staffId || '').trim();
   const xpCategory = String(params.xpCategory || '').trim();
@@ -304,8 +321,8 @@ async function runStaffXpScenario(
     };
   }
 
-  const { adminSetStaffXP } = await import('@/lib/features/admin/services/adminService');
-  const data = await adminSetStaffXP(staffId, xpCategory, xpAmount);
+  const admin = await resolveAdminOperations(operations);
+  const data = await admin.setStaffXP(staffId, xpCategory, xpAmount);
 
   return {
     runId,
@@ -358,7 +375,7 @@ async function runCompleteActivityScenario(
   };
 }
 
-export async function runTestLabScenario(request: TestLabRunRequest): Promise<TestLabScenarioResult> {
+export async function runTestLabScenario(request: TestLabRunRequest, operations?: AdminTestLabOperations): Promise<TestLabScenarioResult> {
   const scenario = getTestLabScenario(request.scenarioId);
   const runId = request.scenarioId === 'cleanup.by-run-id'
     ? String(request.params.runId || '')
@@ -400,19 +417,19 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
     }
 
     if (scenario.id === 'sales.generate-orders') {
-      return await runSalesOrdersScenario(runId, scenario.id, warnings);
+      return await runSalesOrdersScenario(runId, scenario.id, warnings, operations);
     }
 
     if (scenario.id === 'sales.generate-contract') {
-      return await runSalesContractScenario(runId, scenario.id, warnings);
+      return await runSalesContractScenario(runId, scenario.id, warnings, operations);
     }
 
     if (scenario.id === 'sales.generate-bottle-presale-contract') {
-      return await runSalesContractScenario(runId, scenario.id, warnings);
+      return await runSalesContractScenario(runId, scenario.id, warnings, operations);
     }
 
     if (scenario.id === 'sales.generate-grape-forward-contract') {
-      return await runSalesContractScenario(runId, scenario.id, warnings);
+      return await runSalesContractScenario(runId, scenario.id, warnings, operations);
     }
 
     if (
@@ -420,15 +437,15 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
       scenario.id === 'finance.set-player-balance' ||
       scenario.id === 'finance.add-prestige'
     ) {
-      return await runFinanceScenario(runId, scenario.id, params, warnings);
+      return await runFinanceScenario(runId, scenario.id, params, warnings, operations);
     }
 
     if (scenario.id === 'research.grant-all' || scenario.id === 'research.remove-all') {
-      return await runResearchScenario(runId, scenario.id, warnings);
+      return await runResearchScenario(runId, scenario.id, warnings, operations);
     }
 
     if (scenario.id === 'staff.set-xp') {
-      return await runStaffXpScenario(runId, scenario.id, params, warnings);
+      return await runStaffXpScenario(runId, scenario.id, params, warnings, operations);
     }
 
     if (scenario.id === 'activity.complete-now') {
@@ -481,8 +498,8 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
     let fixtureResult: TestLabVineyardResult | TestLabBatchResult | null = null;
     switch (scenario.id) {
       case 'company.set-game-date': {
-        const { adminSetGameDate } = await import('@/lib/features/admin/services/adminService');
-        await adminSetGameDate({
+        const admin = await resolveAdminOperations(operations);
+        await admin.setGameDate({
           week: Number(params.week),
           season: params.season as Season,
           year: Number(params.year)
@@ -503,8 +520,8 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
         };
       }
       case 'vineyard.harvest-ready': {
-        const { adminSetGameDate } = await import('@/lib/features/admin/services/adminService');
-        await adminSetGameDate({
+        const admin = await resolveAdminOperations(operations);
+        await admin.setGameDate({
           week: Number(params.week),
           season: params.season as Season,
           year: Number(params.year)

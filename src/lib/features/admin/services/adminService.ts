@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/lib/database/core/supabase';
+import { clearAllAchievements, clearAllCompanies, clearAllCompaniesAndUsers, clearAllCustomers, clearAllUsers, fullDatabaseReset } from '@/lib/database';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '@/lib/services';
 import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
@@ -224,34 +224,21 @@ export async function adminClearCompanyValuePerWeekHighscores(): Promise<{ succe
  * Clear all companies from database
  */
 export async function adminClearAllCompanies(): Promise<void> {
-  const { error } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) throw error;
+  await clearAllCompanies();
 }
 
 /**
  * Clear all users from database
  */
 export async function adminClearAllUsers(): Promise<void> {
-  const { error } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) throw error;
+  await clearAllUsers();
 }
 
 /**
  * Clear all companies and users from database
  */
 export async function adminClearAllCompaniesAndUsers(): Promise<void> {
-  try {
-    // Clear companies first (due to foreign key constraints)
-    const { error: companiesError } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (companiesError) throw companiesError;
-
-    // Then clear users
-    const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (usersError) throw usersError;
-  } catch (error) {
-    console.error('Error clearing companies and users:', error);
-    throw error;
-  }
+  await clearAllCompaniesAndUsers();
 }
 
 /**
@@ -260,8 +247,7 @@ export async function adminClearAllCompaniesAndUsers(): Promise<void> {
 export async function adminRecreateCustomers(): Promise<void> {
   try {
     // First clear all existing customers
-    const { error: deleteError } = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (deleteError) throw deleteError;
+    await clearAllCustomers();
 
     // Then recreate them
     await initializeCustomers(1); // Initialize with base prestige
@@ -557,8 +543,7 @@ export async function adminGenerateTestForwardPresaleContract(): Promise<{ succe
  * Clear all achievements
  */
 export async function adminClearAllAchievements(): Promise<void> {
-  const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) throw error;
+  await clearAllAchievements();
 }
 
 interface AdminGameDatePayload {
@@ -606,65 +591,5 @@ export async function adminRemoveAllResearch(): Promise<{ success: boolean; remo
  * Full database reset - clears all tables
  */
 export async function adminFullDatabaseReset(): Promise<void> {
-  try {
-    // Clear all tables in the correct order to respect foreign key constraints
-    // Delete child tables first, then parent tables
-    const tables = [
-      'relationship_boosts',
-      'wine_orders',
-      'wine_batches',
-      'vineyards',
-      'activities',
-      'achievements',
-      'user_settings',
-      'highscores',
-      'prestige_events',
-      'transactions',
-      'company_customers',
-      'notifications',  // Clear notifications before companies (it references companies)
-      'companies',
-      'users',
-      'customers',
-      'wine_log'
-    ];
-
-    const errors: string[] = [];
-
-    // Clear all tables - use DELETE with proper ordering for foreign keys
-    for (const table of tables) {
-      try {
-        let deleteQuery;
-
-        // Handle different table structures
-        if (table === 'company_customers') {
-          // company_customers has composite primary key, no single id column
-          deleteQuery = supabase.from(table).delete().neq('company_id', '00000000-0000-0000-0000-000000000000');
-        } else {
-          // All other tables have id columns - delete all records
-          deleteQuery = supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        }
-
-        const { error } = await deleteQuery;
-        if (error) {
-          const errorMsg = `Error clearing table ${table}: ${error.message}`;
-          console.error(errorMsg, error);
-          errors.push(errorMsg);
-        }
-      } catch (err) {
-        const errorMsg = `Exception clearing table ${table}: ${err}`;
-        console.error(errorMsg, err);
-        errors.push(errorMsg);
-      }
-    }
-
-    // Check if there were any errors
-    if (errors.length > 0) {
-      console.error('Full database reset errors:', errors);
-      throw new Error(`Database reset failed with ${errors.length} errors: ${errors.join(', ')}`);
-    }
-  } catch (error) {
-    const errorMessage = `Critical error during full database reset: ${error}`;
-    console.error(errorMessage, error);
-    throw new Error(errorMessage);
-  }
+  await fullDatabaseReset();
 }

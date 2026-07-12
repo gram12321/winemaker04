@@ -15,43 +15,33 @@ import {
 } from '@/components/ui';
 import { Settings, Users, AlertTriangle, Trash2, TestTube2, RefreshCw } from 'lucide-react';
 import { PageProps, NavigationProps } from '@/lib/types/UItypes';
+import type { AdminCheatOps, AdminDatabaseOps, AdminStaffOps } from '../featureTypes';
 import TestLabPage from './TestLabPage';
 import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
-import {
-  adminClearAllAchievements,
-  adminClearAllCompanies,
-  adminClearAllCompaniesAndUsers,
-  adminClearAllHighscores,
-  adminClearAllUsers,
-  adminClearCompanyValueHighscores,
-  adminClearCompanyValuePerWeekHighscores,
-  adminFullDatabaseReset,
-  adminRecreateCustomers
-} from '../services/adminService';
-import { recreateBuyGrapeMarketOffers } from '@/lib/services';
-
 interface AdminDashboardProps extends PageProps, NavigationProps {
-  // Inherits onBack and onNavigateToLogin from shared interfaces
+  database: AdminDatabaseOps;
+  cheats: AdminCheatOps;
+  staff: AdminStaffOps;
 }
 
-export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProps) {
+export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, staff }: AdminDashboardProps) {
   const { isLoading, withLoading } = useLoadingState();
   const [showAllResearch, setShowAllResearch] = useState(false);
 
   const handleClearAllHighscores = () => withLoading(async () => {
-    await adminClearAllHighscores();
+    await database.clearAllHighscores();
   });
 
   const handleClearCompanyValueHighscores = () => withLoading(async () => {
-    await adminClearCompanyValueHighscores();
+    await database.clearCompanyValueHighscores();
   });
 
   const handleClearCompanyValuePerWeekHighscores = () => withLoading(async () => {
-    await adminClearCompanyValuePerWeekHighscores();
+    await database.clearCompanyValuePerWeekHighscores();
   });
 
   const handleClearAllCompanies = () => withLoading(async () => {
-    await adminClearAllCompanies();
+    await database.clearAllCompanies();
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -61,7 +51,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   });
 
   const handleClearAllUsers = () => withLoading(async () => {
-    await adminClearAllUsers();
+    await database.clearAllUsers();
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -71,7 +61,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   });
 
   const handleClearAllCompaniesAndUsers = () => withLoading(async () => {
-    await adminClearAllCompaniesAndUsers();
+    await database.clearAllCompaniesAndUsers();
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -81,19 +71,19 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   });
 
   const handleRecreateCustomers = () => withLoading(async () => {
-    await adminRecreateCustomers();
+    await database.recreateCustomers();
   });
 
   const handleClearAllAchievements = () => withLoading(async () => {
-    await adminClearAllAchievements();
+    await database.clearAllAchievements();
   });
 
   const handleRecreateBuyGrapeOffers = () => withLoading(async () => {
-    await recreateBuyGrapeMarketOffers();
+    await cheats.recreateBuyGrapeMarketOffers();
   });
 
   const handleFullDatabaseReset = () => withLoading(async () => {
-    await adminFullDatabaseReset();
+    await database.fullDatabaseReset();
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -328,7 +318,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
               </CardHeader>
             </Card>
 
-            <TestLabPage />
+            <TestLabPage cheats={cheats} staff={staff} />
           </div>
         </TabsContent>
       </Tabs>
