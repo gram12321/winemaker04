@@ -12,10 +12,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle
-} from '../ui';
+} from '@/components/ui';
 import { Settings, Users, AlertTriangle, Trash2, TestTube2, RefreshCw } from 'lucide-react';
-import { PageProps, NavigationProps } from '../../lib/types/UItypes';
-import TestLabPage from './admin/TestLabPage';
+import { PageProps, NavigationProps } from '@/lib/types/UItypes';
+import TestLabPage from './TestLabPage';
 import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
 import {
   adminClearAllAchievements,
@@ -26,9 +26,9 @@ import {
   adminClearCompanyValueHighscores,
   adminClearCompanyValuePerWeekHighscores,
   adminFullDatabaseReset,
-  adminRecreateCustomers,
-  recreateBuyGrapeMarketOffers
-} from '@/lib/services';
+  adminRecreateCustomers
+} from '../services/adminService';
+import { recreateBuyGrapeMarketOffers } from '@/lib/services';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces

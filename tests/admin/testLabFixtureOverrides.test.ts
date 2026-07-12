@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { WineBatch } from '@/lib/types/types';
 import { initializeBatchFeatures, getFeatureDisplaySeverity } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
-import { applyTestLabBatchOverrides } from '@/lib/services/admin/testLab/testLabFixtureService';
+import { applyTestLabBatchOverrides } from '@/lib/features/admin/services/testLab/testLabFixtureService';
 
 function makeBatch(overrides: Partial<WineBatch> = {}): WineBatch {
   return {

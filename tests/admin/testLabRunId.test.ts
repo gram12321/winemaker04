@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTestLabRunId, extractTestLabRunId, formatTestLabPrefix, withTestLabPrefix } from '@/lib/services/admin/testLab/runId';
+import { createTestLabRunId, extractTestLabRunId, formatTestLabPrefix, withTestLabPrefix } from '@/lib/features/admin/services/testLab/runId';
 
 describe('test lab run ids', () => {
   it('creates stable prefixed run ids', () => {

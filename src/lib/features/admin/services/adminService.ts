@@ -1,17 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '../../database/core/supabase';
-import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '../index';
-import { insertPrestigeEvent } from '../../database';
+import { supabase } from '@/lib/database/core/supabase';
+import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '@/lib/services';
+import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
-import { setPlayerBalance } from '../user/userBalanceService';
-import { getCurrentCompany } from '../core/gameState';
-import { companyService } from '../user/companyService';
+import { setPlayerBalance } from '@/lib/services/user/userBalanceService';
+import { getCurrentCompany } from '@/lib/services/core/gameState';
+import { companyService } from '@/lib/services/user/companyService';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-
-import { awardExperience, getAllStaff } from '../user/staffService';
-
+import { awardExperience, getAllStaff } from '@/lib/services/user/staffService';
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
 
@@ -279,12 +277,12 @@ export async function adminRecreateCustomers(): Promise<void> {
  */
 export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: number; customersGenerated: number }> {
   // Import needed functions
-  const { generateOrder } = await import('../sales/generateOrder');
-  const { getAllCustomers } = await import('../sales/createCustomer');
-  const { getAllWineBatches } = await import('../wine/winery/inventoryService');
-  const { loadVineyards } = await import('../../database/activities/vineyardDB');
-  const { getCurrentPrestige } = await import('../core/gameState');
-  const { SALES_CONSTANTS } = await import('../../constants/constants');
+  const { generateOrder } = await import('@/lib/services/sales/generateOrder');
+  const { getAllCustomers } = await import('@/lib/services/sales/createCustomer');
+  const { getAllWineBatches } = await import('@/lib/services/wine/winery/inventoryService');
+  const { loadVineyards } = await import('@/lib/database/activities/vineyardDB');
+  const { getCurrentPrestige } = await import('@/lib/services/core/gameState');
+  const { SALES_CONSTANTS } = await import('@/lib/constants/constants');
 
   // Get or create customers
   let allCustomers = await getAllCustomers();
@@ -378,9 +376,9 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
  * Only difference: bypasses eligibility and chance checks
  */
 export async function adminGenerateTestContract(): Promise<{ success: boolean; message: string }> {
-  const { getAllCustomers } = await import('../sales/createCustomer');
-  const { generateContractForCustomer } = await import('../sales/contractGenerationService');
-  const { saveWineContract } = await import('../../database/sales/contractDB');
+  const { getAllCustomers } = await import('@/lib/services/sales/createCustomer');
+  const { generateContractForCustomer } = await import('@/lib/services/sales/contractGenerationService');
+  const { saveWineContract } = await import('@/lib/database/sales/contractDB');
 
   // Get or create customers
   let allCustomers = await getAllCustomers();
@@ -420,9 +418,9 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
 }
 
 export async function adminGenerateTestBottlePresaleContract(): Promise<{ success: boolean; message: string }> {
-  const { getAvailableBuyers } = await import('../sales/sellGrapesService');
-  const { saveForwardContract } = await import('../../database/sales/forwardContractDB');
-  const { FORWARD_CONTRACT_CONFIG } = await import('../../constants/contractConstants');
+  const { getAvailableBuyers } = await import('@/lib/services/sales/sellGrapesService');
+  const { saveForwardContract } = await import('@/lib/database/sales/forwardContractDB');
+  const { FORWARD_CONTRACT_CONFIG } = await import('@/lib/constants/contractConstants');
 
   const buyers = await getAvailableBuyers();
   if (buyers.length === 0) {
@@ -486,9 +484,9 @@ export async function adminGenerateTestBottlePresaleContract(): Promise<{ succes
 }
 
 export async function adminGenerateTestForwardPresaleContract(): Promise<{ success: boolean; message: string }> {
-  const { getAvailableBuyers } = await import('../sales/sellGrapesService');
-  const { saveForwardContract } = await import('../../database/sales/forwardContractDB');
-  const { FORWARD_CONTRACT_CONFIG } = await import('../../constants/contractConstants');
+  const { getAvailableBuyers } = await import('@/lib/services/sales/sellGrapesService');
+  const { saveForwardContract } = await import('@/lib/database/sales/forwardContractDB');
+  const { FORWARD_CONTRACT_CONFIG } = await import('@/lib/constants/contractConstants');
 
   const buyers = await getAvailableBuyers();
   if (buyers.length === 0) {

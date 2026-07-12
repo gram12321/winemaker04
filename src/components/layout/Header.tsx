@@ -13,7 +13,7 @@ import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import versionLogRaw from '../../../docs/versionlog.md?raw';
-import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
+import { getAdminFeature } from '@/lib/features/admin';
 
 
 interface HeaderProps extends NavigationProps, CompanyProps {
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   
   // Get current company once instead of multiple calls
   const currentCompany = getCurrentCompany();
-  const showAdminDashboard = isDevAdminSurfaceAvailable();
+  const showAdminDashboard = getAdminFeature().gate.isAvailable();
 
   // Use consolidated hook for reactive prestige loading
   const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);

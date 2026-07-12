@@ -3,7 +3,7 @@ import {
   AUTOMATED_TEST_TARGET_PRESETS,
   getAutomatedTestTargetPreset,
   PRESTIGE_BALANCE_TEST_TARGETS
-} from '@/lib/services/admin/testLab/automatedTestTargets';
+} from '@/lib/features/admin/services/testLab/automatedTestTargets';
 
 describe('Automated Test target presets', () => {
   it('exposes the prestige scenario archetype test as a direct UI target', () => {
@@ -32,7 +32,7 @@ describe('Automated Test target presets', () => {
   });
 
   it('keeps preset ids unique for the Admin Dashboard select control', () => {
-    const ids = AUTOMATED_TEST_TARGET_PRESETS.map(preset => preset.id);
+    const ids = AUTOMATED_TEST_TARGET_PRESETS.map((preset: { id: string }) => preset.id);
 
     expect(new Set(ids).size).toBe(ids.length);
   });

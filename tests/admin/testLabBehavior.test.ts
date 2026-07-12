@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TEST_LAB_SCENARIOS, getTestLabScenario, getTestLabScenarios } from '@/lib/services/admin/testLab/testLabScenarios';
-import { isDevAdminSurfaceAvailable, isLoopbackHostname as isBrowserLoopbackHostname } from '@/lib/services/admin/testLab/devAdminGate';
+import { TEST_LAB_SCENARIOS, getTestLabScenario, getTestLabScenarios } from '@/lib/features/admin/services/testLab/testLabScenarios';
+import { isDevAdminSurfaceAvailable, isLoopbackHostname as isBrowserLoopbackHostname } from '@/lib/features/admin/services/testLab/devAdminGate';
 import {
   getHostnameFromHostHeader,
   isLoopbackHostname as isServerLoopbackHostname,
@@ -57,17 +57,17 @@ const runnerMocks = vi.hoisted(() => ({
   }))
 }));
 
-vi.mock('@/lib/services/admin/testLab/runId', () => ({
+vi.mock('@/lib/features/admin/services/testLab/runId', () => ({
   createTestLabRunId: runnerMocks.createTestLabRunId,
   withTestLabPrefix: (runId: string, value: string) => `[${runId}] ${value}`,
   formatTestLabPrefix: (runId: string) => `testlab_${runId}`
 }));
 
-vi.mock('@/lib/services/admin/testLab/testLabCleanupService', () => ({
+vi.mock('@/lib/features/admin/services/testLab/testLabCleanupService', () => ({
   cleanupTestLabRun: runnerMocks.cleanupTestLabRun
 }));
 
-vi.mock('@/lib/services/admin/testLab/testLabFixtureService', () => ({
+vi.mock('@/lib/features/admin/services/testLab/testLabFixtureService', () => ({
   createTestLabCompany: runnerMocks.createTestLabCompany,
   createHarvestReadyVineyard: runnerMocks.createHarvestReadyVineyard,
   createGrapeBatch: runnerMocks.createGrapeBatch,
@@ -101,7 +101,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('keeps scenario ids unique and default params valid for every registered scenario', async () => {
-    const { normalizeTestLabParams } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { normalizeTestLabParams } = await import('@/lib/features/admin/services/testLab/testLabRunner');
     const ids = TEST_LAB_SCENARIOS.map(scenario => scenario.id);
 
     expect(new Set(ids).size).toBe(ids.length);
@@ -116,7 +116,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('normalizes number, boolean, select, and unknown parameters before running a dry run', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const result = await runTestLabScenario({
       scenarioId: 'winery.must-ready-batch',
@@ -168,7 +168,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('blocks cleanup without a run id before mutating persisted data', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const result = await runTestLabScenario({
       scenarioId: 'cleanup.by-run-id',
@@ -227,7 +227,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('runs sales shortcut scenarios through the active company admin services', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const orderResult = await runTestLabScenario({
       scenarioId: 'sales.generate-orders',
@@ -273,7 +273,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('runs finance and research scenarios through active-company admin services', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     await runTestLabScenario({
       scenarioId: 'finance.set-company-money',
@@ -298,7 +298,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('blocks staff XP scenarios without a selected staff member', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const result = await runTestLabScenario({
       scenarioId: 'staff.set-xp',
@@ -312,7 +312,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('sets staff XP through the active company admin service', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const result = await runTestLabScenario({
       scenarioId: 'staff.set-xp',
@@ -326,7 +326,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('completes an existing activity immediately through the shared activity manager', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const result = await runTestLabScenario({
       scenarioId: 'activity.complete-now',
@@ -343,7 +343,7 @@ describe('Admin Test Lab behavior', () => {
   });
 
   it('blocks instant completion when no activity is selected', async () => {
-    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+    const { runTestLabScenario } = await import('@/lib/features/admin/services/testLab/testLabRunner');
 
     const result = await runTestLabScenario({
       scenarioId: 'activity.complete-now',

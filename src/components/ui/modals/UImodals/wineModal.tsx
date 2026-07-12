@@ -18,7 +18,7 @@ import { WineTasteProfilePanel } from '../../components/WineTasteProfilePanel';
 import { getStoredVineyards, getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBatchStructureIndex, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
-import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
+import { getAdminFeature } from '@/lib/features/admin';
 import { analyzeWineAnchorDownstreamImpact } from '@/lib/services/wine/debug/wineAnchorImpactDebugService';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 
@@ -104,7 +104,7 @@ export const WineModal: React.FC<WineModalProps> = ({
     },
     [wineBatch, vineyard, prestige]
   );
-  const showDevAnchorDebug = isDevAdminSurfaceAvailable();
+  const showDevAnchorDebug = getAdminFeature().gate.isAvailable();
   const anchorDebug = useMemo(() => {
     if (!wineBatch) return null;
     return analyzeWineAnchorDownstreamImpact(

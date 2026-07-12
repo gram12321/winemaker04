@@ -22,8 +22,6 @@ export * from '@/lib/features/loanLender/services/finance/lenderService';
 export * from '@/lib/features/loanLender/services/finance/loanService';
 export * from './finance/wageService';
 
-// Admin services
-export * from './admin/adminService';
 
 // Vineyard services
 export * from './vineyard/vineyardService';

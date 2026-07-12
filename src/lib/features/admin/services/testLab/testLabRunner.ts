@@ -127,7 +127,7 @@ async function runSalesOrdersScenario(
   scenarioId: string,
   warnings: string[]
 ): Promise<TestLabScenarioResult> {
-  const { adminGenerateTestOrders } = await import('@/lib/services/admin/adminService');
+  const { adminGenerateTestOrders } = await import('@/lib/features/admin/services/adminService');
   const data = await adminGenerateTestOrders();
   const createdOrders = data.totalOrdersCreated || 0;
   const status: TestLabScenarioStatus = createdOrders > 0 ? 'passed' : 'blocked';
@@ -158,7 +158,7 @@ async function runSalesContractScenario(
     adminGenerateTestContract,
     adminGenerateTestBottlePresaleContract,
     adminGenerateTestForwardPresaleContract
-  } = await import('@/lib/services/admin/adminService');
+  } = await import('@/lib/features/admin/services/adminService');
 
   const data = scenarioId === 'sales.generate-bottle-presale-contract'
     ? await adminGenerateTestBottlePresaleContract()
@@ -189,7 +189,7 @@ async function runFinanceScenario(
     adminAddPrestigeToCompany,
     adminSetGoldToCompany,
     adminSetPlayerBalance
-  } = await import('@/lib/services/admin/adminService');
+  } = await import('@/lib/features/admin/services/adminService');
 
   if (scenarioId === 'finance.set-company-money') {
     await adminSetGoldToCompany(amount);
@@ -253,7 +253,7 @@ async function runResearchScenario(
   scenarioId: string,
   warnings: string[]
 ): Promise<TestLabScenarioResult> {
-  const { adminGrantAllResearch, adminRemoveAllResearch } = await import('@/lib/services/admin/adminService');
+  const { adminGrantAllResearch, adminRemoveAllResearch } = await import('@/lib/features/admin/services/adminService');
 
   if (scenarioId === 'research.grant-all') {
     const data = await adminGrantAllResearch();
@@ -304,7 +304,7 @@ async function runStaffXpScenario(
     };
   }
 
-  const { adminSetStaffXP } = await import('@/lib/services/admin/adminService');
+  const { adminSetStaffXP } = await import('@/lib/features/admin/services/adminService');
   const data = await adminSetStaffXP(staffId, xpCategory, xpAmount);
 
   return {
@@ -481,7 +481,7 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
     let fixtureResult: TestLabVineyardResult | TestLabBatchResult | null = null;
     switch (scenario.id) {
       case 'company.set-game-date': {
-        const { adminSetGameDate } = await import('@/lib/services/admin/adminService');
+        const { adminSetGameDate } = await import('@/lib/features/admin/services/adminService');
         await adminSetGameDate({
           week: Number(params.week),
           season: params.season as Season,
@@ -503,7 +503,7 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
         };
       }
       case 'vineyard.harvest-ready': {
-        const { adminSetGameDate } = await import('@/lib/services/admin/adminService');
+        const { adminSetGameDate } = await import('@/lib/features/admin/services/adminService');
         await adminSetGameDate({
           week: Number(params.week),
           season: params.season as Season,

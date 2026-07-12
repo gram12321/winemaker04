@@ -9,7 +9,7 @@ import { ResearchPage } from './components/pages/Research';
 import { StaffPage } from './components/pages/Staff';
 import { Profile } from './components/pages/Profile';
 import { Settings } from './components/pages/Settings';
-import { AdminDashboard } from './components/pages/AdminDashboard';
+import { getAdminFeature } from '@/lib/features/admin';
 import { Achievements } from './components/pages/Achievements';
 import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
@@ -27,7 +27,6 @@ import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelati
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { Analytics } from '@vercel/analytics/react';
-import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -164,16 +163,16 @@ function App() {
             onSignOut={handleBackToLogin}
           />
         );
-      case 'admin':
-        if (!isDevAdminSurfaceAvailable()) {
+      case 'admin': {
+        const adminPage = getAdminFeature().ui.renderPage({
+          onBack: () => setCurrentPage('company-overview'),
+          onNavigateToLogin: handleBackToLogin
+        });
+        if (!adminPage) {
           return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
         }
-        return (
-          <AdminDashboard 
-            onBack={() => setCurrentPage('company-overview')}
-            onNavigateToLogin={handleBackToLogin}
-          />
-        );
+        return adminPage;
+      }
       case 'achievements':
         return (
           <Achievements

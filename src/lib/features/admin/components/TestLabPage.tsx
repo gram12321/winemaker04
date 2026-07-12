@@ -28,14 +28,14 @@ import {
   TabsTrigger
 } from '@/components/ui';
 import { useLoadingState } from '@/hooks';
-import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
+import { isDevAdminSurfaceAvailable } from '../services/testLab/devAdminGate';
 import {
   AUTOMATED_TEST_TARGET_PRESETS,
   getAutomatedTestTargetPreset
-} from '@/lib/services/admin/testLab/automatedTestTargets';
-import { getTestLabScenarios, VINEYARD_CONFIG_PARAM_KEYS } from '@/lib/services/admin/testLab/testLabScenarios';
-import { runTestLabScenario } from '@/lib/services/admin/testLab/testLabRunner';
-import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '@/lib/services/admin/testLab/types';
+} from '../services/testLab/automatedTestTargets';
+import { getTestLabScenarios, VINEYARD_CONFIG_PARAM_KEYS } from '../services/testLab/testLabScenarios';
+import { runTestLabScenario } from '../services/testLab/testLabRunner';
+import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '../services/testLab/types';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { getAllStaff } from '@/lib/services/user/staffService';
