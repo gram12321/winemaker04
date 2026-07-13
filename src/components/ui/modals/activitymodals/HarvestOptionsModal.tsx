@@ -10,7 +10,7 @@ import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, getFeatureConfig } from '@/lib/services';
 import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
-import { addStorageVesselCapacity, canStoragePlanHoldVolume, createStorageAllocationPlan, getAvailableStorageVessels, initializeHarvestVolumeLitres, releaseStorageAllocationPlan, releaseUnusedStorageVesselCapacity } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import { addStorageVesselCapacity, createStorageAllocationPlan, getAvailableStorageVessels, getStoragePlanCapacityLitres, initializeHarvestVolumeLitres, releaseStorageAllocationPlan, releaseUnusedStorageVesselCapacity } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import { findCompatibleWineBatch } from '@/lib/services/wine/winery/inventoryService';
 import type { WineBatch } from '@/lib/types/types';
@@ -33,7 +33,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
   const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
   const [compatibleBatch, setCompatibleBatch] = useState<WineBatch | null>(null);
-  const [compatiblePlanHasCapacity, setCompatiblePlanHasCapacity] = useState(false);
+  const [compatiblePlanCapacityLitres, setCompatiblePlanCapacityLitres] = useState(0);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,13 +65,12 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
 
   useEffect(() => {
     if (!isOpen || !compatibleBatch?.storagePlanId || !harvestCalculation) {
-      setCompatiblePlanHasCapacity(false);
+      setCompatiblePlanCapacityLitres(0);
       return;
     }
-    const remainingYield = Math.max(0, harvestCalculation.expectedYield - compatibleBatch.quantity);
-    void canStoragePlanHoldVolume(compatibleBatch.storagePlanId, (compatibleBatch.volumeLitres ?? 0) + initializeHarvestVolumeLitres(remainingYield))
-      .then(setCompatiblePlanHasCapacity)
-      .catch(() => setCompatiblePlanHasCapacity(false));
+    void getStoragePlanCapacityLitres(compatibleBatch.storagePlanId)
+      .then(setCompatiblePlanCapacityLitres)
+      .catch(() => setCompatiblePlanCapacityLitres(0));
   }, [compatibleBatch, harvestCalculation, isOpen]);
 
   const weatherImpact = useMemo(() => {
@@ -90,16 +89,18 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     if (!vineyard || !harvestCalculation) return;
     const selectedCapacity = availableVessels.filter((vessel) => selectedVesselIds.includes(vessel.id)).reduce((total, vessel) => total + vessel.capacityLitres, 0);
     const continuingBatch = compatibleBatch?.storagePlanId ? compatibleBatch : null;
-    if (!continuingBatch && selectedCapacity <= 0) return;
+    const remainingYield = continuingBatch ? Math.max(0, harvestCalculation.expectedYield - continuingBatch.quantity) : harvestCalculation.expectedYield;
+    if (remainingYield <= 0 || (!continuingBatch && selectedCapacity <= 0)) return;
 
     const activityId = uuidv4();
-    const initialParams = { grape: vineyard.grape, harvestedSoFar: continuingBatch?.quantity ?? 0, targetName: vineyard.name, outputBatchId: continuingBatch?.id ?? uuidv4(), storageVesselIds: continuingBatch ? [] : selectedVesselIds };
+    const harvestBaseline = continuingBatch?.quantity ?? 0;
+    const initialParams = { grape: vineyard.grape, harvestBaseline, harvestedSoFar: harvestBaseline, targetName: vineyard.name, outputBatchId: continuingBatch?.id ?? uuidv4(), storageVesselIds: continuingBatch ? [] : selectedVesselIds };
     const creation = await createActivityWithResult({
       id: activityId,
       category: WorkCategory.HARVESTING,
       title: `Harvesting ${vineyard.name}`,
-      totalWork: harvestCalculation.workEstimate.totalWork,
-      activityDetails: `Expected yield: ${formatNumber(harvestCalculation.expectedYield, { smartDecimals: true })} kg`,
+      totalWork: Math.max(0.1, harvestCalculation.workEstimate.totalWork * remainingYield / Math.max(0.1, harvestCalculation.expectedYield)),
+      activityDetails: `Remaining yield: ${formatNumber(remainingYield, { smartDecimals: true })} kg`,
       targetId: vineyard.id,
       params: initialParams,
       isCancellable: true,
@@ -139,11 +140,18 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     if (!weatherImpact?.allowed) return false;
     if (!harvestCalculation) return false;
     const selectedCapacity = availableVessels.filter((vessel) => selectedVesselIds.includes(vessel.id)).reduce((total, vessel) => total + vessel.capacityLitres, 0);
-    return Boolean(compatibleBatch?.storagePlanId) || selectedCapacity > 0 || compatiblePlanHasCapacity;
+    if (!compatibleBatch?.storagePlanId) return selectedCapacity > 0;
+    return remainingYield > 0 && (additionalRequiredLitres <= 0 || selectedCapacity > 0);
   };
 
-  const requiredLitres = harvestCalculation ? initializeHarvestVolumeLitres(harvestCalculation.expectedYield) : 0;
+  const remainingYield = harvestCalculation ? Math.max(0, harvestCalculation.expectedYield - (compatibleBatch?.quantity ?? 0)) : 0;
+  const remainingRequiredLitres = remainingYield > 0 ? initializeHarvestVolumeLitres(remainingYield) : 0;
+  const existingUnusedCapacity = Math.max(0, compatiblePlanCapacityLitres - (compatibleBatch?.volumeLitres ?? 0));
+  const additionalRequiredLitres = compatibleBatch ? Math.max(0, remainingRequiredLitres - existingUnusedCapacity) : remainingRequiredLitres;
   const selectedCapacity = availableVessels.filter((vessel) => selectedVesselIds.includes(vessel.id)).reduce((total, vessel) => total + vessel.capacityLitres, 0);
+  const displayedWorkEstimate = harvestCalculation
+    ? { totalWork: harvestCalculation.workEstimate.totalWork * remainingYield / Math.max(0.1, harvestCalculation.expectedYield) }
+    : { totalWork: 0 };
 
   // Organized warning message for consolidated display
   const organizedWarnings = useMemo(() => {
@@ -187,7 +195,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
         subtitle={`Configure harvesting options for this ${vineyard.hectares} hectare vineyard. Expected yield: ${harvestCalculation ? formatNumber(harvestCalculation.expectedYield, { decimals: 0 }) : 0} kg.`}
         category={WorkCategory.HARVESTING}
         fields={fields}
-        workEstimate={harvestCalculation?.workEstimate || { totalWork: 0 }}
+        workEstimate={displayedWorkEstimate}
         workFactors={harvestCalculation?.workFactors}
         onSubmit={handleSubmit}
         submitLabel="Start Harvesting Activity"
@@ -216,9 +224,9 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
             </div>
             <div className="flex justify-between py-1">
               <span>Selected Storage:</span>
-              <span className={selectedCapacity <= 0 ? 'text-red-600' : selectedCapacity >= requiredLitres ? 'text-green-600' : 'text-amber-600'}>{selectedCapacity.toLocaleString()} L / {requiredLitres.toLocaleString()} L</span>
+              <span className={additionalRequiredLitres <= 0 || selectedCapacity >= additionalRequiredLitres ? 'text-green-600' : selectedCapacity <= 0 ? 'text-red-600' : 'text-amber-600'}>{selectedCapacity.toLocaleString()} L / {additionalRequiredLitres.toLocaleString()} L additional</span>
             </div>
-            {selectedCapacity > 0 && selectedCapacity < requiredLitres && <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Selected vessels hold only {selectedCapacity.toLocaleString()} L of the projected {requiredLitres.toLocaleString()} L. Harvesting can begin, then will pause when these vessels are full so you can continue with more capacity later.</div>}
+            {selectedCapacity > 0 && selectedCapacity < additionalRequiredLitres && <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Selected vessels add {selectedCapacity.toLocaleString()} L of the remaining {additionalRequiredLitres.toLocaleString()} L requirement. Harvesting will pause again if that capacity fills.</div>}
             {compatibleBatch && <div className="mt-2 rounded border border-cyan-200 bg-cyan-50 p-2 text-xs text-cyan-900">This harvest will continue the existing {compatibleBatch.grape} batch. Select additional vessels only when its current allocation needs more capacity.</div>}
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {availableVessels.length === 0 && <div className="text-sm text-red-600 sm:col-span-2">Buy a Cellar Vessel before harvesting.</div>}

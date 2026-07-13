@@ -239,6 +239,10 @@ vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
 describe('buy grape market service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.saveInventoryBatch.mockResolvedValue(true);
+    mocks.deleteInventoryBatch.mockResolvedValue(undefined);
+    mocks.releaseStorageAllocationPlan.mockResolvedValue(true);
+    mocks.releaseBuyMarketOfferUnits.mockResolvedValue({ released: true, error: null });
     mocks.getCurrentCompanyId.mockReturnValue('company-1');
     mocks.getGameState.mockReturnValue({
       week: 3,
@@ -342,6 +346,18 @@ describe('buy grape market service', () => {
     expect(mocks.claimBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', 'offer-1', 120);
     expect(mocks.addMessage).toHaveBeenCalledOnce();
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
+  });
+
+  it('restores claimed stock when saving fails before a batch exists', async () => {
+    mocks.saveInventoryBatch.mockRejectedValueOnce(new Error('save failed'));
+    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
+
+    const result = await purchaseBuyGrapeOffer('offer-1', 120, ['vessel-1']);
+
+    expect(result.success).toBe(false);
+    expect(mocks.releaseStorageAllocationPlan).toHaveBeenCalledWith('plan-1');
+    expect(mocks.releaseBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', 'offer-1', 120);
+    expect(mocks.deleteInventoryBatch).not.toHaveBeenCalled();
   });
 
   it('creates deterministic fermenting batches from the stored market offer preview contract', async () => {

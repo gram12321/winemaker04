@@ -228,15 +228,6 @@ export async function activateStorageVesselPlan(companyId: string, planId: strin
   return { data: data ? fromPlanRow(data as unknown as AllocationPlanRow) : null, error };
 }
 
-export async function updateStorageVesselPlanVolume(companyId: string, planId: string, volumeLitres: number) {
-  return supabase
-    .from('storage_vessel_allocation_plans')
-    .update({ required_litres: volumeLitres })
-    .eq('company_id', companyId)
-    .eq('id', planId)
-    .in('status', ['reserved', 'active']);
-}
-
 export async function updateStorageVesselAllocationFill(companyId: string, planId: string, filledLitres: number) {
   const { data, error } = await supabase
     .from('storage_vessel_allocations')

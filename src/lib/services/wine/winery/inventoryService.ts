@@ -1,7 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics, GameDate, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Vineyard, WineBatchOriginSnapshot, WineBatchState } from '../../../types/types';
-import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
+import { appendStorageBackedHarvestBatch, saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
 import { consumeStorageBackedWineBatch } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
@@ -30,7 +30,7 @@ import { appendAnchorEffects, buildAnchorEffectsFromNeutral, diffAnchorEffects }
 import { CrushingOptions, modifyCrushingCharacteristics } from '../characteristics/crushingCharacteristics';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { applyCrushingToWineAnchors, applyFermentationSetupToWineAnchors, applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
-import { activateStoragePlanForBatch, canStoragePlanHoldVolume, initializeHarvestVolumeLitres, recordBatchStorageVolume } from './storageVesselAllocationService';
+import { activateStoragePlanForBatch, canStoragePlanHoldVolume, initializeHarvestVolumeLitres } from './storageVesselAllocationService';
 
 const DEFAULT_TASTE_QUALITY_INDEX = 0.5;
 
@@ -715,13 +715,9 @@ export async function createWineBatchFromHarvest(
       throw new Error('Selected Storage Vessels do not have enough capacity for this harvest.');
     }
 
-    await saveWineBatch(combinedBatch);
-    if (existingBatch.storagePlanId === storagePlanId) {
-      if (!(await recordBatchStorageVolume(combinedBatch.id, combinedBatch.volumeLitres))) {
-        throw new Error('Could not update Storage Vessel volume for the harvested batch.');
-      }
-    } else if (!(await activateStoragePlanForBatch(storagePlanId, combinedBatch.id, combinedBatch.volumeLitres))) {
-      throw new Error('Could not activate Storage Vessel allocation for the harvested batch.');
+    const companyId = getCurrentCompanyId();
+    if (!companyId || !(await appendStorageBackedHarvestBatch(companyId, combinedBatch))) {
+      throw new Error('Could not update the harvested batch and Storage Vessel volume.');
     }
     triggerGameUpdate();
     return combinedBatch;

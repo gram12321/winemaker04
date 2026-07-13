@@ -18,7 +18,6 @@ export interface TransactionData {
   description: string;
   category: string;
   recurring: boolean;
-  money: number;
   week: number;
   season: Season;
   year: number;
@@ -44,41 +43,35 @@ function mapTransactionFromDB(row: any): Transaction {
   };
 }
 
-export const insertTransaction = async (transactionData: TransactionData): Promise<{ success: boolean; data?: any; error?: string }> => {
+async function recordCompanyTransaction(transactionData: TransactionData, requireFunds: boolean): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    const { data, error } = await supabase
-      .from(TRANSACTIONS_TABLE)
-      .insert(transactionData)
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('record_company_transaction', {
+      p_company_id: transactionData.company_id,
+      p_amount: transactionData.amount,
+      p_description: transactionData.description,
+      p_category: transactionData.category,
+      p_recurring: transactionData.recurring,
+      p_week: transactionData.week,
+      p_season: transactionData.season,
+      p_year: transactionData.year,
+      p_require_funds: requireFunds,
+    });
 
     if (error) {
       return { success: false, error: error.message };
     }
+    if (!data) return { success: false, error: requireFunds ? 'Insufficient funds.' : 'Could not record transaction.' };
 
     return { success: true, data };
   } catch (error: any) {
     console.error('Error inserting transaction:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
-};
-
-export async function insertTransactionWithFundsCheck(transactionData: TransactionData): Promise<{ success: boolean; data?: any; error?: string }> {
-  const { data, error } = await supabase.rpc('record_company_transaction', {
-    p_company_id: transactionData.company_id,
-    p_amount: transactionData.amount,
-    p_description: transactionData.description,
-    p_category: transactionData.category,
-    p_recurring: transactionData.recurring,
-    p_week: transactionData.week,
-    p_season: transactionData.season,
-    p_year: transactionData.year,
-    p_require_funds: true,
-  });
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: 'Insufficient funds.' };
-  return { success: true, data };
 }
+
+export const insertTransaction = (transactionData: TransactionData) => recordCompanyTransaction(transactionData, false);
+
+export const insertTransactionWithFundsCheck = (transactionData: TransactionData) => recordCompanyTransaction(transactionData, true);
 
 export const loadTransactions = async (): Promise<Transaction[]> => {
   try {

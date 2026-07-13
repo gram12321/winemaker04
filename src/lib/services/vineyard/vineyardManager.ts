@@ -816,8 +816,8 @@ export async function handlePartialHarvesting(
     // Get the harvest progress as a percentage (0-1)
     const harvestProgress = workProgress;
     
-    // Calculate how much should be harvested by now based on current yield
-    const expectedHarvestedByNow = currentTotalYield * harvestProgress;
+    const harvestBaseline = activity.params.harvestBaseline || 0;
+    const expectedHarvestedByNow = calculateHarvestedByProgress(currentTotalYield, harvestBaseline, harvestProgress);
     const previouslyHarvested = activity.params.harvestedSoFar || 0;
     
     // Calculate how much to harvest this tick
@@ -898,5 +898,9 @@ export async function handlePartialHarvesting(
     console.error(`Error in partial harvesting for activity ${activity.id}:`, error);
   }
   return false;
+}
+
+export function calculateHarvestedByProgress(totalYield: number, harvestBaseline: number, progress: number): number {
+  return harvestBaseline + Math.max(0, totalYield - harvestBaseline) * Math.max(0, Math.min(1, progress));
 }
 

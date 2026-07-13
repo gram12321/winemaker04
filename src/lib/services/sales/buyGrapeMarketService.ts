@@ -925,8 +925,10 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
   purchasedBatch.storagePlanId = storagePlan.planId;
   purchasedBatch.volumeLitres = initializeHarvestVolumeLitres(roundedQuantity);
 
+  let batchSaved = false;
   try {
     await saveInventoryBatch(purchasedBatch);
+    batchSaved = true;
     if (!(await activateStoragePlanForBatch(storagePlan.planId, purchasedBatch.id, purchasedBatch.volumeLitres))) {
       const deleted = await deleteInventoryBatch(purchasedBatch.id).catch(() => false);
       if (!deleted) {
@@ -959,7 +961,7 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
 
     return { success: true };
   } catch (purchaseError) {
-    const deleted = storagePlan.planId ? await deleteInventoryBatch(purchasedBatch.id).catch(() => false) : true;
+    const deleted = !batchSaved || (storagePlan.planId ? await deleteInventoryBatch(purchasedBatch.id).catch(() => false) : true);
     const released = storagePlan.planId ? await releaseStorageAllocationPlan(storagePlan.planId) : true;
     if (!deleted || !released) {
       console.error('Failed to clean up a partially completed market purchase:', purchaseError);

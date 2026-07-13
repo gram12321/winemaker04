@@ -173,6 +173,13 @@ describe('vineyard lifecycle services', () => {
     mocks.getGameState.mockReturnValue({ week: 5, season: 'Fall', currentYear: 2026 });
   });
 
+  it('progresses a restarted harvest across only the yield remaining after its baseline', async () => {
+    const { calculateHarvestedByProgress } = await import('@/lib/services/vineyard/vineyardManager');
+    expect(calculateHarvestedByProgress(1000, 400, 0)).toBe(400);
+    expect(calculateHarvestedByProgress(1000, 400, 0.5)).toBe(700);
+    expect(calculateHarvestedByProgress(1000, 400, 1)).toBe(1000);
+  });
+
   afterEach(() => {
   });
 

@@ -2,12 +2,14 @@
 import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
-import { addTransaction } from '../finance/financeService';
-import { consumeInventoryBatchQuantity, getInventoryBatchById } from '../wine/winery/inventoryService';
+import { syncPersistedTransaction } from '../finance/financeService';
+import { getInventoryBatchById } from '../wine/winery/inventoryService';
+import { sellStorageBackedWineBatch } from '@/lib/database/activities/inventoryDB';
 import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { getGameState } from '../core/gameState';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import {
   BASE_GRAPE_PRICE_PER_KG,
   FAVORITE_GRAPE_PRIMARY_BONUS,
@@ -241,17 +243,22 @@ export async function sellGrapes(
 
   const pricing = calculateGrapeSalePrice(batch, buyer, prestige, floorPriceOverride, quantityKg);
 
-  // Remove sold grapes from inventory, preserving the remainder when partially sold.
-  const inventoryUpdated = await consumeInventoryBatchQuantity(batchId, quantityKg);
-  if (!inventoryUpdated) return { success: false, revenue: 0, error: 'Failed to update grape inventory' };
-
-  // Record the transaction
-  await addTransaction(
-    pricing.totalRevenue,
-    `Grape Sale: ${quantityKg} kg ${batch.grape} → ${buyer.name} (${pricing.buyerMultiplier.toFixed(2)}x multiplier, ${pricing.relationshipMultiplier.toFixed(2)}x relationship)`,
-    TRANSACTION_CATEGORIES.GRAPE_SALES,
-    false
-  );
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return { success: false, revenue: 0, error: 'No active company selected' };
+  const description = `Grape Sale: ${quantityKg} kg ${batch.grape} → ${buyer.name} (${pricing.buyerMultiplier.toFixed(2)}x multiplier, ${pricing.relationshipMultiplier.toFixed(2)}x relationship)`;
+  const sale = await sellStorageBackedWineBatch({
+    companyId,
+    batchId,
+    quantity: quantityKg,
+    amount: pricing.totalRevenue,
+    description,
+    category: TRANSACTION_CATEGORIES.GRAPE_SALES,
+    week: gameState.week ?? 1,
+    season: gameState.season ?? 'Spring',
+    year: currentYear,
+  });
+  if (sale.error || !sale.data) return { success: false, revenue: 0, error: 'Failed to complete grape sale' };
+  await syncPersistedTransaction(sale.data);
 
   // Update cooperative membership (after money is recorded, fire-and-forget on error)
   if (buyer.id === 'winzergenossenschaft') {
@@ -275,13 +282,16 @@ export async function sellGrapes(
     console.error('Failed to record buyer loyalty sale:', err);
   }
 
-  // Notify player
-  await notificationService.addMessage(
-    `Sold ${quantityKg} kg of ${batch.grape} to ${buyer.name} for ${formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 })}`,
-    'sellGrapesService.sellGrapes',
-    'Grape Sale',
-    NotificationCategory.WINEMAKING_PROCESS
-  );
+  try {
+    await notificationService.addMessage(
+      `Sold ${quantityKg} kg of ${batch.grape} to ${buyer.name} for ${formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 })}`,
+      'sellGrapesService.sellGrapes',
+      'Grape Sale',
+      NotificationCategory.WINEMAKING_PROCESS
+    );
+  } catch (error) {
+    console.warn('Grape sale completed without notification:', error);
+  }
 
   triggerTopicUpdate('wine_batches');
 

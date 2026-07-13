@@ -8,7 +8,6 @@ import {
   releaseStorageVesselAllocation,
   reserveStorageVesselPlan,
   updateStorageVesselAllocationFill,
-  updateStorageVesselPlanVolume,
 } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
@@ -22,6 +21,21 @@ export interface StorageCapacitySummary {
   reservedLitres: number;
   inUseLitres: number;
   availableVesselCount: number;
+}
+
+export function calculateStorageCapacitySummary(vessels: StorageVessel[]): StorageCapacitySummary {
+  return vessels.reduce<StorageCapacitySummary>((summary, vessel) => {
+    summary.totalLitres += vessel.capacityLitres;
+    if (vessel.operationalStatus === 'operational' && vessel.occupancy === 'available') {
+      summary.availableLitres += vessel.capacityLitres;
+      summary.availableVesselCount += 1;
+    } else if (vessel.occupancy === 'reserved') {
+      summary.reservedLitres += vessel.capacityLitres;
+    } else if (vessel.occupancy === 'in_use') {
+      summary.inUseLitres += vessel.capacityLitres;
+    }
+    return summary;
+  }, { totalLitres: 0, availableLitres: 0, reservedLitres: 0, inUseLitres: 0, availableVesselCount: 0 });
 }
 
 function currentGameDate() {
@@ -54,18 +68,7 @@ export async function getStorageCapacitySummary(): Promise<StorageCapacitySummar
   if (!companyId) return { totalLitres: 0, availableLitres: 0, reservedLitres: 0, inUseLitres: 0, availableVesselCount: 0 };
   const { data: vessels, error: vesselError } = await getCompanyStorageVessels(companyId);
   if (vesselError) throw vesselError;
-  return vessels.reduce<StorageCapacitySummary>((summary, vessel) => {
-    summary.totalLitres += vessel.capacityLitres;
-    if (vessel.operationalStatus === 'operational' && vessel.occupancy === 'available') {
-      summary.availableLitres += vessel.capacityLitres;
-      summary.availableVesselCount += 1;
-    } else if (vessel.occupancy === 'reserved') {
-      summary.reservedLitres += vessel.capacityLitres;
-    } else if (vessel.occupancy === 'in_use') {
-      summary.inUseLitres += vessel.capacityLitres;
-    }
-    return summary;
-  }, { totalLitres: 0, availableLitres: 0, reservedLitres: 0, inUseLitres: 0, availableVesselCount: 0 });
+  return calculateStorageCapacitySummary(vessels);
 }
 
 export async function createStorageAllocationPlan(input: {
@@ -122,26 +125,6 @@ export async function activateStoragePlanForBatch(planId: string, batchId: strin
   return !filled.error;
 }
 
-export async function recordBatchStorageVolume(batchId: string, volumeLitres: number): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  if (!companyId) return false;
-  const plansResult = await getCompanyStorageAllocationPlans(companyId);
-  if (plansResult.error) throw plansResult.error;
-  const plan = plansResult.data.find((candidate) => candidate.wineBatchId === batchId && candidate.status === 'active');
-  if (!plan) return false;
-  const volume = Math.max(0, volumeLitres);
-  const allocationsResult = await getCompanyStorageAllocations(companyId);
-  if (allocationsResult.error) throw allocationsResult.error;
-  const assignedLitres = allocationsResult.data
-    .filter((allocation) => allocation.planId === plan.id && !allocation.releasedAt)
-    .reduce((total, allocation) => total + allocation.assignedCapacityLitres, 0);
-  if (volume > assignedLitres) return false;
-  const updated = await updateStorageVesselPlanVolume(companyId, plan.id, volume);
-  if (updated.error) return false;
-  const filled = await updateStorageVesselAllocationFill(companyId, plan.id, volume);
-  return !filled.error;
-}
-
 export async function canStoragePlanHoldVolume(planId: string, volumeLitres: number): Promise<boolean> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return false;
@@ -183,11 +166,6 @@ export async function assertBatchHasUsableStorage(batch: WineBatch): Promise<{ v
     return { valid: false, reason: 'This batch does not have enough active Storage Vessel capacity.' };
   }
   return { valid: true };
-}
-
-export async function releaseStoragePlanForBatch(batch: WineBatch): Promise<boolean> {
-  if (!batch.storagePlanId) return true;
-  return releaseStorageAllocationPlan(batch.storagePlanId);
 }
 
 export async function releaseStorageAllocationPlan(planId: string): Promise<boolean> {

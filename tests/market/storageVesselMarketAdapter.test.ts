@@ -6,8 +6,10 @@ const mocks = vi.hoisted(() => ({
   getCompanyBuyMarketOffer: vi.fn(),
   getCompanyBuyMarketOffers: vi.fn(),
   claimBuyMarketOfferUnits: vi.fn(async () => ({ claimed: true, error: null })),
+  releaseBuyMarketOfferUnits: vi.fn(async () => ({ released: true, error: null })),
   upsertBuyMarketOffers: vi.fn(async () => ({ error: null })),
-  createPurchasedStorageVessels: vi.fn(async () => []),
+  createPurchasedStorageVessels: vi.fn(async () => [] as Array<{ id: string }>),
+  removePurchasedStorageVessels: vi.fn(async () => undefined),
   addTransaction: vi.fn(async () => undefined),
   addMessage: vi.fn(async () => undefined),
   triggerTopicUpdate: vi.fn(),
@@ -20,9 +22,13 @@ vi.mock('@/lib/database/market/buyMarketOffersDB', () => ({
   getCompanyBuyMarketOffer: mocks.getCompanyBuyMarketOffer,
   getCompanyBuyMarketOffers: mocks.getCompanyBuyMarketOffers,
   claimBuyMarketOfferUnits: mocks.claimBuyMarketOfferUnits,
+  releaseBuyMarketOfferUnits: mocks.releaseBuyMarketOfferUnits,
   upsertBuyMarketOffers: mocks.upsertBuyMarketOffers,
 }));
-vi.mock('@/lib/services/wine/winery/storageVesselService', () => ({ createPurchasedStorageVessels: mocks.createPurchasedStorageVessels }));
+vi.mock('@/lib/services/wine/winery/storageVesselService', () => ({
+  createPurchasedStorageVessels: mocks.createPurchasedStorageVessels,
+  removePurchasedStorageVessels: mocks.removePurchasedStorageVessels,
+}));
 vi.mock('@/lib/services/finance/financeService', () => ({ addTransaction: mocks.addTransaction }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
@@ -48,6 +54,9 @@ describe('Storage Vessel market adapter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getCompanyBuyMarketOffer.mockResolvedValue({ data: offer, error: null });
+    mocks.createPurchasedStorageVessels.mockResolvedValue([]);
+    mocks.addTransaction.mockResolvedValue(undefined);
+    mocks.removePurchasedStorageVessels.mockResolvedValue(undefined);
   });
 
   it('creates one individually owned fixed-capacity vessel per purchased cask', async () => {
@@ -71,5 +80,17 @@ describe('Storage Vessel market adapter', () => {
     expect(result.success).toBe(false);
     expect(mocks.createPurchasedStorageVessels).not.toHaveBeenCalled();
     expect(mocks.addTransaction).not.toHaveBeenCalled();
+  });
+
+  it('does not restore offer stock when created vessels could not be removed', async () => {
+    mocks.createPurchasedStorageVessels.mockResolvedValueOnce([{ id: 'vessel-1' }]);
+    mocks.addTransaction.mockRejectedValueOnce(new Error('insufficient funds'));
+    mocks.removePurchasedStorageVessels.mockRejectedValueOnce(new Error('delete failed'));
+    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+
+    const result = await purchaseStorageVesselOffer(offer.offerId, 1);
+
+    expect(result.error).toContain('reconciliation');
+    expect(mocks.releaseBuyMarketOfferUnits).not.toHaveBeenCalled();
   });
 });

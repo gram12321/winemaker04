@@ -128,3 +128,32 @@ export async function updateForwardContract(contractId: string, patch: Record<st
     throw error;
   }
 }
+
+export async function deliverForwardContractInventory(input: {
+  companyId: string;
+  contractId: string;
+  consumptions: Array<{ batchId: string; quantity: number }>;
+  newDelivered: number;
+  fulfilled: boolean;
+  paymentAmount: number;
+  paymentDescription: string;
+  paymentCategory: string;
+  week: number;
+  season: string;
+  year: number;
+}) {
+  const { data, error } = await supabase.rpc('deliver_forward_contract_inventory', {
+    p_company_id: input.companyId,
+    p_contract_id: input.contractId,
+    p_consumptions: input.consumptions,
+    p_new_delivered: input.newDelivered,
+    p_fulfilled: input.fulfilled,
+    p_payment_amount: input.paymentAmount,
+    p_payment_description: input.paymentDescription,
+    p_payment_category: input.paymentCategory,
+    p_week: input.week,
+    p_season: input.season,
+    p_year: input.year,
+  });
+  return { data, error };
+}

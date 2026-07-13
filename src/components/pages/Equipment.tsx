@@ -4,6 +4,7 @@ import { useGameStateWithData, useLoadingState } from '@/hooks';
 import {
   getAllActivities,
   getAllWineBatches,
+  calculateStorageCapacitySummary,
   getOwnedStorageVessels,
   getStorageVesselDisplayName,
   getWineBatchDisplayName,
@@ -26,18 +27,7 @@ export const Equipment: React.FC<EquipmentProps> = () => {
   const [isBuyMarketOpen, setIsBuyMarketOpen] = useState(false);
   const [emptyingRequest, setEmptyingRequest] = useState<{ vessel: StorageVessel; batch: WineBatch } | null>(null);
   const [emptyingError, setEmptyingError] = useState<string | null>(null);
-  const summary = useMemo(
-    () => vessels.reduce(
-      (total, vessel) => ({
-        total: total.total + vessel.capacityLitres,
-        available: total.available + (vessel.occupancy === 'available' ? vessel.capacityLitres : 0),
-        reserved: total.reserved + (vessel.occupancy === 'reserved' ? vessel.capacityLitres : 0),
-        inUse: total.inUse + (vessel.occupancy === 'in_use' ? vessel.capacityLitres : 0),
-      }),
-      { total: 0, available: 0, reserved: 0, inUse: 0 },
-    ),
-    [vessels],
-  );
+  const summary = useMemo(() => calculateStorageCapacitySummary(vessels), [vessels]);
 
   const handleEmptyVessel = useCallback(async () => {
     if (!emptyingRequest) return;
@@ -61,10 +51,10 @@ export const Equipment: React.FC<EquipmentProps> = () => {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Vessels</div><div className="text-lg font-semibold">{vessels.length}</div></div>
-        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Total capacity</div><div className="text-lg font-semibold">{formatNumber(summary.total, { decimals: 0 })} L</div></div>
-        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Available</div><div className="text-lg font-semibold">{formatNumber(summary.available, { decimals: 0 })} L</div></div>
-        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Reserved</div><div className="text-lg font-semibold">{formatNumber(summary.reserved, { decimals: 0 })} L</div></div>
-        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">In use</div><div className="text-lg font-semibold">{formatNumber(summary.inUse, { decimals: 0 })} L</div></div>
+        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Total capacity</div><div className="text-lg font-semibold">{formatNumber(summary.totalLitres, { decimals: 0 })} L</div></div>
+        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Available</div><div className="text-lg font-semibold">{formatNumber(summary.availableLitres, { decimals: 0 })} L</div></div>
+        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Reserved</div><div className="text-lg font-semibold">{formatNumber(summary.reservedLitres, { decimals: 0 })} L</div></div>
+        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">In use</div><div className="text-lg font-semibold">{formatNumber(summary.inUseLitres, { decimals: 0 })} L</div></div>
       </div>
 
       <section className="overflow-hidden rounded-lg border bg-white shadow-sm">

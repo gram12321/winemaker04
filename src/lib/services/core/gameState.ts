@@ -162,6 +162,25 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
   }
 };
 
+/**
+ * Apply a balance already committed by a database transaction without writing
+ * that value back over a potentially newer balance.
+ */
+export const syncPersistedMoney = async (money: number): Promise<void> => {
+  const oldMoney = gameState.money;
+  gameState = { ...gameState, money };
+  if (currentCompany) currentCompany = { ...currentCompany, money };
+
+  if (money !== oldMoney) {
+    try {
+      await updateCompanyValuePrestige(money);
+    } catch (error) {
+      console.error('Failed to update company-value prestige:', error);
+    }
+    prestigeCache = null;
+  }
+};
+
 export const setActiveCompany = async (company: Company): Promise<void> => {
   // Check if this is the same company that's already active
   if (currentCompany && currentCompany.id === company.id) {

@@ -14,8 +14,6 @@ const mocks = vi.hoisted(() => ({
   getCompanyStorageAllocationPlans: vi.fn(async () => ({ data: [{ id: 'plan-1', status: 'active', wineBatchId: 'batch-1' }], error: null })),
   getCompanyStorageAllocations: vi.fn(async () => ({ data: [{ planId: 'plan-1', vesselId: 'vessel-1', filledLitres: 500, assignedCapacityLitres: 500, releasedAt: undefined }], error: null })),
   releaseStorageVesselAllocation: vi.fn(async () => ({ error: null })),
-  updateStorageVesselPlanVolume: vi.fn(async () => ({ error: null })),
-  updateStorageVesselAllocationFill: vi.fn(async () => ({ error: null })),
   triggerTopicUpdate: vi.fn(),
 }));
 
