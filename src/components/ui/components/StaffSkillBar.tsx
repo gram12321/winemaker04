@@ -6,7 +6,7 @@ import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../sh
 
 interface StaffSkillBarProps {
   label: string;
-  skillKey: 'field' | 'winery' | 'financeAndStaff' | 'sales' | 'administrationAndResearch';
+  skillKey: keyof Staff['skills'];
   staff: Staff;
   isRelevant?: boolean; // highlight when relevant for current activity
   taskCount?: number; // multitasking count for this staff
@@ -81,7 +81,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className="w-12 text-xs text-gray-600">{label}</div>
+      <div className="w-20 shrink-0 text-xs text-gray-600">{label}</div>
       <div className="flex-1">
         <UnifiedTooltip
           content={buildTooltipContent()}
@@ -132,7 +132,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
 
 interface StaffSkillBarsListProps {
   staff: Staff;
-  relevantSkill?: 'field' | 'winery' | 'financeAndStaff' | 'sales' | 'administrationAndResearch';
+  relevantSkill?: keyof Staff['skills'];
   taskCountMap?: Map<string, number>;
   className?: string;
 }
@@ -146,6 +146,7 @@ export const StaffSkillBarsList: React.FC<StaffSkillBarsListProps> = ({
   const skills: Array<{ key: StaffSkillBarProps['skillKey']; label: string }> = [
     { key: 'field', label: 'Field' },
     { key: 'winery', label: 'Winery' },
+    { key: 'maintenance', label: 'Maintenance' },
     { key: 'financeAndStaff', label: 'Finance' },
     { key: 'sales', label: 'Sales' },
     { key: 'administrationAndResearch', label: 'Admin & Research' }

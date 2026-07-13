@@ -43,7 +43,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 
 ### Finance, Staff, and Progression
 
-- Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active. Maintenance is a winery-skilled task class; the default Winery Team handles it alongside crushing and fermentation.
+- Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active. Maintenance is a distinct persisted staff skill and task class; the default Maintenance Team handles it separately from Winery's crushing and fermentation work.
 - Founders have zero wages, receive yearly positive-profit returns, and can be bought out into salaried staff.
 - Prestige is derived from the `prestige_events` ledger with permanent and decaying sources; it feeds pricing, land value, gates, achievements, and UI.
 - Research projects use work profiles and prestige/prerequisite/company-value/buyer-loyalty/achievement gates. Active unlocks cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Current permanent effect: vineyard health-decay multiplier.

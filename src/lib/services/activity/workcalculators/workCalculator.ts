@@ -1,5 +1,5 @@
 import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { Staff, WorkCategory } from '@/lib/types/types';
+import { Staff, StaffSkills, WorkCategory } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
 import { calculateEffectiveSkill } from '@/lib/services/user/staffService';
 
@@ -227,15 +227,20 @@ export function calculateEstimatedWeeks(
  * @returns The skill name (e.g., 'Field', 'Winery')
  */
 export function getRelevantSkillName(category: WorkCategory): string {
-  const skillKey = WORK_CATEGORY_INFO[category].skill;
+  const skillKey = getRelevantSkillKey(category);
 
   const skillNames: Record<string, string> = {
     field: 'Field',
     winery: 'Winery',
-    administration: 'Administration',
+    maintenance: 'Maintenance',
+    financeAndStaff: 'Finance & Staff',
     sales: 'Sales',
     administrationAndResearch: 'Administration & Research'
   };
 
   return skillNames[skillKey] || 'General';
+}
+
+export function getRelevantSkillKey(category: WorkCategory): keyof StaffSkills {
+  return WORK_CATEGORY_INFO[category].skill;
 }

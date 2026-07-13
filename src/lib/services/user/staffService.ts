@@ -65,6 +65,7 @@ export function generateRandomSkills(skillModifier: number = 0.5, specialization
   return {
     field: getSkillValue(specializations.includes('field')),
     winery: getSkillValue(specializations.includes('winery')),
+    maintenance: getSkillValue(specializations.includes('maintenance')),
     financeAndStaff: getSkillValue(specializations.includes('financeAndStaff')),
     sales: getSkillValue(specializations.includes('sales')),
     administrationAndResearch: getSkillValue(specializations.includes('administrationAndResearch'))

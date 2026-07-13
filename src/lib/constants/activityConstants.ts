@@ -157,7 +157,7 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
     displayName: 'Maintenance',
     icon: 'icon_maintenance.webp',
     isDensityBased: false,
-    skill: 'winery'
+    skill: 'maintenance'
   },
   [WorkCategory.STAFF_SEARCH]: {
     displayName: 'Staff Search',

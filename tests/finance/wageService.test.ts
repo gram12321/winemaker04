@@ -5,6 +5,7 @@ import type { StaffSkills } from '@/lib/types/types';
 const baseSkills: StaffSkills = {
   field: 0.5,
   winery: 0.5,
+  maintenance: 0.5,
   administrationAndResearch: 0.5,
   sales: 0.5,
   financeAndStaff: 0.5
@@ -15,6 +16,7 @@ describe('calculateWage', () => {
     const skills: StaffSkills = {
       field: 0.5,
       winery: 0.5,
+      maintenance: 0.5,
       administrationAndResearch: 0.5,
       sales: 0.5,
       financeAndStaff: 0.5
@@ -31,6 +33,7 @@ describe('calculateWage', () => {
     const lowSkills: StaffSkills = {
       field: 0.3,
       winery: 0.3,
+      maintenance: 0.3,
       administrationAndResearch: 0.3,
       sales: 0.3,
       financeAndStaff: 0.3
@@ -39,6 +42,7 @@ describe('calculateWage', () => {
     const highSkills: StaffSkills = {
       field: 0.8,
       winery: 0.8,
+      maintenance: 0.8,
       administrationAndResearch: 0.8,
       sales: 0.8,
       financeAndStaff: 0.8
@@ -79,6 +83,7 @@ describe('calculateWage', () => {
     const skills: StaffSkills = {
       field: 0.333,
       winery: 0.333,
+      maintenance: 0.333,
       administrationAndResearch: 0.333,
       sales: 0.333,
       financeAndStaff: 0.333
@@ -95,6 +100,7 @@ describe('calculateWage', () => {
     const minSkills: StaffSkills = {
       field: 0,
       winery: 0,
+      maintenance: 0,
       administrationAndResearch: 0,
       sales: 0,
       financeAndStaff: 0
@@ -110,6 +116,7 @@ describe('calculateWage', () => {
     const maxSkills: StaffSkills = {
       field: 1.0,
       winery: 1.0,
+      maintenance: 1.0,
       administrationAndResearch: 1.0,
       sales: 1.0,
       financeAndStaff: 1.0
@@ -125,6 +132,7 @@ describe('calculateWage', () => {
     const mixedSkills: StaffSkills = {
       field: 0.8,
       winery: 0.6,
+      maintenance: 0.6,
       administrationAndResearch: 0.4,
       sales: 0.7,
       financeAndStaff: 0.5

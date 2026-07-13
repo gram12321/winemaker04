@@ -884,6 +884,7 @@ export enum NotificationCategory {
 export interface StaffSkills {
   field: number;        // Vineyard work
   winery: number;       // Wine production
+  maintenance: number;  // Cellar and equipment upkeep
   financeAndStaff: number; // Finance and staff management
   sales: number;        // Sales and marketing
   administrationAndResearch: number;  // Administration and research
