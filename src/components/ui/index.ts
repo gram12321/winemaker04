@@ -64,7 +64,6 @@ export { MarketWindow } from './market/MarketWindow';
 export { MarketOfferTable } from './market/MarketOfferTable.tsx';
 export { MarketQuickBuyRowAction } from './market/MarketQuickBuyRowAction';
 export { StorageVesselMarketPanel } from './market/StorageVesselMarketPanel';
-export { StorageVesselInventory } from './wine/StorageVesselInventory';
 
 // Type exports (for default exports that also export types)
 export type { ActivityOptionField, ActivityWorkEstimate } from './activities/activityOptionsModal';

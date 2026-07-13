@@ -271,6 +271,33 @@ export async function releaseStorageVesselAllocation(companyId: string, planId: 
     .is('released_at', null);
 }
 
+export async function completeEmptyStorageVessel(input: {
+  companyId: string;
+  batchId: string;
+  planId: string;
+  vesselId: string;
+  remainingLitres: number;
+  remainingQuantity: number;
+  releasedAt: string;
+  releasedYear: number;
+  releasedSeason: string;
+  releasedWeek: number;
+}) {
+  const { data, error } = await supabase.rpc('complete_empty_storage_vessel', {
+    p_company_id: input.companyId,
+    p_batch_id: input.batchId,
+    p_plan_id: input.planId,
+    p_vessel_id: input.vesselId,
+    p_remaining_litres: input.remainingLitres,
+    p_remaining_quantity: input.remainingQuantity,
+    p_released_at: input.releasedAt,
+    p_released_year: input.releasedYear,
+    p_released_season: input.releasedSeason,
+    p_released_week: input.releasedWeek,
+  });
+  return { completed: Boolean(data), error };
+}
+
 export async function releaseStorageVesselPlan(companyId: string, planId: string, date: { year: number; season: string; week: number }) {
   const releasedAt = new Date().toISOString();
   const allocations = await supabase

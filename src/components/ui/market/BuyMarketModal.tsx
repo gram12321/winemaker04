@@ -11,12 +11,19 @@ interface BuyMarketModalProps {
   initialMarket?: BuyMarketWareGroup;
 }
 
+const MARKET_PANELS: Record<BuyMarketWareGroup, React.ComponentType<{ onClose: () => void }>> = {
+  grapes: GrapeMarketPanel,
+  storage_vessels: StorageVesselMarketPanel,
+};
+
 const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose, initialMarket = 'grapes' }) => {
   const [activeDomain, setActiveDomain] = useState<BuyMarketWareGroup>(initialMarket);
 
   useEffect(() => {
     if (isOpen) setActiveDomain(initialMarket);
   }, [initialMarket, isOpen]);
+
+  const ActivePanel = MARKET_PANELS[activeDomain];
 
   return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
     <DialogContent className="dark w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
@@ -37,9 +44,7 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose, initia
         </Button>)}
       </div>
 
-      {activeDomain === 'grapes'
-        ? <GrapeMarketPanel key="grapes" onClose={onClose} />
-        : <StorageVesselMarketPanel key="storage_vessels" onClose={onClose} onPurchaseSuccess={onClose} />}
+      <ActivePanel key={activeDomain} onClose={onClose} />
     </DialogContent>
   </Dialog>;
 };

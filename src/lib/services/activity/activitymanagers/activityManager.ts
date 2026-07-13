@@ -124,7 +124,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     const result = await completeEmptyStorageVesselActivity(activity);
     if (!result.success) {
       notificationService.addMessage(result.error ?? 'The vessel could not be emptied.', 'winemaking.emptyVessel', 'Empty Vessel', NotificationCategory.WINEMAKING_PROCESS);
-      return;
+      throw new Error(result.error ?? 'The vessel could not be emptied.');
     }
     notificationService.addMessage(
       `Emptied ${result.emptiedLitres ?? 0} L of ${result.batch?.grape ?? 'wine'} from ${result.vesselName ?? 'the selected vessel'}. The remaining batch volume is ${result.remainingLitres ?? 0} L.`,

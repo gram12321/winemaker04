@@ -33,6 +33,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
   const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
   const [compatibleBatch, setCompatibleBatch] = useState<WineBatch | null>(null);
+  const [compatiblePlanHasCapacity, setCompatiblePlanHasCapacity] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,6 +63,17 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     return { workEstimate: { totalWork }, workFactors: factors, expectedYield };
   }, [vineyard]);
 
+  useEffect(() => {
+    if (!isOpen || !compatibleBatch?.storagePlanId || !harvestCalculation) {
+      setCompatiblePlanHasCapacity(false);
+      return;
+    }
+    const remainingYield = Math.max(0, harvestCalculation.expectedYield - compatibleBatch.quantity);
+    void canStoragePlanHoldVolume(compatibleBatch.storagePlanId, (compatibleBatch.volumeLitres ?? 0) + initializeHarvestVolumeLitres(remainingYield))
+      .then(setCompatiblePlanHasCapacity)
+      .catch(() => setCompatiblePlanHasCapacity(false));
+  }, [compatibleBatch, harvestCalculation, isOpen]);
+
   const weatherImpact = useMemo(() => {
     if (!vineyard) return null;
     const gameState = getGameState();
@@ -76,15 +88,15 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
   // Event handlers
   const handleSubmit = async () => {
     if (!vineyard || !harvestCalculation) return;
-    const requiredLitres = initializeHarvestVolumeLitres(harvestCalculation.expectedYield);
     const selectedCapacity = availableVessels.filter((vessel) => selectedVesselIds.includes(vessel.id)).reduce((total, vessel) => total + vessel.capacityLitres, 0);
+    const remainingYield = compatibleBatch ? Math.max(0, harvestCalculation.expectedYield - compatibleBatch.quantity) : 0;
     const compatibleHasCapacity = compatibleBatch?.storagePlanId && compatibleBatch.volumeLitres !== undefined
-      ? await canStoragePlanHoldVolume(compatibleBatch.storagePlanId, compatibleBatch.volumeLitres + requiredLitres)
+      ? await canStoragePlanHoldVolume(compatibleBatch.storagePlanId, compatibleBatch.volumeLitres + initializeHarvestVolumeLitres(remainingYield))
       : false;
     if (!compatibleHasCapacity && selectedCapacity <= 0) return;
 
     const activityId = uuidv4();
-    const initialParams = { grape: vineyard.grape, harvestedSoFar: 0, targetName: vineyard.name, outputBatchId: compatibleHasCapacity ? compatibleBatch!.id : uuidv4(), storageVesselIds: compatibleHasCapacity ? [] : selectedVesselIds };
+    const initialParams = { grape: vineyard.grape, harvestedSoFar: compatibleHasCapacity ? compatibleBatch!.quantity : 0, targetName: vineyard.name, outputBatchId: compatibleHasCapacity ? compatibleBatch!.id : uuidv4(), storageVesselIds: compatibleHasCapacity ? [] : selectedVesselIds };
     const creation = await createActivityWithResult({
       id: activityId,
       category: WorkCategory.HARVESTING,
@@ -126,7 +138,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     if (!weatherImpact?.allowed) return false;
     if (!harvestCalculation) return false;
     const selectedCapacity = availableVessels.filter((vessel) => selectedVesselIds.includes(vessel.id)).reduce((total, vessel) => total + vessel.capacityLitres, 0);
-    return selectedCapacity > 0;
+    return selectedCapacity > 0 || compatiblePlanHasCapacity;
   };
 
   const requiredLitres = harvestCalculation ? initializeHarvestVolumeLitres(harvestCalculation.expectedYield) : 0;

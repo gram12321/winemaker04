@@ -68,7 +68,6 @@ export * from './market/buyMarketDomainRegistry';
 export * from './market/storageVessels/storageVesselMarketAdapter';
 export * from './wine/winery/storageVesselService';
 export * from './wine/winery/storageVesselAllocationService';
-export * from './wine/winery/storageVesselEffectService';
 export * from './wine/winery/storageVesselMaintenanceService';
 
 // Prestige services

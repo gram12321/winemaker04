@@ -60,7 +60,10 @@ const mocks = vi.hoisted(() => ({
   })),
   deleteBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
   updateBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
+  claimBuyMarketOfferUnits: vi.fn(async () => ({ claimed: true, error: null })),
+  releaseBuyMarketOfferUnits: vi.fn(async () => ({ released: true, error: null })),
   saveInventoryBatch: vi.fn(async () => true),
+  deleteInventoryBatch: vi.fn(async () => undefined),
   createStorageAllocationPlan: vi.fn(async () => ({ planId: 'plan-1' })),
   activateStoragePlanForBatch: vi.fn(async () => true),
   releaseStorageAllocationPlan: vi.fn(async () => true),
@@ -219,6 +222,12 @@ vi.mock('@/hooks/useGameUpdates', () => ({
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   buildMarketPreviewBatch: mocks.buildMarketPreviewBatch,
   saveInventoryBatch: mocks.saveInventoryBatch,
+  deleteInventoryBatch: mocks.deleteInventoryBatch,
+}));
+
+vi.mock('@/lib/database/market/buyMarketOffersDB', () => ({
+  claimBuyMarketOfferUnits: mocks.claimBuyMarketOfferUnits,
+  releaseBuyMarketOfferUnits: mocks.releaseBuyMarketOfferUnits,
 }));
 vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
   initializeHarvestVolumeLitres: (kg: number) => Math.ceil(kg * 0.5),
@@ -329,11 +338,7 @@ describe('buy grape market service', () => {
     );
     expect(mocks.recordSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 'Bulk Supply Syndicate', 120, 2026, 480);
     expect(mocks.recordMarketSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 120, 2026, 'Spring');
-    expect(mocks.updateBuyOfferRow).toHaveBeenCalledWith(
-      'company-1',
-      'offer-1',
-      expect.objectContaining({ available_kg: 380 })
-    );
+    expect(mocks.claimBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', 'offer-1', 120);
     expect(mocks.addMessage).toHaveBeenCalledOnce();
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
   });

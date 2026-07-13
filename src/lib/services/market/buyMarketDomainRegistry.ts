@@ -10,9 +10,7 @@ import {
 } from './storageVessels/storageVesselMarketAdapter';
 import type { BuyMarketPurchaseResult, BuyMarketWareGroup } from '@/lib/types/market';
 
-export interface BuyMarketPurchaseInput {
-  storageVesselIds?: string[];
-}
+export type BuyMarketPurchaseInput = Record<string, unknown>;
 
 export interface BuyMarketDomainAdapter {
   id: BuyMarketWareGroup;
@@ -28,7 +26,7 @@ const adapters: Record<BuyMarketWareGroup, BuyMarketDomainAdapter> = {
     id: 'grapes',
     label: 'Grapes',
     ensureOffers: ensureBuyGrapeMarketHasData,
-    purchase: (offerId, quantity, input) => purchaseBuyGrapeOffer(offerId, quantity, input.storageVesselIds ?? []),
+    purchase: (offerId, quantity, input) => purchaseBuyGrapeOffer(offerId, quantity, Array.isArray(input.storageVesselIds) ? input.storageVesselIds.filter((id): id is string => typeof id === 'string') : []),
     refreshForSeason: refreshBuyGrapeMarketForSeason,
     processWeekly: processWeeklyBuyGrapeOfferDecay,
   },

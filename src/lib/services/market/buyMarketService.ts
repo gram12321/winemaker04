@@ -2,6 +2,7 @@ import { getCompanyBuyMarketOffer, getCompanyBuyMarketOffers } from '@/lib/datab
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { BuyMarketOfferRecord, BuyMarketPurchaseResult, BuyMarketWareGroup } from '@/lib/types/market';
 import { BUY_MARKET_DOMAINS, getBuyMarketDomainAdapter } from './buyMarketDomainRegistry';
+import type { BuyMarketPurchaseInput } from './buyMarketDomainRegistry';
 
 export async function getBuyMarketOffers(wareGroup?: BuyMarketWareGroup): Promise<BuyMarketOfferRecord[]> {
   const companyId = getCurrentCompanyId();
@@ -11,7 +12,7 @@ export async function getBuyMarketOffers(wareGroup?: BuyMarketWareGroup): Promis
   return data.filter((offer) => offer.availableUnits > 0);
 }
 
-export async function purchaseBuyMarketOffer(offerId: string, quantity: number, input: { storageVesselIds?: string[] } = {}): Promise<BuyMarketPurchaseResult> {
+export async function purchaseBuyMarketOffer(offerId: string, quantity: number, input: BuyMarketPurchaseInput = {}): Promise<BuyMarketPurchaseResult> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, error: 'No active company selected.' };
   const { data: offer, error } = await getCompanyBuyMarketOffer(companyId, offerId);

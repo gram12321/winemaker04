@@ -47,7 +47,7 @@ export async function createPurchasedStorageVessels(
 }
 
 export function getStorageVesselDisplayName(vessel: StorageVessel): string {
-  return `${vessel.productionYear} – ${vessel.capacityLitres.toLocaleString()} L ${vessel.material} ${vessel.vesselType.replace('_', ' ')}`;
+  return `${vessel.productionYear} - ${vessel.capacityLitres.toLocaleString()} L ${vessel.material} ${vessel.vesselType.replace('_', ' ')} #${vessel.id.slice(-4).toUpperCase()}`;
 }
 
 export async function removePurchasedStorageVessels(vesselIds: string[]): Promise<void> {

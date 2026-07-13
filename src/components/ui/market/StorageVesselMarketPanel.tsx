@@ -10,10 +10,9 @@ import { getGameState } from '@/lib/services/core/gameState';
 
 interface StorageVesselMarketPanelProps {
   onClose: () => void;
-  onPurchaseSuccess: () => void;
 }
 
-export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> = ({ onClose, onPurchaseSuccess }) => {
+export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> = ({ onClose }) => {
   const [offers, setOffers] = useState<StorageVesselMarketOffer[]>([]);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [quantityByOfferId, setQuantityByOfferId] = useState<Record<string, number>>({});
@@ -53,7 +52,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       render: (offer) => <div><div className="font-medium text-white">{offer.payload.capacityLitres} L {offer.payload.material === 'oak' ? 'Oak' : offer.payload.material} {offer.payload.vesselType.replace('_', ' ')}</div></div>,
     },
     { key: 'capacity', header: headerWithTooltip('Capacity', 'Fixed capacity for each individually owned vessel.'), sortable: true, className: 'text-right', render: (offer) => `${offer.payload.capacityLitres.toLocaleString()} L` },
-    { key: 'age', header: headerWithTooltip('Cask age', 'Production year and current cask age.'), sortable: true, className: 'text-right', render: (offer) => `${Math.max(0, (new Date().getFullYear() - offer.payload.productionYear))} years (${offer.payload.productionYear})` },
+    { key: 'age', header: headerWithTooltip('Cask age', 'Production year and current cask age.'), sortable: true, className: 'text-right', render: (offer) => `${Math.max(0, ((getGameState().currentYear ?? offer.payload.productionYear) - offer.payload.productionYear))} years (${offer.payload.productionYear})` },
     { key: 'quality', header: headerWithTooltip('Quality', 'Cask quality is shown now; its gameplay effects remain deferred.'), sortable: true, className: 'text-right', render: (offer) => <span className={getColorClass(offer.payload.qualityScore)}>{getQualityInfo(offer.payload.qualityScore).category} ({offer.payload.qualityScore.toFixed(2)})</span> },
     { key: 'available', header: headerWithTooltip('Supply', 'Finite supplier stock. Cask offers do not replenish during the season.'), sortable: true, className: 'text-right', render: (offer) => `${offer.availableUnits} vessels` },
     { key: 'price', header: headerWithTooltip('Price', 'Includes size, quality, supplier relationship, and company prestige.'), sortable: true, className: 'text-right text-amber-300', render: (offer) => formatNumber(offer.pricePerVessel, { currency: true, decimals: 0 }) },
@@ -72,11 +71,11 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
         setErrorByOfferId((current) => ({ ...current, [selectedOffer.id]: result.error ?? 'Purchase failed.' }));
         return;
       }
-      onPurchaseSuccess();
+      onClose();
     } finally {
       setLoading(false);
     }
-  }, [onPurchaseSuccess, selectedOffer, selectedQuantity]);
+  }, [onClose, selectedOffer, selectedQuantity]);
 
   const marketState = getGameState();
   const selectedRelationship = selectedOffer?.supplierLoyalty;
@@ -89,7 +88,6 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       </div>
       <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm"><span className="font-medium text-cyan-200">Storage Vessels</span><p className="mt-1 text-xs text-gray-300">Each purchase creates a separately owned vessel with a fixed capacity. Wine and operation effects will be assigned explicitly in a later winery workflow.</p></div>
       <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden"><div className="overflow-x-auto"><MarketOfferTable rows={sortedOffers} columns={columns} rowKey={(offer) => offer.id} sortKey={sortKey} sortDirection={sortDirection} onSort={(key) => { if (key !== sortKey) { setSortKey(key); setSortDirection('asc'); } else { setSortDirection((current) => current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc'); } }} selectedRowKey={selectedOffer?.id ?? null} onRowClick={(offer) => setSelectedOfferId(offer.id)} /></div></div>
-      {selectedOffer && <div className="rounded border border-gray-700 bg-gray-800 p-3 text-sm"><div className="text-xs uppercase tracking-wide text-gray-400">Purchase summary</div><div className="mt-2 flex justify-between"><span>{selectedQuantity} vessel{selectedQuantity === 1 ? '' : 's'} × {selectedOffer.payload.capacityLitres} L</span><strong className="text-amber-300">{formatNumber(selectedTotal, { currency: true, decimals: 0 })}</strong></div></div>}
       <DialogFooter><Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button><Button className="bg-amber-600 hover:bg-amber-500" disabled={loading || !selectedOffer} onClick={() => void handlePurchase()}>{loading ? 'Buying…' : `Buy for ${formatNumber(selectedTotal, { currency: true, decimals: 0 })}`}</Button></DialogFooter>
   </>;
 };

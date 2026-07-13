@@ -389,7 +389,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
     const loyalty = selectedOffer.supplierLoyalty;
     const consecutiveYears = Math.max(1, loyalty?.consecutiveYears ?? 1);
     const yearPoints = Math.max(0, loyalty?.yearLoyaltyPoints ?? 0);
-    const preview = estimateSupplierTrustPointGain(selectedPurchaseKg, consecutiveYears, yearPoints, companyValue);
+    const preview = estimateSupplierTrustPointGain(selectedOffer.effectivePricePerKg * selectedPurchaseKg, consecutiveYears, yearPoints, companyValue);
 
     return {
       rawPoints: preview.rawPoints,

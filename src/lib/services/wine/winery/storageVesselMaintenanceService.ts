@@ -1,12 +1,5 @@
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
-import {
-  getCompanyStorageAllocationPlans,
-  getCompanyStorageAllocations,
-  getCompanyStorageVessels,
-  releaseStorageVesselAllocation,
-  updateStorageVesselAllocationFill,
-  updateStorageVesselPlanVolume,
-} from '@/lib/database/winery/storageVesselsDB';
+import { completeEmptyStorageVessel, getCompanyStorageAllocationPlans, getCompanyStorageAllocations, getCompanyStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { createActivityWithResult } from '@/lib/services/activity/activitymanagers/activityManager';
 import { calculateEmptyStorageVesselWork } from '@/lib/services/activity/workcalculators/storageVesselMaintenanceWorkCalculator';
 import { getGameState } from '@/lib/services/core/gameState';
@@ -14,7 +7,7 @@ import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPla
 import { WorkCategory, type Activity, type WineBatch } from '@/lib/types/types';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { deleteInventoryBatch, getAllWineBatches, updateInventoryBatch } from './inventoryService';
+import { getAllWineBatches } from './inventoryService';
 import { getStorageVesselDisplayName } from './storageVesselService';
 
 const EMPTY_STORAGE_VESSEL_ACTIVITY_TYPE = 'empty_storage_vessel';
@@ -148,28 +141,28 @@ export async function completeEmptyStorageVesselActivity(activity: Activity): Pr
   const { vessel, allocation, plan, batch } = resolved.context;
   if (plan.id !== expectedPlanId) return { success: false, error: 'The selected vessel has been reassigned to another storage plan.' };
 
-  const currentVolume = Math.max(0, batch.volumeLitres ?? batch.quantity);
+  const currentQuantity = Math.max(0, batch.quantity ?? 0);
+  const currentVolume = Math.max(0, batch.volumeLitres ?? currentQuantity);
   const emptiedLitres = Math.min(currentVolume, allocation.filledLitres);
   const remainingLitres = Math.max(0, currentVolume - emptiedLitres);
-  if (remainingLitres <= 0) {
-    const success = await deleteInventoryBatch(batch.id);
-    if (success) refreshStorageVesselViews();
-    return success
-      ? { success: true, batch, vesselName: getStorageVesselDisplayName(vessel), emptiedLitres, remainingLitres }
-      : { success: false, error: 'Could not discard the final remaining batch volume.' };
-  }
-
   const quantityRatio = currentVolume > 0 ? remainingLitres / currentVolume : 0;
-  const remainingQuantity = Math.max(0, batch.quantity * quantityRatio);
-  if (!(await updateInventoryBatch(batch.id, { volumeLitres: remainingLitres, quantity: remainingQuantity }))) {
-    return { success: false, error: 'Could not update the remaining batch volume.' };
-  }
-
+  const remainingQuantity = Math.max(0, currentQuantity * quantityRatio);
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, error: 'No active company selected.' };
-  if ((await releaseStorageVesselAllocation(companyId, plan.id, vessel.id)).error) return { success: false, error: 'Could not release the emptied vessel.' };
-  if ((await updateStorageVesselPlanVolume(companyId, plan.id, remainingLitres)).error) return { success: false, error: 'Could not update the remaining storage plan.' };
-  if ((await updateStorageVesselAllocationFill(companyId, plan.id, remainingLitres)).error) return { success: false, error: 'Could not update the remaining vessel fills.' };
+  const state = getGameState();
+  const completed = await completeEmptyStorageVessel({
+    companyId,
+    batchId: batch.id,
+    planId: plan.id,
+    vesselId: vessel.id,
+    remainingLitres,
+    remainingQuantity,
+    releasedAt: new Date().toISOString(),
+    releasedYear: state.currentYear ?? 2024,
+    releasedSeason: state.season ?? 'Spring',
+    releasedWeek: state.week ?? 1,
+  });
+  if (completed.error || !completed.completed) return { success: false, error: 'Could not persist the emptied vessel state.' };
 
   refreshStorageVesselViews();
   return { success: true, batch: { ...batch, volumeLitres: remainingLitres, quantity: remainingQuantity }, vesselName: getStorageVesselDisplayName(vessel), emptiedLitres, remainingLitres };

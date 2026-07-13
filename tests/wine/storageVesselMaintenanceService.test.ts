@@ -9,8 +9,7 @@ const mocks = vi.hoisted(() => ({
   createActivityWithResult: vi.fn(async () => ({ activityId: 'activity-1' })),
   loadActivitiesFromDb: vi.fn(async () => [] as Activity[]),
   getAllWineBatches: vi.fn(async () => [] as WineBatch[]),
-  deleteInventoryBatch: vi.fn(async () => true),
-  updateInventoryBatch: vi.fn(async () => true),
+  completeEmptyStorageVessel: vi.fn(async () => ({ completed: true, error: null })),
   getCompanyStorageVessels: vi.fn(async () => ({ data: [] as StorageVessel[], error: null })),
   getCompanyStorageAllocationPlans: vi.fn(async () => ({ data: [{ id: 'plan-1', status: 'active', wineBatchId: 'batch-1' }], error: null })),
   getCompanyStorageAllocations: vi.fn(async () => ({ data: [{ planId: 'plan-1', vesselId: 'vessel-1', filledLitres: 500, assignedCapacityLitres: 500, releasedAt: undefined }], error: null })),
@@ -25,8 +24,6 @@ vi.mock('@/lib/database/activities/activityDB', () => ({ loadActivitiesFromDb: m
 vi.mock('@/lib/services/core/gameState', () => ({ getGameState: () => ({ activities: mocks.activities }) }));
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   getAllWineBatches: mocks.getAllWineBatches,
-  deleteInventoryBatch: mocks.deleteInventoryBatch,
-  updateInventoryBatch: mocks.updateInventoryBatch,
 }));
 vi.mock('@/lib/services/wine/winery/storageVesselService', () => ({ getStorageVesselDisplayName: () => '2024 - 500 L oak cask' }));
 vi.mock('@/lib/utils/companyUtils', () => ({ getCurrentCompanyId: () => 'company-1' }));
@@ -34,9 +31,7 @@ vi.mock('@/lib/database/winery/storageVesselsDB', () => ({
   getCompanyStorageVessels: mocks.getCompanyStorageVessels,
   getCompanyStorageAllocationPlans: mocks.getCompanyStorageAllocationPlans,
   getCompanyStorageAllocations: mocks.getCompanyStorageAllocations,
-  releaseStorageVesselAllocation: mocks.releaseStorageVesselAllocation,
-  updateStorageVesselPlanVolume: mocks.updateStorageVesselPlanVolume,
-  updateStorageVesselAllocationFill: mocks.updateStorageVesselAllocationFill,
+  completeEmptyStorageVessel: mocks.completeEmptyStorageVessel,
 }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
 
@@ -54,7 +49,7 @@ describe('Storage Vessel maintenance service', () => {
     mocks.getAllWineBatches.mockResolvedValue([mocks.batch]);
     mocks.createActivityWithResult.mockResolvedValue({ activityId: 'activity-1' });
     mocks.loadActivitiesFromDb.mockResolvedValue([]);
-    mocks.deleteInventoryBatch.mockResolvedValue(true);
+    mocks.completeEmptyStorageVessel.mockResolvedValue({ completed: true, error: null });
     vi.clearAllMocks();
   });
 
@@ -110,8 +105,8 @@ describe('Storage Vessel maintenance service', () => {
   it('deletes the batch on completion so its storage plan is released by inventory cleanup', async () => {
     const { completeEmptyStorageVesselActivity } = await import('@/lib/services/wine/winery/storageVesselMaintenanceService');
 
-    await expect(completeEmptyStorageVesselActivity(activity())).resolves.toMatchObject({ success: true, batch: mocks.batch });
-    expect(mocks.deleteInventoryBatch).toHaveBeenCalledWith('batch-1');
+    await expect(completeEmptyStorageVesselActivity(activity())).resolves.toMatchObject({ success: true, batch: { ...mocks.batch, volumeLitres: 0, quantity: 0 } });
+    expect(mocks.completeEmptyStorageVessel).toHaveBeenCalledWith(expect.objectContaining({ batchId: 'batch-1', remainingLitres: 0 }));
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('storage_vessels');
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
   });
@@ -130,9 +125,7 @@ describe('Storage Vessel maintenance service', () => {
       emptiedLitres: 200,
       remainingLitres: 300,
     });
-    expect(mocks.updateInventoryBatch).toHaveBeenCalledWith('batch-1', { volumeLitres: 300, quantity: 600 });
-    expect(mocks.releaseStorageVesselAllocation).toHaveBeenCalledWith('company-1', 'plan-1', 'vessel-1');
-    expect(mocks.deleteInventoryBatch).not.toHaveBeenCalled();
+    expect(mocks.completeEmptyStorageVessel).toHaveBeenCalledWith(expect.objectContaining({ batchId: 'batch-1', remainingLitres: 300, remainingQuantity: 600 }));
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('storage_vessels');
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
   });

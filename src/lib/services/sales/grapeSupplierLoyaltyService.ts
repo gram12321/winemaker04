@@ -1,6 +1,8 @@
 import {
   getBuyGoodsSupplierPersistenceBonus,
   getBuyGoodsSupplierPriorityProfiles,
+  getBuyGoodsRelationshipPointsForPurchase,
+  getBuyGoodsRelationshipYearlyCap,
   getBuyGoodsSupplierRelationshipPriceMultiplier,
   getBuyGoodsSupplierRelationships,
   recordBuyGoodsSupplierPurchase,
@@ -16,8 +18,8 @@ export const SUPPLIER_LOYALTY_LEVELS: Record<SupplierLoyaltyLevel, { name: strin
 };
 export const getSupplierRelationshipPriceMultiplier = getBuyGoodsSupplierRelationshipPriceMultiplier;
 export const getSupplierPersistenceBonus = getBuyGoodsSupplierPersistenceBonus;
-export async function getSupplierLoyalties(supplierIds: string[]): Promise<Record<string, SupplierLoyaltyRecord>> { const relationships = await getBuyGoodsSupplierRelationships('grapes', supplierIds); return Object.fromEntries(Object.entries(relationships).map(([id, relation]) => [id, { ...relation, consecutiveYears: 0, totalKgPurchased: relation.totalUnitsPurchased, yearLoyaltyPoints: 0 }])); }
+export async function getSupplierLoyalties(supplierIds: string[]): Promise<Record<string, SupplierLoyaltyRecord>> { const relationships = await getBuyGoodsSupplierRelationships('grapes', supplierIds); return Object.fromEntries(Object.entries(relationships).map(([id, relation]) => [id, { ...relation, totalKgPurchased: relation.totalUnitsPurchased, yearLoyaltyPoints: relation.yearRelationshipPoints }])); }
 export const getSupplierPriorityProfiles = (limit = 12) => getBuyGoodsSupplierPriorityProfiles('grapes', limit);
 export const recordSupplierPurchase = (supplierId: string, supplierName: string, unitsPurchased: number, _currentYear: number, purchaseValue: number) => recordBuyGoodsSupplierPurchase('grapes', supplierId, supplierName, unitsPurchased, purchaseValue);
-export const getSupplierYearlyTrustCap = (_consecutiveYears: number, _companyValue = 0) => 2600;
-export const estimateSupplierTrustPointGain = (kgPurchased: number, _consecutiveYears: number, currentYearLoyaltyPoints: number, _companyValue = 0) => ({ yearlyCap: 2600, remainingCap: Math.max(0, 2600 - currentYearLoyaltyPoints), rawPoints: kgPurchased, appliedPoints: Math.min(kgPurchased, Math.max(0, 2600 - currentYearLoyaltyPoints)) });
+export const getSupplierYearlyTrustCap = (_consecutiveYears: number, companyValue = 0) => getBuyGoodsRelationshipYearlyCap(companyValue);
+export const estimateSupplierTrustPointGain = (purchaseValue: number, _consecutiveYears: number, currentYearLoyaltyPoints: number, companyValue = 0) => { const yearlyCap = getBuyGoodsRelationshipYearlyCap(companyValue); const rawPoints = getBuyGoodsRelationshipPointsForPurchase(purchaseValue); return { yearlyCap, remainingCap: Math.max(0, yearlyCap - currentYearLoyaltyPoints), rawPoints, appliedPoints: Math.min(rawPoints, Math.max(0, yearlyCap - currentYearLoyaltyPoints)) }; };
