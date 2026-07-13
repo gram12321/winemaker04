@@ -49,7 +49,7 @@ const mocks = vi.hoisted(() => {
     getAltitudeRating: vi.fn(() => 0),
     completeClearingActivity: vi.fn(async () => undefined),
     handlePartialPlanting: vi.fn(async () => undefined),
-    handlePartialHarvesting: vi.fn(async () => undefined),
+    handlePartialHarvesting: vi.fn(),
     completeCrushing: vi.fn(async () => undefined),
     completeFermentationSetup: vi.fn(async () => undefined),
     completeEmptyStorageVesselActivity: vi.fn(async () => ({ success: true, batch: { grape: 'Pinot Noir' }, vesselName: '2024 - 500 L oak cask' })),
@@ -452,6 +452,33 @@ describe('activity lifecycle', () => {
     expect(mocks.updateActivityInDb).toHaveBeenCalledWith('harvesting-1', { completedWork: 6 });
     expect(mocks.removeActivityFromDb).toHaveBeenCalledWith('harvesting-1');
     expect(mocks.getActivities()).toEqual([]);
+  });
+
+  it('completes a harvest with the increment persisted during its final work tick', async () => {
+    mocks.setState({ ...mocks.getGameState(), staff: [{ id: 'staff-1' }] });
+    mocks.setVineyards([vineyard()]);
+    mocks.calculateVineyardYield.mockReturnValue(100);
+    mocks.setActivities([
+      activeActivity({
+        id: 'harvesting-final-tick',
+        category: WorkCategory.HARVESTING,
+        targetId: 'vineyard-1',
+        totalWork: 6,
+        params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', storagePlanId: 'plan-1', outputBatchId: 'batch-1', harvestedSoFar: 50 },
+      }),
+    ]);
+    mocks.calculateStaffWorkContribution.mockReturnValue(10);
+    mocks.calculateIndividualStaffContribution.mockReturnValue(10);
+    mocks.handlePartialHarvesting.mockResolvedValueOnce({
+      storageCapacityBlocked: false,
+      params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', storagePlanId: 'plan-1', outputBatchId: 'batch-1', harvestedSoFar: 100, currentTotalYield: 100 },
+    });
+    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+
+    await progressActivities();
+
+    expect(mocks.createWineBatchFromHarvest).not.toHaveBeenCalled();
+    expect(mocks.removeActivityFromDb).toHaveBeenCalledWith('harvesting-final-tick');
   });
 
   it('keeps calculated planting and harvesting total work weather-neutral', async () => {

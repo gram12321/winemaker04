@@ -575,8 +575,11 @@ export async function progressActivities(): Promise<void> {
 
       // Handle partial harvesting for HARVESTING activities
       let storageCapacityBlocked = false;
+      let harvestedParams: Activity['params'] | undefined;
       if (activity.category === WorkCategory.HARVESTING && activity.targetId) {
-        storageCapacityBlocked = await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
+        const harvestProgress = await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
+        storageCapacityBlocked = harvestProgress?.storageCapacityBlocked ?? false;
+        harvestedParams = harvestProgress?.params;
       }
 
       // Update the activity
@@ -584,7 +587,7 @@ export async function progressActivities(): Promise<void> {
 
       // Check if activity is complete
       if (!storageCapacityBlocked && newCompletedWork >= activity.totalWork) {
-        completedActivities.push({ ...activity, completedWork: newCompletedWork });
+        completedActivities.push({ ...activity, ...(harvestedParams ? { params: harvestedParams } : {}), completedWork: newCompletedWork });
       }
     }
 

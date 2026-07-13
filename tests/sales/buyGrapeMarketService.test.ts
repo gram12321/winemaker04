@@ -360,6 +360,16 @@ describe('buy grape market service', () => {
     expect(mocks.deleteInventoryBatch).not.toHaveBeenCalled();
   });
 
+  it('keeps a paid purchase when a UI update listener fails', async () => {
+    mocks.triggerTopicUpdate.mockImplementationOnce(() => { throw new Error('listener failed'); });
+    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
+
+    await expect(purchaseBuyGrapeOffer('offer-1', 120, ['vessel-1'])).resolves.toEqual({ success: true });
+
+    expect(mocks.deleteInventoryBatch).not.toHaveBeenCalled();
+    expect(mocks.releaseBuyMarketOfferUnits).not.toHaveBeenCalled();
+  });
+
   it('creates deterministic fermenting batches from the stored market offer preview contract', async () => {
     mocks.getCompanyBuyOfferRow.mockResolvedValueOnce({
       data: {

@@ -797,18 +797,19 @@ export async function handlePartialHarvesting(
   activity: Activity, 
   oldCompletedWork: number, 
   newCompletedWork: number
-): Promise<boolean> {
+): Promise<{ storageCapacityBlocked: boolean; params?: Activity['params'] }> {
+  let updatedParams: Activity['params'] | undefined;
   try {
     const workProgress = newCompletedWork / activity.totalWork;
     const oldProgress = oldCompletedWork / activity.totalWork;
     const progressThisTick = workProgress - oldProgress;
     
-    if (progressThisTick <= 0) return false; // No progress this tick
+    if (progressThisTick <= 0) return { storageCapacityBlocked: false }; // No progress this tick
     
     const vineyards = await loadVineyards();
     const vineyard = vineyards.find(v => v.id === activity.targetId);
     
-    if (!vineyard || !vineyard.grape) return false;
+    if (!vineyard || !vineyard.grape) return { storageCapacityBlocked: false };
     
     // Calculate current total yield based on current ripeness
     const currentTotalYield = calculateVineyardYield(vineyard);
@@ -830,7 +831,7 @@ export async function handlePartialHarvesting(
       const plannedVolume = initializeHarvestVolumeLitres(previouslyHarvested + harvestQuantityThisTick);
       if (!activity.params.storagePlanId) {
         await updateActivityInDb(activity.id, { status: 'paused', params: { ...activity.params, storageCapacityBlocked: true } });
-        return true;
+        return { storageCapacityBlocked: true };
       }
       if (!(await canStoragePlanHoldVolume(activity.params.storagePlanId, plannedVolume))) {
         const capacityLitres = await getStoragePlanCapacityLitres(activity.params.storagePlanId);
@@ -841,7 +842,7 @@ export async function handlePartialHarvesting(
         capacityBlocked = true;
         if (harvestQuantityThisTick < 0.1) {
           await updateActivityInDb(activity.id, { status: 'paused', params: { ...activity.params, storageCapacityBlocked: true } });
-          return true;
+          return { storageCapacityBlocked: true };
         }
       }
       const gameState = getGameState();
@@ -875,15 +876,16 @@ export async function handlePartialHarvesting(
       
       // Update the harvested amount in activity params
       const newHarvestedSoFar = previouslyHarvested + harvestQuantityThisTick;
+      updatedParams = {
+        ...activity.params,
+        harvestedSoFar: newHarvestedSoFar,
+        ...(capacityBlocked ? { storageCapacityBlocked: true } : {}),
+        // Store current total yield for completion handler
+        currentTotalYield: currentTotalYield
+      };
       await updateActivityInDb(activity.id, {
         ...(capacityBlocked ? { status: 'paused' as const } : {}),
-        params: {
-          ...activity.params,
-          harvestedSoFar: newHarvestedSoFar,
-          ...(capacityBlocked ? { storageCapacityBlocked: true } : {}),
-          // Store current total yield for completion handler
-          currentTotalYield: currentTotalYield
-        }
+        params: updatedParams,
       });
       
       // Update vineyard status to show progress
@@ -892,12 +894,12 @@ export async function handlePartialHarvesting(
         status: 'Growing'
       };
       await saveVineyard(updatedVineyard);
-      return capacityBlocked;
+      return { storageCapacityBlocked: capacityBlocked, params: updatedParams };
     }
   } catch (error) {
     console.error(`Error in partial harvesting for activity ${activity.id}:`, error);
   }
-  return false;
+  return { storageCapacityBlocked: false, ...(updatedParams ? { params: updatedParams } : {}) };
 }
 
 export function calculateHarvestedByProgress(totalYield: number, harvestBaseline: number, progress: number): number {

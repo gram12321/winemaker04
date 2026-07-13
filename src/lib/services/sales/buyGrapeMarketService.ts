@@ -919,8 +919,10 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
     vesselIds: storageVesselIds,
   });
   if (!storagePlan.planId) {
-    await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
-    return { success: false, error: storagePlan.error };
+    const release = await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
+    return release.released && !release.error
+      ? { success: false, error: storagePlan.error }
+      : { success: false, error: 'The purchase needs reconciliation before trying again.' };
   }
   purchasedBatch.storagePlanId = storagePlan.planId;
   purchasedBatch.volumeLitres = initializeHarvestVolumeLitres(roundedQuantity);
@@ -934,8 +936,10 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
       if (!deleted) {
         return { success: false, error: 'Could not activate Storage Vessel capacity. The purchase needs reconciliation before trying again.' };
       }
-      await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
-      return { success: false, error: 'Could not activate Storage Vessel capacity for this batch.' };
+      const release = await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
+      return release.released && !release.error
+        ? { success: false, error: 'Could not activate Storage Vessel capacity for this batch.' }
+        : { success: false, error: 'The purchase needs reconciliation before trying again.' };
     }
     await addTransaction(
       -totalCost,
@@ -946,20 +950,6 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
       true,
     );
 
-    try {
-      await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear, totalCost);
-      await recordMarketSupplierPurchase(offer.supplier_id, roundedQuantity, gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR, (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as Season);
-      await notificationService.addMessage(
-        `Purchased ${roundedQuantity} kg of ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
-        'buyGrapeMarketService.purchaseBuyGrapeOffer', 'Market Purchase', NotificationCategory.WINEMAKING_PROCESS
-      );
-    } catch (postPurchaseError) {
-      console.error('Market purchase completed without recording optional follow-up:', postPurchaseError);
-    }
-
-    triggerTopicUpdate('wine_batches');
-
-    return { success: true };
   } catch (purchaseError) {
     const deleted = !batchSaved || (storagePlan.planId ? await deleteInventoryBatch(purchasedBatch.id).catch(() => false) : true);
     const released = storagePlan.planId ? await releaseStorageAllocationPlan(storagePlan.planId) : true;
@@ -967,10 +957,27 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
       console.error('Failed to clean up a partially completed market purchase:', purchaseError);
       return { success: false, error: 'The purchase needs reconciliation before trying again.' };
     }
-    await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
+    const release = await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
+    if (!release.released || release.error) {
+      console.error('Failed to restore claimed market offer availability:', release.error);
+      return { success: false, error: 'The purchase needs reconciliation before trying again.' };
+    }
     console.error('Failed to purchase market offer:', purchaseError);
     return { success: false, error: 'Could not complete purchase. Please try again.' };
   }
+
+  try {
+    await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear, totalCost);
+    await recordMarketSupplierPurchase(offer.supplier_id, roundedQuantity, gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR, (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as Season);
+    await notificationService.addMessage(
+      `Purchased ${roundedQuantity} kg of ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
+      'buyGrapeMarketService.purchaseBuyGrapeOffer', 'Market Purchase', NotificationCategory.WINEMAKING_PROCESS
+    );
+    triggerTopicUpdate('wine_batches');
+  } catch (postPurchaseError) {
+    console.error('Market purchase completed without optional follow-up:', postPurchaseError);
+  }
+  return { success: true };
 }
 
 export async function ensureBuyGrapeMarketHasData(): Promise<void> {

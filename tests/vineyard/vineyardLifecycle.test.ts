@@ -303,6 +303,20 @@ describe('vineyard lifecycle services', () => {
     }));
   }, 15000);
 
+  it('keeps appended harvest progress available when a later vineyard-status save fails', async () => {
+    const harvestActivity = activity({ totalWork: 100, completedWork: 0, params: { storagePlanId: 'plan-1', outputBatchId: 'batch-1' } });
+    mocks.setActivities([harvestActivity]);
+    mocks.saveVineyard.mockRejectedValueOnce(new Error('status save failed'));
+    const { handlePartialHarvesting } = await import('@/lib/services/vineyard/vineyardManager');
+
+    const result = await handlePartialHarvesting(harvestActivity, 0, 100);
+
+    expect(result.params).toEqual(expect.objectContaining({
+      harvestedSoFar: expect.any(Number),
+      currentTotalYield: expect.any(Number),
+    }));
+  }, 15000);
+
   it('keeps harvest yield calculations independent from the current weather work pace', async () => {
     const { calculateVineyardYield } = await import('@/lib/services/vineyard/vineyardManager');
     const target = vineyard({ ripeness: 0.85, vineyardHealth: 0.9 });

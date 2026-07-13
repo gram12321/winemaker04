@@ -152,6 +152,30 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     const vessels = await createPurchasedStorageVessels(offer.payload as unknown as StorageVesselOfferPayload, offer.offerId, offer.effectivePricePerUnit, safeQuantity);
     purchasedVesselIds = vessels.map((vessel) => vessel.id);
     await addTransaction(-totalCost, `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`, TRANSACTION_CATEGORIES.SUPPLIES, false, companyId, true);
+  } catch (purchaseError) {
+    let removed = purchasedVesselIds.length === 0;
+    try {
+      await removePurchasedStorageVessels(purchasedVesselIds);
+      removed = true;
+    } catch (removeError) {
+      console.error('Failed to remove partially created Storage Vessels:', removeError);
+    }
+    let restored = false;
+    if (removed) {
+      try {
+        const release = await releaseBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
+        restored = release.released && !release.error;
+      } catch (releaseError) {
+        console.error('Failed to restore Storage Vessel offer availability:', releaseError);
+      }
+    }
+    console.error('Failed to purchase Storage Vessel offer:', purchaseError);
+    return removed && restored
+      ? { success: false, error: 'Could not complete Storage Vessel purchase. Please try again.' }
+      : { success: false, error: 'The Storage Vessel purchase needs reconciliation before trying again.' };
+  }
+
+  try {
     try {
       await recordBuyGoodsSupplierPurchase('storage_vessels', offer.sellerId, offer.sellerName, safeQuantity, totalCost);
     } catch (relationshipError) {
@@ -164,27 +188,10 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
       NotificationCategory.WINEMAKING_PROCESS,
     );
     triggerTopicUpdate('storage_vessels');
-    return { success: true };
-  } catch (purchaseError) {
-    let removed = purchasedVesselIds.length === 0;
-    try {
-      await removePurchasedStorageVessels(purchasedVesselIds);
-      removed = true;
-    } catch (removeError) {
-      console.error('Failed to remove partially created Storage Vessels:', removeError);
-    }
-    if (removed) {
-      try {
-        await releaseBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
-      } catch (releaseError) {
-        console.error('Failed to restore Storage Vessel offer availability:', releaseError);
-      }
-    }
-    console.error('Failed to purchase Storage Vessel offer:', purchaseError);
-    return removed
-      ? { success: false, error: 'Could not complete Storage Vessel purchase. Please try again.' }
-      : { success: false, error: 'The Storage Vessel purchase needs reconciliation before trying again.' };
+  } catch (postPurchaseError) {
+    console.error('Storage Vessel purchase completed without optional follow-up:', postPurchaseError);
   }
+  return { success: true };
 }
 
 export async function refreshStorageVesselMarket(): Promise<void> {

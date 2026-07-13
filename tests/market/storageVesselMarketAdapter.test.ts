@@ -93,4 +93,14 @@ describe('Storage Vessel market adapter', () => {
     expect(result.error).toContain('reconciliation');
     expect(mocks.releaseBuyMarketOfferUnits).not.toHaveBeenCalled();
   });
+
+  it('keeps a paid purchase when its notification fails', async () => {
+    mocks.addMessage.mockRejectedValueOnce(new Error('notification failed'));
+    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+
+    await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({ success: true });
+
+    expect(mocks.removePurchasedStorageVessels).not.toHaveBeenCalled();
+    expect(mocks.releaseBuyMarketOfferUnits).not.toHaveBeenCalled();
+  });
 });
