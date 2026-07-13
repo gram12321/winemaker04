@@ -10,7 +10,6 @@ import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, resto
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { boardShareFeature } from '@/lib/features/boardShare';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
 
@@ -79,7 +78,7 @@ const executeGameTick = async (): Promise<void> => {
     // If we're back to Spring, increment year
     if (season === 'Spring') {
       currentYear += 1;
-      await onNewYear(previousYear, currentYear, { week, season, year: currentYear });
+      await onNewYear(previousYear, currentYear);
       await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', NotificationCategory.TIME_CALENDAR);
     }
 
@@ -131,15 +130,6 @@ const executeGameTick = async (): Promise<void> => {
   // Pass season change info and all collected messages if we just changed seasons
   await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
 
-  // Board/share seasonal hooks (e.g. dividends on season start)
-  if (week === 1) {
-    try {
-      await boardShareFeature.ticks.onSeasonStart({ week, season, year: currentYear });
-    } catch (error) {
-      console.warn('Error running board/share season-start hooks:', error);
-    }
-  }
-
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);
 
@@ -178,11 +168,7 @@ const onSeasonChange = async (_previousSeason: string, _newSeason: string, skipN
 /**
  * Handle effects that happen at the start of a new year
  */
-const onNewYear = async (
-  _previousYear: number,
-  _newYear: number,
-  context?: { week: number; season: string; year: number }
-): Promise<void> => {
+const onNewYear = async (_previousYear: number, _newYear: number): Promise<void> => {
   // New year notification is handled in the main processGameTick function
   // Update vineyard ages
   await updateVineyardAges();
@@ -196,17 +182,6 @@ const onNewYear = async (
     await processYearlyFounderDistributions(staff, _previousYear);
   } catch (error) {
     console.error('Error processing yearly founder distributions:', error);
-  }
-
-  // Run board/share yearly hooks (e.g. growth trend updates)
-  try {
-      await boardShareFeature.ticks.onYearStart({
-      week: context?.week ?? 1,
-      season: context?.season ?? 'Spring',
-      year: context?.year ?? _newYear
-    });
-  } catch (error) {
-    console.error('Error running board/share year-start hooks:', error);
   }
 
   // TODO: Add other yearly effects when ready
@@ -315,18 +290,6 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
-    (async () => {
-      try {
-        await boardShareFeature.ticks.onWeekAdvanced({
-          week: gameState.week || 1,
-          season: gameState.season || 'Spring',
-          year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
-        });
-      } catch (error) {
-        console.warn('Error running board/share week-advanced hooks:', error);
-      }
-    })()
   ];
 
   // Throttled, non-blocking achievement checks (decoupled from tick critical path)

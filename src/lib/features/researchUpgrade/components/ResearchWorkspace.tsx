@@ -23,7 +23,6 @@ import {
 } from '@/components/ui';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
-import { getUnlockedResearchIds } from '@/lib/database';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade/feature';
 import {
   buildResearchFootprintSummary,
@@ -34,16 +33,14 @@ import {
   type ResearchDisplayGroupId,
   type ResearchProjectPresentationRow,
 } from '@/lib/features/researchUpgrade/services/research/researchPresentationService';
-import { getResearchPermanentEffects, type ResearchPermanentEffectsSummary } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
+import { type ResearchPermanentEffectsSummary } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
 import {
   getResearchRequirementReasons,
   isResearchProjectEligible,
-  loadResearchEligibilityContext,
   type ResearchEligibilityContext,
 } from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
-import { getResearchViewSummary } from '@/lib/features/researchUpgrade/services/research/researchViewService';
-import { calculateResearchCost, calculateResearchWork, getAllActivities, getCurrentPrestige } from '@/lib/services';
-import { WorkCategory } from '@/lib/types/types';
+import { getResearchViewSummary, loadResearchWorkspaceSnapshot } from '@/lib/features/researchUpgrade/services/research/researchViewService';
+import { calculateResearchCost, calculateResearchWork } from '@/lib/services';
 import { formatNumber } from '@/lib/utils';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { ChevronRight, CircleDot, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
@@ -295,36 +292,17 @@ export function ResearchWorkspace({
     let mounted = true;
 
     const loadResearchStatus = async () => {
-      const [activities, completedIds, prestige, effects] = await Promise.all([
-        getAllActivities(),
-        getUnlockedResearchIds(),
-        getCurrentPrestige(),
-        getResearchPermanentEffects(),
-      ]);
+      const snapshot = await loadResearchWorkspaceSnapshot(bypassGates);
 
       if (!mounted) {
         return;
       }
 
-      const nextActiveResearch = new Set(
-        activities
-          .filter((activity) => activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH)
-          .filter((activity) => activity.status === 'active' && typeof activity.params?.researchId === 'string')
-          .map((activity) => activity.params!.researchId as string)
-      );
-
-      const completedSet = new Set(completedIds);
-      const context = bypassGates ? null : await loadResearchEligibilityContext(prestige, completedSet);
-
-      if (!mounted) {
-        return;
-      }
-
-      setActiveResearch(nextActiveResearch);
-      setCompletedResearch(completedSet);
-      setCurrentPrestige(prestige);
-      setEligibilityContext(context);
-      setPermanentEffects(effects);
+      setActiveResearch(snapshot.activeResearch);
+      setCompletedResearch(snapshot.completedResearch);
+      setCurrentPrestige(snapshot.currentPrestige);
+      setEligibilityContext(snapshot.eligibilityContext);
+      setPermanentEffects(snapshot.permanentEffects);
     };
 
     loadResearchStatus();

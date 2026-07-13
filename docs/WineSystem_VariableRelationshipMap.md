@@ -144,7 +144,7 @@ flowchart LR
 | Weather | Feature facade persists/resolves facts, applies one bounded site-aware projection, and supplies planting/harvesting operation impacts; clearing's annual rule remains outside weather |
 | Markets | Sell/buy markets include fallback, seasonal rows, loyalty, economy/weather, and research scaling |
 | Research | Gates cover grapes, fermentation, staff/vineyard caps, contracts, and buyer progression; health-decay effect is active |
-| Ownership | Founder economy active; board/share runtime remains no-op |
+| Ownership | Founder economy active; public-company/share runtime remains deferred |
 
 ## Alignment Rules
 

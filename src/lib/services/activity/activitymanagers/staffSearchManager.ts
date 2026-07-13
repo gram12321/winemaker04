@@ -12,7 +12,6 @@ import {
   calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
   calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
-import { boardShareFeature } from '@/lib/features/boardShare';
 import { formatNumber } from '@/lib/utils/utils';
 
 /**
@@ -149,20 +148,6 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
         `Insufficient funds to hire ${candidate.name}. Need ${formatNumber(candidate.wage, { currency: true, decimals: 2 })} for first month's wage.`,
         'staffSearchManager.startHiringProcess',
         'Insufficient Funds',
-        NotificationCategory.FINANCE_AND_STAFF
-      );
-      return null;
-    }
-
-    // Check modularized board/share constraint for staff hiring
-    const boardCheck = await boardShareFeature.constraints.checkStaffHiring({
-      candidateName: candidate.name
-    });
-    if (!boardCheck.allowed) {
-      await notificationService.addMessage(
-        boardCheck.errorMessage || `Board approval required to hire ${candidate.name}. Board satisfaction is too low to approve new staff hires.`,
-        'staffSearchManager.startHiringProcess',
-        'Board Restriction',
         NotificationCategory.FINANCE_AND_STAFF
       );
       return null;

@@ -155,3 +155,21 @@ export async function getUnlockedResearchIds(companyId?: string): Promise<string
   return unlocks.map(unlock => unlock.researchId);
 }
 
+/**
+ * Remove known research unlock records. Callers are responsible for selecting
+ * the company-scoped records they intend to delete.
+ */
+export async function deleteResearchUnlocksByIds(unlockIds: string[]): Promise<void> {
+  if (unlockIds.length === 0) return;
+
+  const { error } = await supabase
+    .from('research_unlocks')
+    .delete()
+    .in('id', unlockIds);
+
+  if (error) {
+    console.error('Error deleting research unlocks:', error);
+    throw error;
+  }
+}
+

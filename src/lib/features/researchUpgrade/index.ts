@@ -4,12 +4,9 @@ export type {
   ResearchUpgradeWorkflowHooks,
   ResearchUpgradeUnlockHooks,
   ResearchUpgradeSetupHooks,
-  ResearchUpgradeAdminHooks,
   ResearchUpgradeUiHooks,
   ResearchUpgradeEffectsHooks,
   ResearchPermanentEffectsSummary,
   GrantResearchUnlockInput,
   GrantStartingGrapeUnlockInput,
-  ResearchUpgradeAdminGrantAllResult,
-  ResearchUpgradeAdminRemoveAllResult
 } from './featureTypes';

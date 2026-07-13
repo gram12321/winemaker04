@@ -4,7 +4,7 @@ Status: Historical implemented feature and reintroduction reference. Current mai
 
 This document describes the larger public-company/share system that was implemented in an earlier code line and later removed or disabled from active mainline. Keep it as a reference for reintroducing that system.
 
-Current mainline repo state: active share-price services, active share-management UI, dividends, and weekly share-price snapshots described below are not wired in this repo. The repo currently contains share/board data scaffolding and a `boardShare` feature shell whose default implementation is no-op. Local branch names indicate reintroduction work may exist outside this branch (`archive/board-share-active-seam`, `feature/readd-board-share`).
+Current mainline repo state: active share-price services, active share-management UI, dividends, and weekly share-price snapshots described below are not wired in this repo. The repo currently contains share/board data scaffolding but no inactive feature shell. Local branch names indicate reintroduction work may exist outside this branch (`archive/board-share-active-seam`, `feature/readd-board-share`).
 
 Current overlap: [2026-05-20-early-game-balance-founder-economy.md](2026-05-20-early-game-balance-founder-economy.md) now implements a light founder-perspective slice: founder staff, zero wages, profit-share distributions, buyout, persistence, and Founder Panel UI. That founder slice does not replace the full public-company/share-market system described here.
 

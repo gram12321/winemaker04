@@ -5,7 +5,7 @@ Status: Historical implemented feature and reintroduction reference. Current mai
 
 This document describes the larger public-company/share system that was implemented in an earlier code line and later removed or disabled from active mainline. It should be kept as a reference for reintroducing that system, not deleted as obsolete design noise.
 
-Current mainline repo state: the documented `src/lib/services/finance/shares/*` services, `ShareManagementPanel.tsx`, and active share-price runtime are not wired in this repo. Current code has share/board data scaffolding (`company_shares`, `company_metrics_history`, `shareValuationConstants`) and a `boardShare` feature shell that defaults to a no-op adapter. Local branch names indicate reintroduction work may exist outside this branch (`archive/board-share-active-seam`, `feature/readd-board-share`).
+Current mainline repo state: the documented `src/lib/services/finance/shares/*` services, `ShareManagementPanel.tsx`, and active share-price runtime are not wired in this repo. Current code has share/board data scaffolding (`company_shares`, `company_metrics_history`, `shareValuationConstants`) but no inactive feature shell. Local branch names indicate reintroduction work may exist outside this branch (`archive/board-share-active-seam`, `feature/readd-board-share`).
 
 Current overlap: [2026-05-20-early-game-balance-founder-economy.md](2026-05-20-early-game-balance-founder-economy.md) now implements a light founder-perspective slice: founder staff, zero wages, profit-share distributions, buyout, persistence, and Founder Panel UI. That founder slice addresses a small part of the larger ownership/company-finance theme, but it is not the public-company/share-market system described below.
 

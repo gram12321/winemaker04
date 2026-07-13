@@ -24,7 +24,6 @@ import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
-import { boardShareFeature } from '@/lib/features/boardShare';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { Analytics } from '@vercel/analytics/react';
 
@@ -110,16 +109,6 @@ function App({ adminFeature }: AppProps) {
 
   const handleTimeAdvance = () => {
   };
-
-  // Register modularized app-level listeners for optional features (e.g., board/share)
-  useEffect(() => {
-    const unregister = boardShareFeature.ui.registerAppEventListeners?.({
-      navigateToWinepedia: () => setCurrentPage('winepedia')
-    });
-    return () => {
-      unregister?.();
-    };
-  }, []);
 
   const renderCurrentPage = () => {
     if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {

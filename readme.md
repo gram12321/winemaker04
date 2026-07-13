@@ -28,7 +28,7 @@ npm run build
 - Keep business logic, validation, calculations, and persistence orchestration out of React components.
 - `*DB.ts` files own Supabase CRUD and row mapping; services own domain rules.
 - Prefer existing barrel exports and shared types. Do not add compatibility branches or migrations unless requested.
-- Feature modules use two patterns: installed feature facades (`loanLender`, `researchUpgrade`, `boardShare`) expose one static feature value from their barrel; the development-only `admin` feature is dynamically loaded into `App`. `weather` is an always-on functional barrel. Callers do not configure features or import their internals.
+- Feature modules use two patterns: installed feature facades (`loanLender`, `researchUpgrade`) expose one static feature value from their barrel; the development-only `admin` feature is dynamically loaded into `App`. `weather` is an always-on functional barrel. Callers do not configure features or import their internals. Public-company/share gameplay remains deferred rather than represented by an inactive feature shell.
 
 ## Documentation Entry Points
 

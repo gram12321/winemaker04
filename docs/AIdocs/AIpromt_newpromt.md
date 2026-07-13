@@ -39,7 +39,7 @@ For taste, structure, or contracts work, also read:
 - **Sales:** regional customers, order generation, multi-factor pricing, contracts with taste/structure/site/grape/vintage/characteristic requirements, sell-side grape buyers, buy-side grape suppliers, loyalty, and economy/weather market pressure.
 - **Weather:** current weather, forecast pattern/confidence, Weather Center, vineyard health/ripeness impact, and grape-market volatility.
 - **Finance:** transactions, financial reports, loans through the `loanLender` feature seam, founder profit-share/buyout UI, and asset valuation.
-- **Board/share status:** public-company/share-market docs are historical implemented-feature and reintroduction references; current mainline only has board/share scaffolding and a no-op `boardShare` feature shell.
+- **Board/share status:** public-company/share-market docs are historical implementation and reintroduction references; current mainline retains only deferred board/share scaffolding, with no inactive feature shell.
 - **Staff/activity:** staff management, founders, teams, recruitment, wages, assignment, work calculators, activity progression.
 - **Research:** active research page with effects/footprint/catalog tabs, enforced gates, starting research, grape/fermentation/staff/vineyard/contract/grape-buyer unlocks, and permanent vineyard-health effect aggregation.
 - **Player interface:** company switching, profile, Winepedia, achievements, highscores, settings, notifications, admin tools.

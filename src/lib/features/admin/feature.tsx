@@ -7,7 +7,7 @@ import {
   getStoredVineyards,
   recreateBuyGrapeMarketOffers
 } from '@/lib/services';
-import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import type { AdminFeature } from './featureTypes';
 import type { AdminCheatOps, AdminDashboardDependencies, AdminDatabaseOps, AdminTestLab } from './internalTypes';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -112,7 +112,7 @@ const dashboard: AdminDashboardDependencies = {
   database,
   cheats,
   testLab,
-  renderResearchInspector: () => researchUpgradeFeature.ui.renderAdminInspector()
+  renderResearchInspector: () => researchUpgradeAdminIntegration.renderInspector()
 };
 
 export const adminFeature: AdminFeature = {

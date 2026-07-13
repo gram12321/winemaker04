@@ -38,25 +38,8 @@ export interface ResearchUpgradeSetupHooks {
   grantStartingGrapeUnlock(input: GrantStartingGrapeUnlockInput): Promise<void>;
 }
 
-export interface ResearchUpgradeAdminGrantAllResult {
-  success: boolean;
-  unlocked: number;
-  alreadyUnlocked: number;
-}
-
-export interface ResearchUpgradeAdminRemoveAllResult {
-  success: boolean;
-  removed: number;
-}
-
-export interface ResearchUpgradeAdminHooks {
-  grantAllResearch(): Promise<ResearchUpgradeAdminGrantAllResult>;
-  removeAllResearch(): Promise<ResearchUpgradeAdminRemoveAllResult>;
-}
-
 export interface ResearchUpgradeUiHooks {
   renderResearchPage(): ReactElement;
-  renderAdminInspector(): ReactElement;
 }
 
 export interface ResearchUpgradeEffectsHooks {
@@ -67,7 +50,6 @@ export interface ResearchUpgradeFeature {
   workflow: ResearchUpgradeWorkflowHooks;
   unlocks: ResearchUpgradeUnlockHooks;
   setup: ResearchUpgradeSetupHooks;
-  admin: ResearchUpgradeAdminHooks;
   ui: ResearchUpgradeUiHooks;
   effects: ResearchUpgradeEffectsHooks;
 }

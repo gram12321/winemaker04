@@ -17,7 +17,6 @@ import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { updateGameState } from '@/lib/services/core/gameState';
-import { boardShareFeature } from '@/lib/features/boardShare';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { buildVineyardCapacityState, getCapacityConstraintReason } from './vineyardCapacityService';
 
@@ -366,33 +365,6 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     if (currentMoney < option.totalPrice) {
       const errorMsg = `Insufficient funds. You have ${formatNumber(currentMoney, { currency: true })} but need ${formatNumber(option.totalPrice, { currency: true })}.`;
       await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', NotificationCategory.FINANCE_AND_STAFF);
-      return {
-        success: false,
-        error: errorMsg
-      };
-    }
-
-    // Check modularized board/share constraint for vineyard purchase
-    const constraintResult = await boardShareFeature.constraints.checkVineyardPurchase({
-      currentMoney,
-      purchaseAmount: option.totalPrice,
-      totalAssets: 0,
-      fixedAssets: 0,
-      currentAssets: 0,
-      expensesPerSeason: 0,
-      profitMargin: 0
-    });
-
-    if (!constraintResult.allowed) {
-      const errorMsg =
-        constraintResult.errorMessage ||
-        'Board approval required for vineyard purchases. Your purchase exceeds the approved budget limit.';
-      await notificationService.addMessage(
-        errorMsg,
-        'vineyardService.purchaseVineyard',
-        'Board Restriction',
-        NotificationCategory.FINANCE_AND_STAFF
-      );
       return {
         success: false,
         error: errorMsg

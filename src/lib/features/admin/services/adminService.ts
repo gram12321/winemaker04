@@ -8,7 +8,7 @@ import type { Season } from '@/lib/types/types';
 import { setPlayerBalance } from '@/lib/services/user/userBalanceService';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 import { companyService } from '@/lib/services/user/companyService';
-import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import { awardExperience, getAllStaff } from '@/lib/services/user/staffService';
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
@@ -539,14 +539,14 @@ export async function adminSetGameDate({ week, season, year }: AdminGameDatePayl
  * Grant all research projects to the active company
  */
 export async function adminGrantAllResearch(): Promise<{ success: boolean; unlocked: number; alreadyUnlocked: number }> {
-  return researchUpgradeFeature.admin.grantAllResearch();
+  return researchUpgradeAdminIntegration.grantAllResearch();
 }
 
 /**
  * Remove all research unlocks from the active company
  */
 export async function adminRemoveAllResearch(): Promise<{ success: boolean; removed: number }> {
-  return researchUpgradeFeature.admin.removeAllResearch();
+  return researchUpgradeAdminIntegration.removeAllResearch();
 }
 
 /**

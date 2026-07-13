@@ -16,7 +16,6 @@ import {
   WeatherTab,
   GrapeBuyersTab
 } from '@/components/pages/winepedia/index';
-import { boardShareFeature } from '@/lib/features/boardShare';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 
@@ -33,8 +32,6 @@ interface WinepediaProps extends PageProps {
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
   const loanLenderTabs = useMemo(() => loanLenderFeature.ui.getWinepediaTabs(), []);
-  const boardShareTabs = useMemo(() => boardShareFeature.ui.getWinepediaTabs(), []);
-
   const tabs = useMemo<WinepediaTab[]>(() => {
     const baseTabs: WinepediaTab[] = [
       { id: 'grapeVarieties', label: 'Grape Variety', component: GrapeVarietiesTab },
@@ -51,12 +48,11 @@ export default function Winepedia({ view }: WinepediaProps) {
       { id: 'grapeBuyers', label: 'Grape Buyers', component: GrapeBuyersTab },
       { id: 'economy', label: 'Economy', component: EconomyTab },
       { id: 'weather', label: 'Weather', component: WeatherTab },
-      ...loanLenderTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component })),
-      ...boardShareTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component }))
+      ...loanLenderTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component }))
     ];
 
     return baseTabs.sort((a, b) => a.label.localeCompare(b.label));
-  }, [boardShareTabs, loanLenderTabs]);
+  }, [loanLenderTabs]);
 
   useEffect(() => {
     if (view === 'customers') {
