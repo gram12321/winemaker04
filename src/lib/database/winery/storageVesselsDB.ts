@@ -271,6 +271,25 @@ export async function releaseStorageVesselAllocation(companyId: string, planId: 
     .is('released_at', null);
 }
 
+export async function consumeStorageBackedWineBatch(input: {
+  companyId: string;
+  batchId: string;
+  quantity: number;
+  releasedYear: number;
+  releasedSeason: string;
+  releasedWeek: number;
+}) {
+  const { data, error } = await supabase.rpc('consume_storage_backed_wine_batch', {
+    p_company_id: input.companyId,
+    p_batch_id: input.batchId,
+    p_quantity: input.quantity,
+    p_released_year: input.releasedYear,
+    p_released_season: input.releasedSeason,
+    p_released_week: input.releasedWeek,
+  });
+  return { consumed: Boolean(data), error };
+}
+
 export async function completeEmptyStorageVessel(input: {
   companyId: string;
   batchId: string;

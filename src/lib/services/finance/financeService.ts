@@ -7,7 +7,7 @@ import { CAPITAL_FLOW_TRANSACTION_CATEGORIES } from '@/lib/constants/financeCons
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from '../user/companyService';
-import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
+import { insertTransaction as insertTransactionDB, insertTransactionWithFundsCheck, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
@@ -41,7 +41,8 @@ export const addTransaction = async (
   description: string,
   category: string,
   recurring = false,
-  companyId?: string
+  companyId?: string,
+  requireFunds = false,
 ): Promise<string> => {
   try {
     if (!companyId) {
@@ -76,15 +77,16 @@ export const addTransaction = async (
       created_at: new Date().toISOString()
     };
     
-    await updateGameState({ money: newMoney });
-    
-    triggerGameUpdate();
-    
-    const result = await insertTransactionDB(transactionData);
+    const result = requireFunds
+      ? await insertTransactionWithFundsCheck(transactionData)
+      : await insertTransactionDB(transactionData);
     
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Failed to insert transaction');
     }
+
+    await updateGameState({ money: result.data.money ?? newMoney });
+    triggerGameUpdate();
     
     const newTransaction: Transaction = {
       id: result.data.id,

@@ -334,7 +334,8 @@ describe('buy grape market service', () => {
       expect.stringContaining('Market Purchase: 120 kg Chardonnay (Grapes) from Bulk Supply Syndicate'),
       'Supplies',
       false,
-      'company-1'
+      'company-1',
+      true,
     );
     expect(mocks.recordSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 'Bulk Supply Syndicate', 120, 2026, 480);
     expect(mocks.recordMarketSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 120, 2026, 'Spring');

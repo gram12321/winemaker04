@@ -151,7 +151,7 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
   try {
     const vessels = await createPurchasedStorageVessels(offer.payload as unknown as StorageVesselOfferPayload, offer.offerId, offer.effectivePricePerUnit, safeQuantity);
     purchasedVesselIds = vessels.map((vessel) => vessel.id);
-    await addTransaction(-totalCost, `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`, TRANSACTION_CATEGORIES.SUPPLIES, false, companyId);
+    await addTransaction(-totalCost, `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`, TRANSACTION_CATEGORIES.SUPPLIES, false, companyId, true);
     try {
       await recordBuyGoodsSupplierPurchase('storage_vessels', offer.sellerId, offer.sellerName, safeQuantity, totalCost);
     } catch (relationshipError) {

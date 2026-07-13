@@ -1,7 +1,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics, GameDate, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Vineyard, WineBatchOriginSnapshot, WineBatchState } from '../../../types/types';
-import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById, deleteWineBatch } from '../../../database/activities/inventoryDB';
+import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
+import { consumeStorageBackedWineBatch } from '@/lib/database/winery/storageVesselsDB';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { getGameState } from '@/lib/services/core/gameState';
+import { GAME_INITIALIZATION } from '@/lib/constants';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
@@ -26,7 +30,7 @@ import { appendAnchorEffects, buildAnchorEffectsFromNeutral, diffAnchorEffects }
 import { CrushingOptions, modifyCrushingCharacteristics } from '../characteristics/crushingCharacteristics';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { applyCrushingToWineAnchors, applyFermentationSetupToWineAnchors, applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
-import { activateStoragePlanForBatch, canStoragePlanHoldVolume, initializeHarvestVolumeLitres, recordBatchStorageVolume, releaseStoragePlanForBatch } from './storageVesselAllocationService';
+import { activateStoragePlanForBatch, canStoragePlanHoldVolume, initializeHarvestVolumeLitres, recordBatchStorageVolume } from './storageVesselAllocationService';
 
 const DEFAULT_TASTE_QUALITY_INDEX = 0.5;
 
@@ -725,7 +729,9 @@ export async function createWineBatchFromHarvest(
 
   await saveWineBatch(incomingBatch);
   if (!(await activateStoragePlanForBatch(storagePlanId, incomingBatch.id, incomingBatch.volumeLitres))) {
-    await deleteWineBatch(incomingBatch.id);
+    if (!(await deleteInventoryBatch(incomingBatch.id))) {
+      throw new Error('Could not activate Storage Vessel allocation; the harvest batch needs reconciliation.');
+    }
     throw new Error('Could not activate Storage Vessel allocation for the harvested batch.');
   }
   triggerGameUpdate();
@@ -748,7 +754,9 @@ export async function createWineBatchFromMarketSource(input: CreateMarketWineBat
   }
   await saveWineBatch(batch);
   if (!(await activateStoragePlanForBatch(input.storagePlanId, batch.id, batch.volumeLitres))) {
-    await deleteWineBatch(batch.id);
+    if (!(await deleteInventoryBatch(batch.id))) {
+      throw new Error('Could not activate Storage Vessel allocation; the market batch needs reconciliation.');
+    }
     throw new Error('Could not activate Storage Vessel allocation for the market batch.');
   }
   triggerGameUpdate();
@@ -799,12 +807,26 @@ export async function updateInventoryBatch(batchId: string, updates: Partial<Win
 
 export async function deleteInventoryBatch(batchId: string): Promise<boolean> {
   const batch = await getInventoryBatchById(batchId);
-  const success = await deleteWineBatch(batchId);
-  if (success) {
-    if (batch) await releaseStoragePlanForBatch(batch);
-    triggerGameUpdate();
-  }
-  return success;
+  if (!batch) return false;
+  return consumeInventoryBatchQuantity(batchId, batch.quantity);
+}
+
+/** Remove inventory while keeping a non-bottled batch's storage plan and fill volumes in sync. */
+export async function consumeInventoryBatchQuantity(batchId: string, quantity: number): Promise<boolean> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId || !Number.isFinite(quantity) || quantity <= 0) return false;
+  const state = getGameState();
+  const result = await consumeStorageBackedWineBatch({
+    companyId,
+    batchId,
+    quantity,
+    releasedYear: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
+    releasedSeason: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
+    releasedWeek: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+  });
+  if (!result.consumed || result.error) return false;
+  triggerGameUpdate();
+  return true;
 }
 
 // Format completed wine name

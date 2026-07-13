@@ -31,8 +31,10 @@ export const Equipment: React.FC<EquipmentProps> = () => {
       (total, vessel) => ({
         total: total.total + vessel.capacityLitres,
         available: total.available + (vessel.occupancy === 'available' ? vessel.capacityLitres : 0),
+        reserved: total.reserved + (vessel.occupancy === 'reserved' ? vessel.capacityLitres : 0),
+        inUse: total.inUse + (vessel.occupancy === 'in_use' ? vessel.capacityLitres : 0),
       }),
-      { total: 0, available: 0 },
+      { total: 0, available: 0, reserved: 0, inUse: 0 },
     ),
     [vessels],
   );
@@ -57,10 +59,12 @@ export const Equipment: React.FC<EquipmentProps> = () => {
         <Button onClick={() => setIsBuyMarketOpen(true)} className="bg-amber-600 hover:bg-amber-500">Buy Equipment</Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Vessels</div><div className="text-lg font-semibold">{vessels.length}</div></div>
         <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Total capacity</div><div className="text-lg font-semibold">{formatNumber(summary.total, { decimals: 0 })} L</div></div>
         <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Available</div><div className="text-lg font-semibold">{formatNumber(summary.available, { decimals: 0 })} L</div></div>
+        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">Reserved</div><div className="text-lg font-semibold">{formatNumber(summary.reserved, { decimals: 0 })} L</div></div>
+        <div className="rounded-lg border bg-white p-3"><div className="text-xs text-gray-500">In use</div><div className="text-lg font-semibold">{formatNumber(summary.inUse, { decimals: 0 })} L</div></div>
       </div>
 
       <section className="overflow-hidden rounded-lg border bg-white shadow-sm">

@@ -3,8 +3,7 @@ import type { WineBatch } from '@/lib/types/types';
 
 const mocks = vi.hoisted(() => ({
   getInventoryBatchById: vi.fn(),
-  updateInventoryBatch: vi.fn(async () => true),
-  deleteInventoryBatch: vi.fn(async () => true),
+  consumeInventoryBatchQuantity: vi.fn(async () => true),
   getGameState: vi.fn(() => ({ prestige: 0, currentYear: 2026, season: 'Spring' })),
   addTransaction: vi.fn(async () => undefined),
   recordMarketBuyerSale: vi.fn(async () => undefined),
@@ -15,8 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   getInventoryBatchById: mocks.getInventoryBatchById,
-  updateInventoryBatch: mocks.updateInventoryBatch,
-  deleteInventoryBatch: mocks.deleteInventoryBatch,
+  consumeInventoryBatchQuantity: mocks.consumeInventoryBatchQuantity,
 }));
 vi.mock('@/lib/services/core/gameState', () => ({ getGameState: mocks.getGameState }));
 vi.mock('@/lib/services/finance/financeService', () => ({ addTransaction: mocks.addTransaction }));
@@ -41,21 +39,19 @@ describe('sellGrapes inventory seam', () => {
     mocks.getInventoryBatchById.mockResolvedValue(batch);
   });
 
-  it('deletes a fully sold batch through inventoryService and records the sale', async () => {
+  it('consumes a fully sold batch through the storage-aware inventory command and records the sale', async () => {
     const { sellGrapes } = await import('@/lib/services/sales/sellGrapesService');
     const result = await sellGrapes(batch.id, buyer, 100);
     expect(result.success).toBe(true);
-    expect(mocks.deleteInventoryBatch).toHaveBeenCalledWith(batch.id);
-    expect(mocks.updateInventoryBatch).not.toHaveBeenCalled();
+    expect(mocks.consumeInventoryBatchQuantity).toHaveBeenCalledWith(batch.id, 100);
     expect(mocks.addTransaction).toHaveBeenCalledOnce();
     expect(mocks.recordBuyerSale).toHaveBeenCalledWith('bulk_buyer', 100, 2026);
   });
 
-  it('uses inventoryService update for a partial sale', async () => {
+  it('uses the storage-aware inventory command for a partial sale', async () => {
     const { sellGrapes } = await import('@/lib/services/sales/sellGrapesService');
     const result = await sellGrapes(batch.id, buyer, 40);
     expect(result.success).toBe(true);
-    expect(mocks.updateInventoryBatch).toHaveBeenCalledWith(batch.id, { quantity: 60 });
-    expect(mocks.deleteInventoryBatch).not.toHaveBeenCalled();
+    expect(mocks.consumeInventoryBatchQuantity).toHaveBeenCalledWith(batch.id, 40);
   });
 });

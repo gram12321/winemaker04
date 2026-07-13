@@ -5,6 +5,7 @@ import {
   getCompanyStorageAllocations,
   getCompanyStorageVessels,
   releaseStorageVesselPlan,
+  releaseStorageVesselAllocation,
   reserveStorageVesselPlan,
   updateStorageVesselAllocationFill,
   updateStorageVesselPlanVolume,
@@ -99,6 +100,17 @@ export async function addStorageVesselCapacity(planId: string, vesselIds: string
   const result = await addStorageVesselPlanAllocations(companyId, planId, vesselIds);
   if (result.error || !result.added) return { success: false, error: 'Selected Storage Vessels are unavailable.' };
   return { success: true };
+}
+
+/** Roll back capacity added to an active plan before any wine has entered those vessels. */
+export async function releaseUnusedStorageVesselCapacity(planId: string, vesselIds: string[]): Promise<boolean> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return false;
+  const results = await Promise.all(vesselIds.map(async (vesselId) => {
+    const result = await releaseStorageVesselAllocation(companyId, planId, vesselId);
+    return !result.error;
+  }));
+  return results.every(Boolean);
 }
 
 export async function activateStoragePlanForBatch(planId: string, batchId: string, volumeLitres: number): Promise<boolean> {

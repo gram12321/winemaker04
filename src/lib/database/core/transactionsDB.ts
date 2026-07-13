@@ -63,6 +63,23 @@ export const insertTransaction = async (transactionData: TransactionData): Promi
   }
 };
 
+export async function insertTransactionWithFundsCheck(transactionData: TransactionData): Promise<{ success: boolean; data?: any; error?: string }> {
+  const { data, error } = await supabase.rpc('record_company_transaction', {
+    p_company_id: transactionData.company_id,
+    p_amount: transactionData.amount,
+    p_description: transactionData.description,
+    p_category: transactionData.category,
+    p_recurring: transactionData.recurring,
+    p_week: transactionData.week,
+    p_season: transactionData.season,
+    p_year: transactionData.year,
+    p_require_funds: true,
+  });
+  if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: 'Insufficient funds.' };
+  return { success: true, data };
+}
+
 export const loadTransactions = async (): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase

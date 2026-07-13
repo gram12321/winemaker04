@@ -45,7 +45,7 @@ import {
   type CreateMarketWineBatchInput,
   type MarketBatchStateProfile
 } from '../wine/winery/inventoryService';
-import { activateStoragePlanForBatch, createStorageAllocationPlan, initializeHarvestVolumeLitres } from '../wine/winery/storageVesselAllocationService';
+import { activateStoragePlanForBatch, createStorageAllocationPlan, initializeHarvestVolumeLitres, releaseStorageAllocationPlan } from '../wine/winery/storageVesselAllocationService';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface BuyGrapeMarketOffer {
@@ -940,7 +940,8 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
       `Market Purchase: ${roundedQuantity} kg ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name}`,
       TRANSACTION_CATEGORIES.SUPPLIES,
       false,
-      companyId
+      companyId,
+      true,
     );
 
     try {
@@ -959,7 +960,8 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
     return { success: true };
   } catch (purchaseError) {
     const deleted = storagePlan.planId ? await deleteInventoryBatch(purchasedBatch.id).catch(() => false) : true;
-    if (!deleted) {
+    const released = storagePlan.planId ? await releaseStorageAllocationPlan(storagePlan.planId) : true;
+    if (!deleted || !released) {
       console.error('Failed to clean up a partially completed market purchase:', purchaseError);
       return { success: false, error: 'The purchase needs reconciliation before trying again.' };
     }

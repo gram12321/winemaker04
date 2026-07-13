@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { loadWineBatches, saveWineBatch, deleteWineBatch } from '../../database/activities/inventoryDB';
+import { loadWineBatches } from '../../database/activities/inventoryDB';
+import { consumeInventoryBatchQuantity } from '../wine/winery/inventoryService';
 import {
   getForwardContractById,
   getOpenForwardContracts,
@@ -291,14 +292,10 @@ export async function autoDeliverForwardContract(contractId: string): Promise<{ 
     for (const batch of eligible) {
       if (deliverRemaining <= 0) break;
       const deliveredFromBatch = Math.min(batch.quantity, deliverRemaining);
-      const updatedQty = batch.quantity - deliveredFromBatch;
       deliveredNow += deliveredFromBatch;
       deliverRemaining -= deliveredFromBatch;
-
-      if (updatedQty <= 0) {
-        await deleteWineBatch(batch.id);
-      } else {
-        await saveWineBatch({ ...batch, quantity: updatedQty });
+      if (!(await consumeInventoryBatchQuantity(batch.id, deliveredFromBatch))) {
+        throw new Error(`Could not update ${batch.grape} inventory for this delivery.`);
       }
     }
 

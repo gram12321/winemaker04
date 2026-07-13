@@ -3,12 +3,11 @@ import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { addTransaction } from '../finance/financeService';
-import { deleteInventoryBatch, getInventoryBatchById, updateInventoryBatch } from '../wine/winery/inventoryService';
+import { consumeInventoryBatchQuantity, getInventoryBatchById } from '../wine/winery/inventoryService';
 import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { getGameState } from '../core/gameState';
-import { recordBatchStorageVolume, releaseStoragePlanForBatch } from '../wine/winery/storageVesselAllocationService';
 import {
   BASE_GRAPE_PRICE_PER_KG,
   FAVORITE_GRAPE_PRIMARY_BONUS,
@@ -243,20 +242,8 @@ export async function sellGrapes(
   const pricing = calculateGrapeSalePrice(batch, buyer, prestige, floorPriceOverride, quantityKg);
 
   // Remove sold grapes from inventory, preserving the remainder when partially sold.
-  const remainingQuantity = batch.quantity - quantityKg;
-  const inventoryUpdated = remainingQuantity > 0
-    ? await updateInventoryBatch(batchId, { quantity: remainingQuantity })
-    : await deleteInventoryBatch(batchId);
+  const inventoryUpdated = await consumeInventoryBatchQuantity(batchId, quantityKg);
   if (!inventoryUpdated) return { success: false, revenue: 0, error: 'Failed to update grape inventory' };
-  if (remainingQuantity > 0 && batch.storagePlanId && batch.volumeLitres !== undefined) {
-    if (!(await recordBatchStorageVolume(batchId, batch.volumeLitres * (remainingQuantity / batch.quantity)))) {
-      return { success: false, revenue: 0, error: 'Failed to update Storage Vessel volume' };
-    }
-  } else if (remainingQuantity <= 0) {
-    if (batch.storagePlanId && !(await releaseStoragePlanForBatch(batch))) {
-      return { success: false, revenue: 0, error: 'Failed to release Storage Vessel allocation' };
-    }
-  }
 
   // Record the transaction
   await addTransaction(

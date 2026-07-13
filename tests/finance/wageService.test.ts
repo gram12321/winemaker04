@@ -54,6 +54,12 @@ describe('calculateWage', () => {
     expect(highWage).toBeGreaterThan(lowWage);
   });
 
+  it('includes maintenance in the average skill', () => {
+    const withoutMaintenance = { ...baseSkills, maintenance: 0 };
+    const withMaintenance = { ...baseSkills, maintenance: 1 };
+    expect(calculateWage(withMaintenance)).toBeGreaterThan(calculateWage(withoutMaintenance));
+  });
+
   it('applies specialization bonus multiplicatively', () => {
     const skills = baseSkills;
 

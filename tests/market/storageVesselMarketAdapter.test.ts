@@ -60,7 +60,7 @@ describe('Storage Vessel market adapter', () => {
       950,
       2,
     );
-    expect(mocks.addTransaction).toHaveBeenCalledWith(-1900, expect.stringContaining('2 storage vessels'), 'Supplies', false, 'company-1');
+    expect(mocks.addTransaction).toHaveBeenCalledWith(-1900, expect.stringContaining('2 storage vessels'), 'Supplies', false, 'company-1', true);
     expect(mocks.claimBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', offer.offerId, 2);
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('storage_vessels');
   });
