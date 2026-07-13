@@ -125,9 +125,9 @@ export async function updateLoan(loanId: string, updates: Partial<Loan>): Promis
   }
 }
 
-export async function loadActiveLoans(): Promise<Loan[]> {
+export async function loadActiveLoans(companyId?: string): Promise<Loan[]> {
   try {
-    const { data, error } = await getCompanyQuery('loans')
+    const { data, error } = await getCompanyQuery('loans', companyId)
       .eq('status', 'active')
       .order('next_payment_year', { ascending: true })
       .order('next_payment_season', { ascending: true });

@@ -135,7 +135,9 @@ export const researchUpgradeFeature: ResearchUpgradeFeature = {
   },
 
   ui: {
-    renderResearchPage: () => <ResearchWorkspace />
+    renderResearchPage: ({ getAchievementTitle }) => (
+      <ResearchWorkspace getAchievementTitle={getAchievementTitle} />
+    )
   },
 
   effects: {

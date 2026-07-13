@@ -6,6 +6,7 @@ import {
   getResearchDependencyMetadata,
   getResearchDisplayGroup,
   getResearchGateChips,
+  getResearchRequirementDetails,
   getResearchRewardDetails,
 } from '@/lib/features/researchUpgrade/services/research/researchPresentationService';
 
@@ -72,6 +73,21 @@ describe('research presentation service', () => {
         }),
       ])
     );
+  });
+
+  it('shows the authoritative tier-specific achievement title in requirements', () => {
+    const details = getResearchRequirementDetails(
+      projectById('foundation_staff_training'),
+      RESEARCH_PROJECTS,
+      (achievementId) => achievementId === 'sales_count_tier_2'
+        ? 'Sales Professional - 10 Sales'
+        : undefined
+    );
+
+    expect(details).toContainEqual({
+      label: 'Required Achievement',
+      value: 'Sales Professional - 10 Sales',
+    });
   });
 
   it('derives unlock-next titles and ladder footprint summaries', () => {

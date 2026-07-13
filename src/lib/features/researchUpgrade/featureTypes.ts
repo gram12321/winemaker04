@@ -39,7 +39,9 @@ export interface ResearchUpgradeSetupHooks {
 }
 
 export interface ResearchUpgradeUiHooks {
-  renderResearchPage(): ReactElement;
+  renderResearchPage(input: {
+    getAchievementTitle(achievementId: string): string | undefined;
+  }): ReactElement;
 }
 
 export interface ResearchUpgradeEffectsHooks {

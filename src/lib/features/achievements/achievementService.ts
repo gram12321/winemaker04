@@ -1,19 +1,22 @@
-import { AchievementConfig, AchievementWithStatus, AchievementUnlock, Transaction, WineOrder } from '@/lib/types/types';
+import { AchievementConfig, AchievementWithStatus, AchievementUnlock, GameState, Transaction, WineOrder } from '@/lib/types/types';
 import { ALL_ACHIEVEMENTS } from './achievementDefinitions';
 import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked, getAchievementUnlock } from '@/lib/database/core/achievementsDB';
-import { insertPrestigeEvent, insertPrestigeEventIfAbsentBySource, listPrestigeEvents } from '@/lib/database/customers/prestigeEventsDB';
+import {
+  insertPrestigeEventIfAbsentBySource,
+  insertVineyardAchievementPrestigeEventIfAbsent,
+} from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from '@/lib/services/core/gameState';
-import { calculateFinancialData, calculateCompanyValue, loadTransactions } from '@/lib/services/finance/financeService';
+import { getCompanyFinancialSnapshot } from '@/lib/services/finance/financeService';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { loadWineLogByVineyard } from '@/lib/database/core/wineLogDB';
+import { getWineProductionSummary, loadWineLogByVineyard } from '@/lib/database/core/wineLogDB';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '@/hooks';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { resolveWineLogAchievementScore } from './achievementScoreUtils';
-import { loadWineOrders } from '@/lib/database/customers/salesDB';
+import { getSalesSummary, loadWineOrders } from '@/lib/database/customers/salesDB';
 import { loadWineContracts } from '@/lib/database/sales/contractDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import type { AchievementStats, AchievementWorkspace } from './featureTypes';
@@ -120,6 +123,7 @@ interface AchievementCheckContext {
   largestFulfilledContractValue: number;
   bestSalePriceOverAskingPercent: number;
   bestSalePriceUnderAskingPercent: number;
+  gameState: Pick<GameState, 'week' | 'season' | 'currentYear' | 'foundedYear' | 'money' | 'prestige'>;
   vineyards: Array<{
     id: string;
     name: string;
@@ -142,36 +146,61 @@ interface AchievementCheckContext {
   }>;
 }
 
+function captureAchievementEvaluationScope(
+  companyId = getCurrentCompanyId(),
+  state: Partial<GameState> = getGameState()
+): {
+  companyId: string;
+  gameState: AchievementCheckContext['gameState'];
+} {
+  if (
+    state.week === undefined ||
+    state.season === undefined ||
+    state.currentYear === undefined ||
+    state.foundedYear === undefined ||
+    state.money === undefined ||
+    state.prestige === undefined
+  ) {
+    throw new Error('Achievement evaluation requires a fully initialized active company state.');
+  }
+
+  return {
+    companyId,
+    gameState: {
+      week: state.week,
+      season: state.season,
+      currentYear: state.currentYear,
+      foundedYear: state.foundedYear,
+      money: state.money,
+      prestige: state.prestige,
+    },
+  };
+}
+
 /**
  * Build achievement check context from current game state
  */
-async function buildAchievementContext(companyId: string): Promise<AchievementCheckContext> {
-  const gameState = getGameState();
+async function buildAchievementContext(
+  companyId: string,
+  gameState: Pick<GameState, 'week' | 'season' | 'currentYear' | 'foundedYear' | 'money' | 'prestige'>
+): Promise<AchievementCheckContext> {
   const [vineyards, wineOrders, wineContracts, wineBatches] = await Promise.all([
-    loadVineyards(),
-    loadWineOrders(),
-    loadWineContracts(),
-    loadWineBatches(),
+    loadVineyards(companyId),
+    loadWineOrders(undefined, companyId),
+    loadWineContracts(companyId),
+    loadWineBatches(companyId),
   ]);
   
   // Calculate company age
   const companyAgeInYears = gameState.currentYear! - gameState.foundedYear!;
   
   // Load financial data
-  const [financialData, companyValue, transactions] = await Promise.all([
-    calculateFinancialData('year'),
-    calculateCompanyValue(),
-    loadTransactions()
+  const [financialSnapshot, salesSummary, productionSummary] = await Promise.all([
+    getCompanyFinancialSnapshot(companyId, gameState),
+    getSalesSummary(companyId),
+    getWineProductionSummary(companyId)
   ]);
-  
-  // OPTIMIZATION: Use lightweight summary queries instead of loading full datasets
-  const { getSalesSummary } = await import('../../database/customers/salesDB');
-  const { getWineProductionSummary } = await import('../../database/core/wineLogDB');
-  
-  const [salesSummary, productionSummary] = await Promise.all([
-    getSalesSummary(),
-    getWineProductionSummary()
-  ]);
+  const { financialData, companyValue, transactions } = financialSnapshot;
   
   const totalSalesCount = salesSummary.totalSalesCount;
   const totalSalesValue = salesSummary.totalSalesValue;
@@ -202,7 +231,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   const allWineLogEntries = [];
   for (const vineyard of vineyards) {
     try {
-      const vineyardEntries = await loadWineLogByVineyard(vineyard.id);
+      const vineyardEntries = await loadWineLogByVineyard(vineyard.id, companyId);
       allWineLogEntries.push(...vineyardEntries);
     } catch (error) {
       console.warn(`Failed to load wine log for vineyard ${vineyard.id}:`, error);
@@ -220,7 +249,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   }
   
   // Get achievement completion data (excluding meta achievements from the count)
-  const completedAchievements = await getAllAchievementUnlocks();
+  const completedAchievements = await getAllAchievementUnlocks(companyId);
   
   // Exclude meta achievements from both completed and total counts to avoid chicken-and-egg problem
   // The 100% achievement completion achievement shouldn't count itself
@@ -292,6 +321,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     largestFulfilledContractValue,
     bestSalePriceOverAskingPercent,
     bestSalePriceUnderAskingPercent,
+    gameState,
     vineyards: vineyardData,
     wineLogEntries: allWineLogEntries.map(entry => ({
       tasteQualityIndex: entry.tasteQualityIndex,
@@ -670,13 +700,13 @@ async function spawnAchievementPrestigeEvents(
   unlock: AchievementUnlock,
   context?: AchievementCheckContext
 ): Promise<void> {
-  if (!achievement.prestige) return;
-  
-  const gameState = getGameState();
+  if (!achievement.prestige || !context) return;
+
+  const gameState = context.gameState;
   const currentWeek = calculateAbsoluteWeeks(
-    gameState.week!, 
-    gameState.season!, 
-    gameState.currentYear!
+    gameState.week,
+    gameState.season,
+    gameState.currentYear
   );
   
   // Spawn company prestige event
@@ -689,6 +719,7 @@ async function spawnAchievementPrestigeEvents(
       decay_rate: achievement.prestige.company.decayRate,
       source_id: `achievement:${achievement.id}`,
       payload: {
+        event: 'achievement_unlock',
         achievementId: achievement.id,
         achievementName: achievement.name,
         achievementIcon: achievement.icon,
@@ -696,25 +727,11 @@ async function spawnAchievementPrestigeEvents(
         achievementLevel: achievement.achievementLevel,
         unlockedValue: unlock.metadata?.value
       }
-    });
+    }, unlock.companyId);
   }
   
   // Spawn vineyard prestige events for ALL qualifying vineyards (one per vineyard that meets the condition)
-  if (achievement.prestige.vineyard && context) {
-    // Get existing prestige events to check which vineyard+achievement combinations already have events
-    const existingEvents = await listPrestigeEvents();
-    const existingVineyardAchievements = new Set<string>();
-    
-    // Build set of existing vineyard+achievement combinations
-    for (const event of existingEvents) {
-      if (event.type === 'vineyard_achievement' && event.source_id && event.payload) {
-        const metadata: any = event.payload;
-        if (metadata.achievementId === achievement.id) {
-          existingVineyardAchievements.add(event.source_id);
-        }
-      }
-    }
-    
+  if (achievement.prestige.vineyard) {
     // Find ALL qualifying vineyards for this achievement type (not just the best one)
     const qualifyingVineyards: typeof context.vineyards = [];
     
@@ -735,14 +752,9 @@ async function spawnAchievementPrestigeEvents(
       qualifyingVineyards.push(...context.vineyards.filter(v => v.prestige >= threshold));
     }
     
-    // Create prestige events for all qualifying vineyards that don't already have one
+    // The database uniqueness constraint handles overlapping checks safely.
     for (const vineyard of qualifyingVineyards) {
-      // Skip if this vineyard+achievement combination already has a prestige event
-      if (existingVineyardAchievements.has(vineyard.id)) {
-        continue;
-      }
-      
-      await insertPrestigeEvent({
+      await insertVineyardAchievementPrestigeEventIfAbsent({
         id: uuidv4(),
         type: 'vineyard_achievement',
         amount_base: achievement.prestige.vineyard.baseAmount,
@@ -755,10 +767,11 @@ async function spawnAchievementPrestigeEvents(
           achievementIcon: achievement.icon,
           achievementCategory: achievement.category,
           achievementLevel: achievement.achievementLevel,
+          vineyardId: vineyard.id,
           vineyardName: vineyard.name,
           event: 'achievement_unlock'
         }
-      });
+      }, unlock.companyId);
     }
   }
 }
@@ -770,24 +783,24 @@ async function unlockAchievementWithPrestige(
   achievement: AchievementConfig,
   context: AchievementCheckContext,
   progressData?: { progress?: number; target?: number; unit?: string }
-): Promise<AchievementUnlock> {
-  const gameState = getGameState();
+): Promise<AchievementUnlock | null> {
+  const gameState = context.gameState;
   const currentWeek = calculateAbsoluteWeeks(
-    gameState.week!, 
-    gameState.season!, 
-    gameState.currentYear!
+    gameState.week,
+    gameState.season,
+    gameState.currentYear
   );
   
   // Create unlock record
-  const unlock = await unlockAchievement({
+  const unlockResult = await unlockAchievement({
     achievementId: achievement.id,
     achievementName: achievement.name,
     description: achievement.description,
     companyId: context.companyId,
     unlockedAt: {
-      week: gameState.week!,
-      season: gameState.season!,
-      year: gameState.currentYear!
+      week: gameState.week,
+      season: gameState.season,
+      year: gameState.currentYear
     },
     unlockedAtTimestamp: currentWeek,
     progress: progressData?.progress,
@@ -798,9 +811,12 @@ async function unlockAchievementWithPrestige(
       achievementLevel: achievement.achievementLevel
     }
   });
+  const { unlock, created } = unlockResult;
   
   // Spawn prestige events
   await spawnAchievementPrestigeEvents(achievement, unlock, context);
+
+  if (!created) return null;
   
   // Trigger global update for UI
   triggerGameUpdate();
@@ -810,7 +826,15 @@ async function unlockAchievementWithPrestige(
     `🏆 Achievement Unlocked: ${achievement.name} (${achievement.icon})`,
     'achievements.unlock',
     'Achievements',
-    NotificationCategory.SYSTEM
+    NotificationCategory.SYSTEM,
+    {
+      companyId: context.companyId,
+      gameDate: {
+        week: gameState.week,
+        season: gameState.season,
+        year: gameState.currentYear,
+      },
+    }
   );
   
   return unlock;
@@ -828,17 +852,17 @@ export async function checkAndUnlockAchievement(
     return null;
   }
   
-  const targetCompanyId = getCurrentCompanyId();
+  const { companyId: targetCompanyId, gameState } = captureAchievementEvaluationScope();
   // Check if already unlocked
   const existingUnlock = await getAchievementUnlock(achievementId, targetCompanyId);
   if (existingUnlock) {
-    const context = await buildAchievementContext(targetCompanyId);
+    const context = await buildAchievementContext(targetCompanyId, gameState);
     await spawnAchievementPrestigeEvents(achievement, existingUnlock, context);
     return null;
   }
   
   // Build context and check condition
-  const context = await buildAchievementContext(targetCompanyId);
+  const context = await buildAchievementContext(targetCompanyId, gameState);
   const conditionResult = checkAchievementCondition(achievement, context);
   
   if (conditionResult.isMet) {
@@ -852,10 +876,13 @@ export async function checkAndUnlockAchievement(
  * Check all achievements and unlock any that are met
  * Also checks for new qualifying vineyards on already-unlocked vineyard achievements
  */
-export async function checkAllAchievements(): Promise<AchievementUnlock[]> {
-  const targetCompanyId = getCurrentCompanyId();
+export async function checkAllAchievements(
+  companyId?: string,
+  state?: Partial<GameState>
+): Promise<AchievementUnlock[]> {
+  const { companyId: targetCompanyId, gameState } = captureAchievementEvaluationScope(companyId, state);
   
-  const context = await buildAchievementContext(targetCompanyId);
+  const context = await buildAchievementContext(targetCompanyId, gameState);
   const newUnlocks: AchievementUnlock[] = [];
   
   for (const achievement of ALL_ACHIEVEMENTS) {
@@ -876,7 +903,7 @@ export async function checkAllAchievements(): Promise<AchievementUnlock[]> {
     
     if (conditionResult.isMet) {
       const unlock = await unlockAchievementWithPrestige(achievement, context, conditionResult);
-      newUnlocks.push(unlock);
+      if (unlock) newUnlocks.push(unlock);
     }
   }
   
@@ -891,7 +918,8 @@ export async function getAllAchievementsWithStatus(): Promise<AchievementWithSta
 }
 
 export async function getUnlockedAchievementIds(): Promise<Set<string>> {
-  const unlocks = await getAllAchievementUnlocks();
+  const companyId = getCurrentCompanyId();
+  const unlocks = await getAllAchievementUnlocks(companyId);
   return new Set(unlocks.map((unlock) => unlock.achievementId));
 }
 
@@ -935,9 +963,9 @@ function buildAchievementStats(achievementsWithStatus: AchievementWithStatus[]):
 }
 
 export async function getAchievementWorkspace(): Promise<AchievementWorkspace> {
-  const targetCompanyId = getCurrentCompanyId();
+  const { companyId: targetCompanyId, gameState } = captureAchievementEvaluationScope();
   const [context, unlocks] = await Promise.all([
-    buildAchievementContext(targetCompanyId),
+    buildAchievementContext(targetCompanyId, gameState),
     getAllAchievementUnlocks(targetCompanyId),
   ]);
   const unlockMap = new Map(unlocks.map((unlock) => [unlock.achievementId, unlock]));

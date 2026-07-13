@@ -53,6 +53,7 @@ type ResearchGroupFilter = 'all' | ResearchDisplayGroupId;
 
 interface ResearchWorkspaceProps {
   bypassGates?: boolean;
+  getAchievementTitle?: (achievementId: string) => string | undefined;
   readOnly?: boolean;
   variant?: 'player' | 'admin';
 }
@@ -264,6 +265,7 @@ function getRequirementStatus(
 
 export function ResearchWorkspace({
   bypassGates = false,
+  getAchievementTitle = () => undefined,
   readOnly = false,
   variant = 'player',
 }: ResearchWorkspaceProps) {
@@ -316,7 +318,10 @@ export function ResearchWorkspace({
     };
   }, [bypassGates, refreshVersion, subscribe]);
 
-  const presentationRows = useMemo(() => buildResearchPresentationRows(RESEARCH_PROJECTS), []);
+  const presentationRows = useMemo(
+    () => buildResearchPresentationRows(RESEARCH_PROJECTS, RESEARCH_PROJECTS, getAchievementTitle),
+    [getAchievementTitle]
+  );
 
   const projectModels = useMemo<ResearchProjectModel[]>(() => {
     return presentationRows.map((presentation) => {

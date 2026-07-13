@@ -29,7 +29,7 @@ export async function checkAchievementsAfterWeekAdvance(): Promise<void> {
   if (shouldRunAchievementCheck(companyId, absoluteWeek) && !companiesWithCheckInFlight.has(companyId)) {
     companiesWithCheckInFlight.add(companyId);
     try {
-    await checkAllAchievements();
+      await checkAllAchievements(companyId, gameState);
       recordAchievementCheck(companyId, absoluteWeek);
     } finally {
       companiesWithCheckInFlight.delete(companyId);

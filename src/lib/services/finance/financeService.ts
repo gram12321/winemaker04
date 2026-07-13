@@ -1,5 +1,5 @@
 import { getGameState, updateGameState } from '../core/gameState';
-import type { Transaction } from '@/lib/types/types';
+import type { GameState, Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { SEASON_ORDER, TRANSACTION_CATEGORIES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
@@ -12,7 +12,7 @@ import { loanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 
-interface FinancialData {
+export interface FinancialData {
   income: number;
   expenses: number;
   netIncome: number;
@@ -32,8 +32,8 @@ interface FinancialData {
   totalEquity: number;
 }
 
-let transactionsCache: Transaction[] = [];
-let transactionsLoadPromise: Promise<Transaction[]> | null = null; // Promise-based cache for parallel calls
+const transactionsCacheByCompany = new Map<string, Transaction[]>();
+const transactionsLoadPromiseByCompany = new Map<string, Promise<Transaction[]>>();
 
 // Add a new transaction to the system
 export const addTransaction = async (
@@ -100,18 +100,24 @@ export const addTransaction = async (
       money: result.data.money
     };
     
-    transactionsCache.push(newTransaction);
-    transactionsLoadPromise = null; // Invalidate promise cache when new transaction is added
-    
-    transactionsCache.sort((a, b) => {
-      if (a.date.year !== b.date.year) return b.date.year - a.date.year;
-      if (a.date.season !== b.date.season) {
-        return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
-      }
-      if (a.date.week !== b.date.week) return b.date.week - a.date.week;
-      // For same week transactions, sort by ID (newer transactions have higher IDs)
-      return b.id.localeCompare(a.id);
-    });
+    const inFlightLoad = transactionsLoadPromiseByCompany.get(companyId);
+    if (inFlightLoad) {
+      await inFlightLoad;
+    }
+    transactionsLoadPromiseByCompany.delete(companyId);
+    const companyTransactions = transactionsCacheByCompany.get(companyId);
+    if (companyTransactions && !companyTransactions.some((transaction) => transaction.id === newTransaction.id)) {
+      companyTransactions.push(newTransaction);
+      companyTransactions.sort((a, b) => {
+        if (a.date.year !== b.date.year) return b.date.year - a.date.year;
+        if (a.date.season !== b.date.season) {
+          return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
+        }
+        if (a.date.week !== b.date.week) return b.date.week - a.date.week;
+        // For same week transactions, sort by ID (newer transactions have higher IDs)
+        return b.id.localeCompare(a.id);
+      });
+    }
 
     // Notify listeners again now that the persisted transaction is available to finance readers.
     triggerGameUpdate();
@@ -125,48 +131,57 @@ export const addTransaction = async (
 
 // Load transactions from database
 // OPTIMIZATION: Uses promise-based caching to prevent parallel database calls
-export const loadTransactions = async (): Promise<Transaction[]> => {
-  // If there's already a load in progress, return that promise
-  if (transactionsLoadPromise) {
-    return transactionsLoadPromise;
+export const loadTransactions = async (companyId?: string): Promise<Transaction[]> => {
+  const targetCompanyId = companyId || getCurrentCompanyId();
+  const inFlight = transactionsLoadPromiseByCompany.get(targetCompanyId);
+  if (inFlight) {
+    return inFlight;
   }
   
-  // If cache is populated, return it immediately
-  if (transactionsCache.length > 0) {
-    return transactionsCache;
+  const cached = transactionsCacheByCompany.get(targetCompanyId);
+  if (cached) {
+    return cached;
   }
   
-  // Start loading and cache the promise
-  transactionsLoadPromise = (async () => {
+  const loadPromise = (async () => {
     try {
-      const transactions = await loadTransactionsDB();
-      transactionsCache = transactions;
-      transactionsLoadPromise = null; // Clear promise cache after completion
+      const transactions = await loadTransactionsDB(targetCompanyId);
+      transactionsCacheByCompany.set(targetCompanyId, transactions);
+      transactionsLoadPromiseByCompany.delete(targetCompanyId);
       return transactions;
     } catch (error) {
       console.error('Error loading transactions:', error);
-      transactionsLoadPromise = null; // Clear promise cache on error
+      transactionsLoadPromiseByCompany.delete(targetCompanyId);
       return [];
     }
   })();
-  
-  return transactionsLoadPromise;
+  transactionsLoadPromiseByCompany.set(targetCompanyId, loadPromise);
+
+  return loadPromise;
 };
 
 // Get transactions from cache or load from Supabase if cache is empty
 export const getTransactions = (): Transaction[] => {
-  if (transactionsCache.length === 0) {
-    loadTransactions().catch(console.error);
+  const companyId = getCurrentCompanyId();
+  const transactions = transactionsCacheByCompany.get(companyId);
+  if (!transactions) {
+    loadTransactions(companyId).catch(console.error);
     return [];
   }
-  
-  return transactionsCache;
+
+  return transactions;
 };
 
 // Clear transactions cache (useful when transactions are modified externally)
-export const clearTransactionsCache = (): void => {
-  transactionsCache = [];
-  transactionsLoadPromise = null;
+export const clearTransactionsCache = (companyId?: string): void => {
+  if (companyId) {
+    transactionsCacheByCompany.delete(companyId);
+    transactionsLoadPromiseByCompany.delete(companyId);
+    return;
+  }
+
+  transactionsCacheByCompany.clear();
+  transactionsLoadPromiseByCompany.clear();
 };
 
 // Calculate company value (total assets - total liabilities)
@@ -181,6 +196,33 @@ export const calculateCompanyValue = async (): Promise<number> => {
   }
 };
 
+export async function getCompanyFinancialSnapshot(
+  companyId: string,
+  state: Pick<GameState, 'week' | 'season' | 'currentYear' | 'money'>
+): Promise<{
+  financialData: FinancialData;
+  companyValue: number;
+  transactions: Transaction[];
+}> {
+  const financialData = await calculateFinancialData('year', {
+    week: state.week,
+    season: state.season,
+    year: state.currentYear,
+    companyId,
+    cashMoney: state.money,
+  });
+  const [totalOutstandingLoans, transactions] = await Promise.all([
+    loanLenderFeature.metrics.calculateTotalOutstandingLoans(companyId),
+    loadTransactions(companyId),
+  ]);
+
+  return {
+    financialData,
+    companyValue: financialData.totalAssets - totalOutstandingLoans,
+    transactions,
+  };
+}
+
 export const calculateTotalAssets = async (): Promise<number> => {
   try {
     const financialData = await calculateFinancialData('year');
@@ -194,14 +236,20 @@ export const calculateTotalAssets = async (): Promise<number> => {
 // Calculate financial data for income statement and balance sheet
 export const calculateFinancialData = async (
   period: 'weekly' | 'season' | 'year' | 'all',
-  options: { week?: number; season?: string; year?: number } = {}
+  options: {
+    week?: number;
+    season?: string;
+    year?: number;
+    companyId?: string;
+    cashMoney?: number;
+  } = {}
 ): Promise<FinancialData> => {
   const gameState = getGameState();
   
   const [transactions, vineyards, wineBatches] = await Promise.all([
-    loadTransactions(),
-    loadVineyards(),
-    loadWineBatches()
+    loadTransactions(options.companyId),
+    loadVineyards(options.companyId),
+    loadWineBatches(options.companyId)
   ]);
   
   const currentDate = {
@@ -287,7 +335,7 @@ export const calculateFinancialData = async (
     return sum + (batch.quantity * landValuePriceMultiplier * 5);
   }, 0);
   
-  const cashMoney = gameState.money || 0;
+  const cashMoney = options.cashMoney ?? gameState.money ?? 0;
   const fixedAssets = buildingsValue + allVineyardsValue;
   const currentAssets = wineValue + grapesValue;
   const totalAssets = cashMoney + fixedAssets + currentAssets;

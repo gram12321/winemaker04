@@ -38,13 +38,16 @@ export interface NotificationFilterRecord {
   created_at: string;
 }
 
-export const saveNotification = async (notification: DbNotificationRecord): Promise<void> => {
+export const saveNotification = async (
+  notification: DbNotificationRecord,
+  companyId?: string
+): Promise<void> => {
   try {
     const { error } = await supabase
       .from(NOTIFICATIONS_TABLE)
       .upsert({
         id: notification.id,
-        company_id: getCurrentCompanyId(),
+        company_id: companyId || getCurrentCompanyId(),
         game_week: notification.game_week,
         game_season: notification.game_season,
         game_year: notification.game_year,

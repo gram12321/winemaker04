@@ -11,6 +11,8 @@ import {
   clearNotificationFilters
 } from "@/lib/database/core/notificationsDB";
 import { NotificationCategory } from "@/lib/types/types";
+import type { GameDate } from "@/lib/types/types";
+import { getCurrentCompanyId } from "@/lib/utils";
 
 export interface PlayerNotification {
   id: string;
@@ -109,22 +111,39 @@ export const notificationService = {
     return [...notifications];
   },
 
-  async addMessage(text: string, origin: string, userFriendlyOrigin: string, category: NotificationCategory) {
-    await loadFiltersFromDbIfNeeded();
+  async addMessage(
+    text: string,
+    origin: string,
+    userFriendlyOrigin: string,
+    category: NotificationCategory,
+    options: { companyId?: string; gameDate?: GameDate } = {}
+  ) {
+    let isForActiveCompany = true;
+    if (options.companyId) {
+      try {
+        isForActiveCompany = options.companyId === getCurrentCompanyId();
+      } catch {
+        isForActiveCompany = false;
+      }
+    }
 
-    const blockStatus = isNotificationBlocked(origin, category);
-    if (blockStatus === true) {
-      return null;
+    let blockStatus: boolean | 'history' = false;
+    if (isForActiveCompany) {
+      await loadFiltersFromDbIfNeeded();
+      blockStatus = isNotificationBlocked(origin, category);
+      if (blockStatus === true) {
+        return null;
+      }
     }
 
     const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
       ? (globalThis.crypto as any).randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const gameState = getGameState();
-    const gameWeek = gameState.week || 1;
-    const gameSeason = gameState.season || 'Spring';
-    const gameYear = gameState.currentYear || 2024;
+    const gameState = options.gameDate ? undefined : getGameState();
+    const gameWeek = options.gameDate?.week ?? gameState?.week ?? 1;
+    const gameSeason = options.gameDate?.season ?? gameState?.season ?? 'Spring';
+    const gameYear = options.gameDate?.year ?? gameState?.currentYear ?? 2024;
 
     const message: PlayerNotification = {
       id,
@@ -137,9 +156,6 @@ export const notificationService = {
       category
     };
 
-    notifications = [message, ...notifications];
-    notifyListeners();
-
     saveNotification({
       id,
       game_week: gameWeek,
@@ -149,7 +165,12 @@ export const notificationService = {
       origin,
       userFriendlyOrigin,
       category
-    });
+    }, options.companyId);
+
+    if (!isForActiveCompany) return message;
+
+    notifications = [message, ...notifications];
+    notifyListeners();
 
     const showToasts = localStorage.getItem('showNotifications') !== 'false';
     const shouldShowToast = showToasts && blockStatus === false;

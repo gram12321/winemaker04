@@ -20,10 +20,11 @@ import { buildGameDate } from '../dbMapperUtils';
  *   unlocked_game_year INTEGER,
  *   progress JSONB DEFAULT '{}',
  *   metadata JSONB DEFAULT '{}',
- *   UNIQUE(id)
+ *   UNIQUE(company_id, achievement_key)
  * );
  *
  * CREATE INDEX idx_achievements_company ON achievements(company_id);
+ * The achievement uniqueness migration enforces this current data shape.
  */
 
 /**
@@ -88,7 +89,7 @@ function achievementUnlockToRow(unlock: Partial<AchievementUnlock> & { achieveme
  */
 export async function unlockAchievement(
   unlock: Omit<AchievementUnlock, 'id'> & { achievementName: string; description: string }
-): Promise<AchievementUnlock> {
+): Promise<{ unlock: AchievementUnlock; created: boolean }> {
   const row = achievementUnlockToRow({
     ...unlock,
     id: uuidv4()
@@ -108,13 +109,13 @@ export async function unlockAchievement(
     // If duplicate, it's already unlocked - fetch and return existing
     if (error.code === '23505') {
       const existing = await getAchievementUnlock(unlock.achievementId, unlock.companyId);
-      if (existing) return existing;
+      if (existing) return { unlock: existing, created: false };
     }
     console.error('Error unlocking achievement:', error);
     throw error;
   }
   
-  return rowToAchievementUnlock(data);
+  return { unlock: rowToAchievementUnlock(data), created: true };
 }
 
 /**

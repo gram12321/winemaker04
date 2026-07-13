@@ -40,7 +40,7 @@ export interface LoanLenderSetupHooks {
 }
 
 export interface LoanLenderMetricsHooks {
-  calculateTotalOutstandingLoans(): Promise<number>;
+  calculateTotalOutstandingLoans(companyId?: string): Promise<number>;
   loadActivePortfolio(): Promise<ActiveLoanPortfolio>;
   defaultActivePortfolio: ActiveLoanPortfolio;
 }

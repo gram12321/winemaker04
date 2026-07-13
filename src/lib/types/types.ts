@@ -579,6 +579,7 @@ export type PrestigeEventType =
   | 'penalty'
   | 'cellar_collection'
   | 'achievement'
+  | 'research'
   | 'vineyard_sale'
   | 'vineyard_achievement'
   | 'vineyard_age'
@@ -628,9 +629,22 @@ export interface PrestigePayloadVineyardSale extends PrestigePayloadVineyardComm
   vineyardPrestigeFactor: number;
 }
 
-export interface PrestigePayloadVineyardAchievement extends PrestigePayloadVineyardCommon {
+export interface PrestigePayloadVineyardOperationalAchievement extends PrestigePayloadVineyardCommon {
   event: 'planting' | 'aging' | 'improvement' | 'harvest';
 }
+
+export interface PrestigePayloadVineyardAchievementUnlock extends PrestigePayloadVineyardCommon {
+  event: 'achievement_unlock';
+  achievementId: string;
+  achievementName: string;
+  achievementIcon: string;
+  achievementCategory: AchievementCategory;
+  achievementLevel?: AchievementLevel;
+}
+
+export type PrestigePayloadVineyardAchievement =
+  | PrestigePayloadVineyardOperationalAchievement
+  | PrestigePayloadVineyardAchievementUnlock;
 
 export interface PrestigePayloadCompanyStory extends PrestigePayloadBase {
   title?: string;
@@ -638,6 +652,22 @@ export interface PrestigePayloadCompanyStory extends PrestigePayloadBase {
   summary?: string;
   origin?: string;
   family?: string;
+}
+
+export interface PrestigePayloadAchievementUnlock extends PrestigePayloadBase {
+  event: 'achievement_unlock';
+  achievementId: string;
+  achievementName: string;
+  achievementIcon: string;
+  achievementCategory: AchievementCategory;
+  achievementLevel?: AchievementLevel;
+  unlockedValue?: unknown;
+}
+
+export interface PrestigePayloadResearch extends PrestigePayloadBase {
+  projectId: string;
+  projectTitle: string;
+  description: string;
 }
 
 export interface PrestigePayloadAdminCheat extends PrestigePayloadBase {
@@ -649,6 +679,8 @@ export type PrestigeEventPayload =
   | { type: 'company_finance'; payload: PrestigePayloadCompanyFinance }
   | { type: 'company_story'; payload: PrestigePayloadCompanyStory }
   | { type: 'admin_cheat'; payload: PrestigePayloadAdminCheat }
+  | { type: 'achievement'; payload: PrestigePayloadAchievementUnlock }
+  | { type: 'research'; payload: PrestigePayloadResearch }
   | { type: 'sale'; payload: { customerName: string; wineName: string; saleValue: number } }
   | { type: 'penalty'; payload: Record<string, unknown> }
   | { type: 'vineyard_sale'; payload: PrestigePayloadVineyardSale }

@@ -17,11 +17,14 @@ vi.mock('@/lib/database/sales/contractDB', () => ({
   saveWineContract: vi.fn(async () => true),
 }));
 
-vi.mock('@/lib/services/core/gameState', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/services/core/gameState')>('@/lib/services/core/gameState');
+vi.mock('@/lib/services/core/gameState', () => {
   return {
-    ...actual,
     getCurrentPrestige: mocks.getCurrentPrestige,
+    getGameState: vi.fn(() => ({
+      week: 1,
+      season: 'Spring',
+      currentYear: 2026,
+    })),
   };
 });
 

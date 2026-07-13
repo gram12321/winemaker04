@@ -63,12 +63,12 @@ export const insertTransaction = async (transactionData: TransactionData): Promi
   }
 };
 
-export const loadTransactions = async (): Promise<Transaction[]> => {
+export const loadTransactions = async (companyId?: string): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .select('*')
-      .eq('company_id', getCurrentCompanyId());
+      .eq('company_id', companyId || getCurrentCompanyId());
 
     if (error) throw error;
     

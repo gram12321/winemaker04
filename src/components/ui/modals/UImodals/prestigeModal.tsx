@@ -8,7 +8,7 @@ import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Separator } from '../../shadCN/separator';
 import { TooltipSection, TooltipRow, TooltipHeader, tooltipStyles, UnifiedTooltip } from '../../shadCN/tooltip';
-import { Star, TrendingUp, Grape, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
+import { Star, TrendingUp, Grape, DollarSign, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 
 // Type definitions for calculation data
@@ -116,6 +116,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     sale: { icon: TrendingUp, label: 'Company Sales', color: 'bg-emerald-100 text-emerald-800' },
     cellar_collection: { icon: TrendingUp, label: 'Cellar Collection', color: 'bg-amber-100 text-amber-800' },
     achievement: { icon: Star, label: 'Achievements & Milestones', color: 'bg-yellow-100 text-yellow-800' },
+    research: { icon: FlaskConical, label: 'Research Milestones', color: 'bg-cyan-100 text-cyan-800' },
     vineyard_sale: { icon: Grape, label: 'Vineyard Sales', color: 'bg-green-100 text-green-800' },
     vineyard_achievement: { icon: Star, label: 'Vineyard Achievements', color: 'bg-yellow-100 text-yellow-800' },
     vineyard_age: { icon: Star, label: 'Vine Age', color: 'bg-orange-100 text-orange-800' },
@@ -176,20 +177,12 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     return `${formatNumber(weeks, { decimals: 0 })} week${weeks === 1 ? '' : 's'}`;
   };
 
-  const getEventMetadata = (event: PrestigeEvent): any =>
-    (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+  const getEventMetadata = (event: PrestigeEvent): any => event.metadata ?? {};
 
   const getAchievementCategoryKey = (event: PrestigeEvent): string => {
     const metadata = getEventMetadata(event);
     if (typeof metadata.achievementCategory === 'string' && metadata.achievementCategory.trim()) {
       return metadata.achievementCategory.trim().toLowerCase();
-    }
-    if (
-      (typeof metadata.category === 'string' && metadata.category.trim().toLowerCase() === 'research') ||
-      metadata.projectId ||
-      metadata.projectTitle
-    ) {
-      return 'research';
     }
     return 'other';
   };

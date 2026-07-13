@@ -105,9 +105,9 @@ export const createStartingVineyard = async (input: StartingVineyardInsert): Pro
   }
 };
 
-export const loadVineyards = async (): Promise<Vineyard[]> => {
+export const loadVineyards = async (companyId?: string): Promise<Vineyard[]> => {
   try {
-    const { data, error } = await getCompanyQuery(VINEYARDS_TABLE)
+    const { data, error } = await getCompanyQuery(VINEYARDS_TABLE, companyId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;

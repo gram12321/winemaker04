@@ -28,7 +28,7 @@ export function getCurrentCompanyId(): string {
  *   .eq('state', 'bottled')
  *   .order('created_at', { ascending: false });
  */
-export function getCompanyQuery(table: string) {
-  const companyId = getCurrentCompanyId();
-  return supabase.from(table).select().eq('company_id', companyId);
+export function getCompanyQuery(table: string, companyId?: string) {
+  const targetCompanyId = companyId || getCurrentCompanyId();
+  return supabase.from(table).select().eq('company_id', targetCompanyId);
 }

@@ -4,6 +4,16 @@ import { computeBuyOfferPricePerKg, getBuyOfferStateLabel } from '@/lib/services
 
 const mocks = vi.hoisted(() => ({
   getCurrentCompanyId: vi.fn(() => 'company-1'),
+  getCompanyQuery: vi.fn(() => {
+    const query = {
+      eq: vi.fn(),
+      order: vi.fn(),
+      then: (resolve: (value: { data: never[]; error: null }) => unknown) => resolve({ data: [], error: null }),
+    };
+    query.eq.mockReturnValue(query);
+    query.order.mockReturnValue(query);
+    return query;
+  }),
   getGameState: vi.fn(() => ({
     week: 3,
     season: 'Spring',
@@ -147,6 +157,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: mocks.getCurrentCompanyId,
+  getCompanyQuery: mocks.getCompanyQuery,
 }));
 
 vi.mock('@/lib/services/core/gameState', () => ({
