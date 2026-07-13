@@ -73,8 +73,8 @@ function achievementUnlockToRow(unlock: Partial<AchievementUnlock> & { achieveme
     id: unlock.id || uuidv4(),
     company_id: unlock.companyId,
     achievement_key: unlock.achievementId,
-    achievement_name: '', // Will be filled from achievement config
-    description: '', // Will be filled from achievement config
+    achievement_name: '',
+    description: '',
     unlocked_game_week: unlock.unlockedAt.week,
     unlocked_game_season: unlock.unlockedAt.season,
     unlocked_game_year: unlock.unlockedAt.year,
@@ -86,11 +86,9 @@ function achievementUnlockToRow(unlock: Partial<AchievementUnlock> & { achieveme
 /**
  * Create achievement unlock record
  */
-export async function unlockAchievement(unlock: Omit<AchievementUnlock, 'id'>): Promise<AchievementUnlock> {
-  // Get achievement config to fill in name and description
-  const { getAchievementConfig } = await import('../../services/user/achievementService');
-  const config = getAchievementConfig(unlock.achievementId);
-
+export async function unlockAchievement(
+  unlock: Omit<AchievementUnlock, 'id'> & { achievementName: string; description: string }
+): Promise<AchievementUnlock> {
   const row = achievementUnlockToRow({
     ...unlock,
     id: uuidv4()
@@ -100,8 +98,8 @@ export async function unlockAchievement(unlock: Omit<AchievementUnlock, 'id'>): 
     .from('achievements')
     .insert({
       ...row,
-      achievement_name: config?.name || unlock.achievementId,
-      description: config?.description || ''
+      achievement_name: unlock.achievementName,
+      description: unlock.description
     })
     .select()
     .single();
@@ -217,26 +215,6 @@ export async function deleteAllAchievements(companyId?: string): Promise<void> {
     console.error('Error deleting achievements:', error);
     throw error;
   }
-}
-
-/**
- * Get achievement unlock count by category
- */
-export async function getAchievementCountByCategory(category: string, companyId?: string): Promise<number> {
-  const targetCompanyId = companyId || getCurrentCompanyId();
-  if (!targetCompanyId) return 0;
-
-  // Note: This requires achievement_key to match category pattern
-  // For now, we'll get all and filter in memory
-  const unlocks = await getAllAchievementUnlocks(targetCompanyId);
-
-  // Import here to avoid circular dependencies
-  const { ALL_ACHIEVEMENTS } = await import('../../constants/achievementConstants');
-
-  return unlocks.filter(unlock => {
-    const config = ALL_ACHIEVEMENTS.find(a => a.id === unlock.achievementId);
-    return config?.category === category;
-  }).length;
 }
 
 /**

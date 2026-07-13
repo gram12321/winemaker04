@@ -11,7 +11,6 @@ export * from './user/highscoreService';
 export * from './user/userSettingsService';
 export * from './user/staffService';
 export * from './user/teamService';
-export * from './user/achievementService';
 export * from './user/wineLogService';
 
 // Finance services

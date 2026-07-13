@@ -30,13 +30,15 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Finance/founders | `services/finance/`, `services/user/staffService.ts` | finance views, `FounderPanel.tsx` | transactions, staff founder field, finance/staff constants |
 | Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases and constants |
 | Research | `features/researchUpgrade/`, research constants | `Research.tsx`, admin inspector | research unlock database and view services |
-| Prestige/achievements | `services/prestige/`, user services | prestige, achievements, highscores | prestige event, achievement, highscore databases |
+| Prestige | `services/prestige/` | prestige UI | prestige-event database |
+| Achievements | `features/achievements/` | feature-owned achievement workspace | achievement database adapter |
 
 ## Feature Seams
 
 | Feature | State |
 |---|---|
 | `loanLender` | Installed feature facade; `loanLenderFeature` owns loan/lender services, UI, activities, and public read/workflow hooks. |
+| `achievements` | Installed feature facade; `achievementsFeature` owns game-specific definitions, evaluation, read models, and the achievement workspace. Core ticks, Research gates, and App routing use its public interface; `database/core/achievementsDB.ts` remains the CRUD adapter. |
 | `researchUpgrade` | Installed feature facade; `researchUpgradeFeature` owns gameplay research integration, selectors/view models, effects, and player UI rendering. Its named `adminIntegration` entry point owns the Admin-only inspector and commands. |
 | `admin` | Development-only compatible-Winemaker slice; `main.tsx` dynamically loads `adminFeature` and passes it explicitly into `App`. |
 | `boardShare` | Installed but intentionally inactive facade; `boardShareFeature` retains the isolated contract while public-company/share gameplay is deferred and is not wired into host behavior. |

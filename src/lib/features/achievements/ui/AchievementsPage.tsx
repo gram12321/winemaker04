@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '../ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '@/components/ui';
 import { Trophy, Medal, Lock, Calendar, Coins, Wine, Star } from 'lucide-react';
 import { formatNumber, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
-import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-import { getAllAchievementsWithStatus, getAchievementStats } from '@/lib/services';
-import { getAchievementLevelInfo } from '@/lib/services/user/achievementService';
-import { AchievementLevel } from '@/lib/types/types';
+import { PageProps, CompanyProps } from '@/lib/types/UItypes';
+import { getAllAchievementsWithStatus, getAchievementStats } from '../achievementService';
+import { getAchievementLevelInfo } from '../achievementDefinitionUtils';
+import { AchievementLevel, AchievementWithStatus } from '@/lib/types/types';
+import { filterAchievementSeriesForDisplay } from '../achievementPresentationService';
 
 interface AchievementsProps extends PageProps, CompanyProps {
   // Inherits currentCompany and onBack from shared interfaces
@@ -14,9 +15,9 @@ interface AchievementsProps extends PageProps, CompanyProps {
 
 // Achievement types are now imported from the service layer
 
-export function Achievements({ currentCompany, onBack }: AchievementsProps) {
+export function AchievementsPage({ currentCompany, onBack }: AchievementsProps) {
   const { withLoading } = useLoadingState();
-  const [achievementsWithStatus, setAchievementsWithStatus] = useState<any[]>([]);
+  const [achievementsWithStatus, setAchievementsWithStatus] = useState<AchievementWithStatus[]>([]);
   const [achievementStats, setAchievementStats] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -75,69 +76,11 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
     }
   };
 
-  // Filter achievements to show only completed tiers and next achievable tier in each series
-  const filterAchievementsBySeries = (achievements: any[]) => {
-    // Group achievements by series (base ID without tier)
-    const seriesMap = new Map<string, any[]>();
-    const nonTieredAchievements: any[] = [];
-    
-    achievements.forEach(achievement => {
-      // Check if this is a tiered achievement
-      if (achievement.id.includes('_tier_')) {
-        // Extract base ID (remove _tier_X suffix)
-        const baseId = achievement.id.replace(/_tier_\d+$/, '');
-        if (!seriesMap.has(baseId)) {
-          seriesMap.set(baseId, []);
-        }
-        seriesMap.get(baseId)!.push(achievement);
-      } else {
-        // Non-tiered achievements (like vineyard achievements)
-        nonTieredAchievements.push(achievement);
-      }
-    });
-
-    const filteredAchievements: any[] = [];
-    
-    // Process tiered achievements
-    seriesMap.forEach((seriesAchievements) => {
-      // Sort by tier (extract tier number from ID)
-      const sortedAchievements = seriesAchievements.sort((a, b) => {
-        const aTier = parseInt(a.id.match(/_tier_(\d+)$/)?.[1] || '0');
-        const bTier = parseInt(b.id.match(/_tier_(\d+)$/)?.[1] || '0');
-        return aTier - bTier;
-      });
-
-      // Find the highest completed tier
-      let highestCompletedTier = -1;
-      for (let i = 0; i < sortedAchievements.length; i++) {
-        if (sortedAchievements[i].isUnlocked) {
-          highestCompletedTier = i;
-        }
-      }
-
-      // Add all completed tiers
-      for (let i = 0; i <= highestCompletedTier; i++) {
-        filteredAchievements.push(sortedAchievements[i]);
-      }
-
-      // Add the next achievable tier (if any)
-      const nextTierIndex = highestCompletedTier + 1;
-      if (nextTierIndex < sortedAchievements.length) {
-        filteredAchievements.push(sortedAchievements[nextTierIndex]);
-      }
-    });
-
-    // Add all non-tiered achievements (individual achievements that don't follow the _tier_X pattern)
-    filteredAchievements.push(...nonTieredAchievements);
-
-    return filteredAchievements;
-  };
-
   const categoryFilteredAchievements = selectedCategory === 'all'
     ? achievementsWithStatus
     : achievementsWithStatus.filter(a => a.category === selectedCategory);
 
-  const filteredAchievements = filterAchievementsBySeries(categoryFilteredAchievements);
+  const filteredAchievements = filterAchievementSeriesForDisplay(categoryFilteredAchievements);
 
   const unlockedCount = achievementStats?.unlockedCount || 0;
   const totalCount = achievementStats?.totalAchievements || 0;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveWineLogAchievementScore } from '@/lib/services/user/achievementScoreUtils';
+import { resolveWineLogAchievementScore } from '../../../src/lib/features/achievements/achievementScoreUtils';
 
 describe('resolveWineLogAchievementScore', () => {
   it('uses the persisted wine score when present', () => {

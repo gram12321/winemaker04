@@ -1,5 +1,5 @@
-import { AchievementConfig } from '../types/types';
-import { createTieredAchievements } from '../services/user/achievementService';
+import { AchievementConfig } from '@/lib/types/types';
+import { createTieredAchievements } from './achievementDefinitionUtils';
 
 /**
  * Achievement Definitions
@@ -9,14 +9,6 @@ import { createTieredAchievements } from '../services/user/achievementService';
  */
 
 // ===== ACHIEVEMENT LEVEL SYSTEM =====
-
-export const achievementLevels = {
-  1: { name: 'Fresh Off the Vine', prestige: 0.1, decayYears: 1 },
-  2: { name: 'Cork Puller', prestige: 3, decayYears: 5 },
-  3: { name: 'Cellar Hand', prestige: 20, decayYears: 25 },
-  4: { name: 'Wine Wizard', prestige: 100, decayYears: 75 },
-  5: { name: 'Living Legend', prestige: 300, decayYears: 100 },
-} as const;
 
 // ===== FINANCIAL ACHIEVEMENTS =====
 

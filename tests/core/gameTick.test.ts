@@ -89,6 +89,14 @@ vi.mock('@/lib/features/weather', () => ({
   resolveSeasonalWeatherForecast: mocks.resolveSeasonalWeatherForecast,
 }));
 
+vi.mock('@/lib/features/achievements', () => ({
+  achievementsFeature: {
+    evaluation: {
+      checkAll: mocks.checkAllAchievements,
+    },
+  },
+}));
+
 vi.mock('@/lib/services', () => ({
   getGameState: mocks.getGameState,
   updateGameState: mocks.updateGameState,
@@ -99,7 +107,6 @@ vi.mock('@/lib/services', () => ({
   checkAndTriggerBookkeeping: mocks.checkAndTriggerBookkeeping,
   processEconomyPhaseTransition: mocks.processEconomyPhaseTransition,
   highscoreService: { submitCompanyHighscores: mocks.submitCompanyHighscores },
-  checkAllAchievements: mocks.checkAllAchievements,
   updateCellarCollectionPrestige: mocks.updateCellarCollectionPrestige,
   calculateCompanyValue: mocks.calculateCompanyValue,
   updateVineyardRipeness: mocks.updateVineyardRipeness,

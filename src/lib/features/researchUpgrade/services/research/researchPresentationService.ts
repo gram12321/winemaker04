@@ -5,7 +5,7 @@ import {
   type ResearchUnlock,
   type UnlockType,
 } from '@/lib/constants/researchConstants';
-import { ALL_ACHIEVEMENTS } from '@/lib/constants/achievementConstants';
+import { achievementsFeature } from '@/lib/features/achievements';
 import {
   CHAINED_RESEARCH_UNLOCK_TYPES,
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
@@ -272,7 +272,6 @@ export function getResearchRequirementDetails(
 ): ResearchRequirementDetail[] {
   const details: ResearchRequirementDetail[] = [];
   const projectTitleById = new Map(allProjects.map((candidate) => [candidate.id, candidate.title]));
-  const achievementNameById = new Map(ALL_ACHIEVEMENTS.map((achievement) => [achievement.id, achievement.name]));
 
   if (typeof project.requiredPrestige === 'number' && project.requiredPrestige > 0) {
     details.push({
@@ -314,7 +313,7 @@ export function getResearchRequirementDetails(
     details.push({
       label: project.requiredAchievementIds.length === 1 ? 'Required Achievement' : 'Required Achievements',
       value: project.requiredAchievementIds
-        .map((id) => achievementNameById.get(id) || id)
+        .map((id) => achievementsFeature.catalog.getTitle(id) || id)
         .join(', '),
     });
   }

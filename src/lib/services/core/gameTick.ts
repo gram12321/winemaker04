@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
@@ -11,6 +11,7 @@ import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/const
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { loanLenderFeature } from '@/lib/features/loanLender';
+import { achievementsFeature } from '@/lib/features/achievements';
 import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
 
 // Prevent concurrent game tick execution
@@ -304,7 +305,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       // Fire-and-forget; do not await to keep tick latency low
       void (async () => {
         try {
-          await checkAllAchievements();
+          await achievementsFeature.evaluation.checkAll();
         } catch (error) {
           console.warn('Error during throttled achievement checking:', error);
         }

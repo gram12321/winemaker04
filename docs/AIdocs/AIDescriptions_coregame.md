@@ -9,7 +9,7 @@ Current implementation orientation for agents and maintainers. `CONTEXT.md` is a
 - React/Vite/TypeScript/Tailwind/ShadCN frontend with Supabase persistence and company-scoped state.
 - Weekly progression runs through `processGameTick()` in `src/lib/services/core/gameTick.ts`.
 - Services/features own rules, calculations, validation, and orchestration. `src/lib/database/` owns CRUD/mapping. Components own presentation and interaction.
-- Feature modules use installed static facades for `loanLender`, `researchUpgrade`, and intentionally inactive `boardShare`; development-only `admin` is loaded explicitly by bootstrap; `weather` is an always-on functional barrel. Public-company/share gameplay remains deferred and `boardShare` is not wired into host behavior.
+- Feature modules use installed static facades for `achievements`, `loanLender`, `researchUpgrade`, and intentionally inactive `boardShare`; development-only `admin` is loaded explicitly by bootstrap; `weather` is an always-on functional barrel. Public-company/share gameplay remains deferred and `boardShare` is not wired into host behavior.
 - Core persistence areas cover game state, staff, activities, inventory, customers/orders, contracts, grape markets, forward contracts, research, loans, prestige, achievements, and highscores.
 
 ## Player Surfaces
@@ -43,7 +43,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 
 ### Finance, Staff, and Progression
 
-- Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active.
+- Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active. `achievementsFeature` owns the game-specific catalog, evaluation, read models, and player page; its database adapter remains under `database/core/`.
 - Founders have zero wages, receive yearly positive-profit returns, and can be bought out into salaried staff.
 - Prestige is derived from the `prestige_events` ledger with permanent and decaying sources; it feeds pricing, land value, gates, achievements, and UI.
 - Research projects use work profiles and prestige/prerequisite/company-value/buyer-loyalty/achievement gates. Active unlocks cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Current permanent effect: vineyard health-decay multiplier.
@@ -64,5 +64,5 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 | Sales/markets | `src/lib/services/sales/`, sales pages/modals, `src/lib/database/sales/` |
 | Finance/loans/founders | `src/lib/services/finance/`, `src/lib/features/loanLender/`, `src/components/finance/` |
 | Research | `src/lib/features/researchUpgrade/`, `src/lib/constants/researchConstants.ts`, `src/components/pages/Research.tsx` |
-| Prestige/progression | `src/lib/services/prestige/`, user services, achievement/highscore databases |
+| Prestige/progression | `src/lib/services/prestige/`, `src/lib/features/achievements/`, highscore services/databases |
 | Tests | `tests/` |

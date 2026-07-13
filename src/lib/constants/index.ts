@@ -12,7 +12,6 @@ export * from './loanConstants';
 export * from './financeConstants';
 export * from './staffConstants';
 export * from './researchPresentationConstants';
-export * from './achievementConstants';
 export * from './timeConstants';
 export * from './creditRatingConstants';
 export * from './cooperativeConstants';

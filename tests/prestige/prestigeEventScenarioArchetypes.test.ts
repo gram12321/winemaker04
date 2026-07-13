@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { achievementLevels } from '@/lib/constants/achievementConstants';
+import { achievementsFeature } from '@/lib/features/achievements';
 import { getResearchProject } from '@/lib/constants/researchConstants';
 import { calculatePrestigePenaltyWithFame } from '@/lib/features/loanLender/services/finance/loanService';
 import {
@@ -18,7 +18,7 @@ type Archetype = {
   baseVineyardPrestige: number;
   featureSeverity: number;
   researchProjectId: string;
-  achievementTier: keyof typeof achievementLevels;
+  achievementTier: 1 | 2 | 3 | 4 | 5;
 };
 
 const archetypes = {
@@ -121,7 +121,7 @@ function calculateScenarioImpact(archetype: Archetype) {
       archetype.featureSeverity
     ),
     researchReward: researchReward(archetype.researchProjectId),
-    achievementReward: achievementLevels[archetype.achievementTier].prestige,
+    achievementReward: achievementsFeature.catalog.getLevelInfo(archetype.achievementTier).prestige,
     warning2LoanPenalty: calculatePrestigePenaltyWithFame(-25, archetype.currentPrestige, { rate: 0.02, cap: 25 }),
     loanDefaultPenalty: calculatePrestigePenaltyWithFame(-75, archetype.currentPrestige, { rate: 0.08, cap: 175 })
   };

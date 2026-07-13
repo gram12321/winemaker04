@@ -35,7 +35,6 @@ vi.mock('@/components/pages/Research', () => ({ ResearchPage: () => createElemen
 vi.mock('@/components/pages/Staff', () => ({ StaffPage: () => createElement('div', null, 'Staff') }));
 vi.mock('@/components/pages/Profile', () => ({ Profile: () => createElement('div', null, 'Profile') }));
 vi.mock('@/components/pages/Settings', () => ({ Settings: () => createElement('div', null, 'Settings') }));
-vi.mock('@/components/pages/Achievements', () => ({ Achievements: () => createElement('div', null, 'Achievements') }));
 vi.mock('@/components/pages/WineLog', () => ({ WineLog: () => createElement('div', null, 'Wine Log') }));
 vi.mock('@/components/pages/Winepedia.tsx', () => ({ default: () => createElement('div', null, 'Winepedia') }));
 vi.mock('@/components/pages/WeatherCenter', () => ({ WeatherCenterPage: () => createElement('div', null, 'Weather') }));
@@ -57,6 +56,13 @@ vi.mock('@/lib/services', () => ({
   preloadAllCustomerRelationships: mocks.preloadAllCustomerRelationships
 }));
 vi.mock('@/lib/features/loanLender', () => ({ loanLenderFeature: { ui: { getAppOverlays: () => [] } } }));
+vi.mock('@/lib/features/achievements', () => ({
+  achievementsFeature: {
+    ui: {
+      renderAchievementsPage: () => createElement('div', null, 'Achievements')
+    }
+  }
+}));
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
 let root: Root | null = null;

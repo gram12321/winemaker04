@@ -10,7 +10,6 @@ import { StaffPage } from './components/pages/Staff';
 import { Profile } from './components/pages/Profile';
 import { Settings } from './components/pages/Settings';
 import type { AdminFeature } from '@/lib/features/admin';
-import { Achievements } from './components/pages/Achievements';
 import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
 import { WeatherCenterPage } from './components/pages/WeatherCenter';
@@ -25,6 +24,7 @@ import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
 import { loanLenderFeature } from '@/lib/features/loanLender';
+import { achievementsFeature } from '@/lib/features/achievements';
 import { Analytics } from '@vercel/analytics/react';
 
 interface AppProps {
@@ -167,12 +167,10 @@ function App({ adminFeature }: AppProps) {
         return adminPage;
       }
       case 'achievements':
-        return (
-          <Achievements
-            currentCompany={currentCompany}
-            onBack={() => setCurrentPage('company-overview')}
-          />
-        );
+        return achievementsFeature.ui.renderAchievementsPage({
+          currentCompany,
+          onBack: () => setCurrentPage('company-overview')
+        });
       case 'wine-log':
         return (
           <WineLog
