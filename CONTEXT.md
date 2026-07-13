@@ -17,7 +17,7 @@ Stable terminology and high-value gameplay relationships. See `docs/WineSystem_V
 | Weather | Weekly state/forecast and operation modifiers | state, intensity, pattern, confidence, site exposure, planting/harvesting operation impact |
 | Market | Buyer/supplier demand and supply | economy, weather, loyalty, grape/batch state |
 | Storage vessels | Individually owned cellar equipment purchased through Market offers; each vessel has a fixed capacity at purchase | casks, steel tanks, concrete tanks, containers, vessel type, capacity, material, purchase price, vessel state; future inputs to taste, structure, price, vineyard, and winery operations |
-| Ownership | Founder and future board/share concepts | `isFounder`, Founder Return, `boardShare` seam |
+| Ownership | Founder and future board/share concepts | `isFounder`, Founder Return, `boardShare` facade |
 | Outcomes | Progression/economy outputs | price, contracts, grape sales, prestige, achievements |
 
 ## Wine Model
@@ -62,7 +62,7 @@ Implemented enforcement covers grape planting, fermentation methods, staff cap, 
 
 - Founders have zero wages, receive 20% of positive yearly net profit per founder, and can be bought out for 15% of company asset value.
 - Prestige is ledger-derived from permanent (`decay_rate = 0`) and decaying (`0 < decay_rate < 1`) events. Write through `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source metadata.
-- Founder ownership behavior is active. `boardShare` remains an intentionally inactive facade while public-company/share gameplay is deferred.
+- Founder ownership behavior is active. `boardShare` remains an intentionally inactive facade while public-company/share gameplay is deferred and it is not wired into host behavior.
 
 ## Naming Rules
 

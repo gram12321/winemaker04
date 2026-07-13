@@ -1,6 +1,6 @@
 # Wine System Variable Relationship Map
 
-Date: 2026-07-12
+Date: 2026-07-13
 Status: Current mainline relationship map
 
 Stable terms and constants live in [CONTEXT.md](../CONTEXT.md). Implementation ownership/status lives in [AIDescriptions_coregame.md](AIdocs/AIDescriptions_coregame.md) and [PROJECT_INFO.md](PROJECT_INFO.md).
@@ -144,7 +144,7 @@ flowchart LR
 | Weather | Feature facade persists/resolves facts, applies one bounded site-aware projection, and supplies planting/harvesting operation impacts; clearing's annual rule remains outside weather |
 | Markets | Sell/buy markets include fallback, seasonal rows, loyalty, economy/weather, and research scaling |
 | Research | Gates cover grapes, fermentation, staff/vineyard caps, contracts, and buyer progression; health-decay effect is active |
-| Ownership | Founder economy active; board/share runtime remains intentionally inactive |
+| Ownership | Founder economy active; board/share runtime remains intentionally inactive and not wired into host behavior |
 
 ## Alignment Rules
 

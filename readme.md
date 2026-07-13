@@ -25,10 +25,17 @@ npm run build
 
 ## Architecture Rules
 
+| Pattern | Features | Public interface | Lifecycle |
+|---|---|---|---|
+| Installed feature facade | `loanLender`, `researchUpgrade`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
+| Development-only feature | `admin` | host type passed to `App` | dynamically loaded in Vite development only |
+| Always-on functional module | `weather` | stable function/type barrel | required application capability |
+
 - Keep business logic, validation, calculations, and persistence orchestration out of React components.
 - `*DB.ts` files own Supabase CRUD and row mapping; services own domain rules.
 - Prefer existing barrel exports and shared types. Do not add compatibility branches or migrations unless requested.
-- Feature modules use two patterns: installed feature facades (`loanLender`, `researchUpgrade`, `boardShare`) expose one static feature value from their barrel; the development-only `admin` feature is dynamically loaded into `App`. `weather` is an always-on functional barrel. `boardShare` is deliberately inactive and has no host wiring while public-company/share gameplay is deferred. Callers do not configure features or import their internals.
+- Callers import feature barrels, not feature internals or general-service re-exports.
+- `boardShare` is deliberately inactive and has no host wiring while public-company/share gameplay is deferred.
 
 ## Documentation Entry Points
 
@@ -50,7 +57,7 @@ npm run build
 - Weather is persisted weekly state/forecast, a bounded site-aware vineyard projection, and grape-market context. Weather Center is operational; Winepedia is the technical reference.
 - Sell and buy grape markets include bulk fallback, seasonal rows, loyalty, economy/weather pressure, and research scaling.
 - Founder economy is active as a light ownership layer: zero founder wages, profitable-year returns, and buyout into salaried staff.
-- Full public-company/share-market runtime is not active.
+- Full public-company/share-market runtime is intentionally inactive, and `boardShare` remains isolated from host wiring.
 
 ## Admin Test Systems
 

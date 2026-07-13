@@ -1,6 +1,6 @@
 # Winemaker 0.4 - Project Information
 
-Last code-verified: 2026-07-12
+Last code-verified: 2026-07-13
 
 Ownership and module map for the mainline codebase. Behavior details belong in `docs/AIdocs/AIDescriptions_coregame.md`; vocabulary belongs in `CONTEXT.md`.
 
@@ -57,7 +57,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 
 - Weather is persisted weekly state/forecast plus shared bounded vineyard projection and grape-market context; the feature facade also supplies presentation models.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Equipment and vineyard-technique tracks remain future work.
-- Founder economy is active and intentionally smaller than the archived public-company/share design; the isolated Board Share facade remains intentionally inactive.
+- Founder economy is active and intentionally smaller than the archived public-company/share design; the isolated Board Share facade remains intentionally inactive and does not participate in host wiring.
 - Completed implementation records live under `docs/superpowers/completed/`; active planning documents remain under `specs/` and `plans/`.
 
 ## Test and Documentation Map

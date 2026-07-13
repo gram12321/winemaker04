@@ -1,6 +1,6 @@
 # Core Game Mechanics
 
-Last code-verified: 2026-07-12
+Last code-verified: 2026-07-13
 
 Current implementation orientation for agents and maintainers. `CONTEXT.md` is authoritative for vocabulary; `docs/PROJECT_INFO.md` for ownership; code and tests for final behavior.
 
@@ -9,7 +9,7 @@ Current implementation orientation for agents and maintainers. `CONTEXT.md` is a
 - React/Vite/TypeScript/Tailwind/ShadCN frontend with Supabase persistence and company-scoped state.
 - Weekly progression runs through `processGameTick()` in `src/lib/services/core/gameTick.ts`.
 - Services/features own rules, calculations, validation, and orchestration. `src/lib/database/` owns CRUD/mapping. Components own presentation and interaction.
-- Feature modules use installed static facades for `loanLender`, `researchUpgrade`, and intentionally inactive `boardShare`; development-only `admin` is loaded explicitly by bootstrap; `weather` is an always-on functional barrel. Public-company/share gameplay remains deferred.
+- Feature modules use installed static facades for `loanLender`, `researchUpgrade`, and intentionally inactive `boardShare`; development-only `admin` is loaded explicitly by bootstrap; `weather` is an always-on functional barrel. Public-company/share gameplay remains deferred and `boardShare` is not wired into host behavior.
 - Core persistence areas cover game state, staff, activities, inventory, customers/orders, contracts, grape markets, forward contracts, research, loans, prestige, achievements, and highscores.
 
 ## Player Surfaces
