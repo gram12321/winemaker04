@@ -553,7 +553,7 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
+      <DialogContent className="dark w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Buy from Market</DialogTitle>
           <DialogDescription className="sr-only">
@@ -563,7 +563,14 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
 
         <div className="flex gap-2">
           <Button size="sm" className="bg-amber-600 hover:bg-amber-500">Grapes</Button>
-          <Button variant="outline" size="sm" onClick={() => setShowStorageVessels(true)}>Casks</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowStorageVessels(true)}
+            className="border-gray-600 bg-gray-800 text-white hover:bg-gray-700 hover:text-white"
+          >
+            Casks
+          </Button>
         </div>
 
         <div className="space-y-4">

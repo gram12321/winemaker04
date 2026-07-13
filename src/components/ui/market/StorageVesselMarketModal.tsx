@@ -69,9 +69,9 @@ export const StorageVesselMarketModal: React.FC<StorageVesselMarketModalProps> =
   }, [loadOffers, selectedOffer, selectedQuantity]);
 
   return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-    <DialogContent className="w-[98vw] max-w-[72rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
+    <DialogContent className="dark w-[98vw] max-w-[72rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
       <DialogHeader><DialogTitle className="text-amber-400 text-lg">Buy from Market</DialogTitle><DialogDescription className="sr-only">Purchase individual storage vessels for the winery.</DialogDescription></DialogHeader>
-      <div className="flex gap-2"><Button variant="outline" size="sm" onClick={onShowGrapes}>Grapes</Button><Button size="sm" className="bg-amber-600 hover:bg-amber-500">Casks</Button></div>
+      <div className="flex gap-2"><Button variant="outline" size="sm" onClick={onShowGrapes} className="border-gray-600 bg-gray-800 text-white hover:bg-gray-700 hover:text-white">Grapes</Button><Button size="sm" className="bg-amber-600 hover:bg-amber-500">Casks</Button></div>
       <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm"><span className="font-medium text-cyan-200">Storage Vessels</span><p className="mt-1 text-xs text-gray-300">Each purchase creates a separately owned vessel with a fixed capacity. Wine and operation effects will be assigned explicitly in a later winery workflow.</p></div>
       <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden"><div className="overflow-x-auto"><MarketOfferTable rows={offers} columns={columns} rowKey={(offer) => offer.id} selectedRowKey={selectedOffer?.id ?? null} onRowClick={(offer) => setSelectedOfferId(offer.id)} /></div></div>
       {selectedOffer && <div className="rounded border border-gray-700 bg-gray-800 p-3 text-sm"><div className="text-xs uppercase tracking-wide text-gray-400">Purchase summary</div><div className="mt-2 flex justify-between"><span>{selectedQuantity} vessel{selectedQuantity === 1 ? '' : 's'} × {selectedOffer.payload.capacityLitres} L</span><strong className="text-amber-300">{formatNumber(selectedTotal, { currency: true, decimals: 0 })}</strong></div></div>}
