@@ -38,10 +38,12 @@ import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } fro
 import { calculateFeatureMarketPriceMultiplier, calculateFeatureRiskMarketPriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 import {
   buildMarketPreviewBatch,
+  deleteInventoryBatch,
   saveInventoryBatch,
   type CreateMarketWineBatchInput,
   type MarketBatchStateProfile
 } from '../wine/winery/inventoryService';
+import { activateStoragePlanForBatch, createStorageAllocationPlan, initializeHarvestVolumeLitres, releaseStorageAllocationPlan } from '../wine/winery/storageVesselAllocationService';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface BuyGrapeMarketOffer {
@@ -854,7 +856,7 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
   }
 }
 
-export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number): Promise<{ success: boolean; error?: string }> {
+export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number, storageVesselIds: string[] = []): Promise<{ success: boolean; error?: string }> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, error: 'No active company selected.' };
 
@@ -911,8 +913,25 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
     } : previewBatch.originSnapshot,
   };
 
+  if (storageVesselIds.length === 0) {
+    return { success: false, error: 'Select enough Storage Vessel capacity before purchasing this batch.' };
+  }
+
+  const storagePlan = await createStorageAllocationPlan({
+    requiredLitres: initializeHarvestVolumeLitres(roundedQuantity),
+    vesselIds: storageVesselIds,
+  });
+  if (!storagePlan.planId) return { success: false, error: storagePlan.error };
+  purchasedBatch.storagePlanId = storagePlan.planId;
+  purchasedBatch.volumeLitres = initializeHarvestVolumeLitres(roundedQuantity);
+
   try {
     await saveInventoryBatch(purchasedBatch);
+    if (!(await activateStoragePlanForBatch(storagePlan.planId, purchasedBatch.id, purchasedBatch.volumeLitres))) {
+      await deleteInventoryBatch(purchasedBatch.id);
+      await releaseStorageAllocationPlan(storagePlan.planId);
+      return { success: false, error: 'Could not activate Storage Vessel capacity for this batch.' };
+    }
     await addTransaction(
       -totalCost,
       `Market Purchase: ${roundedQuantity} kg ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name}`,
@@ -950,6 +969,7 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
 
     return { success: true };
   } catch (purchaseError) {
+    await releaseStorageAllocationPlan(storagePlan.planId);
     console.error('Failed to purchase market offer:', purchaseError);
     return { success: false, error: 'Could not complete purchase. Please try again.' };
   }

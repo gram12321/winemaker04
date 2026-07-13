@@ -62,11 +62,11 @@ export const StorageVesselMarketModal: React.FC<StorageVesselMarketModalProps> =
         setErrorByOfferId((current) => ({ ...current, [selectedOffer.id]: result.error ?? 'Purchase failed.' }));
         return;
       }
-      await loadOffers();
+      onClose();
     } finally {
       setLoading(false);
     }
-  }, [loadOffers, selectedOffer, selectedQuantity]);
+  }, [onClose, selectedOffer, selectedQuantity]);
 
   return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
     <DialogContent className="dark w-[98vw] max-w-[72rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">

@@ -9,6 +9,7 @@ import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
+import { releaseStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import { formatNumber } from '@/lib/utils';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
@@ -51,6 +52,10 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
         const gameState = getGameState();
         const currentSeason = gameState.season;
 
+        if (harvestedSoFar <= 0 && remainingYield <= 0 && activity.params.storagePlanId) {
+          await releaseStorageAllocationPlan(activity.params.storagePlanId);
+        }
+
         if (remainingYield > 0.1) { // Only create batch if at least 0.1kg remaining (allow small batches)
           // Create harvest dates: start is activity start, end is current date
           const harvestStartDate = {
@@ -73,7 +78,9 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
             activity.params.grape,
             roundedYield,
             harvestStartDate,
-            harvestEndDate
+            harvestEndDate,
+            activity.params.storagePlanId,
+            activity.params.outputBatchId
           );
         }
 
@@ -221,7 +228,7 @@ export async function createActivityWithResult(options: ActivityCreationOptions)
     }
 
     const activity: Activity = {
-      id: uuidv4(),
+      id: options.id ?? uuidv4(),
       category: options.category,
       title: options.title,
       totalWork: options.totalWork,
@@ -358,7 +365,10 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
       console.warn(`Activity ${activityId} is not paused (status: ${activity.status})`);
       return false;
     }
-    const success = await updateActivityInDb(activityId, { status: 'active' });
+    const success = await updateActivityInDb(activityId, {
+      status: 'active',
+      params: { ...activity.params, storageCapacityBlocked: false },
+    });
     if (success) {
       const currentActivities = await getAllActivities();
       updateGameState({ activities: currentActivities });
@@ -432,6 +442,9 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
 
     const success = await updateActivityInDb(activityId, { status: 'cancelled' });
     if (success) {
+      if (activity.params.storagePlanId) {
+        await releaseStorageAllocationPlan(activity.params.storagePlanId);
+      }
       // Update local game state
       const currentActivities = await getAllActivities();
       updateGameState({ activities: currentActivities });
@@ -528,15 +541,16 @@ export async function progressActivities(): Promise<void> {
       }
 
       // Handle partial harvesting for HARVESTING activities
+      let storageCapacityBlocked = false;
       if (activity.category === WorkCategory.HARVESTING && activity.targetId) {
-        await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
+        storageCapacityBlocked = await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
       }
 
       // Update the activity
-      await updateActivityInDb(activity.id, { completedWork: newCompletedWork });
+      await updateActivityInDb(activity.id, { completedWork: storageCapacityBlocked ? oldCompletedWork : newCompletedWork });
 
       // Check if activity is complete
-      if (newCompletedWork >= activity.totalWork) {
+      if (!storageCapacityBlocked && newCompletedWork >= activity.totalWork) {
         completedActivities.push({ ...activity, completedWork: newCompletedWork });
       }
     }

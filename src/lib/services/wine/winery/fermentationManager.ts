@@ -15,6 +15,7 @@ import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
 import { applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
 import { diffAnchorEffects } from '../debug/wineAnchorEffectUtils';
+import { assertBatchHasUsableStorage, releaseStoragePlanForBatch } from './storageVesselAllocationService';
 
 /**
  * Fermentation Manager
@@ -32,6 +33,10 @@ export async function startFermentationActivity(
     // Validate batch state
     if (batch.state !== 'must_ready') {
       return { success: false, error: 'Batch must be in must_ready stage for fermentation' };
+    }
+    const storageValidation = await assertBatchHasUsableStorage(batch);
+    if (!storageValidation.valid) {
+      return { success: false, error: storageValidation.reason };
     }
 
     // Calculate work and cost
@@ -98,6 +103,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
 
   // Record the bottled wine in the production log and trigger bottling events
   if (success) {
+    await releaseStoragePlanForBatch(batch);
     try {
       // Get the updated batch to record in the log
       const updatedBatches = await loadWineBatches();

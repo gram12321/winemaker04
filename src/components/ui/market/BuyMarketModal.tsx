@@ -21,16 +21,20 @@ import {
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants';
 import type { WineFeature } from '@/lib/types/wineFeatures';
 import type { WeatherState } from '@/lib/types/types';
 import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { StorageVesselMarketModal } from './StorageVesselMarketModal';
+import { getAvailableStorageVessels, initializeHarvestVolumeLitres } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import type { StorageVessel } from '@/lib/types/storageVessels';
 
 type SortDirection = 'asc' | 'desc' | null;
 
 interface BuyMarketModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMarket?: 'grapes' | 'storage_vessels';
 }
 
 function getSeasonVolatilityIcon(season?: string): string {
@@ -235,7 +239,7 @@ const SupplierTrustPanel: React.FC<{
   );
 };
 
-const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
+const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose, initialMarket = 'grapes' }) => {
   const [showStorageVessels, setShowStorageVessels] = useState(false);
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -248,12 +252,17 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
   const [showAllOffers, setShowAllOffers] = useState(false);
   const [companyValue, setCompanyValue] = useState(0);
   const [purchaseQuantityByOfferId, setPurchaseQuantityByOfferId] = useState<Record<string, number>>({});
+  const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
+  const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
 
   const loadOffers = useCallback(async () => {
     setLoading(true);
     try {
       const nextOffers = await getBuyGrapeMarketOffers();
       setOffers(nextOffers);
+      const vessels = await getAvailableStorageVessels();
+      setAvailableVessels(vessels);
+      setSelectedVesselIds([]);
       const computedCompanyValue = await calculateCompanyValue().catch(() => 0);
       setCompanyValue(computedCompanyValue);
     } finally {
@@ -269,15 +278,16 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setShowAllOffers(false);
+      setShowStorageVessels(initialMarket === 'storage_vessels');
     }
-  }, [isOpen]);
+  }, [initialMarket, isOpen]);
 
   useEffect(() => {
     setShowAllOffers(false);
   }, [grapeFilter, stateFilter, sortKey, sortDirection]);
 
-  const handleBuy = useCallback(async (offerId: string, quantityKg: number) => {
-    const result = await purchaseBuyMarketOffer(offerId, quantityKg);
+  const handleBuy = useCallback(async (offerId: string, quantityKg: number, vesselIds: string[]) => {
+    const result = await purchaseBuyMarketOffer(offerId, quantityKg, vesselIds);
 
     if (!result.success) {
       setErrorByOfferId((current) => ({
@@ -382,6 +392,11 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
     if (!selectedOffer) return 1;
     return getOfferQuantity(selectedOffer);
   }, [getOfferQuantity, selectedOffer]);
+
+  const selectedVesselCapacity = useMemo(() => availableVessels
+    .filter((vessel) => selectedVesselIds.includes(vessel.id))
+    .reduce((total, vessel) => total + vessel.capacityLitres, 0), [availableVessels, selectedVesselIds]);
+  const requiredStorageLitres = initializeHarvestVolumeLitres(selectedPurchaseKg);
 
   const trustPreview = useMemo(() => {
     if (!selectedOffer || selectedPurchaseKg <= 0) return null;
@@ -731,6 +746,18 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
               No offers match the current filters.
             </div>
           )}
+
+          {selectedOffer && (
+            <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm">
+              <div className="font-medium text-cyan-200">Assign Storage Vessels</div>
+              <div className="mt-1 text-xs text-gray-300">This purchase creates a WineBatch and requires capacity now. Initial planning uses {STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG} L/kg as a temporary bootstrap ratio; future operation losses and conversions will update volume.</div>
+              <div className="mt-2 flex justify-between text-xs"><span>Selected capacity</span><span className={selectedVesselCapacity >= requiredStorageLitres ? 'text-green-300' : 'text-red-300'}>{selectedVesselCapacity.toLocaleString()} L / {requiredStorageLitres.toLocaleString()} L</span></div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {availableVessels.length === 0 && <div className="text-red-300">Buy a Storage Vessel before purchasing grapes.</div>}
+                {availableVessels.map((vessel) => <label key={vessel.id} className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/50 p-2 text-xs"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
@@ -746,9 +773,9 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose }) => {
             onClick={() => {
               if (!selectedOffer) return;
               const safeQty = Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg));
-              void handleBuy(selectedOffer.id, safeQty);
+              void handleBuy(selectedOffer.id, safeQty, selectedVesselIds);
             }}
-            disabled={loading || !selectedOffer || !priceBreakdown}
+            disabled={loading || !selectedOffer || !priceBreakdown || selectedVesselCapacity < requiredStorageLitres}
             className="bg-amber-600 hover:bg-amber-500 text-white"
           >
             {loading

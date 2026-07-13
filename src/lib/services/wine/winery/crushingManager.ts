@@ -3,6 +3,7 @@ import { WorkCategory } from '../../../types/types';
 import { createActivity } from '../../activity/activitymanagers/activityManager';
 import { calculateCrushingWork, validateCrushingBatch } from '../../activity/workcalculators/crushingWorkCalculator';
 import { CrushingOptions } from '../characteristics/crushingCharacteristics';
+import { assertBatchHasUsableStorage } from './storageVesselAllocationService';
 
 /**
  * Crushing Manager
@@ -41,6 +42,10 @@ export async function startCrushingActivity(batch: WineBatch, options: CrushingO
     const validation = validateCrushingActivity(batch, options);
     if (!validation.valid) {
       return { success: false, error: validation.reason };
+    }
+    const storageValidation = await assertBatchHasUsableStorage(batch);
+    if (!storageValidation.valid) {
+      return { success: false, error: storageValidation.reason };
     }
     
     // Calculate work and cost

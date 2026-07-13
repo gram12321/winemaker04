@@ -12,12 +12,12 @@ export async function getBuyMarketOffers(wareGroup?: BuyMarketWareGroup): Promis
   return data.filter((offer) => offer.availableUnits > 0);
 }
 
-export async function purchaseBuyMarketOffer(offerId: string, quantity: number): Promise<BuyMarketPurchaseResult> {
+export async function purchaseBuyMarketOffer(offerId: string, quantity: number, storageVesselIds: string[] = []): Promise<BuyMarketPurchaseResult> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, error: 'No active company selected.' };
   const { data: offer, error } = await getCompanyBuyMarketOffer(companyId, offerId);
   if (error || !offer) return { success: false, error: 'Offer not found.' };
-  if (offer.wareGroup === 'grapes') return purchaseBuyGrapeOffer(offerId, quantity);
+  if (offer.wareGroup === 'grapes') return purchaseBuyGrapeOffer(offerId, quantity, storageVesselIds);
   return purchaseStorageVesselOffer(offerId, quantity);
 }
 

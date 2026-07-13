@@ -32,3 +32,5 @@ export const STORAGE_VESSEL_CATALOG: readonly StorageVesselCatalogEntry[] = [
 ];
 
 export const STORAGE_VESSEL_OFFER_PREFIX = 'storage_vessel';
+export const STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG = 0.5;
+export const STORAGE_VESSEL_CAPACITY_UNIT = 'L';

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
+import { deleteStorageVessels, getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
 import { GAME_INITIALIZATION } from '@/lib/constants';
@@ -32,7 +32,8 @@ export async function createPurchasedStorageVessels(
     capacityLitres: payload.capacityLitres,
     acquisitionPrice,
     sourceOfferId,
-    state: 'empty',
+    operationalStatus: 'operational',
+    occupancy: 'available',
     purchasedYear: gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
     purchasedSeason: gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON,
     purchasedWeek: gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
@@ -41,4 +42,11 @@ export async function createPurchasedStorageVessels(
   const { error } = await insertStorageVessels(vessels);
   if (error) throw error;
   return vessels;
+}
+
+export async function removePurchasedStorageVessels(vesselIds: string[]): Promise<void> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId || vesselIds.length === 0) return;
+  const { error } = await deleteStorageVessels(companyId, vesselIds);
+  if (error) throw error;
 }

@@ -129,3 +129,12 @@ export async function claimBuyMarketOfferUnits(companyId: string, offerId: strin
   });
   return { claimed: Boolean(data), error };
 }
+
+export async function releaseBuyMarketOfferUnits(companyId: string, offerId: string, units: number) {
+  const { data, error } = await supabase.rpc('release_market_buy_offer_units', {
+    p_company_id: companyId,
+    p_offer_id: offerId,
+    p_units: units,
+  });
+  return { released: Boolean(data), error };
+}

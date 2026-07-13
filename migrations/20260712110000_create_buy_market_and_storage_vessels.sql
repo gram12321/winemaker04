@@ -112,5 +112,23 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION release_market_buy_offer_units(
+  p_company_id UUID,
+  p_offer_id TEXT,
+  p_units INTEGER
+) RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF p_units <= 0 THEN
+    RETURN FALSE;
+  END IF;
+  UPDATE market_buy_offers
+  SET available_units = available_units + p_units, updated_at = NOW()
+  WHERE company_id = p_company_id AND offer_id = p_offer_id;
+  RETURN FOUND;
+END;
+$$;
+
 -- The application no longer reads this table after this migration.
 DROP TABLE IF EXISTS grape_market_buy_offers;

@@ -247,6 +247,8 @@ export interface WineBatch {
   vineyardName: string;
   grape: GrapeVariety;
   quantity: number; // in kg or bottles
+  volumeLitres?: number; // Current physical liquid volume for non-bottled storage allocation
+  storagePlanId?: string; // Required for non-bottled batches
   batchNumber?: number; // Sequential identifier for duplicate vintage/vineyard batches
   batchGroupSize?: number; // Total batches sharing the same vintage/vineyard combination
   state: WineBatchState;
@@ -819,6 +821,7 @@ export interface Activity {
 }
 
 export interface ActivityCreationOptions {
+  id?: string;
   category: WorkCategory;
   title: string;
   totalWork: number;

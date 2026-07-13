@@ -91,6 +91,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
     { id: 'staff', label: 'Staff', icon: '👥' },
     { id: 'vineyard', label: 'Vineyard', icon: NAVIGATION_EMOJIS.vineyard },
     { id: 'winery', label: 'Winery', icon: NAVIGATION_EMOJIS.winery },
+    { id: 'equipment', label: 'Equipment', icon: '⚙️' },
     { id: 'sales', label: 'Sales', icon: NAVIGATION_EMOJIS.sales }
   ];
 

@@ -1,6 +1,36 @@
 export type StorageVesselType = 'cask' | 'steel_tank' | 'concrete_tank' | 'container';
 export type StorageVesselMaterial = 'oak' | 'stainless_steel' | 'concrete' | 'neutral';
-export type StorageVesselState = 'empty' | 'allocated' | 'maintenance';
+export type StorageVesselOperationalStatus = 'operational' | 'maintenance' | 'retired';
+export type StorageVesselOccupancy = 'available' | 'reserved' | 'in_use' | 'maintenance' | 'retired';
+export type StorageAllocationPlanStatus = 'reserved' | 'active' | 'released';
+
+export interface StorageVesselAllocationPlan {
+  id: string;
+  companyId: string;
+  activityId?: string;
+  wineBatchId?: string;
+  status: StorageAllocationPlanStatus;
+  requiredLitres: number;
+  createdYear: number;
+  createdSeason: string;
+  createdWeek: number;
+  activatedYear?: number;
+  activatedSeason?: string;
+  activatedWeek?: number;
+  releasedYear?: number;
+  releasedSeason?: string;
+  releasedWeek?: number;
+}
+
+export interface StorageVesselAllocation {
+  id: string;
+  companyId: string;
+  planId: string;
+  vesselId: string;
+  assignedCapacityLitres: number;
+  filledLitres: number;
+  releasedAt?: string;
+}
 
 export interface StorageVessel {
   id: string;
@@ -10,7 +40,10 @@ export interface StorageVessel {
   capacityLitres: number;
   acquisitionPrice: number;
   sourceOfferId: string;
-  state: StorageVesselState;
+  operationalStatus: StorageVesselOperationalStatus;
+  occupancy: StorageVesselOccupancy;
+  activePlanId?: string;
+  activeWineBatchId?: string;
   purchasedYear: number;
   purchasedSeason: string;
   purchasedWeek: number;

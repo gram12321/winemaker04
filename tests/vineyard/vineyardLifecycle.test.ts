@@ -96,6 +96,11 @@ vi.mock('@/lib/services/core/gameState', () => ({
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   createWineBatchFromHarvest: mocks.createWineBatchFromHarvest
 }));
+vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
+  initializeHarvestVolumeLitres: (kg: number) => Math.ceil(kg * 0.5),
+  canStoragePlanHoldVolume: vi.fn(async () => true),
+  getStoragePlanCapacityLitres: vi.fn(async () => 1000),
+}));
 
 vi.mock('@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService', () => ({
   getResearchPermanentEffects: mocks.getResearchPermanentEffects
@@ -263,7 +268,7 @@ describe('vineyard lifecycle services', () => {
   }, 15000);
 
   it('creates partial harvest batches as activity work progresses and records harvested-so-far state', async () => {
-    const harvestActivity = activity({ totalWork: 100, completedWork: 0 });
+    const harvestActivity = activity({ totalWork: 100, completedWork: 0, params: { storagePlanId: 'plan-1', outputBatchId: 'batch-1' } });
     mocks.setActivities([harvestActivity]);
     const { handlePartialHarvesting } = await import('@/lib/services/vineyard/vineyardManager');
 
@@ -275,7 +280,9 @@ describe('vineyard lifecycle services', () => {
       'Pinot Noir',
       expect.any(Number),
       { week: 2, season: 'Fall', year: 2026 },
-      { week: 5, season: 'Fall', year: 2026 }
+      { week: 5, season: 'Fall', year: 2026 },
+      'plan-1',
+      'batch-1'
     );
     expect(mocks.updateActivityInDb).toHaveBeenCalledWith('activity-1', {
       params: expect.objectContaining({

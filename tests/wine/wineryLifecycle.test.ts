@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => {
     getBatches: () => batches,
     loadVineyards: vi.fn(async () => vineyards),
     loadWineBatches: vi.fn(async () => batches),
+    getWineBatchById: vi.fn(async (batchId: string) => batches.find(batch => batch.id === batchId) ?? null),
+    deleteWineBatch: vi.fn(async (batchId: string) => { batches = batches.filter(batch => batch.id !== batchId); return true; }),
     saveWineBatch: vi.fn(async (batch: WineBatch) => {
       const existingIndex = batches.findIndex(candidate => candidate.id === batch.id);
       if (existingIndex >= 0) {
@@ -58,6 +60,8 @@ vi.mock('@/lib/database/activities/vineyardDB', () => ({
 
 vi.mock('@/lib/database/activities/inventoryDB', () => ({
   loadWineBatches: mocks.loadWineBatches,
+  getWineBatchById: mocks.getWineBatchById,
+  deleteWineBatch: mocks.deleteWineBatch,
   saveWineBatch: mocks.saveWineBatch,
   updateWineBatch: mocks.updateWineBatch,
   bulkUpdateWineBatches: mocks.bulkUpdateWineBatches
@@ -95,6 +99,15 @@ vi.mock('@/lib/services/wine/features/featureService', () => ({
   initializeBatchFeatures: mocks.initializeBatchFeatures,
   processEventTrigger: mocks.processEventTrigger,
   simulateMarketFeatureLifecycle: mocks.simulateMarketFeatureLifecycle
+}));
+
+vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
+  initializeHarvestVolumeLitres: (kg: number) => Math.ceil(kg * 0.5),
+  canStoragePlanHoldVolume: vi.fn(async () => true),
+  activateStoragePlanForBatch: vi.fn(async () => true),
+  recordBatchStorageVolume: vi.fn(async () => true),
+  releaseStoragePlanForBatch: vi.fn(async () => true),
+  assertBatchHasUsableStorage: vi.fn(async () => ({ valid: true })),
 }));
 
 vi.mock('@/lib/services/user/wineLogService', () => ({
@@ -167,13 +180,15 @@ describe('winery harvest-to-bottle lifecycle', () => {
     } = await import('@/lib/services/wine/winery/fermentationManager');
 
     const harvestDate = { week: 2, season: 'Fall' as const, year: 2026 };
-    const grapes = await createWineBatchFromHarvest(
+    let grapes = await createWineBatchFromHarvest(
       'vineyard-1',
       'Lifecycle Vineyard',
       'Pinot Noir',
       1200,
       harvestDate,
-      harvestDate
+      harvestDate,
+      'plan-1',
+      'batch-1'
     );
 
     expect(grapes).toMatchObject({
@@ -187,6 +202,19 @@ describe('winery harvest-to-bottle lifecycle', () => {
     expect(grapes.characteristics).toBeDefined();
     expect(grapes.wineAnchors).toBeDefined();
     expect(mocks.saveWineBatch).toHaveBeenCalledWith(expect.objectContaining({ state: 'grapes' }));
+
+    const continuedGrapes = await createWineBatchFromHarvest(
+      'vineyard-1',
+      'Lifecycle Vineyard',
+      'Pinot Noir',
+      120,
+      harvestDate,
+      { week: 3, season: 'Fall', year: 2026 },
+      'plan-1',
+      'batch-1'
+    );
+    expect(continuedGrapes).toMatchObject({ id: grapes.id, quantity: 1320 });
+    grapes = continuedGrapes;
 
     const crushingOptions: CrushingOptions = {
       method: 'Mechanical Press',
@@ -293,7 +321,8 @@ describe('winery harvest-to-bottle lifecycle', () => {
       grape: 'Pinot Noir',
       quantity: 900,
       harvestStartDate: harvestDate,
-      harvestEndDate: harvestDate
+      harvestEndDate: harvestDate,
+      storagePlanId: 'plan-2'
     });
 
     expect(batch).toMatchObject({

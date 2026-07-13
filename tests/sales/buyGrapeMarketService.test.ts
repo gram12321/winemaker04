@@ -61,6 +61,9 @@ const mocks = vi.hoisted(() => ({
   deleteBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
   updateBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
   saveInventoryBatch: vi.fn(async () => true),
+  createStorageAllocationPlan: vi.fn(async () => ({ planId: 'plan-1' })),
+  activateStoragePlanForBatch: vi.fn(async () => true),
+  releaseStorageAllocationPlan: vi.fn(async () => true),
   addTransaction: vi.fn(async () => undefined),
   recordSupplierPurchase: vi.fn(async () => ({
     companyId: 'company-1',
@@ -217,6 +220,12 @@ vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   buildMarketPreviewBatch: mocks.buildMarketPreviewBatch,
   saveInventoryBatch: mocks.saveInventoryBatch,
 }));
+vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
+  initializeHarvestVolumeLitres: (kg: number) => Math.ceil(kg * 0.5),
+  createStorageAllocationPlan: mocks.createStorageAllocationPlan,
+  activateStoragePlanForBatch: mocks.activateStoragePlanForBatch,
+  releaseStorageAllocationPlan: mocks.releaseStorageAllocationPlan,
+}));
 
 describe('buy grape market service', () => {
   beforeEach(() => {
@@ -295,7 +304,7 @@ describe('buy grape market service', () => {
   it('creates inventory, writes transaction, and updates offer volume after successful purchase', async () => {
     const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
 
-    const result = await purchaseBuyGrapeOffer('offer-1', 120);
+    const result = await purchaseBuyGrapeOffer('offer-1', 120, ['vessel-1']);
 
     expect(result).toEqual({ success: true });
     expect(mocks.saveInventoryBatch).toHaveBeenCalledWith(expect.objectContaining({
@@ -363,7 +372,7 @@ describe('buy grape market service', () => {
     });
 
     const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
-    const result = await purchaseBuyGrapeOffer('offer-2', 75);
+    const result = await purchaseBuyGrapeOffer('offer-2', 75, ['vessel-1']);
 
     expect(result).toEqual({ success: true });
     expect(mocks.saveInventoryBatch).toHaveBeenCalledWith(expect.objectContaining({
@@ -385,7 +394,7 @@ describe('buy grape market service', () => {
   it('blocks purchase when requested quantity exceeds supplier seasonal remaining capacity', async () => {
     const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
 
-    const result = await purchaseBuyGrapeOffer('offer-1', 450);
+    const result = await purchaseBuyGrapeOffer('offer-1', 450, ['vessel-1']);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('remaining seasonal supply (400 kg)');

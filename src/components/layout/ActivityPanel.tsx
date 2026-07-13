@@ -8,6 +8,8 @@ import { useGameStateWithData } from '@/hooks';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { addStorageVesselCapacity, getAvailableStorageVessels } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import type { StorageVessel } from '@/lib/types/storageVessels';
 
 type PanelState = 'hidden' | 'minimized' | 'full';
 type MobileState = 'closed' | 'open';
@@ -27,6 +29,16 @@ export const ActivityPanel: React.FC = () => {
   const [minimizedCards, setMinimizedCards] = useState<Set<string>>(new Set());
   const [orderedActivityIds, setOrderedActivityIds] = useState<string[]>([]);
   const [activityProgresses, setActivityProgresses] = useState<Record<string, { progress: number; timeRemaining: string }>>({});
+  const [capacityActivity, setCapacityActivity] = useState<Activity | null>(null);
+  const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
+  const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
+  const [addingCapacity, setAddingCapacity] = useState(false);
+
+  useEffect(() => {
+    if (!capacityActivity) return;
+    void getAvailableStorageVessels().then(setAvailableVessels).catch(() => setAvailableVessels([]));
+    setSelectedVesselIds([]);
+  }, [capacityActivity]);
 
   // Drag & drop configuration
   const sensors = useSensors(
@@ -89,9 +101,27 @@ export const ActivityPanel: React.FC = () => {
 
   const handleResumeActivity = async (activityId: string) => {
     try {
+      const activity = activities.find((candidate) => candidate.id === activityId);
+      if (activity?.params.storageCapacityBlocked && activity.params.storagePlanId) {
+        setCapacityActivity(activity);
+        return;
+      }
       await resumeActivity(activityId);
     } catch (error) {
       console.error('Error in handleResumeActivity:', error);
+    }
+  };
+
+  const handleAddCapacity = async () => {
+    if (!capacityActivity?.params.storagePlanId || selectedVesselIds.length === 0) return;
+    setAddingCapacity(true);
+    try {
+      const result = await addStorageVesselCapacity(capacityActivity.params.storagePlanId, selectedVesselIds);
+      if (!result.success) return;
+      await resumeActivity(capacityActivity.id);
+      setCapacityActivity(null);
+    } finally {
+      setAddingCapacity(false);
     }
   };
 
@@ -339,6 +369,19 @@ export const ActivityPanel: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {capacityActivity && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900">Add Storage Capacity</h2>
+            <p className="mt-1 text-sm text-gray-600">This harvest paused because its selected vessels are full. Choose additional vessels, then resume the activity.</p>
+            <div className="mt-4 space-y-2">
+              {availableVessels.length === 0 && <p className="text-sm text-red-600">No available Storage Vessels. Buy equipment before resuming.</p>}
+              {availableVessels.map((vessel) => <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 p-2 text-sm"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity}>Cancel</Button><Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || selectedVesselIds.length === 0} className="bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Adding…' : 'Add capacity and resume'}</Button></div>
           </div>
         </div>
       )}

@@ -1,11 +1,12 @@
 import { addTransaction } from '@/lib/services/finance/financeService';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { getGameState } from '@/lib/services/core/gameState';
-import { createPurchasedStorageVessels } from '@/lib/services/wine/winery/storageVesselService';
+import { createPurchasedStorageVessels, removePurchasedStorageVessels } from '@/lib/services/wine/winery/storageVesselService';
 import {
   getCompanyBuyMarketOffer,
   getCompanyBuyMarketOffers,
   claimBuyMarketOfferUnits,
+  releaseBuyMarketOfferUnits,
   upsertBuyMarketOffers,
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -94,8 +95,10 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
   const claim = await claimBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
   if (claim.error || !claim.claimed) return { success: false, error: 'Offer availability changed. Please reopen the market.' };
 
+  let purchasedVesselIds: string[] = [];
   try {
-    await createPurchasedStorageVessels(offer.payload as unknown as StorageVesselOfferPayload, offer.offerId, offer.effectivePricePerUnit, safeQuantity);
+    const vessels = await createPurchasedStorageVessels(offer.payload as unknown as StorageVesselOfferPayload, offer.offerId, offer.effectivePricePerUnit, safeQuantity);
+    purchasedVesselIds = vessels.map((vessel) => vessel.id);
     await addTransaction(-totalCost, `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`, TRANSACTION_CATEGORIES.SUPPLIES, false, companyId);
     await notificationService.addMessage(
       `Purchased ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
@@ -106,6 +109,16 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     triggerTopicUpdate('storage_vessels');
     return { success: true };
   } catch (purchaseError) {
+    try {
+      await removePurchasedStorageVessels(purchasedVesselIds);
+    } catch (removeError) {
+      console.error('Failed to remove partially created Storage Vessels:', removeError);
+    }
+    try {
+      await releaseBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
+    } catch (releaseError) {
+      console.error('Failed to restore Storage Vessel offer availability:', releaseError);
+    }
     console.error('Failed to purchase Storage Vessel offer:', purchaseError);
     return { success: false, error: 'Could not complete Storage Vessel purchase. Please try again.' };
   }
