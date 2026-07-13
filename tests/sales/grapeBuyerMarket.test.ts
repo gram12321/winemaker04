@@ -105,6 +105,14 @@ vi.mock('@/lib/features/researchUpgrade/services/research/researchEnforcer', () 
   }
 }));
 
+vi.mock('@/lib/features/researchUpgrade', () => ({
+  researchUpgradeFeature: {
+    unlocks: {
+      getUnlockedItems: mocks.getUnlockedItems
+    }
+  }
+}));
+
 vi.mock('@/lib/services', () => ({
   getBuyerLoyalty: mocks.getBuyerLoyalty,
   getBuyerRelationshipPriceMultiplier: mocks.getBuyerRelationshipPriceMultiplier,

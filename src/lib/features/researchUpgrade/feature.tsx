@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { GAME_INITIALIZATION, type SeasonName } from '@/lib/constants';
 import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
 import { getAllResearchUnlocks, getUnlockedResearchIds, unlockResearch } from '@/lib/database/core/researchUnlocksDB';
@@ -7,6 +8,9 @@ import { getGameState } from '@/lib/services/core/gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { ResearchUpgradeFeature } from './featureTypes';
+import { getResearchPermanentEffects } from './services/research/researchPermanentEffectsService';
+
+const ResearchWorkspace = lazy(() => import('./components/ResearchWorkspace').then(module => ({ default: module.ResearchWorkspace })));
 
 function getRequiredResearch(type: UnlockType, value: string | number): ResearchProject | null {
   const valueKey = String(value);
@@ -29,7 +33,7 @@ async function getUnlockedResearchSet(companyId?: string): Promise<Set<string>> 
   return new Set(unlockedResearchIds);
 }
 
-export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
+export const researchUpgradeFeature: ResearchUpgradeFeature = {
   workflow: {
     startResearch,
     completeResearch
@@ -228,5 +232,13 @@ export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
         removed: unlockIds.length
       };
     }
+  },
+
+  ui: {
+    renderResearchPage: () => <ResearchWorkspace />
+  },
+
+  effects: {
+    getPermanentEffects: getResearchPermanentEffects
   }
 };

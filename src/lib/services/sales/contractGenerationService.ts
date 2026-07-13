@@ -25,7 +25,7 @@ import {
   CUSTOMER_MAX_WINE_AGE,
   AVAILABLE_CHARACTERISTICS
 } from '../../constants/contractConstants';
-import { researchEnforcer } from '../../features/researchUpgrade/services/research/researchEnforcer';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 const CONTRACT_TYPE_UNLOCK_VALUE_TO_CUSTOMER_TYPE: Record<string, CustomerType> = {
   restaurant: 'Restaurant',
@@ -43,7 +43,7 @@ async function getUnlockedContractCustomerTypes(): Promise<Set<CustomerType>> {
   const unlockedCustomerTypes = new Set<CustomerType>(['Wine Shop']);
 
   const unlockedValueGroups = await Promise.all([
-    researchEnforcer.getUnlockedItems('contract_type')
+    researchUpgradeFeature.unlocks.getUnlockedItems('contract_type')
   ]);
 
   for (const unlockedValues of unlockedValueGroups) {

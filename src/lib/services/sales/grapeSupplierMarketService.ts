@@ -12,7 +12,7 @@ import {
   type SupplierMarketCountryKey
 } from '@/lib/constants';
 import { getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
-import { researchEnforcer } from '../../features/researchUpgrade/services/research/researchEnforcer';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   createSupplierRow,
   getKnownSupplierRowsForCountries,
@@ -91,7 +91,7 @@ function computeScaledSeasonSupply(baseSeasonSupplyKg: number, companyValue: num
 
 async function getSeasonalSupplierCountFromResearch(): Promise<number> {
   // Intentionally shared with buyer market progression.
-  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_slots');
+  const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape_buyer_slots');
   const additional = unlocked.reduce((sum, value) => {
     const parsed = Number(value);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
@@ -103,7 +103,7 @@ async function getSeasonalSupplierCountFromResearch(): Promise<number> {
 
 async function getUnlockedSupplierCountriesFromResearch(homeCountry: CountryKey): Promise<CountryKey[]> {
   // Intentionally shared with buyer market progression.
-  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_country_access');
+  const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape_buyer_country_access');
   const allowed = new Set<CountryKey>([homeCountry]);
 
   for (const value of unlocked) {

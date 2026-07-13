@@ -1,5 +1,4 @@
-import React from 'react';
-import { ResearchAdminInspector } from '@/lib/features/researchUpgrade/components/ResearchAdminInspector';
+import { lazy } from 'react';
 import {
   authService,
   completeActivityNow,
@@ -45,6 +44,8 @@ import {
 } from './services/testLab/testLabFixtureService';
 import { createTestLabRunner, type AutomatedTestRunResult } from './services/testLab/testLabRunner';
 import { getTestLabScenarios } from './services/testLab/testLabScenarios';
+
+const ResearchAdminInspector = lazy(() => import('@/lib/features/researchUpgrade/components/ResearchAdminInspector').then(module => ({ default: module.ResearchAdminInspector })));
 
 const runAutomatedTests = async (target?: string): Promise<AutomatedTestRunResult> => {
   const response = await fetch('/api/test-run', {
@@ -113,11 +114,11 @@ export function createWinemakerAdminDashboardDependencies(): AdminDashboardDepen
     database,
     cheats,
     testLab,
-    renderResearchInspector: () => React.createElement(ResearchAdminInspector)
+    renderResearchInspector: () => <ResearchAdminInspector />
   };
 }
 
-export const activeAdminFeature: AdminFeature = createAdminFeature({
+export const adminFeature: AdminFeature = createAdminFeature({
   isAvailable: isDevSurfaceAvailable,
   dashboard: createWinemakerAdminDashboardDependencies()
 });

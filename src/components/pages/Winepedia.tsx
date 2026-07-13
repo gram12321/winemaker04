@@ -16,8 +16,8 @@ import {
   WeatherTab,
   GrapeBuyersTab
 } from '@/components/pages/winepedia/index';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { boardShareFeature } from '@/lib/features/boardShare';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 
 interface WinepediaTab {
@@ -32,8 +32,8 @@ interface WinepediaProps extends PageProps {
 
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
-  const loanLenderTabs = useMemo(() => getLoanLenderFeature().ui.getWinepediaTabs(), []);
-  const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getWinepediaTabs(), []);
+  const loanLenderTabs = useMemo(() => loanLenderFeature.ui.getWinepediaTabs(), []);
+  const boardShareTabs = useMemo(() => boardShareFeature.ui.getWinepediaTabs(), []);
 
   const tabs = useMemo<WinepediaTab[]>(() => {
     const baseTabs: WinepediaTab[] = [

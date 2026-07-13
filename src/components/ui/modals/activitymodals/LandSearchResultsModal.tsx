@@ -6,7 +6,7 @@ import { X, Minimize2 } from 'lucide-react';
 import { purchaseVineyard } from '@/lib/services';
 import { getGameState } from '@/lib/services';
 import { WarningModal } from '@/components/ui';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   BASE_MAX_HECTARES_PER_VINEYARD,
   BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
@@ -75,9 +75,9 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
       try {
         const [vineyards, unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
           getAllVineyards(),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_size'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('total_vineyard_hectares'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_count')
         ]);
 
         if (!isMounted) return;

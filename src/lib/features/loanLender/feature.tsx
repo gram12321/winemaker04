@@ -1,13 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useGameState } from '@/hooks';
-import { isModalMinimized } from '@/lib/utils';
+import { lazy } from 'react';
 import type { StartingLoanConfig } from '@/lib/constants/startingConditions';
 import type { LoanLenderFeature } from './featureTypes';
-import { LoansView } from './ui/LoansView';
-import { LoanWarningModalDisplay } from './ui/LoanWarningModalDisplay';
-import { LendersTab } from './ui/LendersTab';
-import { LenderSearchResultsModal } from './ui/LenderSearchResultsModal';
-import { completeLenderSearch, clearPendingLenderSearchResults } from './services/activity/activitymanagers/lenderSearchManager';
+import { completeLenderSearch } from './services/activity/activitymanagers/lenderSearchManager';
 import { completeTakeLoan } from './services/activity/activitymanagers/takeLoanManager';
 import { getAllLenders, initializeLenders } from './services/finance/lenderService';
 import {
@@ -17,37 +11,12 @@ import {
   processSeasonalLoanPayments,
   restructureForcedLoansIfNeeded
 } from './services/finance/loanService';
+import { DEFAULT_ACTIVE_LOAN_PORTFOLIO, loadActiveLoanPortfolio } from './services/finance/loanViewService';
 
-function LenderSearchResultsDisplay() {
-  const gameState = useGameState();
-  const [showResults, setShowResults] = useState(false);
-
-  useEffect(() => {
-    if (gameState.pendingLenderSearchResults?.offers?.length) {
-      setShowResults(true);
-      return;
-    }
-
-    setShowResults(false);
-  }, [gameState.pendingLenderSearchResults]);
-
-  const handleClose = () => {
-    setShowResults(false);
-    clearPendingLenderSearchResults();
-  };
-
-  if (!gameState.pendingLenderSearchResults?.offers?.length) {
-    return null;
-  }
-
-  return (
-    <LenderSearchResultsModal
-      isOpen={showResults && !isModalMinimized('lender')}
-      onClose={handleClose}
-      offers={gameState.pendingLenderSearchResults.offers}
-    />
-  );
-}
+const LoansView = lazy(() => import('./ui/LoansView').then(module => ({ default: module.LoansView })));
+const LoanWarningModalDisplay = lazy(() => import('./ui/LoanWarningModalDisplay').then(module => ({ default: module.LoanWarningModalDisplay })));
+const LendersTab = lazy(() => import('./ui/LendersTab').then(module => ({ default: module.LendersTab })));
+const LenderSearchResultsDisplay = lazy(() => import('./ui/LenderSearchResultsDisplay').then(module => ({ default: module.LenderSearchResultsDisplay })));
 
 async function applyStartingLoan(config: StartingLoanConfig): Promise<string> {
   const lenders = await getAllLenders();
@@ -76,7 +45,7 @@ async function applyStartingLoan(config: StartingLoanConfig): Promise<string> {
   );
 }
 
-export const activeLoanLenderFeature: LoanLenderFeature = {
+export const loanLenderFeature: LoanLenderFeature = {
   ui: {
     getFinanceTabs() {
       return [
@@ -124,7 +93,9 @@ export const activeLoanLenderFeature: LoanLenderFeature = {
   },
 
   metrics: {
-    calculateTotalOutstandingLoans
+    calculateTotalOutstandingLoans,
+    loadActivePortfolio: loadActiveLoanPortfolio,
+    defaultActivePortfolio: DEFAULT_ACTIVE_LOAN_PORTFOLIO
   },
 
   ticks: {

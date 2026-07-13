@@ -1,18 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ReactElement } from 'react';
 import { createAdminFeature } from '@/lib/features/admin/createAdminFeature';
 
 describe('Admin feature facade', () => {
-  it('uses the unavailable adapter until a host configures an implementation', async () => {
-    vi.resetModules();
-    const facade = await import('@/lib/features/admin');
-    const { getAdminFeature } = facade;
-
-    expect(Object.keys(facade).sort()).toEqual(['configureAdminFeature', 'getAdminFeature']);
-    expect(getAdminFeature().isAvailable()).toBe(false);
-    expect(getAdminFeature().renderPage({ onBack: vi.fn(), onNavigateToLogin: vi.fn() })).toBeNull();
-  });
-
   it('constructs a fork adapter with host dependencies behind the rendering seam', () => {
     const dashboard = {
       database: {} as never,
@@ -34,7 +23,7 @@ describe('Admin feature facade', () => {
   });
 
   it('assembles the Winemaker adapter with each internal collaborator group', async () => {
-    const { createWinemakerAdminDashboardDependencies } = await import('@/lib/features/admin/active');
+    const { createWinemakerAdminDashboardDependencies } = await import('@/lib/features/admin/feature');
 
     const dependencies = createWinemakerAdminDashboardDependencies();
 
@@ -51,17 +40,4 @@ describe('Admin feature facade', () => {
     expect(dependencies.renderResearchInspector).toEqual(expect.any(Function));
   });
 
-  it('exposes only availability and page rendering after configuration', async () => {
-    vi.resetModules();
-    const { configureAdminFeature, getAdminFeature } = await import('@/lib/features/admin');
-    const page = { type: 'admin-page', props: {}, key: null } as unknown as ReactElement;
-    const renderPage = vi.fn(() => page);
-
-    configureAdminFeature({ isAvailable: () => true, renderPage });
-
-    const feature = getAdminFeature();
-    expect(feature.isAvailable()).toBe(true);
-    expect(feature.renderPage({ onBack: vi.fn(), onNavigateToLogin: vi.fn() })).toBe(page);
-    expect(renderPage).toHaveBeenCalledOnce();
-  });
 });

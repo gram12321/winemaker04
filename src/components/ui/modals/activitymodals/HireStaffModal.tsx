@@ -9,7 +9,7 @@ import { formatNumber, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 interface HireStaffModalProps {
   isOpen: boolean;
@@ -51,7 +51,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       try {
         const [staff, unlockedLimits] = await Promise.all([
           getAllStaff(),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('staff_limit')
+          researchUpgradeFeature.unlocks.getUnlockedItems('staff_limit')
         ]);
 
         if (!isMounted) return;

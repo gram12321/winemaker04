@@ -139,20 +139,29 @@ vi.mock('@/hooks/useGameUpdates', () => ({
 }));
 
 vi.mock('@/lib/features/loanLender', () => ({
-  getLoanLenderFeature: () => ({
+  loanLenderFeature: {
     workflow: {
       completeLenderSearch: vi.fn(async () => undefined),
       completeTakeLoan: vi.fn(async () => undefined)
     }
-  })
+  }
 }));
 
 vi.mock('@/lib/features/researchUpgrade', () => ({
-  getResearchUpgradeFeature: () => ({
+  researchUpgradeFeature: {
     workflow: {
       completeResearch: vi.fn(async () => undefined)
+    },
+    effects: {
+      getPermanentEffects: vi.fn(async () => ({
+        vineyardHealthDecayMultiplier: 1,
+        researchSkillMultiplier: 1,
+        administrationAndResearchWorkMultiplier: 1,
+        allStaffWorkMultiplier: 1,
+        activeEffects: []
+      }))
     }
-  })
+  }
 }));
 
 vi.mock('@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService', () => ({

@@ -11,7 +11,7 @@ import {
   getMaxSearchableHectares,
   MIN_SEARCHABLE_HECTARES
 } from '@/lib/services/vineyard/vineyardCapacityService';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 /**
  * Start a land search activity
@@ -21,9 +21,9 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
     const gameState = getGameState();
     const [vineyards, unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
       getAllVineyards(),
-      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
-      getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
-      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_size'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('total_vineyard_hectares'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_count')
     ]);
 
     const vineyardCapacity = buildVineyardCapacityState({

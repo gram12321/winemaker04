@@ -12,7 +12,7 @@ import {
   BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
   BASE_VINEYARD_COUNT_LIMIT,
 } from '@/lib/constants/researchConstants';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   buildVineyardCapacityState,
   getLandSearchPenaltyReferenceRangeFromCapacity,
@@ -117,9 +117,9 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
       try {
         const [vineyards, unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
           getAllVineyards(),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_size'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('total_vineyard_hectares'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_count')
         ]);
 
         if (!isMounted) return;

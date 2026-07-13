@@ -165,23 +165,23 @@ vi.mock('@/lib/database/activities/inventoryDB', () => ({
 }));
 
 vi.mock('@/lib/features/boardShare', () => ({
-  getBoardShareFeature: () => ({
+  boardShareFeature: {
     ticks: {
       onWeekAdvanced: mocks.boardWeekAdvanced,
       onSeasonStart: mocks.boardSeasonStart,
       onYearStart: mocks.boardYearStart
     }
-  })
+  }
 }));
 
 vi.mock('@/lib/features/loanLender', () => ({
-  getLoanLenderFeature: () => ({
+  loanLenderFeature: {
     ticks: {
       processSeasonalLoanPayments: mocks.processSeasonalLoanPayments,
       enforceEmergencyQuickLoanIfNeeded: mocks.enforceEmergencyQuickLoanIfNeeded,
       restructureForcedLoansIfNeeded: mocks.restructureForcedLoansIfNeeded
     }
-  })
+  }
 }));
 
 describe('processGameTick', () => {

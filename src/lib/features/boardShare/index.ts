@@ -1,12 +1,21 @@
-import type { BoardShareFeature } from './featureTypes';
-import { noBoardShareFeature } from './noop';
-
-let boardShareFeature: BoardShareFeature = noBoardShareFeature;
-
-export function configureBoardShareFeature(feature: BoardShareFeature): void {
-  boardShareFeature = feature;
-}
-
-export function getBoardShareFeature(): BoardShareFeature {
-  return boardShareFeature;
-}
+export { boardShareFeature } from './feature';
+export type {
+  BoardShareFeature,
+  BoardShareTickContext,
+  BoardShareTickHooks,
+  BoardShareConstraintHooks,
+  BoardShareStartingHooks,
+  BoardShareUiHooks,
+  BoardShareRuntimeFeature,
+  VineyardPurchaseConstraintInput,
+  VineyardPurchaseConstraintResult,
+  StaffHiringConstraintInput,
+  StaffHiringConstraintResult,
+  VineyardPurchaseConstraintInfo,
+  CompanyCreationOwnershipInput,
+  CompanyCreationOwnershipOutput,
+  StartingOwnershipInput,
+  StartingOwnershipOutput,
+  FinanceTabRegistration,
+  WinepediaTabRegistration
+} from './featureTypes';

@@ -9,7 +9,7 @@ Current implementation orientation for agents and maintainers. `CONTEXT.md` is a
 - React/Vite/TypeScript/Tailwind/ShadCN frontend with Supabase persistence and company-scoped state.
 - Weekly progression runs through `processGameTick()` in `src/lib/services/core/gameTick.ts`.
 - Services/features own rules, calculations, validation, and orchestration. `src/lib/database/` owns CRUD/mapping. Components own presentation and interaction.
-- Active seams: `loanLender`, `researchUpgrade`, and development-only `admin`; `boardShare` is a no-op shell.
+- Feature modules use installed static facades for `loanLender`, `researchUpgrade`, and `boardShare`; development-only `admin` is loaded explicitly by bootstrap; `weather` is an always-on functional barrel.
 - Core persistence areas cover game state, staff, activities, inventory, customers/orders, contracts, grape markets, forward contracts, research, loans, prestige, achievements, and highscores.
 
 ## Player Surfaces

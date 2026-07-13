@@ -12,7 +12,7 @@ import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 /**
  * Fermentation Options Modal
@@ -139,7 +139,7 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
     const loadUnlocks = async () => {
       setIsLoadingFermentationUnlocks(true);
       try {
-        const unlocked = await getResearchUpgradeFeature().unlocks.getUnlockedItems('fermentation_technology');
+        const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('fermentation_technology');
         if (!isMounted) return;
 
         const unlockedSet = new Set<string>(['Basic', ...unlocked.map(value => String(value))]);

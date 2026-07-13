@@ -13,16 +13,16 @@ import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import versionLogRaw from '../../../docs/versionlog.md?raw';
-import { getAdminFeature } from '@/lib/features/admin';
 
 
 interface HeaderProps extends NavigationProps, CompanyProps {
   currentPage: string;
   onTimeAdvance: () => void;
   onBackToLogin?: () => void;
+  adminAvailable: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance, onBackToLogin }) => {
+const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance, onBackToLogin, adminAvailable }) => {
   const gameState = useGameState();
   const weather = useMemo(() => createWeatherWeekContext(gameState), [gameState]);
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   
   // Get current company once instead of multiple calls
   const currentCompany = getCurrentCompany();
-  const showAdminDashboard = getAdminFeature().isAvailable();
+  const showAdminDashboard = adminAvailable;
 
   // Use consolidated hook for reactive prestige loading
   const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);

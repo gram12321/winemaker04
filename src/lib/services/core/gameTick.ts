@@ -10,8 +10,8 @@ import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, resto
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { boardShareFeature } from '@/lib/features/boardShare';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
 
 // Prevent concurrent game tick execution
@@ -134,7 +134,7 @@ const executeGameTick = async (): Promise<void> => {
   // Board/share seasonal hooks (e.g. dividends on season start)
   if (week === 1) {
     try {
-      await getBoardShareFeature().ticks.onSeasonStart({ week, season, year: currentYear });
+      await boardShareFeature.ticks.onSeasonStart({ week, season, year: currentYear });
     } catch (error) {
       console.warn('Error running board/share season-start hooks:', error);
     }
@@ -151,7 +151,7 @@ const executeGameTick = async (): Promise<void> => {
   if (isNewYearTick) {
     triggerTopicUpdate('wine_batches');
     triggerGameUpdate();
-    await getLoanLenderFeature().ticks.restructureForcedLoansIfNeeded();
+    await loanLenderFeature.ticks.restructureForcedLoansIfNeeded();
   }
 
   // Trigger final UI refresh after all weekly effects are processed
@@ -200,7 +200,7 @@ const onNewYear = async (
 
   // Run board/share yearly hooks (e.g. growth trend updates)
   try {
-    await getBoardShareFeature().ticks.onYearStart({
+      await boardShareFeature.ticks.onYearStart({
       week: context?.week ?? 1,
       season: context?.season ?? 'Spring',
       year: context?.year ?? _newYear
@@ -318,7 +318,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
     (async () => {
       try {
-        await getBoardShareFeature().ticks.onWeekAdvanced({
+        await boardShareFeature.ticks.onWeekAdvanced({
           week: gameState.week || 1,
           season: gameState.season || 'Spring',
           year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
@@ -385,7 +385,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     weeklyTasks.push(
       (async () => {
         try {
-          await getLoanLenderFeature().ticks.processSeasonalLoanPayments();
+        await loanLenderFeature.ticks.processSeasonalLoanPayments();
         } catch (error) {
           console.warn('Error during seasonal loan payments:', error);
         }
@@ -425,7 +425,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   }
 
   try {
-    await getLoanLenderFeature().ticks.enforceEmergencyQuickLoanIfNeeded();
+      await loanLenderFeature.ticks.enforceEmergencyQuickLoanIfNeeded();
   } catch (error) {
     console.warn('Error enforcing emergency quick loan:', error);
   }

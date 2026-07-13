@@ -8,7 +8,7 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from '../user/companyService';
 import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 
@@ -173,7 +173,7 @@ export const clearTransactionsCache = (): void => {
 export const calculateCompanyValue = async (): Promise<number> => {
   try {
     const financialData = await calculateFinancialData('year');
-    const totalOutstandingLoans = await getLoanLenderFeature().metrics.calculateTotalOutstandingLoans();
+    const totalOutstandingLoans = await loanLenderFeature.metrics.calculateTotalOutstandingLoans();
     return financialData.totalAssets - totalOutstandingLoans;
   } catch (error) {
     console.error('Error calculating company value:', error);

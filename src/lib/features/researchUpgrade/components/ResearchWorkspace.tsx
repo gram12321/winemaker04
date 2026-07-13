@@ -24,7 +24,7 @@ import {
 import { Progress } from '@/components/ui/shadCN/progress';
 import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
 import { getUnlockedResearchIds } from '@/lib/database';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade/feature';
 import {
   buildResearchFootprintSummary,
   buildResearchPresentationRows,
@@ -583,7 +583,7 @@ export function ResearchWorkspace({
       return;
     }
 
-    await getResearchUpgradeFeature().workflow.startResearch(projectId);
+    await researchUpgradeFeature.workflow.startResearch(projectId);
     setRefreshVersion((current) => current + 1);
   };
 

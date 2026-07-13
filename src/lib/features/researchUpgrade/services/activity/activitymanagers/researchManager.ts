@@ -8,7 +8,7 @@ import { getResearchProject, RESEARCH_PROJECTS } from '@/lib/constants/researchC
 import { addResearchPrestigeEvent } from '@/lib/services/prestige/prestigeService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
-import { getResearchUpgradeFeature } from '../../..';
+import { researchUpgradeFeature } from '../../..';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 import { getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
 import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
@@ -169,7 +169,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
                   );
                   
                   // Record the research completion in database (always, even if no unlocks)
-                  await getResearchUpgradeFeature().setup.grantResearchUnlock({
+                  await researchUpgradeFeature.setup.grantResearchUnlock({
                         researchId: resolvedProjectId,
                         companyId,
                         gameDate,

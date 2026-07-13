@@ -31,7 +31,7 @@ import {
 } from '@/lib/services';
 import { clamp, getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
 import type { GrapeBuyer } from './sellGrapesService';
-import { researchEnforcer } from '../../features/researchUpgrade/services/research/researchEnforcer';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {
   createBuyerRow,
   getBuyerRow,
@@ -335,7 +335,7 @@ function getBuyerVolatilitySensitivity(
 
 async function getSeasonalBuyerCountFromResearch(): Promise<number> {
   // Intentionally shared with supplier market progression.
-  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_slots');
+  const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape_buyer_slots');
   const additional = unlocked.reduce((sum, value) => {
     const parsed = Number(value);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
@@ -346,7 +346,7 @@ async function getSeasonalBuyerCountFromResearch(): Promise<number> {
 }
 
 async function getBuyerLimitMultiplierFromResearch(): Promise<number> {
-  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_limit_multiplier');
+  const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape_buyer_limit_multiplier');
   const additive = unlocked.reduce((sum, value) => {
     const parsed = Number(value);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
@@ -355,7 +355,7 @@ async function getBuyerLimitMultiplierFromResearch(): Promise<number> {
 }
 
 async function getBuyerMultiplierBonusFromResearch(): Promise<number> {
-  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_multiplier_bonus');
+  const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape_buyer_multiplier_bonus');
   const bonus = unlocked.reduce((sum, value) => {
     const parsed = Number(value);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
@@ -365,7 +365,7 @@ async function getBuyerMultiplierBonusFromResearch(): Promise<number> {
 
 async function getUnlockedBuyerCountriesFromResearch(homeCountry: CountryKey): Promise<CountryKey[]> {
   // Intentionally shared with supplier market progression.
-  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_country_access');
+  const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape_buyer_country_access');
   const allowed = new Set<CountryKey>([homeCountry]);
 
   for (const value of unlocked) {

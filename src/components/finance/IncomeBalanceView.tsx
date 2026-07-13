@@ -3,7 +3,7 @@ import { calculateFinancialData, calculateCompanyValue } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS, WEEKS_PER_SEASON } from '@/lib/constants';
-import { DEFAULT_ACTIVE_LOAN_PORTFOLIO, loadActiveLoanPortfolio } from '@/lib/features/loanLender/services/finance/loanViewService';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 
 interface IncomeBalanceViewProps {
   period: 'weekly' | 'season' | 'year' | 'all';
@@ -39,8 +39,8 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
   );
 
   const loanPortfolio = useGameStateWithData(
-    loadActiveLoanPortfolio,
-    DEFAULT_ACTIVE_LOAN_PORTFOLIO
+    loanLenderFeature.metrics.loadActivePortfolio,
+    loanLenderFeature.metrics.defaultActivePortfolio
   );
   const { loans: activeLoans, totalOutstandingLoans } = loanPortfolio;
 

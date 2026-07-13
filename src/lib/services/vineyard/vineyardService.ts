@@ -17,8 +17,8 @@ import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { updateGameState } from '@/lib/services/core/gameState';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { boardShareFeature } from '@/lib/features/boardShare';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { buildVineyardCapacityState, getCapacityConstraintReason } from './vineyardCapacityService';
 
 
@@ -373,7 +373,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     }
 
     // Check modularized board/share constraint for vineyard purchase
-    const constraintResult = await getBoardShareFeature().constraints.checkVineyardPurchase({
+    const constraintResult = await boardShareFeature.constraints.checkVineyardPurchase({
       currentMoney,
       purchaseAmount: option.totalPrice,
       totalAssets: 0,
@@ -401,9 +401,9 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
 
     const existingVineyards = await getAllVineyards();
     const [unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
-      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
-      getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
-      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_size'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('total_vineyard_hectares'),
+      researchUpgradeFeature.unlocks.getUnlockedItems('vineyard_count')
     ]);
 
     const vineyardCapacity = buildVineyardCapacityState({

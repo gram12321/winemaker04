@@ -9,7 +9,7 @@ import { ResearchPage } from './components/pages/Research';
 import { StaffPage } from './components/pages/Staff';
 import { Profile } from './components/pages/Profile';
 import { Settings } from './components/pages/Settings';
-import { getAdminFeature } from '@/lib/features/admin';
+import type { AdminFeature } from '@/lib/features/admin';
 import { Achievements } from './components/pages/Achievements';
 import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
@@ -24,15 +24,19 @@ import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { boardShareFeature } from '@/lib/features/boardShare';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 import { Analytics } from '@vercel/analytics/react';
 
-function App() {
+interface AppProps {
+  adminFeature: AdminFeature | null;
+}
+
+function App({ adminFeature }: AppProps) {
   const [currentPage, setCurrentPage] = useState('login');
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
-  const loanLenderAppOverlays = useMemo(() => getLoanLenderFeature().ui.getAppOverlays(), []);
+  const loanLenderAppOverlays = useMemo(() => loanLenderFeature.ui.getAppOverlays(), []);
   
   const lastInitializedCompanyIdRef = useRef<string | null>(null);
   useCustomerRelationshipUpdates();
@@ -109,7 +113,7 @@ function App() {
 
   // Register modularized app-level listeners for optional features (e.g., board/share)
   useEffect(() => {
-    const unregister = getBoardShareFeature().ui.registerAppEventListeners?.({
+    const unregister = boardShareFeature.ui.registerAppEventListeners?.({
       navigateToWinepedia: () => setCurrentPage('winepedia')
     });
     return () => {
@@ -164,7 +168,7 @@ function App() {
           />
         );
       case 'admin': {
-        const adminPage = getAdminFeature().renderPage({
+        const adminPage = adminFeature?.renderPage({
           onBack: () => setCurrentPage('company-overview'),
           onNavigateToLogin: handleBackToLogin
         });
@@ -221,6 +225,7 @@ function App() {
         onNavigate={handleNavigate}
         onTimeAdvance={handleTimeAdvance}
         onBackToLogin={handleBackToLogin}
+        adminAvailable={Boolean(adminFeature?.isAvailable())}
       />
 
       <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 mx-auto w-full max-w-7xl">

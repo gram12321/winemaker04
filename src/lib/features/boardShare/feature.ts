@@ -2,7 +2,8 @@ import { calculateInitialShareCount } from '@/lib/constants/financeConstants';
 import { getGameState } from '@/lib/services/core/gameState';
 import type { BoardShareFeature } from './featureTypes';
 
-export const noBoardShareFeature: BoardShareFeature = {
+/** Baseline ownership and constraint behavior while public-company runtime is deferred. */
+export const boardShareFeature: BoardShareFeature = {
   ticks: {
     async onWeekAdvanced() {},
     async onSeasonStart() {},

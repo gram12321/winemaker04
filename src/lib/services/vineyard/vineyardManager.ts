@@ -8,7 +8,7 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
-import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import {
   isRipenessGrowthActiveForWeek,
@@ -150,7 +150,7 @@ export async function updateVineyardRipeness(
     const currentState = getGameState();
     const currentYear = weatherContext?.date.year || currentState.currentYear || 1;
     const companyId = getCurrentCompanyId() || 'default-company';
-    const permanentEffects = await getResearchPermanentEffects(companyId);
+    const permanentEffects = await researchUpgradeFeature.effects.getPermanentEffects(companyId);
     const effectiveWeather = weatherContext ?? createWeatherWeekContext({
       ...currentState,
       currentYear,
@@ -513,7 +513,7 @@ export async function updateVineyardHealthDegradation(
       season: season as Season,
       week: _week,
     });
-    const permanentEffects = await getResearchPermanentEffects(companyId || undefined);
+    const permanentEffects = await researchUpgradeFeature.effects.getPermanentEffects(companyId || undefined);
     const vineyardsToUpdate: Vineyard[] = [];
     
     for (const vineyard of vineyards) {

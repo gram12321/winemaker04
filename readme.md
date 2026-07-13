@@ -28,7 +28,7 @@ npm run build
 - Keep business logic, validation, calculations, and persistence orchestration out of React components.
 - `*DB.ts` files own Supabase CRUD and row mapping; services own domain rules.
 - Prefer existing barrel exports and shared types. Do not add compatibility branches or migrations unless requested.
-- Current feature seams: `loanLender` and `researchUpgrade` are active; `boardShare` is a no-op shell.
+- Feature modules use two patterns: installed feature facades (`loanLender`, `researchUpgrade`, `boardShare`) expose one static feature value from their barrel; the development-only `admin` feature is dynamically loaded into `App`. `weather` is an always-on functional barrel. Callers do not configure features or import their internals.
 
 ## Documentation Entry Points
 
@@ -54,7 +54,7 @@ npm run build
 
 ## Admin Test Systems
 
-The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixtures. It is loopback-gated, dynamically loaded only in Vite development builds, and fixture cleanup uses durable `testlab_...` run IDs. Its two-function public seam and Winemaker-fork adapter requirements live in `src/lib/features/admin/README.md`; `test-viewer/` is legacy reference material.
+The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixtures. It is loopback-gated, dynamically loaded only in Vite development builds, and fixture cleanup uses durable `testlab_...` run IDs. Its explicit host dependency and Winemaker-fork adapter requirements live in `src/lib/features/admin/README.md`; `test-viewer/` is legacy reference material.
 
 ## Agent Workflow
 

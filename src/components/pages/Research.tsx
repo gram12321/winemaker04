@@ -1,5 +1,5 @@
-import { ResearchWorkspace } from '@/lib/features/researchUpgrade/components/ResearchWorkspace';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 export function ResearchPage() {
-  return <ResearchWorkspace />;
+  return researchUpgradeFeature.ui.renderResearchPage();
 }

@@ -20,16 +20,16 @@ import { FounderPanel } from './FounderPanel';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { loadTransactions } from '@/lib/services';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { boardShareFeature } from '@/lib/features/boardShare';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 
 export default function FinanceView() {
   const [activeTab, setActiveTab] = useState('income');
   const [activePeriod, setActivePeriod] = useState<'weekly' | 'season' | 'year' | 'all'>('weekly');
   const gameState = useGameState();
   const transactions = useGameStateWithData(loadTransactions, []);
-  const loanLenderTabs = useMemo(() => getLoanLenderFeature().ui.getFinanceTabs(), []);
-  const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getFinanceTabs(), []);
+  const loanLenderTabs = useMemo(() => loanLenderFeature.ui.getFinanceTabs(), []);
+  const boardShareTabs = useMemo(() => boardShareFeature.ui.getFinanceTabs(), []);
   const featureTabs = useMemo(
     () => [...loanLenderTabs, ...boardShareTabs],
     [loanLenderTabs, boardShareTabs]

@@ -27,6 +27,8 @@ const mocks = vi.hoisted(() => {
     triggerGameUpdate: vi.fn(() => undefined),
     calculateCreditRating: vi.fn(async () => ({ finalRating: 0.8 })),
     calculateLenderAvailability: vi.fn(() => ({ isAvailable: true })),
+    initializeLenders: vi.fn(async () => undefined),
+    getAllLenders: vi.fn(async () => []),
     insertPrestigeEvent: vi.fn(async () => undefined),
     loadVineyards: vi.fn(async () => []),
     deleteVineyards: vi.fn(async () => true),
@@ -76,7 +78,9 @@ vi.mock('@/lib/features/loanLender/services/finance/creditRatingService', () => 
 }));
 
 vi.mock('@/lib/features/loanLender/services/finance/lenderService', () => ({
-  calculateLenderAvailability: mocks.calculateLenderAvailability
+  calculateLenderAvailability: mocks.calculateLenderAvailability,
+  initializeLenders: mocks.initializeLenders,
+  getAllLenders: mocks.getAllLenders
 }));
 
 vi.mock('@/lib/database/customers/prestigeEventsDB', () => ({

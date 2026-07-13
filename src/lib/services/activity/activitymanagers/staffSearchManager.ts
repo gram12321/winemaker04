@@ -12,7 +12,7 @@ import {
   calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
   calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { boardShareFeature } from '@/lib/features/boardShare';
 import { formatNumber } from '@/lib/utils/utils';
 
 /**
@@ -155,7 +155,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     }
 
     // Check modularized board/share constraint for staff hiring
-    const boardCheck = await getBoardShareFeature().constraints.checkStaffHiring({
+    const boardCheck = await boardShareFeature.constraints.checkStaffHiring({
       candidateName: candidate.name
     });
     if (!boardCheck.allowed) {

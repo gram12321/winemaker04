@@ -1,5 +1,5 @@
 import type { ResearchProject, UnlockType } from '@/lib/constants/researchConstants';
-import { getResearchUpgradeFeature } from '../../index';
+import { researchUpgradeFeature } from '../../index';
 
 /**
  * Research Enforcer Service
@@ -18,7 +18,7 @@ class ResearchEnforcerService {
     value: string | number,
     companyId?: string
   ): Promise<boolean> {
-    return getResearchUpgradeFeature().unlocks.isUnlocked(type, value, companyId);
+    return researchUpgradeFeature.unlocks.isUnlocked(type, value, companyId);
   }
 
   /**
@@ -31,7 +31,7 @@ class ResearchEnforcerService {
     type: UnlockType,
     companyId?: string
   ): Promise<string[]> {
-    return getResearchUpgradeFeature().unlocks.getUnlockedItems(type, companyId);
+    return researchUpgradeFeature.unlocks.getUnlockedItems(type, companyId);
   }
 
   /**
@@ -41,7 +41,7 @@ class ResearchEnforcerService {
    * @returns Research project that unlocks this item, or null if no research required
    */
   getRequiredResearch(type: UnlockType, value: string | number): ResearchProject | null {
-    return getResearchUpgradeFeature().unlocks.getRequiredResearch(type, value);
+    return researchUpgradeFeature.unlocks.getRequiredResearch(type, value);
   }
 
   /**
@@ -51,7 +51,7 @@ class ResearchEnforcerService {
    * @returns User-friendly error message
    */
   getLockedMessage(type: UnlockType, value: string | number): string {
-    return getResearchUpgradeFeature().unlocks.getLockedMessage(type, value);
+    return researchUpgradeFeature.unlocks.getLockedMessage(type, value);
   }
 }
 

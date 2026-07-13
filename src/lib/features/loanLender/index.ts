@@ -1,12 +1,13 @@
-import type { LoanLenderFeature } from './featureTypes';
-import { noLoanLenderFeature } from './noop';
-
-let loanLenderFeature: LoanLenderFeature = noLoanLenderFeature;
-
-export function configureLoanLenderFeature(feature: LoanLenderFeature): void {
-  loanLenderFeature = feature;
-}
-
-export function getLoanLenderFeature(): LoanLenderFeature {
-  return loanLenderFeature;
-}
+export { loanLenderFeature } from './feature';
+export type {
+  LoanLenderFeature,
+  LoanLenderFinanceTabRegistration,
+  LoanLenderWinepediaTabRegistration,
+  LoanLenderOverlayRegistration,
+  LoanLenderUiHooks,
+  LoanLenderWorkflowHooks,
+  LoanLenderSetupHooks,
+  LoanLenderMetricsHooks,
+  LoanLenderTickHooks,
+  ActiveLoanPortfolio
+} from './featureTypes';

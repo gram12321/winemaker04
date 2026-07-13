@@ -31,6 +31,14 @@ vi.mock('@/lib/features/researchUpgrade/services/research/researchEnforcer', () 
   },
 }));
 
+vi.mock('@/lib/features/researchUpgrade', () => ({
+  researchUpgradeFeature: {
+    unlocks: {
+      getUnlockedItems: mocks.getUnlockedItems
+    }
+  }
+}));
+
 function customer(type: Customer['customerType'], id: string): Customer {
   return {
     id,
