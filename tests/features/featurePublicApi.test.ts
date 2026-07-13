@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as boardShare from '@/lib/features/boardShare';
 import * as loanLender from '@/lib/features/loanLender';
 import * as researchUpgrade from '@/lib/features/researchUpgrade';
 
@@ -23,6 +24,18 @@ describe('installed feature public facades', () => {
     expect(researchUpgrade.researchUpgradeFeature).not.toHaveProperty('admin');
     expect(researchUpgrade.researchUpgradeFeature.ui).not.toHaveProperty('renderAdminInspector');
     expect(researchUpgrade.researchUpgradeFeature.effects.getPermanentEffects)
+      .toEqual(expect.any(Function));
+  });
+
+  it('exports the inactive Board Share feature value and no registry API', () => {
+    expect(Object.keys(boardShare).sort()).toEqual(['boardShareFeature']);
+    expect(boardShare.boardShareFeature.constraints.checkVineyardPurchase)
+      .toEqual(expect.any(Function));
+    expect(boardShare.boardShareFeature.ticks.onWeekAdvanced)
+      .toEqual(expect.any(Function));
+    expect(boardShare.boardShareFeature.starting.getStartingOwnership)
+      .toEqual(expect.any(Function));
+    expect(boardShare.boardShareFeature.ui.getFinanceTabs)
       .toEqual(expect.any(Function));
   });
 

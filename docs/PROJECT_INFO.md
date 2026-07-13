@@ -39,6 +39,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | `loanLender` | Installed feature facade; `loanLenderFeature` owns loan/lender services, UI, activities, and public read/workflow hooks. |
 | `researchUpgrade` | Installed feature facade; `researchUpgradeFeature` owns gameplay research integration, selectors/view models, effects, and player UI rendering. Its named `adminIntegration` entry point owns the Admin-only inspector and commands. |
 | `admin` | Development-only compatible-Winemaker slice; `main.tsx` dynamically loads `adminFeature` and passes it explicitly into `App`. |
+| `boardShare` | Installed but intentionally inactive facade; `boardShareFeature` retains the isolated contract while public-company/share gameplay is deferred and is not wired into host behavior. |
 | `weather` | Always-on functional module; its barrel exports weather resolution, operation, market, vineyard, and presentation capabilities. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
 
@@ -56,7 +57,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 
 - Weather is persisted weekly state/forecast plus shared bounded vineyard projection and grape-market context; the feature facade also supplies presentation models.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Equipment and vineyard-technique tracks remain future work.
-- Founder economy is active and intentionally smaller than the archived public-company/share design; no inactive board/share feature shell is retained.
+- Founder economy is active and intentionally smaller than the archived public-company/share design; the isolated Board Share facade remains intentionally inactive.
 - Completed implementation records live under `docs/superpowers/completed/`; active planning documents remain under `specs/` and `plans/`.
 
 ## Test and Documentation Map

@@ -126,3 +126,15 @@ export const SHARE_CALCULATION = {
   TARGET_SHARE_PRICE: 50, // Target share price in euros (€50)
   MIN_SHARES: 10000, // Minimum shares for liquidity
 } as const;
+
+/**
+ * Calculate initial share count based on total company capital
+ * Uses target share price of €50 to determine appropriate share count
+ *
+ * @param totalCapital Total company capital (player + family + public investment)
+ * @returns Calculated share count (minimum 10,000 for liquidity)
+ */
+export function calculateInitialShareCount(totalCapital: number): number {
+  const calculatedShares = Math.round(totalCapital / SHARE_CALCULATION.TARGET_SHARE_PRICE);
+  return Math.max(calculatedShares, SHARE_CALCULATION.MIN_SHARES);
+}
