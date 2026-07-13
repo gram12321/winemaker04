@@ -36,7 +36,7 @@ export async function startResearch(projectId: string): Promise<string | null> {
 
             const prestige = await getCurrentPrestige();
             const unlockedIds = new Set(await getUnlockedResearchIds(companyId || undefined));
-            const eligibilityContext = await loadResearchEligibilityContext(prestige, unlockedIds, companyId || undefined);
+            const eligibilityContext = await loadResearchEligibilityContext(prestige, unlockedIds);
             const rawLockReasons = getResearchRequirementReasons(project, eligibilityContext);
 
             if (rawLockReasons.length > 0) {

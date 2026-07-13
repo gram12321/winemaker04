@@ -2,23 +2,22 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '@/components/ui';
 import { Trophy, Medal, Lock, Calendar, Coins, Wine, Star } from 'lucide-react';
-import { formatNumber, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, formatGameDateFromObject } from '@/lib/utils';
 import { PageProps, CompanyProps } from '@/lib/types/UItypes';
-import { getAllAchievementsWithStatus, getAchievementStats } from '../achievementService';
-import { getAchievementLevelInfo } from '../achievementDefinitionUtils';
-import { AchievementLevel, AchievementWithStatus } from '@/lib/types/types';
-import { filterAchievementSeriesForDisplay } from '../achievementPresentationService';
+import type { AchievementLevel, AchievementWithStatus } from '@/lib/types/types';
+import type { AchievementStats, AchievementsFeature } from '../featureTypes';
 
 interface AchievementsProps extends PageProps, CompanyProps {
-  // Inherits currentCompany and onBack from shared interfaces
+  views: AchievementsFeature['views'];
+  catalog: AchievementsFeature['catalog'];
 }
 
 // Achievement types are now imported from the service layer
 
-export function AchievementsPage({ currentCompany, onBack }: AchievementsProps) {
+export function AchievementsPage({ currentCompany, onBack, views, catalog }: AchievementsProps) {
   const { withLoading } = useLoadingState();
   const [achievementsWithStatus, setAchievementsWithStatus] = useState<AchievementWithStatus[]>([]);
-  const [achievementStats, setAchievementStats] = useState<any>(null);
+  const [achievementStats, setAchievementStats] = useState<AchievementStats | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
@@ -35,13 +34,9 @@ export function AchievementsPage({ currentCompany, onBack }: AchievementsProps) 
       try {
         setLoading(true);
 
-        // Load achievements with status
-        const achievements = await getAllAchievementsWithStatus();
-        setAchievementsWithStatus(achievements);
-
-        // Load achievement statistics
-        const stats = await getAchievementStats();
-        setAchievementStats(stats);
+        const workspace = await views.getWorkspace();
+        setAchievementsWithStatus(workspace.achievements);
+        setAchievementStats(workspace.stats);
       } catch (error) {
         console.error('Error loading achievements data:', error);
       } finally {
@@ -54,7 +49,7 @@ export function AchievementsPage({ currentCompany, onBack }: AchievementsProps) 
     if (!achievementLevel || achievementLevel < 1 || achievementLevel > 5) {
       return { name: 'Unknown', color: 'bg-gray-100 text-gray-800' };
     }
-    return getAchievementLevelInfo(achievementLevel as AchievementLevel);
+    return catalog.getLevelInfo(achievementLevel as AchievementLevel);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -80,7 +75,7 @@ export function AchievementsPage({ currentCompany, onBack }: AchievementsProps) 
     ? achievementsWithStatus
     : achievementsWithStatus.filter(a => a.category === selectedCategory);
 
-  const filteredAchievements = filterAchievementSeriesForDisplay(categoryFilteredAchievements);
+  const filteredAchievements = views.filterForDisplay(categoryFilteredAchievements);
 
   const unlockedCount = achievementStats?.unlockedCount || 0;
   const totalCount = achievementStats?.totalAchievements || 0;

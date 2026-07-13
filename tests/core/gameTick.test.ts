@@ -91,8 +91,8 @@ vi.mock('@/lib/features/weather', () => ({
 
 vi.mock('@/lib/features/achievements', () => ({
   achievementsFeature: {
-    evaluation: {
-      checkAll: mocks.checkAllAchievements,
+    ticks: {
+      checkAfterWeekAdvance: mocks.checkAllAchievements,
     },
   },
 }));

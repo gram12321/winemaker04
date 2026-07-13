@@ -5,7 +5,6 @@ import {
   type ResearchUnlock,
   type UnlockType,
 } from '@/lib/constants/researchConstants';
-import { achievementsFeature } from '@/lib/features/achievements';
 import {
   CHAINED_RESEARCH_UNLOCK_TYPES,
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
@@ -313,12 +312,20 @@ export function getResearchRequirementDetails(
     details.push({
       label: project.requiredAchievementIds.length === 1 ? 'Required Achievement' : 'Required Achievements',
       value: project.requiredAchievementIds
-        .map((id) => achievementsFeature.catalog.getTitle(id) || id)
+        .map(formatAchievementRequirementId)
         .join(', '),
     });
   }
 
   return details;
+}
+
+function formatAchievementRequirementId(achievementId: string): string {
+  return achievementId
+    .replace(/_tier_\d+$/, '')
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 export function getResearchRewardDetails(project: ResearchProject): ResearchRewardDetail[] {

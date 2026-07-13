@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import * as boardShare from '@/lib/features/boardShare';
+import * as achievements from '@/lib/features/achievements';
 import * as loanLender from '@/lib/features/loanLender';
 import * as researchUpgrade from '@/lib/features/researchUpgrade';
 
 describe('installed feature public facades', () => {
+  it('exports the Achievements feature value and no implementation helpers', () => {
+    expect(Object.keys(achievements).sort()).toEqual(['achievementsFeature']);
+    expect(achievements.achievementsFeature.evaluation.checkAll).toEqual(expect.any(Function));
+    expect(achievements.achievementsFeature.progression.getUnlockedIds).toEqual(expect.any(Function));
+    expect(achievements.achievementsFeature.views.getWorkspace).toEqual(expect.any(Function));
+    expect(achievements.achievementsFeature.ticks.checkAfterWeekAdvance).toEqual(expect.any(Function));
+  });
+
   it('exports the Loan Lender feature value and no registry API', () => {
     expect(Object.keys(loanLender).sort()).toEqual(['loanLenderFeature']);
     expect(loanLender.loanLenderFeature.ui.getFinanceTabs).toEqual(expect.any(Function));

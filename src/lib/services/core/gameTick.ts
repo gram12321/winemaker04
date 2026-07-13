@@ -6,7 +6,7 @@ import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchor
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
+import { NotificationCategory, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
@@ -16,10 +16,6 @@ import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/featur
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
-
-// Throttle configuration for expensive, non-critical checks
-const ACHIEVEMENT_CHECK_INTERVAL_WEEKS = 4; // run every 4 weeks
-let lastAchievementCheckAbsoluteWeek = -1;
 
 /**
  * Enhanced time advancement with automatic game events
@@ -293,24 +289,11 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
 
   ];
 
-  // Throttled, non-blocking achievement checks (decoupled from tick critical path)
+  // Throttled, non-blocking achievement checks are owned by the feature.
   try {
-    const absWeek = calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!);
-    const shouldRunAchievements =
-      lastAchievementCheckAbsoluteWeek < 0 ||
-      absWeek - lastAchievementCheckAbsoluteWeek >= ACHIEVEMENT_CHECK_INTERVAL_WEEKS;
-
-    if (shouldRunAchievements) {
-      lastAchievementCheckAbsoluteWeek = absWeek;
-      // Fire-and-forget; do not await to keep tick latency low
-      void (async () => {
-        try {
-          await achievementsFeature.evaluation.checkAll();
-        } catch (error) {
-          console.warn('Error during throttled achievement checking:', error);
-        }
-      })();
-    }
+    void achievementsFeature.ticks.checkAfterWeekAdvance().catch((error) => {
+      console.warn('Error during throttled achievement checking:', error);
+    });
   } catch (error) {
     console.warn('Failed to schedule achievement checks:', error);
   }

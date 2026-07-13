@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filterAchievementSeriesForDisplay } from '../../../src/lib/features/achievements/achievementPresentationService';
+import { ALL_ACHIEVEMENTS } from '../../../src/lib/features/achievements/achievementDefinitions';
 import type { AchievementWithStatus } from '../../../src/lib/types/types';
 
 function achievement(id: string, isUnlocked: boolean): AchievementWithStatus {
@@ -16,6 +17,10 @@ function achievement(id: string, isUnlocked: boolean): AchievementWithStatus {
 }
 
 describe('achievement presentation', () => {
+  it('does not expose grape-tenure tiers until grape-change history is persisted', () => {
+    expect(ALL_ACHIEVEMENTS.some((entry) => entry.id.startsWith('vineyard_time_tier_'))).toBe(false);
+  });
+
   it('shows unlocked tiers and the next tier in each series alongside individual achievements', () => {
     const displayed = filterAchievementSeriesForDisplay([
       achievement('wine_score_tier_3', false),

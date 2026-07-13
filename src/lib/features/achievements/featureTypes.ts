@@ -18,22 +18,39 @@ export interface AchievementsPageInput {
   onBack?: () => void;
 }
 
+export interface AchievementStats {
+  totalAchievements: number;
+  unlockedCount: number;
+  unlockedPercent: number;
+  byCategory: Record<string, { total: number; unlocked: number }>;
+  byRarity: Record<string, { total: number; unlocked: number }>;
+}
+
+export interface AchievementWorkspace {
+  achievements: AchievementWithStatus[];
+  stats: AchievementStats;
+}
+
 export interface AchievementsFeature {
   evaluation: {
-    checkAll(companyId?: string): Promise<AchievementUnlock[]>;
-    checkOne(achievementId: string, companyId?: string): Promise<AchievementUnlock | null>;
+    checkAll(): Promise<AchievementUnlock[]>;
+    checkOne(achievementId: string): Promise<AchievementUnlock | null>;
   };
   progression: {
-    getUnlockedIds(companyId?: string): Promise<Set<string>>;
+    getUnlockedIds(): Promise<Set<string>>;
   };
   catalog: {
     getTitle(achievementId: string): string | undefined;
     getLevelInfo(level: AchievementLevel): AchievementLevelInfo;
   };
   views: {
-    getAllWithStatus(companyId?: string): Promise<AchievementWithStatus[]>;
-    getStats(companyId?: string): ReturnType<typeof import('./achievementService').getAchievementStats>;
+    getAllWithStatus(): Promise<AchievementWithStatus[]>;
+    getStats(): Promise<AchievementStats>;
+    getWorkspace(): Promise<AchievementWorkspace>;
     filterForDisplay(achievements: AchievementWithStatus[]): AchievementWithStatus[];
+  };
+  ticks: {
+    checkAfterWeekAdvance(): Promise<void>;
   };
   ui: {
     renderAchievementsPage(input: AchievementsPageInput): ReactElement;

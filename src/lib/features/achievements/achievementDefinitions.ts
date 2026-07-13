@@ -1,4 +1,5 @@
 import { AchievementConfig } from '@/lib/types/types';
+import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants';
 import { createTieredAchievements } from './achievementDefinitionUtils';
 
 /**
@@ -305,7 +306,7 @@ export const WINE_PRICE_ACHIEVEMENTS = createTieredAchievements(
 export const SALES_PRICE_OVER_ACHIEVEMENTS = createTieredAchievements(
   'sales_price_over',
   'Price Maximizer',
-  'Sell wine for {threshold}% over estimated price',
+  'Sell wine for {threshold}% over the asking price',
   '📈',
   'sales',
   'sales_price_percentage',
@@ -317,7 +318,7 @@ export const SALES_PRICE_OVER_ACHIEVEMENTS = createTieredAchievements(
 export const SALES_PRICE_UNDER_ACHIEVEMENTS = createTieredAchievements(
   'sales_price_under',
   'Volume Seller',
-  'Sell wine for {threshold}% under estimated price',
+  'Sell wine for {threshold}% under the asking price',
   '📉',
   'sales',
   'sales_price_percentage',
@@ -331,7 +332,7 @@ export const SALES_PRICE_UNDER_ACHIEVEMENTS = createTieredAchievements(
 export const PRESTIGE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'prestige_by_year',
   'Early Prestige',
-  'Achieve {threshold} prestige before year 5',
+  `Achieve {threshold} prestige before year ${ACHIEVEMENT_DEADLINE_YEARS.prestige}`,
   '⏰',
   'time',
   'prestige_by_year',
@@ -355,7 +356,7 @@ export const REVENUE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
 export const ASSETS_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'assets_by_year',
   'Rapid Growth',
-  'Accumulate {threshold} assets before year 10',
+  `Accumulate {threshold} assets before year ${ACHIEVEMENT_DEADLINE_YEARS.assets}`,
   '🚀',
   'time',
   'assets_by_year',
@@ -367,7 +368,7 @@ export const ASSETS_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
 export const HECTARES_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'hectares_by_year',
   'Land Rush',
-  'Own {threshold} hectares before year 15',
+  `Own {threshold} hectares before year ${ACHIEVEMENT_DEADLINE_YEARS.hectares}`,
   '🏞️',
   'time',
   'hectares_by_year',
@@ -521,7 +522,8 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...AVERAGE_HECTARE_VALUE_ACHIEVEMENTS,
   
   // ===== VINEYARD-SPECIFIC ACHIEVEMENTS =====
-  ...VINEYARD_TIME_ACHIEVEMENTS,
+  // Vineyard grape-tenure achievements remain deferred until grape changes
+  // have durable historical tracking. Do not expose impossible progress.
   ...VINEYARD_WINE_VARIETY_ACHIEVEMENTS,
   ...VINEYARD_BOTTLE_PRODUCTION_ACHIEVEMENTS,
   ...VINEYARD_SALES_COUNT_ACHIEVEMENTS,

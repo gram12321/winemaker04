@@ -52,6 +52,23 @@ export async function insertPrestigeEvent(row: Omit<PrestigeEventRow, 'company_i
   if (error) throw error;
 }
 
+/**
+ * Insert a source-keyed event once for the active company.
+ *
+ * The matching unique index makes this safe when two achievement checks overlap.
+ */
+export async function insertPrestigeEventIfAbsentBySource(
+  row: Omit<PrestigeEventRow, 'company_id'> & { source_id: string }
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('prestige_events')
+    .insert([{ ...row, company_id: getCurrentCompanyId() }]);
+
+  if (!error) return true;
+  if (error.code === '23505') return false;
+  throw error;
+}
+
 export async function listPrestigeEvents(): Promise<PrestigeEventRow[]> {
   const { data, error } = await supabase
     .from('prestige_events')

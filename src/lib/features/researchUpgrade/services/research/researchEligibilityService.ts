@@ -6,7 +6,6 @@ import { getGameState } from '@/lib/services/core/gameState';
 import { type BuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 import { getMaxBuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber } from '@/lib/utils/utils';
 
 export interface ResearchEligibilityContext {
@@ -20,14 +19,12 @@ export interface ResearchEligibilityContext {
 
 export async function loadResearchEligibilityContext(
   currentPrestige: number,
-  completedResearch: Set<string>,
-  companyId?: string
+  completedResearch: Set<string>
 ): Promise<ResearchEligibilityContext> {
-  const targetCompanyId = companyId || getCurrentCompanyId();
   const [companyValue, maxBuyerLoyaltyLevel, unlockedAchievementIds] = await Promise.all([
     calculateCompanyValue(),
     getMaxBuyerLoyaltyLevel(),
-    achievementsFeature.progression.getUnlockedIds(targetCompanyId),
+    achievementsFeature.progression.getUnlockedIds(),
   ]);
 
   const gameState = getGameState();

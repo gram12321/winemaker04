@@ -43,7 +43,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 
 ### Finance, Staff, and Progression
 
-- Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active. `achievementsFeature` owns the game-specific catalog, evaluation, read models, and player page; its database adapter remains under `database/core/`.
+- Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active. `achievementsFeature` owns the game-specific catalog, evaluation, company-keyed tick cadence, read models, and player page; its database adapter remains under `database/core/`. Vineyard grape-tenure achievements remain deferred until grape-change history is persisted.
 - Founders have zero wages, receive yearly positive-profit returns, and can be bought out into salaried staff.
 - Prestige is derived from the `prestige_events` ledger with permanent and decaying sources; it feeds pricing, land value, gates, achievements, and UI.
 - Research projects use work profiles and prestige/prerequisite/company-value/buyer-loyalty/achievement gates. Active unlocks cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Current permanent effect: vineyard health-decay multiplier.
