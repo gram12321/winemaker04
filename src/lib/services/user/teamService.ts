@@ -43,7 +43,7 @@ export function getDefaultTeams(): StaffTeam[] {
       description: 'Oversee winery processes',
       memberIds: [],
       icon: '🍷',
-      defaultTaskTypes: ['crushing', 'fermentation']
+      defaultTaskTypes: ['crushing', 'fermentation', 'maintenance']
     },
     {
       id: uuidv4(),
@@ -54,6 +54,18 @@ export function getDefaultTeams(): StaffTeam[] {
       defaultTaskTypes: ['sales']
     }
   ];
+}
+
+function addMaintenanceToDefaultWineryTeams(teams: StaffTeam[]): StaffTeam[] {
+  let changed = false;
+  const updatedTeams = teams.map((team) => {
+    const isDefaultWineryTeam = team.name === 'Winery Team'
+      && (team.defaultTaskTypes.includes('crushing') || team.defaultTaskTypes.includes('fermentation'));
+    if (!isDefaultWineryTeam || team.defaultTaskTypes.includes('maintenance')) return team;
+    changed = true;
+    return { ...team, defaultTaskTypes: [...team.defaultTaskTypes, 'maintenance'] };
+  });
+  return changed ? updatedTeams : teams;
 }
 
 /**
@@ -335,8 +347,10 @@ export async function initializeTeamsSystem(): Promise<void> {
     const dbTeams = await loadTeamsFromDb();
 
     if (dbTeams.length > 0) {
-      // Load teams from database
-      updateGameState({ teams: dbTeams });
+      // Upgrade the built-in Winery Team without changing custom teams.
+      const teams = addMaintenanceToDefaultWineryTeams(dbTeams);
+      if (teams !== dbTeams) await saveTeamsToDb(teams);
+      updateGameState({ teams });
     } else {
       // No teams in database, create default teams
       const defaultTeams = getDefaultTeams();

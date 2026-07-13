@@ -327,7 +327,7 @@ describe('buy grape market service', () => {
       false,
       'company-1'
     );
-    expect(mocks.recordSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 'Bulk Supply Syndicate', 120, 2026);
+    expect(mocks.recordSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 'Bulk Supply Syndicate', 120, 2026, 480);
     expect(mocks.recordMarketSupplierPurchase).toHaveBeenCalledWith('bulk_supplier', 120, 2026, 'Spring');
     expect(mocks.updateBuyOfferRow).toHaveBeenCalledWith(
       'company-1',

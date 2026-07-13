@@ -185,6 +185,25 @@ export async function releaseStorageAllocationPlan(planId: string): Promise<bool
   return !result.error;
 }
 
+/**
+ * Cancelling a production activity may undo capacity that was reserved before
+ * any wine existed, but must never release an active plan that already holds
+ * a batch (including a partially harvested batch).
+ */
+export async function releaseReservedStorageAllocationPlan(planId: string): Promise<boolean> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return false;
+
+  const plansResult = await getCompanyStorageAllocationPlans(companyId);
+  if (plansResult.error) throw plansResult.error;
+  const plan = plansResult.data.find((candidate) => candidate.id === planId);
+
+  if (!plan || plan.status !== 'reserved') return true;
+
+  const result = await releaseStorageVesselPlan(companyId, planId, currentGameDate());
+  return !result.error;
+}
+
 export function getStorageVesselAllocationAvailability(vessel: StorageVessel): { available: boolean; reason?: string } {
   if (vessel.operationalStatus !== 'operational') return { available: false, reason: `Vessel is ${vessel.operationalStatus}.` };
   if (vessel.occupancy !== 'available') return { available: false, reason: `Vessel is currently ${vessel.occupancy.replace('_', ' ')}.` };

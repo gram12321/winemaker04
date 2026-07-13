@@ -8,6 +8,7 @@ export enum WorkCategory {
   HARVESTING = 'HARVESTING',
   CRUSHING = 'CRUSHING',
   FERMENTATION = 'FERMENTATION',
+  MAINTENANCE = 'MAINTENANCE',
   CLEARING = 'CLEARING',
   BUILDING = 'BUILDING',
   UPGRADING = 'UPGRADING',
@@ -832,6 +833,7 @@ export interface ActivityCreationOptions {
   activityDetails?: string;
   // Skip the default activity creation notification (useful for combined notifications)
   skipNotification?: boolean;
+  initialStatus?: Activity['status'];
 }
 
 export interface ActivityProgress {

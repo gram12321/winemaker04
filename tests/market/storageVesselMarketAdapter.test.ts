@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   addTransaction: vi.fn(async () => undefined),
   addMessage: vi.fn(async () => undefined),
   triggerTopicUpdate: vi.fn(),
+  recordBuyGoodsSupplierPurchase: vi.fn(async () => null),
 }));
 
 vi.mock('@/lib/utils/companyUtils', () => ({ getCurrentCompanyId: mocks.getCurrentCompanyId }));
@@ -25,6 +26,13 @@ vi.mock('@/lib/services/wine/winery/storageVesselService', () => ({ createPurcha
 vi.mock('@/lib/services/finance/financeService', () => ({ addTransaction: mocks.addTransaction }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
+vi.mock('@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService', () => ({
+  recordBuyGoodsSupplierPurchase: mocks.recordBuyGoodsSupplierPurchase,
+  getBuyGoodsSupplierRelationships: vi.fn(async () => ({})),
+  getBuyGoodsSupplierRelationshipPriceMultiplier: vi.fn(() => 1),
+  getBuyGoodsSupplierPersistenceBonus: vi.fn(() => 0),
+  getBuyGoodsSupplierPriorityProfiles: vi.fn(async () => []),
+}));
 
 const offer = {
   companyId: 'company-1', offerId: 'storage_vessel_oak_cask_225', wareGroup: 'storage_vessels' as const,
@@ -33,7 +41,7 @@ const offer = {
   createdYear: 2026, createdSeason: 'Spring' as const, createdWeek: 1,
   lastRefreshedYear: 2026, lastRefreshedSeason: 'Spring' as const, lastRefreshedWeek: 1,
   expiresYear: null, expiresSeason: null, expiresWeek: null,
-  payload: { vesselType: 'cask', material: 'oak', capacityLitres: 225 },
+  payload: { vesselType: 'cask', material: 'oak', qualityScore: 0.78, productionYear: 2024, capacityLitres: 225 },
 };
 
 describe('Storage Vessel market adapter', () => {
@@ -47,7 +55,7 @@ describe('Storage Vessel market adapter', () => {
     await expect(purchaseStorageVesselOffer(offer.offerId, 2)).resolves.toEqual({ success: true });
 
     expect(mocks.createPurchasedStorageVessels).toHaveBeenCalledWith(
-      { vesselType: 'cask', material: 'oak', capacityLitres: 225 },
+      { vesselType: 'cask', material: 'oak', qualityScore: 0.78, productionYear: 2024, capacityLitres: 225 },
       offer.offerId,
       950,
       2,

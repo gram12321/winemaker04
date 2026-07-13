@@ -1,9 +1,10 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
-import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
+import { getAllActivities, getAllWineBatches, getOwnedStorageVessels, bottleWine, isActionAvailable, getStorageVesselDisplayName, getWineBatchDisplayName, isBatchEmptyingInProgress } from '@/lib/services';
+import type { StorageVessel } from '@/lib/types/storageVessels';
 import { WineBatch } from '@/lib/types/types';
-import { Button, BuyMarketModal, CrushingOptionsModal, WineModal, SellGrapesModal, StorageVesselInventory } from '../ui';
+import { Button, BuyMarketModal, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
@@ -126,6 +127,8 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
 const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
+  const vessels = useGameStateWithData(getOwnedStorageVessels, [] as StorageVessel[], { topic: 'storage_vessels' });
+  useGameStateWithData(getAllActivities, [], { topic: 'activities' });
   const [isBuyMarketOpen, setIsBuyMarketOpen] = useState(false);
   
   // Unified modal state
@@ -189,7 +192,6 @@ const Winery: React.FC = () => {
         </div>
       </div>
 
-      <StorageVesselInventory />
       
       {/* Summary Cards - Desktop/Tablet (hidden on mobile) */}
       <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -248,6 +250,8 @@ const Winery: React.FC = () => {
             <div className="space-y-4">
               {activeBatches.map((batch) => {
                 const displayName = getWineBatchDisplayName(batch);
+                const batchVessels = vessels.filter((vessel) => vessel.activeWineBatchId === batch.id || vessel.activePlanId === batch.storagePlanId);
+                const emptyingInProgress = isBatchEmptyingInProgress(batch.id);
                 return (
                   <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   {/* Wine Batch Header */}
@@ -262,7 +266,7 @@ const Winery: React.FC = () => {
                         Wine Details
                       </Button>
 
-                      {isActionAvailable(batch, 'crush') && (
+                      {!emptyingInProgress && isActionAvailable(batch, 'crush') && (
                         <>
                           <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
                             Crush Grapes
@@ -270,23 +274,25 @@ const Winery: React.FC = () => {
                         </>
                       )}
 
-                      <Button onClick={() => openModal('sellGrapes', batch.id)} size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
+                      {!emptyingInProgress && <Button onClick={() => openModal('sellGrapes', batch.id)} size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
                         Sell Grapes
-                      </Button>
+                      </Button>}
                       
-                      {isFermentationActionAvailable(batch, 'ferment') && (
+                      {!emptyingInProgress && isFermentationActionAvailable(batch, 'ferment') && (
                         <Button onClick={() => openModal('fermentation', batch.id)} size="sm" className="bg-purple-600 hover:bg-purple-700">
                           Start Fermentation
                         </Button>
                       )}
                       
-                      {isFermentationActionAvailable(batch, 'bottle') && (
+                      {!emptyingInProgress && isFermentationActionAvailable(batch, 'bottle') && (
                         <Button onClick={() => handleAction(batch.id, 'bottle')} size="sm" className="bg-green-600 hover:bg-green-700">
                           Bottle Wine
                         </Button>
                       )}
                     </div>
                   </div>
+
+                  {emptyingInProgress && <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">An Empty Vessel maintenance activity is in progress. Production actions are unavailable until it is cancelled or completed.</div>}
 
                   {/* 4-Grid Layout */}
                   <div className="grid grid-cols-4 gap-4">
@@ -307,6 +313,7 @@ const Winery: React.FC = () => {
                             .join(' ')}
                         </span>
                       </div>
+                      {batchVessels.length > 0 && <div className="text-xs text-gray-600">Stored: <span className="font-medium text-gray-800">{batchVessels.map(getStorageVesselDisplayName).join(', ')}</span></div>}
                       
                       {/* Fermentation Status Badge */}
                       <FermentationStatusBadge batch={batch} />

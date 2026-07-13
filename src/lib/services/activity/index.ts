@@ -23,4 +23,5 @@ export * from './workcalculators/lenderSearchWorkCalculator';
 export * from './workcalculators/takeLoanWorkCalculator';
 export * from './workcalculators/plantingWorkCalculator';
 export * from './workcalculators/harvestingWorkCalculator';
+export * from './workcalculators/storageVesselMaintenanceWorkCalculator';
 export * from './workcalculators/researchWorkCalculator';

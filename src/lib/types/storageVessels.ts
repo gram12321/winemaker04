@@ -37,6 +37,8 @@ export interface StorageVessel {
   companyId: string;
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
+  qualityScore: number;
+  productionYear: number;
   capacityLitres: number;
   acquisitionPrice: number;
   sourceOfferId: string;
@@ -52,5 +54,7 @@ export interface StorageVessel {
 export interface StorageVesselOfferPayload {
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
+  qualityScore: number;
+  productionYear: number;
   capacityLitres: number;
 }

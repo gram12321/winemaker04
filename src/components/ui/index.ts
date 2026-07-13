@@ -63,7 +63,7 @@ export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
 export { MarketWindow } from './market/MarketWindow';
 export { MarketOfferTable } from './market/MarketOfferTable.tsx';
 export { MarketQuickBuyRowAction } from './market/MarketQuickBuyRowAction';
-export { StorageVesselMarketModal } from './market/StorageVesselMarketModal';
+export { StorageVesselMarketPanel } from './market/StorageVesselMarketPanel';
 export { StorageVesselInventory } from './wine/StorageVesselInventory';
 
 // Type exports (for default exports that also export types)

@@ -9,7 +9,8 @@ import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
-import { releaseStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import { releaseStorageAllocationPlan, releaseReservedStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import { completeEmptyStorageVesselActivity } from '@/lib/services/wine/winery/storageVesselMaintenanceService';
 import { formatNumber } from '@/lib/utils';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
@@ -119,6 +120,20 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     notificationService.addMessage(`Successfully started fermentation for ${activity.params.targetName}!`, 'winemaking.fermentation', 'Fermentation', NotificationCategory.WINEMAKING_PROCESS);
   },
 
+  [WorkCategory.MAINTENANCE]: async (activity: Activity) => {
+    const result = await completeEmptyStorageVesselActivity(activity);
+    if (!result.success) {
+      notificationService.addMessage(result.error ?? 'The vessel could not be emptied.', 'winemaking.emptyVessel', 'Empty Vessel', NotificationCategory.WINEMAKING_PROCESS);
+      return;
+    }
+    notificationService.addMessage(
+      `Emptied ${result.emptiedLitres ?? 0} L of ${result.batch?.grape ?? 'wine'} from ${result.vesselName ?? 'the selected vessel'}. The remaining batch volume is ${result.remainingLitres ?? 0} L.`,
+      'winemaking.emptyVessel',
+      'Empty Vessel',
+      NotificationCategory.WINEMAKING_PROCESS,
+    );
+  },
+
   [WorkCategory.CLEARING]: async (activity: Activity) => {
     await completeClearingActivity(activity);
   },
@@ -223,7 +238,7 @@ export async function createActivityWithResult(options: ActivityCreationOptions)
       const hasConflict = await hasActiveActivity(options.targetId, options.category);
       if (hasConflict) {
         console.warn(`An activity of type ${options.category} is already in progress for this target.`);
-        return { activityId: null };
+        return { activityId: null, reason: `An activity of type ${options.category.toLowerCase()} is already in progress for this target.` };
       }
     }
 
@@ -235,7 +250,7 @@ export async function createActivityWithResult(options: ActivityCreationOptions)
       completedWork: 0,
       targetId: options.targetId,
       params: options.params || {},
-      status: 'active',
+      status: options.initialStatus ?? 'active',
       gameWeek: gameState.week || 1,
       gameSeason: gameState.season || 'Spring',
       gameYear: gameState.currentYear || 2025,
@@ -279,11 +294,19 @@ export async function createActivityWithResult(options: ActivityCreationOptions)
       return { activityId: activity.id };
     }
 
-    return { activityId: null };
+    return { activityId: null, reason: 'The activity could not be saved. Check the activity category/schema and try again.' };
   } catch (error) {
     console.error('Error creating activity:', error);
-    return { activityId: null };
+    return { activityId: null, reason: getActivityCreationErrorMessage(error) };
   }
+}
+
+function getActivityCreationErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'Unknown activity creation error.';
 }
 
 /** Create an activity and return its ID for existing callers. */
@@ -381,6 +404,16 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
   }
 }
 
+export async function activateActivityWithParams(activityId: string, params: Record<string, any>): Promise<boolean> {
+  const success = await updateActivityInDb(activityId, { status: 'active', params });
+  if (success) {
+    const currentActivities = await getAllActivities();
+    updateGameState({ activities: currentActivities });
+    triggerGameUpdateImmediate();
+  }
+  return success;
+}
+
 /**
  * Complete an activity immediately using the same completion handlers as weekly progress.
  * This is intended for development/test tooling where waiting for ticks would hide bugs.
@@ -443,7 +476,7 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
     const success = await updateActivityInDb(activityId, { status: 'cancelled' });
     if (success) {
       if (activity.params.storagePlanId) {
-        await releaseStorageAllocationPlan(activity.params.storagePlanId);
+        await releaseReservedStorageAllocationPlan(activity.params.storagePlanId);
       }
       // Update local game state
       const currentActivities = await getAllActivities();

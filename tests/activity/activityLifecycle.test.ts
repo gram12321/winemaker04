@@ -52,13 +52,15 @@ const mocks = vi.hoisted(() => {
     handlePartialHarvesting: vi.fn(async () => undefined),
     completeCrushing: vi.fn(async () => undefined),
     completeFermentationSetup: vi.fn(async () => undefined),
+    completeEmptyStorageVesselActivity: vi.fn(async () => ({ success: true, batch: { grape: 'Pinot Noir' }, vesselName: '2024 - 500 L oak cask' })),
     completeBookkeeping: vi.fn(async () => undefined),
     calculateStaffWorkContribution: vi.fn(() => 0),
     calculateIndividualStaffContribution: vi.fn(() => 0),
     completeStaffSearch: vi.fn(async () => undefined),
     completeHiringProcess: vi.fn(async () => undefined),
     completeLandSearch: vi.fn(async () => undefined),
-    awardExperience: vi.fn(async () => undefined)
+    awardExperience: vi.fn(async () => undefined),
+    releaseReservedStorageAllocationPlan: vi.fn(async () => true)
   };
 });
 
@@ -86,6 +88,7 @@ vi.mock('@/lib/services/activity', () => ({
     HARVESTING: 'HARVESTING',
     CRUSHING: 'CRUSHING',
     FERMENTATION: 'FERMENTATION',
+    MAINTENANCE: 'MAINTENANCE',
     CLEARING: 'CLEARING',
     BUILDING: 'BUILDING',
     UPGRADING: 'UPGRADING',
@@ -111,6 +114,15 @@ vi.mock('@/lib/services/activity/activitymanagers/staffSearchManager', () => ({
 
 vi.mock('@/lib/services/activity/activitymanagers/landSearchManager', () => ({
   completeLandSearch: mocks.completeLandSearch
+}));
+
+vi.mock('@/lib/services/wine/winery/storageVesselMaintenanceService', () => ({
+  completeEmptyStorageVesselActivity: mocks.completeEmptyStorageVesselActivity,
+}));
+
+vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
+  releaseStorageAllocationPlan: vi.fn(async () => true),
+  releaseReservedStorageAllocationPlan: mocks.releaseReservedStorageAllocationPlan,
 }));
 
 vi.mock('@/lib/database/activities/activityDB', () => ({
@@ -304,6 +316,22 @@ describe('activity lifecycle', () => {
     expect(mocks.updateGameState).toHaveBeenLastCalledWith({ activities: [] });
   });
 
+  it('keeps an active vessel plan intact when a partially completed harvest is cancelled', async () => {
+    const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
+    mocks.setVineyards([vineyard()]);
+    await manager.createActivity({
+      category: WorkCategory.HARVESTING,
+      title: 'Partial harvest',
+      totalWork: 20,
+      targetId: 'vineyard-1',
+      params: { grape: 'Pinot Noir', storagePlanId: 'active-plan-1' },
+      skipNotification: true,
+    });
+
+    await expect(manager.cancelActivity('activity-1')).resolves.toBe(true);
+    expect(mocks.releaseReservedStorageAllocationPlan).toHaveBeenCalledWith('active-plan-1');
+  });
+
   it('force-completes an activity through the same removal path used by weekly progress', async () => {
     const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
     await manager.createActivity({
@@ -326,6 +354,25 @@ describe('activity lifecycle', () => {
     expect(mocks.removeActivityFromDb).toHaveBeenCalledWith('activity-1');
     expect(mocks.getActivities()).toEqual([]);
     expect(mocks.updateGameState).toHaveBeenLastCalledWith({ activities: [] });
+  });
+
+  it('completes Empty Vessel maintenance through its dedicated cleanup handler', async () => {
+    const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
+    await manager.createActivity({
+      category: WorkCategory.MAINTENANCE,
+      title: 'Empty Vessel - 2024 - 500 L oak cask',
+      targetId: 'batch-1',
+      totalWork: 20,
+      params: { type: 'empty_storage_vessel', batchId: 'batch-1', sourceStoragePlanId: 'plan-1' },
+      skipNotification: true,
+    });
+
+    await expect(manager.completeActivityNow('activity-1')).resolves.toMatchObject({ success: true });
+    expect(mocks.completeEmptyStorageVesselActivity).toHaveBeenCalledWith(expect.objectContaining({
+      category: WorkCategory.MAINTENANCE,
+      params: expect.objectContaining({ batchId: 'batch-1' }),
+    }));
+    expect(mocks.removeActivityFromDb).toHaveBeenCalledWith('activity-1');
   });
 
   it('applies current weather only to planting and harvesting work as conditions change', async () => {

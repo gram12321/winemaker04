@@ -410,6 +410,8 @@ export async function createGrapeBatch(
     companyId: result.company.id,
     vesselType: 'container',
     material: 'neutral',
+    qualityScore: 0.5,
+    productionYear: harvestDate.year,
     capacityLitres: 10000,
     acquisitionPrice: 0,
     sourceOfferId: `test_lab_${runId}`,

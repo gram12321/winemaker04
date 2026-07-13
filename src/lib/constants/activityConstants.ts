@@ -17,6 +17,7 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.HARVESTING]: 1.78,   // hectares/week (4.4 acres = ~1.78 hectares)
   [WorkCategory.CRUSHING]: 2.5,     // tons/week
   [WorkCategory.FERMENTATION]: 5.0,  // kL/week
+  [WorkCategory.MAINTENANCE]: 1000, // litres/week
   [WorkCategory.CLEARING]: 0.4,     // hectares/week (1.0 acres = ~0.4 hectares)
   [WorkCategory.BUILDING]: 100000,  // €/week
   [WorkCategory.UPGRADING]: 100000, // €/week
@@ -72,6 +73,7 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.HARVESTING]: 25,
   [WorkCategory.CRUSHING]: 10,
   [WorkCategory.FERMENTATION]: 100,
+  [WorkCategory.MAINTENANCE]: 5,
   [WorkCategory.CLEARING]: 5, // Base initial work for clearing category
   [WorkCategory.BUILDING]: 200,
   [WorkCategory.UPGRADING]: 150,
@@ -148,6 +150,12 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
   [WorkCategory.FERMENTATION]: {
     displayName: 'Fermentation',
     icon: 'icon_fermentation.webp',
+    isDensityBased: false,
+    skill: 'winery'
+  },
+  [WorkCategory.MAINTENANCE]: {
+    displayName: 'Maintenance',
+    icon: 'icon_maintenance.webp',
     isDensityBased: false,
     skill: 'winery'
   },

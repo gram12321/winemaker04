@@ -35,6 +35,7 @@ import {
 } from './grapeSupplierLoyaltyService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
+import { calculateBuyGoodsPrice, getBuyGoodsCompanyScale } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import { calculateFeatureMarketPriceMultiplier, calculateFeatureRiskMarketPriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 import {
   buildMarketPreviewBatch,
@@ -113,18 +114,11 @@ function getYearCycleMultiplier(year: number): number {
 }
 
 function getBuyOfferCompanyValueMultiplier(companyValue: number): number {
-  if (companyValue <= 0) return 1;
-
-  const normalized = Math.max(0, Math.log10(Math.max(BUY_OFFER_COMPANY_VALUE_REFERENCE, companyValue)) - 4);
-  return clamp(1 + normalized * 0.45, 1, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER);
+  return Math.min(BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, getBuyGoodsCompanyScale(companyValue, 0, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER));
 }
 
 function getBuyOfferPrestigeMultiplier(prestige: number): number {
-  if (prestige <= 0) return 1;
-
-  const normalizedPrestige = NormalizeScrewed1000To01WithTail(prestige);
-  const scaledPrestige = Math.max(0, (normalizedPrestige - 0.1) / 0.899);
-  return clamp(1 + scaledPrestige * 0.3, 1, 1.3);
+  return getBuyGoodsCompanyScale(0, prestige);
 }
 
 function computeBuyOfferAvailableKg(companyValue: number, prestige: number): number {
@@ -468,19 +462,16 @@ export function computeBuyOfferPricePerKg(input: {
   const volatilityMultiplier = input.demandFactors?.volatilityPriceMultiplier ?? input.volatilityMultiplier;
   const buyerSensitivityMultiplier = input.demandFactors?.volatilityBuyerPriceSensitivityMultiplier ?? 1;
   const supplierRelationshipPriceMultiplier = input.supplierRelationshipPriceMultiplier ?? 1;
-  const companyPrestigeMultiplier = clamp(1 - NormalizeScrewed1000To01WithTail(input.companyPrestige ?? 0) * BUY_OFFER_PRESTIGE_MAX_DISCOUNT, 0.7, 1);
-  const mirroredBaseline = input.basePrice
-    * qualityMultiplier
-    * seasonMultiplier
-    * economyMultiplier
-    * yearCycleMultiplier
-    * volatilityMultiplier
-    * buyerSensitivityMultiplier
-    * supplierRelationshipPriceMultiplier
-    * companyPrestigeMultiplier
-    * (input.previewValueMultiplier ?? 1);
-  const withStatePremium = mirroredBaseline * STATE_PREMIUMS[input.state];
-  return clamp(withStatePremium * (1 + BUY_MARKET_FIXED_SPREAD), BUY_MARKET_MIN_PRICE, BUY_MARKET_MAX_PRICE);
+  return calculateBuyGoodsPrice({
+    basePrice: input.basePrice,
+    itemMultiplier: qualityMultiplier * (input.previewValueMultiplier ?? 1) * STATE_PREMIUMS[input.state],
+    marketMultiplier: seasonMultiplier * economyMultiplier * yearCycleMultiplier * volatilityMultiplier * buyerSensitivityMultiplier,
+    supplierRelationshipMultiplier: supplierRelationshipPriceMultiplier,
+    companyPrestige: input.companyPrestige ?? 0,
+    spreadMultiplier: 1 + BUY_MARKET_FIXED_SPREAD,
+    minimumPrice: BUY_MARKET_MIN_PRICE,
+    maximumPrice: BUY_MARKET_MAX_PRICE,
+  });
 }
 
 export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'basePricePerKg' | 'qualityScore' | 'batchState' | 'effectivePricePerKg' | 'demandFactors' | 'supplierLoyalty' | 'previewBatch'>): BuyOfferPriceBreakdown {
@@ -940,7 +931,7 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
       companyId
     );
 
-    await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear);
+    await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear, totalCost);
     await recordMarketSupplierPurchase(
       offer.supplier_id,
       roundedQuantity,

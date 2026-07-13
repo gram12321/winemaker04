@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, NotificationCategory } from '@/lib/types/types';
-import { createActivityWithResult, getGameState } from '@/lib/services';
+import { activateActivityWithParams, cancelActivity, createActivityWithResult, getGameState } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculateHarvestWork } from '@/lib/services/activity';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WeatherOperationStatusNotice } from '@/components/ui';
@@ -84,14 +84,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     if (!compatibleHasCapacity && selectedCapacity <= 0) return;
 
     const activityId = uuidv4();
-    const storagePlan = compatibleHasCapacity
-      ? { planId: compatibleBatch!.storagePlanId! }
-      : await createStorageAllocationPlan({ requiredLitres: selectedCapacity, vesselIds: selectedVesselIds, activityId });
-    if (!storagePlan.planId) {
-      await notificationService.addMessage(storagePlan.error || 'Could not reserve Storage Vessel capacity.', 'harvestOptionsModal.storage', 'Storage Capacity', NotificationCategory.SYSTEM);
-      return;
-    }
-
+    const initialParams = { grape: vineyard.grape, harvestedSoFar: 0, targetName: vineyard.name, outputBatchId: compatibleHasCapacity ? compatibleBatch!.id : uuidv4(), storageVesselIds: compatibleHasCapacity ? [] : selectedVesselIds };
     const creation = await createActivityWithResult({
       id: activityId,
       category: WorkCategory.HARVESTING,
@@ -99,27 +92,28 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       totalWork: harvestCalculation.workEstimate.totalWork,
       activityDetails: `Expected yield: ${formatNumber(harvestCalculation.expectedYield, { smartDecimals: true })} kg`,
       targetId: vineyard.id,
-      params: {
-        grape: vineyard.grape,
-        harvestedSoFar: 0,
-        targetName: vineyard.name,
-        storagePlanId: storagePlan.planId,
-        outputBatchId: compatibleHasCapacity ? compatibleBatch!.id : uuidv4(),
-        storageVesselIds: compatibleHasCapacity ? [] : selectedVesselIds
-      },
-      isCancellable: true
+      params: initialParams,
+      isCancellable: true,
+      initialStatus: 'paused',
     });
     
-    if (creation.activityId) {
-      // Success handled by notificationService in activityManager
-    } else {
-      if (!compatibleHasCapacity) await releaseStorageAllocationPlan(storagePlan.planId);
+    if (!creation.activityId) {
       await notificationService.addMessage(
         creation.reason || 'Failed to create harvesting activity.',
         'harvestOptionsModal.handleStartHarvest',
         creation.reason ? 'Harvest Unavailable' : 'Harvest Error',
         NotificationCategory.SYSTEM
       );
+      return;
+    }
+
+    const storagePlan = compatibleHasCapacity
+      ? { planId: compatibleBatch!.storagePlanId! }
+      : await createStorageAllocationPlan({ requiredLitres: selectedCapacity, vesselIds: selectedVesselIds, activityId: creation.activityId });
+    if (!storagePlan.planId || !(await activateActivityWithParams(creation.activityId, { ...initialParams, storagePlanId: storagePlan.planId }))) {
+      if (storagePlan.planId && !compatibleHasCapacity) await releaseStorageAllocationPlan(storagePlan.planId);
+      await cancelActivity(creation.activityId);
+      await notificationService.addMessage(storagePlan.error || 'Could not reserve Storage Vessel capacity.', 'harvestOptionsModal.storage', 'Storage Capacity', NotificationCategory.SYSTEM);
     }
     
     onClose();

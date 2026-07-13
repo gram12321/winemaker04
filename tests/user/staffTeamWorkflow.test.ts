@@ -115,6 +115,14 @@ describe('staff and team workflow', () => {
     }));
   });
 
+  it('adds Maintenance to the default Winery Team task classes', async () => {
+    const { getDefaultTeams } = await import('@/lib/services/user/teamService');
+
+    expect(getDefaultTeams().find((candidate) => candidate.name === 'Winery Team')).toMatchObject({
+      defaultTaskTypes: expect.arrayContaining(['crushing', 'fermentation', 'maintenance']),
+    });
+  });
+
   it('assigns and removes staff from a team in both game state and persistence', async () => {
     const { assignStaffToTeam, removeStaffFromTeam } = await import('@/lib/services/user/teamService');
 

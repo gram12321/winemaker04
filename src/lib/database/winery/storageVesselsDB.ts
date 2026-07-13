@@ -8,6 +8,8 @@ interface StorageVesselRow {
   company_id: string;
   vessel_type: StorageVessel['vesselType'];
   material: StorageVessel['material'];
+  quality_score: number;
+  production_year: number;
   capacity_litres: number;
   acquisition_price: number;
   source_offer_id: string;
@@ -23,6 +25,8 @@ function fromRow(row: StorageVesselRow): StorageVessel {
     companyId: row.company_id,
     vesselType: row.vessel_type,
     material: row.material,
+    qualityScore: row.quality_score,
+    productionYear: row.production_year,
     capacityLitres: row.capacity_litres,
     acquisitionPrice: row.acquisition_price,
     sourceOfferId: row.source_offer_id,
@@ -40,6 +44,8 @@ function toRow(vessel: StorageVessel): StorageVesselRow {
     company_id: vessel.companyId,
     vessel_type: vessel.vesselType,
     material: vessel.material,
+    quality_score: vessel.qualityScore,
+    production_year: vessel.productionYear,
     capacity_litres: vessel.capacityLitres,
     acquisition_price: vessel.acquisitionPrice,
     source_offer_id: vessel.sourceOfferId,
@@ -114,15 +120,15 @@ function occupancyForVessel(
   vesselId: string,
   plans: StorageVesselAllocationPlan[],
   allocations: StorageVesselAllocation[],
-): { occupancy: StorageVesselOccupancy; planId?: string; wineBatchId?: string } {
+): { occupancy: StorageVesselOccupancy; activePlanId?: string; activeWineBatchId?: string } {
   const allocation = allocations.find((candidate) => candidate.vesselId === vesselId && !candidate.releasedAt);
   if (!allocation) return { occupancy: 'available' };
   const plan = plans.find((candidate) => candidate.id === allocation.planId);
-  if (!plan) return { occupancy: 'reserved', planId: allocation.planId };
+  if (!plan) return { occupancy: 'reserved', activePlanId: allocation.planId };
   return {
     occupancy: plan.status === 'active' ? 'in_use' : plan.status === 'reserved' ? 'reserved' : 'available',
-    planId: plan.id,
-    wineBatchId: plan.wineBatchId,
+    activePlanId: plan.id,
+    activeWineBatchId: plan.wineBatchId,
   };
 }
 
@@ -253,6 +259,16 @@ export async function updateStorageVesselAllocationFill(companyId: string, planI
     remaining -= fill;
   }
   return { data: rows.length, error: null };
+}
+
+export async function releaseStorageVesselAllocation(companyId: string, planId: string, vesselId: string) {
+  return supabase
+    .from('storage_vessel_allocations')
+    .update({ released_at: new Date().toISOString(), filled_litres: 0 })
+    .eq('company_id', companyId)
+    .eq('plan_id', planId)
+    .eq('vessel_id', vesselId)
+    .is('released_at', null);
 }
 
 export async function releaseStorageVesselPlan(companyId: string, planId: string, date: { year: number; season: string; week: number }) {

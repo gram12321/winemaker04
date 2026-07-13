@@ -4,6 +4,7 @@ import { createActivity } from '../../activity/activitymanagers/activityManager'
 import { calculateCrushingWork, validateCrushingBatch } from '../../activity/workcalculators/crushingWorkCalculator';
 import { CrushingOptions } from '../characteristics/crushingCharacteristics';
 import { assertBatchHasUsableStorage } from './storageVesselAllocationService';
+import { isBatchEmptyingInProgress } from './storageVesselMaintenanceService';
 
 /**
  * Crushing Manager
@@ -38,6 +39,9 @@ export function validateCrushingActivity(batch: WineBatch, options: CrushingOpti
  */
 export async function startCrushingActivity(batch: WineBatch, options: CrushingOptions): Promise<{ success: boolean; error?: string }> {
   try {
+    if (isBatchEmptyingInProgress(batch.id)) {
+      return { success: false, error: 'This batch is scheduled to be emptied.' };
+    }
     // Validate the crushing activity
     const validation = validateCrushingActivity(batch, options);
     if (!validation.valid) {

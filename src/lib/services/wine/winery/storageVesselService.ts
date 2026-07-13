@@ -29,6 +29,8 @@ export async function createPurchasedStorageVessels(
     companyId,
     vesselType: payload.vesselType,
     material: payload.material,
+    qualityScore: payload.qualityScore,
+    productionYear: payload.productionYear,
     capacityLitres: payload.capacityLitres,
     acquisitionPrice,
     sourceOfferId,
@@ -42,6 +44,10 @@ export async function createPurchasedStorageVessels(
   const { error } = await insertStorageVessels(vessels);
   if (error) throw error;
   return vessels;
+}
+
+export function getStorageVesselDisplayName(vessel: StorageVessel): string {
+  return `${vessel.productionYear} – ${vessel.capacityLitres.toLocaleString()} L ${vessel.material} ${vessel.vesselType.replace('_', ' ')}`;
 }
 
 export async function removePurchasedStorageVessels(vesselIds: string[]): Promise<void> {

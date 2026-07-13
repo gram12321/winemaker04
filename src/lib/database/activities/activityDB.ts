@@ -8,7 +8,7 @@ export async function saveActivityToDb(activity: Activity): Promise<boolean> {
     const companyId = getCurrentCompanyId();
     if (!companyId) {
       console.error('No company ID found to save activity.');
-      return false;
+      throw new Error('No active company selected while saving the activity.');
     }
 
     const activityData = {
@@ -34,13 +34,13 @@ export async function saveActivityToDb(activity: Activity): Promise<boolean> {
 
     if (error) {
       console.error('Error saving activity to Supabase:', error);
-      return false;
+      throw error;
     }
 
     return true;
   } catch (error) {
     console.error('Error in saveActivityToDb:', error);
-    return false;
+    throw error;
   }
 }
 

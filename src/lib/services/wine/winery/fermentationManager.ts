@@ -16,6 +16,7 @@ import { calculateWineScore, getTasteQualityIndex } from '../winescore/wineScore
 import { applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
 import { diffAnchorEffects } from '../debug/wineAnchorEffectUtils';
 import { assertBatchHasUsableStorage, releaseStoragePlanForBatch } from './storageVesselAllocationService';
+import { isBatchEmptyingInProgress } from './storageVesselMaintenanceService';
 
 /**
  * Fermentation Manager
@@ -30,6 +31,9 @@ export async function startFermentationActivity(
   options: FermentationOptions
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (isBatchEmptyingInProgress(batch.id)) {
+      return { success: false, error: 'This batch is scheduled to be emptied.' };
+    }
     // Validate batch state
     if (batch.state !== 'must_ready') {
       return { success: false, error: 'Batch must be in must_ready stage for fermentation' };
@@ -77,6 +81,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   if (!batch || batch.state !== 'must_fermenting') {
     return false;
   }
+  if (isBatchEmptyingInProgress(batch.id)) return false;
 
   const gameState = getGameState();
 

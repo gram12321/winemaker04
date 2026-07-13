@@ -1,6 +1,6 @@
 # Project Context
 
-Date: 2026-07-12
+Date: 2026-07-13
 Stable terminology and high-value gameplay relationships. See `docs/WineSystem_VariableRelationshipMap.md` for dependency diagrams and `docs/AIdocs/AIDescriptions_coregame.md` for implementation status.
 
 ## Wine Vocabulary
@@ -16,7 +16,7 @@ Stable terminology and high-value gameplay relationships. See `docs/WineSystem_V
 | Lifecycle | Post-creation evolution | features, oxidation, bottle aging, prestige |
 | Weather | Weekly state/forecast and operation modifiers | state, intensity, pattern, confidence, site exposure, planting/harvesting operation impact |
 | Market | Buyer/supplier demand and supply | economy, weather, loyalty, grape/batch state |
-| Storage vessels | Individually owned cellar equipment purchased through Market offers; each vessel has a fixed capacity at purchase | casks, steel tanks, concrete tanks, containers, vessel type, capacity, material, purchase price, vessel state; future inputs to taste, structure, price, vineyard, and winery operations |
+| Storage vessels | Individually owned cellar equipment purchased from domain-scoped Buy Goods suppliers; cask offers rotate by supplier, capacity, quality, relationship price, company scale, and prestige | casks, steel tanks, concrete tanks, containers, vessel type, capacity, material, quality score (0-1), supplier relationship, purchase price, vessel state; an occupied vessel may be emptied through a cancellable Maintenance activity, reducing the batch volume and releasing only that vessel. Cancelling production preserves the active plan and its existing wine; only an unused reservation is released; future inputs to taste, structure, price, vineyard, and winery operations |
 | Ownership | Founder and future board/share concepts | `isFounder`, Founder Return, `boardShare` seam |
 | Outcomes | Progression/economy outputs | price, contracts, grape sales, prestige, achievements |
 
@@ -48,7 +48,7 @@ Estimated price combines wine score, score curve, land-value, feature, company-p
 | Vineyard projection | Normal seasonal health/ripeness delta × bounded weather/site multiplier; includes planting progress, research health decay, aspect, altitude, suitability, and soil response |
 | Market impact | Weather and economy affect grape prices/limits; loyalty and research affect buyer/supplier access and scaling |
 | Operation impact | Winter prevents starting planting; severe weather slows planting/harvesting work and extreme conditions can pause it. Clearing's annual availability remains a vineyard-maintenance rule. |
-| Buy-market previews | Offers persist, expire, decay, and refresh; previews simulate bounded state/age/features without notifications or prestige events |
+| Buy-market previews | One Buy Market modal hosts registered domain panels; offers persist, expire, decay, and refresh, while previews simulate bounded state/age/features without notifications or prestige events |
 
 The feature facade at `src/lib/features/weather/` owns resolution, vineyard projection, market context, operation impacts, and presentation models. Weather does not directly affect yield, harvest anchors, or wine score. Severe events, mitigation actions, weather research, and weather achievements remain future work.
 
