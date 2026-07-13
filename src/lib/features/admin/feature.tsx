@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import React from 'react';
 import {
   authService,
   completeActivityNow,
@@ -7,9 +7,10 @@ import {
   getStoredVineyards,
   recreateBuyGrapeMarketOffers
 } from '@/lib/services';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import type { AdminFeature } from './featureTypes';
 import type { AdminCheatOps, AdminDashboardDependencies, AdminDatabaseOps, AdminTestLab } from './internalTypes';
-import { createAdminFeature } from './createAdminFeature';
+import { AdminDashboard } from './components/AdminDashboard';
 import {
   adminAddPrestigeToCompany,
   adminClearAllAchievements,
@@ -44,8 +45,6 @@ import {
 } from './services/testLab/testLabFixtureService';
 import { createTestLabRunner, type AutomatedTestRunResult } from './services/testLab/testLabRunner';
 import { getTestLabScenarios } from './services/testLab/testLabScenarios';
-
-const ResearchAdminInspector = lazy(() => import('@/lib/features/researchUpgrade/components/ResearchAdminInspector').then(module => ({ default: module.ResearchAdminInspector })));
 
 const runAutomatedTests = async (target?: string): Promise<AutomatedTestRunResult> => {
   const response = await fetch('/api/test-run', {
@@ -109,16 +108,17 @@ const testLab: AdminTestLab = {
   })
 };
 
-export function createWinemakerAdminDashboardDependencies(): AdminDashboardDependencies {
-  return {
-    database,
-    cheats,
-    testLab,
-    renderResearchInspector: () => <ResearchAdminInspector />
-  };
-}
+const dashboard: AdminDashboardDependencies = {
+  database,
+  cheats,
+  testLab,
+  renderResearchInspector: () => researchUpgradeFeature.ui.renderAdminInspector()
+};
 
-export const adminFeature: AdminFeature = createAdminFeature({
+export const adminFeature: AdminFeature = {
   isAvailable: isDevSurfaceAvailable,
-  dashboard: createWinemakerAdminDashboardDependencies()
-});
+  renderPage(props) {
+    if (!isDevSurfaceAvailable()) return null;
+    return React.createElement(AdminDashboard, { ...props, ...dashboard });
+  }
+};

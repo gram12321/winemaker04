@@ -62,7 +62,7 @@ Implemented enforcement covers grape planting, fermentation methods, staff cap, 
 
 - Founders have zero wages, receive 20% of positive yearly net profit per founder, and can be bought out for 15% of company asset value.
 - Prestige is ledger-derived from permanent (`decay_rate = 0`) and decaying (`0 < decay_rate < 1`) events. Write through `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source metadata.
-- `boardShare` is a no-op seam; share/board constants and database scaffolding are not active public-company runtime.
+- `boardShare` is an installed baseline feature facade; it supplies current ownership and constraint behavior while share/board constants and database scaffolding remain outside the active public-company runtime.
 
 ## Naming Rules
 

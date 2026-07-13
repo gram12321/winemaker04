@@ -6,7 +6,7 @@ The Admin feature is a development-only slice intended for compatible Winemaker 
 
 ## Portability between Winemaker forks
 
-The host type seam stays unchanged between forks. `createAdminFeature.ts` constructs the feature from internal dashboard adapters; `feature.tsx` is the canonical Winemaker adapter and the only place that assembles those collaborators. A fork can keep the Admin UI while replacing that adapter assembly for its own Winemaker module layout.
+The host type seam stays unchanged between forks. `feature.tsx` is the canonical Winemaker composition module and the only place that assembles the internal dashboard collaborators. A fork can keep the Admin UI while adapting that composition module for its own Winemaker layout.
 
 The default active adapter requires:
 

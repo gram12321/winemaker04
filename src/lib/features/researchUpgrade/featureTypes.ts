@@ -56,6 +56,7 @@ export interface ResearchUpgradeAdminHooks {
 
 export interface ResearchUpgradeUiHooks {
   renderResearchPage(): ReactElement;
+  renderAdminInspector(): ReactElement;
 }
 
 export interface ResearchUpgradeEffectsHooks {

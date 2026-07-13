@@ -11,6 +11,7 @@ import type { ResearchUpgradeFeature } from './featureTypes';
 import { getResearchPermanentEffects } from './services/research/researchPermanentEffectsService';
 
 const ResearchWorkspace = lazy(() => import('./components/ResearchWorkspace').then(module => ({ default: module.ResearchWorkspace })));
+const ResearchAdminInspector = lazy(() => import('./components/ResearchAdminInspector').then(module => ({ default: module.ResearchAdminInspector })));
 
 function getRequiredResearch(type: UnlockType, value: string | number): ResearchProject | null {
   const valueKey = String(value);
@@ -235,7 +236,8 @@ export const researchUpgradeFeature: ResearchUpgradeFeature = {
   },
 
   ui: {
-    renderResearchPage: () => <ResearchWorkspace />
+    renderResearchPage: () => <ResearchWorkspace />,
+    renderAdminInspector: () => <ResearchAdminInspector />
   },
 
   effects: {

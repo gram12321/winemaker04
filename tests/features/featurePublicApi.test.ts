@@ -17,6 +17,16 @@ describe('installed feature public facades', () => {
       .toEqual(expect.any(Function));
     expect(researchUpgrade.researchUpgradeFeature.unlocks.getUnlockedItems)
       .toEqual(expect.any(Function));
+    expect(researchUpgrade.researchUpgradeFeature.setup.grantResearchUnlock)
+      .toEqual(expect.any(Function));
+    expect(researchUpgrade.researchUpgradeFeature.admin.grantAllResearch)
+      .toEqual(expect.any(Function));
+    expect(researchUpgrade.researchUpgradeFeature.ui.renderResearchPage)
+      .toEqual(expect.any(Function));
+    expect(researchUpgrade.researchUpgradeFeature.ui.renderAdminInspector)
+      .toEqual(expect.any(Function));
+    expect(researchUpgrade.researchUpgradeFeature.effects.getPermanentEffects)
+      .toEqual(expect.any(Function));
   });
 
   it('exports the Board Share baseline feature value and no registry API', () => {
@@ -24,6 +34,10 @@ describe('installed feature public facades', () => {
     expect(boardShare.boardShareFeature.constraints.checkVineyardPurchase)
       .toEqual(expect.any(Function));
     expect(boardShare.boardShareFeature.ticks.onWeekAdvanced)
+      .toEqual(expect.any(Function));
+    expect(boardShare.boardShareFeature.starting.getStartingOwnership)
+      .toEqual(expect.any(Function));
+    expect(boardShare.boardShareFeature.ui.getFinanceTabs)
       .toEqual(expect.any(Function));
   });
 });
