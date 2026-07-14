@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Customer } from '@/lib/types/types';
+import { getContractGenerationChance } from '@/lib/services/sales/contractGenerationService';
 
 const mocks = vi.hoisted(() => ({
   getAllCustomers: vi.fn(async (): Promise<Customer[]> => []),
@@ -72,8 +73,6 @@ describe('contract generation unlock filtering', () => {
   });
 
   it('keeps Wine Shop baseline unlocked and filters locked contract customer types', async () => {
-    const { getContractGenerationChance } = await import('@/lib/services/sales/contractGenerationService');
-
     const chance = await getContractGenerationChance();
 
     expect(chance.customerTypeBreakdown['Wine Shop'].total).toBe(1);
@@ -84,8 +83,6 @@ describe('contract generation unlock filtering', () => {
 
   it('includes newly unlocked customer contract channels from research', async () => {
     mocks.getUnlockedItems.mockResolvedValue(['restaurant', 'chain_store']);
-
-    const { getContractGenerationChance } = await import('@/lib/services/sales/contractGenerationService');
 
     const chance = await getContractGenerationChance();
 

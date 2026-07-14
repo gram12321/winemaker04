@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUY_MARKET_FIXED_SPREAD } from '@/lib/constants';
-import { computeBuyOfferPricePerKg, getBuyOfferStateLabel } from '@/lib/services/sales/buyGrapeMarketService';
+import {
+  computeBuyOfferPricePerKg,
+  getBuyOfferStateLabel,
+  recreateBuyGrapeMarketOffers,
+  purchaseBuyGrapeOffer
+} from '@/lib/services/sales/buyGrapeMarketService';
 
 const mocks = vi.hoisted(() => ({
   getCurrentCompanyId: vi.fn(() => 'company-1'),
@@ -211,6 +216,7 @@ vi.mock('@/lib/services/finance/financeService', async () => {
   return {
     ...actual,
     addTransaction: mocks.addTransaction,
+    calculateCompanyValue: vi.fn(async () => 100000),
   };
 });
 
@@ -294,7 +300,6 @@ describe('buy grape market service', () => {
       .mockResolvedValueOnce({ data: [{ offer_id: 'stale-offer' }] as never, error: null })
       .mockResolvedValueOnce({ data: [], error: null });
 
-    const { recreateBuyGrapeMarketOffers } = await import('@/lib/services/sales/buyGrapeMarketService');
     await recreateBuyGrapeMarketOffers();
 
     expect(mocks.deleteBuyOfferRow).toHaveBeenCalledWith('company-1', 'stale-offer');
@@ -304,8 +309,6 @@ describe('buy grape market service', () => {
   });
 
   it('creates inventory, writes transaction, and updates offer volume after successful purchase', async () => {
-    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
-
     const result = await purchaseBuyGrapeOffer('offer-1', 120);
 
     expect(result).toEqual({ success: true });
@@ -373,7 +376,6 @@ describe('buy grape market service', () => {
       error: null,
     });
 
-    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
     const result = await purchaseBuyGrapeOffer('offer-2', 75);
 
     expect(result).toEqual({ success: true });
@@ -394,8 +396,6 @@ describe('buy grape market service', () => {
   });
 
   it('blocks purchase when requested quantity exceeds supplier seasonal remaining capacity', async () => {
-    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
-
     const result = await purchaseBuyGrapeOffer('offer-1', 450);
 
     expect(result.success).toBe(false);

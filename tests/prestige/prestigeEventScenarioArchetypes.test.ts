@@ -198,6 +198,8 @@ describe('prestige event scenario archetypes', () => {
     expect(young.achievementReward).toBe(3);
     expect(regional.achievementReward).toBe(20);
     expect(iconic.achievementReward).toBe(300);
+    expect(achievementsFeature.catalog.getLevelInfo(1).prestige).toBe(0.1);
+    expect(achievementsFeature.catalog.getLevelInfo(4).prestige).toBe(100);
 
     expect(regional.achievementReward).toBeLessThan(young.achievementReward * 10);
     expect(iconic.achievementReward).toBeLessThan(regional.achievementReward * 20);

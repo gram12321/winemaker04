@@ -43,6 +43,11 @@ export interface CompanyStats {
 class CompanyService {
   public async createCompany(data: CompanyCreateData): Promise<{ success: boolean; company?: Company; error?: string }> {
     try {
+      const nameExists = await checkCompanyNameExists(data.name);
+      if (nameExists) {
+        return { success: false, error: 'Company name already exists' };
+      }
+
       let userId: string | null = null;
 
       if (data.userId) {
@@ -61,11 +66,6 @@ class CompanyService {
       } else if (data.associateWithUser) {
         const currentUser = authService.getCurrentUser();
         userId = currentUser ? currentUser.id : null;
-      }
-
-      const nameExists = await checkCompanyNameExists(data.name);
-      if (nameExists) {
-        return { success: false, error: 'Company name already exists' };
       }
 
       const companyData: CompanyData = {

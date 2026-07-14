@@ -45,7 +45,7 @@ For taste, structure, or contracts work, also read:
 - **Player interface:** company switching, profile, Winepedia, achievements, highscores, settings, notifications, admin tools.
 - **Prestige:** company and vineyard prestige events, decay, customer relationship effects.
 
-Known current test caveat: the full suite has two active failing visibility expectations in `tests/user/researchPanelVisibility.test.ts`; treat that as research UI backlog, not as a general test-runner failure.
+The automated suite currently has no known failing expectations. Live database smoke tests are opt-in and require a reachable, isolated Supabase environment; the default Vitest run uses database seams mocked at the unit boundary.
 
 Keep detailed status updates in `docs/AIdocs/AIDescriptions_coregame.md` and file/module updates in `docs/PROJECT_INFO.md`; do not expand this prompt into a second README.
 
