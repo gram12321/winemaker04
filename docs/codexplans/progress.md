@@ -5,7 +5,7 @@ Original prompt: PLEASE IMPLEMENT THIS PLAN: Board/Share Detachment Plan
 - Next actions: run typecheck, remove remaining board/share exports and tests, simplify finance contribution model, fix compile errors, run tests, commit C and D.
 - 2026-03-06: Implemented stripped branch behavior.
   - Removed board/share UI modules and active runtime wiring.
-  - Added no-op boardShare seam implementation and made it default.
+  - Kept `boardShare` as an intentionally inactive facade.
   - Removed board/share service implementations and share valuation test.
   - Removed board/share exports from service and constants barrels.
   - Simplified company creation/update to stop runtime writes to company_shares.

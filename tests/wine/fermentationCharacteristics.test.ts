@@ -149,61 +149,37 @@ describe('fermentationCharacteristics', () => {
   });
 
   describe('getCombinedFermentationEffects', () => {
-    it('returns effects array for basic method and ambient temperature', () => {
-      const effects = getCombinedFermentationEffects('Basic', 'Ambient');
-      
-      expect(Array.isArray(effects)).toBe(true);
-      expect(effects.length).toBeGreaterThan(0);
-    });
-
-    it('returns effects array for extended maceration method', () => {
-      const effects = getCombinedFermentationEffects('Extended Maceration', 'Ambient');
-      
-      expect(Array.isArray(effects)).toBe(true);
-      // Extended maceration should have multiple effects
-      expect(effects.length).toBeGreaterThan(0);
+    it('returns effects for every supported method and temperature combination', () => {
+      for (const method of ['Basic', 'Temperature Controlled', 'Extended Maceration'] as const) {
+        for (const temperature of ['Ambient', 'Cool', 'Warm'] as const) {
+          const effects = getCombinedFermentationEffects(method, temperature);
+          expect(Array.isArray(effects)).toBe(true);
+          expect(effects.length).toBeGreaterThan(0);
+        }
+      }
     });
   });
 
   describe('getFermentationMethodInfo', () => {
-    it('returns method information for all available methods', () => {
+    it('exposes valid method information with Basic as the baseline', () => {
       const methods = getFermentationMethodInfo();
-      
-      expect(methods['Basic']).toBeDefined();
-      expect(methods['Temperature Controlled']).toBeDefined();
-      expect(methods['Extended Maceration']).toBeDefined();
-    });
-
-    it('includes work multipliers and costs for each method', () => {
-      const methods = getFermentationMethodInfo();
-      
+      expect(Object.keys(methods)).toEqual(expect.arrayContaining([
+        'Basic', 'Temperature Controlled', 'Extended Maceration'
+      ]));
       Object.values(methods).forEach(method => {
         expect(method.workMultiplier).toBeGreaterThan(0);
         expect(typeof method.costPenalty).toBe('number');
         expect(method.description).toBeDefined();
       });
-    });
-
-    it('has Basic method as baseline (workMultiplier 1.0, no cost)', () => {
-      const methods = getFermentationMethodInfo();
-      
       expect(methods['Basic'].workMultiplier).toBe(1.0);
       expect(methods['Basic'].costPenalty).toBe(0);
     });
   });
 
   describe('getFermentationTemperatureInfo', () => {
-    it('returns temperature information for all available temperatures', () => {
+    it('exposes valid information for every supported temperature', () => {
       const temperatures = getFermentationTemperatureInfo();
-      
-      expect(temperatures['Ambient']).toBeDefined();
-      expect(temperatures['Cool']).toBeDefined();
-      expect(temperatures['Warm']).toBeDefined();
-    });
-
-    it('includes cost modifiers for temperature control', () => {
-      const temperatures = getFermentationTemperatureInfo();
-      
+      expect(Object.keys(temperatures)).toEqual(expect.arrayContaining(['Ambient', 'Cool', 'Warm']));
       Object.values(temperatures).forEach(temp => {
         expect(typeof temp.costModifier).toBe('number');
         expect(temp.description).toBeDefined();

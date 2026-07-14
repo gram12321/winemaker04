@@ -1,5 +1,8 @@
-import { ResearchWorkspace } from '@/lib/features/researchUpgrade/components/ResearchWorkspace';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { achievementsFeature } from '@/lib/features/achievements';
 
 export function ResearchPage() {
-  return <ResearchWorkspace />;
+  return researchUpgradeFeature.ui.renderResearchPage({
+    getAchievementTitle: achievementsFeature.catalog.getTitle,
+  });
 }

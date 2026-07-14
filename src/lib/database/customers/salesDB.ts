@@ -45,10 +45,10 @@ export const saveWineOrder = async (order: WineOrder): Promise<void> => {
   }
 };
 
-export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
+export const loadWineOrders = async (status?: string, companyId?: string): Promise<WineOrder[]> => {
   try {
     // First, load orders without the join to avoid Supabase query issues
-    let query = getCompanyQuery(WINE_ORDERS_TABLE);
+    let query = getCompanyQuery(WINE_ORDERS_TABLE, companyId);
     
     // Filter by status if provided, otherwise load all orders
     if (status) {
@@ -60,7 +60,7 @@ export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
     if (ordersError) throw ordersError;
 
     // Load customer relationships separately (filtered by company)
-    const { data: customersData, error: customersError } = await getCompanyQuery('customers')
+    const { data: customersData, error: customersError } = await getCompanyQuery('customers', companyId)
       .select('id, relationship');
 
     // Create a map of customer relationships for quick lookup
@@ -107,12 +107,12 @@ export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
  * Get sales summary for achievement context
  * OPTIMIZATION: Lightweight query for achievement calculations
  */
-export const getSalesSummary = async (): Promise<{
+export const getSalesSummary = async (companyId?: string): Promise<{
   totalSalesCount: number;
   totalSalesValue: number;
 }> => {
   try {
-    const { data, error } = await getCompanyQuery(WINE_ORDERS_TABLE)
+    const { data, error } = await getCompanyQuery(WINE_ORDERS_TABLE, companyId)
       .select('status, total_value, fulfillable_value');
 
     if (error) throw error;

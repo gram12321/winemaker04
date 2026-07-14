@@ -31,6 +31,18 @@ export interface TestLabRunnerDependencies {
   createBottledWine: typeof createBottledWine;
   completeActivityNow: (activityId: string) => Promise<{ success: boolean; error?: string; activity?: { id: string; title: string } }>;
   getCurrentUserId: () => string | null;
+  runAutomatedTests: (target?: string) => Promise<AutomatedTestRunResult>;
+}
+
+export interface AutomatedTestRunResult {
+  ok: boolean;
+  status?: string;
+  passed?: number;
+  failed?: number;
+  skipped?: number;
+  exitCode?: number;
+  message?: string;
+  [key: string]: unknown;
 }
 
 const normalizeFieldValue = (
@@ -101,28 +113,24 @@ async function runRegressionScenario(
   runId: string,
   scenarioId: string,
   params: Record<string, string | number | boolean>,
-  warnings: string[]
+  warnings: string[],
+  dependencies: TestLabRunnerDependencies
 ): Promise<TestLabScenarioResult> {
   const target = typeof params.target === 'string' && params.target.trim() ? params.target.trim() : undefined;
-  const response = await fetch('/api/test-run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(target ? { target } : {})
-  });
-  const data = await response.json();
+  const data = await dependencies.runAutomatedTests(target);
 
   return {
     runId,
     scenarioId,
-    status: response.ok && data.status === 'passed' ? 'passed' : 'failed',
-    summary: response.ok
+    status: data.ok && data.status === 'passed' ? 'passed' : 'failed',
+    summary: data.ok
       ? `${data.passed || 0} passed, ${data.failed || 0} failed, ${data.skipped || 0} skipped`
       : data.message || 'Regression runner request failed',
     assertions: [
       {
         name: 'Vitest runner completed',
-        passed: response.ok,
-        details: response.ok ? `Exit code ${data.exitCode ?? 0}` : data.message
+        passed: data.ok,
+        details: data.ok ? `Exit code ${data.exitCode ?? 0}` : data.message
       },
       {
         name: 'No failing tests',
@@ -406,7 +414,7 @@ export function createTestLabRunner(dependencies: TestLabRunnerDependencies) {
     }
 
     if (scenario.id === 'regression.full-suite') {
-      return await runRegressionScenario(runId, scenario.id, params, warnings);
+      return await runRegressionScenario(runId, scenario.id, params, warnings, dependencies);
     }
 
     if (scenario.id === 'sales.generate-orders') {

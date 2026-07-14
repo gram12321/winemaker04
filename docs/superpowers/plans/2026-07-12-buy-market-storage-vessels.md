@@ -1,5 +1,7 @@
 # Buy Market and Storage Vessels Implementation Plan
 
+Status: Active pending mainline implementation. Code-checked on 2026-07-14: current `main` still uses the grape-specific buy-market persistence/service path and has no Storage Vessel runtime. A separate development branch contains later storage-market work, but it is not part of this mainline review.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the grape-only buy flow with a real Buy Market module, preserve the existing Grape Procurement behaviour behind an adapter, and introduce individually owned casks as the first Storage Vessels market. A purchased vessel has a fixed capacity and persistent identity. Steel tanks, concrete tanks, containers, and later machinery must be addable without revisiting grape procurement or generic market persistence.

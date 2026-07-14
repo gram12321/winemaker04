@@ -1,6 +1,6 @@
 import { supabase } from '../core/supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { PrestigeEvent } from '../../types/types';
+import { PrestigeEvent, type PrestigePayloadVineyardAchievementUnlock } from '../../types/types';
 
 export interface PrestigeEventRow {
   id: string;
@@ -45,18 +45,57 @@ export async function upsertPrestigeEventBySource(type: string, sourceId: string
   }
 }
 
-export async function insertPrestigeEvent(row: Omit<PrestigeEventRow, 'company_id'>): Promise<void> {
+export async function insertPrestigeEvent(
+  row: Omit<PrestigeEventRow, 'company_id'>,
+  companyId?: string
+): Promise<void> {
   const { error } = await supabase
     .from('prestige_events')
-    .insert([{ ...row, company_id: getCurrentCompanyId() }]);
+    .insert([{ ...row, company_id: companyId || getCurrentCompanyId() }]);
   if (error) throw error;
 }
 
-export async function listPrestigeEvents(): Promise<PrestigeEventRow[]> {
+/**
+ * Insert a source-keyed event once for the active company.
+ *
+ * The matching unique index makes this safe when two achievement checks overlap.
+ */
+export async function insertPrestigeEventIfAbsentBySource(
+  row: Omit<PrestigeEventRow, 'company_id'> & { source_id: string },
+  companyId?: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('prestige_events')
+    .insert([{ ...row, company_id: companyId || getCurrentCompanyId() }]);
+
+  if (!error) return true;
+  if (error.code === '23505') return false;
+  throw error;
+}
+
+/** Insert one vineyard reward per company, vineyard, and achievement. */
+export async function insertVineyardAchievementPrestigeEventIfAbsent(
+  row: Omit<PrestigeEventRow, 'company_id'> & {
+    type: 'vineyard_achievement';
+    source_id: string;
+    payload: PrestigePayloadVineyardAchievementUnlock;
+  },
+  companyId?: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('prestige_events')
+    .insert([{ ...row, company_id: companyId || getCurrentCompanyId() }]);
+
+  if (!error) return true;
+  if (error.code === '23505') return false;
+  throw error;
+}
+
+export async function listPrestigeEvents(companyId?: string): Promise<PrestigeEventRow[]> {
   const { data, error } = await supabase
     .from('prestige_events')
     .select('*')
-    .eq('company_id', getCurrentCompanyId())
+    .eq('company_id', companyId || getCurrentCompanyId())
     .order('created_game_week', { ascending: false });
   if (error) throw error;
   return (data as PrestigeEventRow[]) || [];

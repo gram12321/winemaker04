@@ -106,8 +106,8 @@ export async function saveWineContract(contract: WineContract): Promise<void> {
 /**
  * Load all wine contracts from the database
  */
-export async function loadWineContracts(): Promise<WineContract[]> {
-  const { data, error } = await getCompanyQuery('wine_contracts')
+export async function loadWineContracts(companyId?: string): Promise<WineContract[]> {
+  const { data, error } = await getCompanyQuery('wine_contracts', companyId)
     .order('created_year', { ascending: false })
     .order('created_season', { ascending: false })
     .order('created_week', { ascending: false });

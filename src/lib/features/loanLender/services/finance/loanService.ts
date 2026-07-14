@@ -2021,9 +2021,9 @@ function calculatePrepaymentPenalty(remainingInterest: number): number {
 /**
  * Calculate total outstanding loan balance across all active loans
  */
-export async function calculateTotalOutstandingLoans(): Promise<number> {
+export async function calculateTotalOutstandingLoans(companyId?: string): Promise<number> {
   try {
-    const activeLoans = await loadActiveLoans();
+    const activeLoans = await loadActiveLoans(companyId);
     return activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
   } catch (error) {
     return 0;

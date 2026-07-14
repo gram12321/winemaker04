@@ -1,12 +1,11 @@
 import { type ResearchProject } from '@/lib/constants/researchConstants';
 import { GAME_INITIALIZATION } from '@/lib/constants';
-import { getAllAchievementUnlocks } from '@/lib/database/core/achievementsDB';
+import { achievementsFeature } from '@/lib/features/achievements';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
 import { type BuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 import { getMaxBuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber } from '@/lib/utils/utils';
 
 export interface ResearchEligibilityContext {
@@ -20,14 +19,12 @@ export interface ResearchEligibilityContext {
 
 export async function loadResearchEligibilityContext(
   currentPrestige: number,
-  completedResearch: Set<string>,
-  companyId?: string
+  completedResearch: Set<string>
 ): Promise<ResearchEligibilityContext> {
-  const targetCompanyId = companyId || getCurrentCompanyId();
-  const [companyValue, maxBuyerLoyaltyLevel, unlocks] = await Promise.all([
+  const [companyValue, maxBuyerLoyaltyLevel, unlockedAchievementIds] = await Promise.all([
     calculateCompanyValue(),
     getMaxBuyerLoyaltyLevel(),
-    getAllAchievementUnlocks(targetCompanyId),
+    achievementsFeature.progression.getUnlockedIds(),
   ]);
 
   const gameState = getGameState();
@@ -48,7 +45,7 @@ export async function loadResearchEligibilityContext(
     companyValue,
     companyAgeWeeks,
     maxBuyerLoyaltyLevel,
-    unlockedAchievementIds: new Set(unlocks.map((unlock) => unlock.achievementId)),
+    unlockedAchievementIds,
   };
 }
 

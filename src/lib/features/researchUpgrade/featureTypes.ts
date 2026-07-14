@@ -1,5 +1,9 @@
+import type { ReactElement } from 'react';
 import type { ResearchProject, UnlockType } from '@/lib/constants/researchConstants';
 import type { Activity, GameDate } from '@/lib/types/types';
+import type { ResearchPermanentEffectsSummary } from './services/research/researchPermanentEffectsService';
+
+export type { ResearchPermanentEffectsSummary };
 
 export interface ResearchUpgradeWorkflowHooks {
   startResearch(projectId: string): Promise<string | null>;
@@ -34,25 +38,20 @@ export interface ResearchUpgradeSetupHooks {
   grantStartingGrapeUnlock(input: GrantStartingGrapeUnlockInput): Promise<void>;
 }
 
-export interface ResearchUpgradeAdminGrantAllResult {
-  success: boolean;
-  unlocked: number;
-  alreadyUnlocked: number;
+export interface ResearchUpgradeUiHooks {
+  renderResearchPage(input: {
+    getAchievementTitle(achievementId: string): string | undefined;
+  }): ReactElement;
 }
 
-export interface ResearchUpgradeAdminRemoveAllResult {
-  success: boolean;
-  removed: number;
-}
-
-export interface ResearchUpgradeAdminHooks {
-  grantAllResearch(): Promise<ResearchUpgradeAdminGrantAllResult>;
-  removeAllResearch(): Promise<ResearchUpgradeAdminRemoveAllResult>;
+export interface ResearchUpgradeEffectsHooks {
+  getPermanentEffects(companyId?: string): Promise<ResearchPermanentEffectsSummary>;
 }
 
 export interface ResearchUpgradeFeature {
   workflow: ResearchUpgradeWorkflowHooks;
   unlocks: ResearchUpgradeUnlockHooks;
   setup: ResearchUpgradeSetupHooks;
-  admin: ResearchUpgradeAdminHooks;
+  ui: ResearchUpgradeUiHooks;
+  effects: ResearchUpgradeEffectsHooks;
 }

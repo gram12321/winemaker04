@@ -4,7 +4,7 @@ Status: Historical/superseded for weather coverage as of 2026-07-11. The weather
 
 > Historical record only. References below to the former weather-impact service and Weather Center service do not describe current runtime or active test ownership.
 
-Source: coverage gaps listed in `docs/superpowers/plans/2026-05-24-founder-economy-implementation-audit.md`.
+Source: coverage gaps listed in `docs/superpowers/completed/2026-05-24-founder-economy-implementation-audit.md`.
 
 ## Priority A - Weather Impact Service
 - [x] Add dedicated unit tests for weather impact coefficients, seasonal adjustment, and response labeling.

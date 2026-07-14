@@ -23,6 +23,11 @@ import {
 } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import type { AnchorEffectEntry } from './wineAnchorEffectUtils';
 import { buildAnchorEffectsFromNeutral } from './wineAnchorEffectUtils';
+import { isDevSurfaceAvailable } from '@/lib/utils';
+
+export function isWineAnchorImpactDebugAvailable(): boolean {
+  return isDevSurfaceAvailable();
+}
 
 type CharacteristicDeltaMap = Record<keyof WineCharacteristics, number>;
 type FlavorFamilyDeltaMap = Record<FlavorFamilyId, number>;

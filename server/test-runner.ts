@@ -9,14 +9,14 @@ export * from './test-runner-parser';
 
 export async function runVitestSuite(options: { target?: string } = {}): Promise<VitestRunSummary> {
   const targets = normalizeVitestTargets(options.target);
-  const args = ['test', '--', '--reporter=json'];
+  const args = ['vitest', 'run', '--reporter=json'];
   if (targets.length > 0) {
     args.push(...targets);
   }
 
-  const testProcess = spawn('npm', args, {
+  const testProcess = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', args, {
     cwd: process.cwd(),
-    shell: true,
+    shell: false,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, NODE_ENV: 'test' }
   });

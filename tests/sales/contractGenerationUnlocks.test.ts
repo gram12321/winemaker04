@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Customer } from '@/lib/types/types';
+import { getContractGenerationChance } from '@/lib/services/sales/contractGenerationService';
 
 const mocks = vi.hoisted(() => ({
   getAllCustomers: vi.fn(async (): Promise<Customer[]> => []),
@@ -17,11 +18,14 @@ vi.mock('@/lib/database/sales/contractDB', () => ({
   saveWineContract: vi.fn(async () => true),
 }));
 
-vi.mock('@/lib/services/core/gameState', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/services/core/gameState')>('@/lib/services/core/gameState');
+vi.mock('@/lib/services/core/gameState', () => {
   return {
-    ...actual,
     getCurrentPrestige: mocks.getCurrentPrestige,
+    getGameState: vi.fn(() => ({
+      week: 1,
+      season: 'Spring',
+      currentYear: 2026,
+    })),
   };
 });
 
@@ -29,6 +33,14 @@ vi.mock('@/lib/features/researchUpgrade/services/research/researchEnforcer', () 
   researchEnforcer: {
     getUnlockedItems: mocks.getUnlockedItems,
   },
+}));
+
+vi.mock('@/lib/features/researchUpgrade', () => ({
+  researchUpgradeFeature: {
+    unlocks: {
+      getUnlockedItems: mocks.getUnlockedItems
+    }
+  }
 }));
 
 function customer(type: Customer['customerType'], id: string): Customer {
@@ -61,8 +73,6 @@ describe('contract generation unlock filtering', () => {
   });
 
   it('keeps Wine Shop baseline unlocked and filters locked contract customer types', async () => {
-    const { getContractGenerationChance } = await import('@/lib/services/sales/contractGenerationService');
-
     const chance = await getContractGenerationChance();
 
     expect(chance.customerTypeBreakdown['Wine Shop'].total).toBe(1);
@@ -73,8 +83,6 @@ describe('contract generation unlock filtering', () => {
 
   it('includes newly unlocked customer contract channels from research', async () => {
     mocks.getUnlockedItems.mockResolvedValue(['restaurant', 'chain_store']);
-
-    const { getContractGenerationChance } = await import('@/lib/services/sales/contractGenerationService');
 
     const chance = await getContractGenerationChance();
 

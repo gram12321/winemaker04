@@ -10,7 +10,7 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 
 
@@ -38,7 +38,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   // Load unlocked grapes on mount
   useEffect(() => {
     const loadUnlockedGrapes = async () => {
-      const unlocked = await getResearchUpgradeFeature().unlocks.getUnlockedItems('grape');
+      const unlocked = await researchUpgradeFeature.unlocks.getUnlockedItems('grape');
       const unlockedGrapes = unlocked.filter(grape => 
         GRAPE_VARIETIES.includes(grape as GrapeVariety)
       ) as GrapeVariety[];

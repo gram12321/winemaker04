@@ -102,53 +102,33 @@ describe('calculateWage', () => {
     expect(Number.isInteger(wage)).toBe(true);
   });
 
-  it('handles minimum skills (all zeros)', () => {
-    const minSkills: StaffSkills = {
+  it.each([
+    ['minimum skills', {
       field: 0,
       winery: 0,
       maintenance: 0,
       administrationAndResearch: 0,
       sales: 0,
       financeAndStaff: 0
-    };
-
-    const wage = calculateWage(minSkills, []);
-
-    // Base: 500 + (0 * 1000) = 500
-    expect(wage).toBe(500);
-  });
-
-  it('handles maximum skills (all ones)', () => {
-    const maxSkills: StaffSkills = {
+    }, 500],
+    ['maximum skills', {
       field: 1.0,
       winery: 1.0,
       maintenance: 1.0,
       administrationAndResearch: 1.0,
       sales: 1.0,
       financeAndStaff: 1.0
-    };
-
-    const wage = calculateWage(maxSkills, []);
-
-    // Base: 500 + (1.0 * 1000) = 1500
-    expect(wage).toBe(1500);
-  });
-
-  it('calculates correct wage for mixed skill levels', () => {
-    const mixedSkills: StaffSkills = {
+    }, 1500],
+    ['mixed skills', {
       field: 0.8,
       winery: 0.6,
       maintenance: 0.6,
       administrationAndResearch: 0.4,
       sales: 0.7,
       financeAndStaff: 0.5
-    };
-
-    const wage = calculateWage(mixedSkills, []);
-
-    // Average: (0.8 + 0.6 + 0.4 + 0.7 + 0.5) / 5 = 3.0 / 5 = 0.6
-    // Base: 500 + (0.6 * 1000) = 500 + 600 = 1100
-    expect(wage).toBe(1100);
+    }, 1100],
+  ] as const)('%s skills have the expected base wage', (_label, skills, expected) => {
+    expect(calculateWage(skills, [])).toBe(expected);
   });
 
   it('handles multiple specializations correctly', () => {

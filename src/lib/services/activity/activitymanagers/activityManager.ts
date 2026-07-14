@@ -12,9 +12,8 @@ import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { releaseStorageAllocationPlan, releaseReservedStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import { completeEmptyStorageVesselActivity } from '@/lib/services/wine/winery/storageVesselMaintenanceService';
 import { formatNumber } from '@/lib/utils';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-import { getResearchPermanentEffects } from '@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService';
+import { loanLenderFeature } from '@/lib/features/loanLender';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 
 
@@ -165,7 +164,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
       typeof activity.params?.researchId === 'string';
 
     if (isResearchActivity) {
-      await getResearchUpgradeFeature().workflow.completeResearch(activity);
+      await researchUpgradeFeature.workflow.completeResearch(activity);
       return;
     }
 
@@ -187,11 +186,11 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   },
 
   [WorkCategory.LENDER_SEARCH]: async (activity: Activity) => {
-    await getLoanLenderFeature().workflow.completeLenderSearch(activity);
+      await loanLenderFeature.workflow.completeLenderSearch(activity);
   },
 
   [WorkCategory.TAKE_LOAN]: async (activity: Activity) => {
-    await getLoanLenderFeature().workflow.completeTakeLoan(activity);
+      await loanLenderFeature.workflow.completeTakeLoan(activity);
   },
 
   [WorkCategory.FINANCE_AND_STAFF]: async (activity: Activity) => {
@@ -505,7 +504,7 @@ export async function progressActivities(): Promise<void> {
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
-    const researchEffects = await getResearchPermanentEffects();
+    const researchEffects = await researchUpgradeFeature.effects.getPermanentEffects();
     const weather = createWeatherWeekContext(gameState);
     const season = gameState.season ?? 'Spring';
 
@@ -675,7 +674,9 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     const assignedStaffIds = activity.params.assignedStaffIds || [];
     const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
     const grapeVariety = activity.params.grape;
-    const researchEffects = isResearchActivity(activity) ? await getResearchPermanentEffects() : null;
+    const researchEffects = isResearchActivity(activity)
+      ? await researchUpgradeFeature.effects.getPermanentEffects()
+      : null;
     const staffContributionOptions = isResearchActivity(activity)
       ? { researchSkillMultiplier: researchEffects?.researchSkillMultiplier ?? 1 }
       : undefined;

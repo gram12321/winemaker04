@@ -2,29 +2,26 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { configureLoanLenderFeature } from '@/lib/features/loanLender';
-import { activeLoanLenderFeature } from '@/lib/features/loanLender/active';
-import { configureResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-import { activeResearchUpgradeFeature } from '@/lib/features/researchUpgrade/active';
-import { configureAdminFeature } from '@/lib/features/admin';
+import type { AdminFeature } from '@/lib/features/admin';
 
-configureLoanLenderFeature(activeLoanLenderFeature);
-configureResearchUpgradeFeature(activeResearchUpgradeFeature);
-const Root = import.meta.env.PROD ? (
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-) : (
-  <App />
-);
+function Root({ adminFeature }: { adminFeature: AdminFeature | null }) {
+  return import.meta.env.PROD ? (
+    <React.StrictMode>
+      <App adminFeature={adminFeature} />
+    </React.StrictMode>
+  ) : (
+    <App adminFeature={adminFeature} />
+  );
+}
 
 async function bootstrap(): Promise<void> {
-  if (import.meta.env.DEV) {
-    const { activeAdminFeature } = await import('@/lib/features/admin/active');
-    configureAdminFeature(activeAdminFeature);
-  }
+  const adminFeature = import.meta.env.DEV
+    ? (await import('@/lib/features/admin/feature')).adminFeature
+    : null;
 
-  ReactDOM.createRoot(document.getElementById('root')!).render(Root);
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <Root adminFeature={adminFeature} />
+  );
 }
 
 void bootstrap();

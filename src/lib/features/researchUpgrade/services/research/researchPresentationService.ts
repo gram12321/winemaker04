@@ -5,7 +5,6 @@ import {
   type ResearchUnlock,
   type UnlockType,
 } from '@/lib/constants/researchConstants';
-import { ALL_ACHIEVEMENTS } from '@/lib/constants/achievementConstants';
 import {
   CHAINED_RESEARCH_UNLOCK_TYPES,
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
@@ -268,11 +267,11 @@ export function getResearchGateChips(project: ResearchProject): ResearchGateChip
 
 export function getResearchRequirementDetails(
   project: ResearchProject,
-  allProjects: ResearchProject[]
+  allProjects: ResearchProject[],
+  getAchievementTitle: (achievementId: string) => string | undefined = () => undefined
 ): ResearchRequirementDetail[] {
   const details: ResearchRequirementDetail[] = [];
   const projectTitleById = new Map(allProjects.map((candidate) => [candidate.id, candidate.title]));
-  const achievementNameById = new Map(ALL_ACHIEVEMENTS.map((achievement) => [achievement.id, achievement.name]));
 
   if (typeof project.requiredPrestige === 'number' && project.requiredPrestige > 0) {
     details.push({
@@ -314,7 +313,7 @@ export function getResearchRequirementDetails(
     details.push({
       label: project.requiredAchievementIds.length === 1 ? 'Required Achievement' : 'Required Achievements',
       value: project.requiredAchievementIds
-        .map((id) => achievementNameById.get(id) || id)
+        .map((achievementId) => getAchievementTitle(achievementId) || achievementId)
         .join(', '),
     });
   }
@@ -484,7 +483,8 @@ export function getResearchDependencyMetadata(
 
 export function buildResearchPresentationRows(
   projects: ResearchProject[],
-  allProjects: ResearchProject[] = projects
+  allProjects: ResearchProject[] = projects,
+  getAchievementTitle: (achievementId: string) => string | undefined = () => undefined
 ): ResearchProjectPresentationRow[] {
   return projects.map(project => {
     const dependencyMetadata = getResearchDependencyMetadata(project, allProjects);
@@ -497,7 +497,7 @@ export function buildResearchPresentationRows(
       primaryImpact: getPrimaryResearchImpact(project),
       gateChips: getResearchGateChips(project),
       rewardDetails: getResearchRewardDetails(project),
-      requirementDetails: getResearchRequirementDetails(project, allProjects),
+      requirementDetails: getResearchRequirementDetails(project, allProjects, getAchievementTitle),
       prerequisiteLinks: dependencyMetadata.prerequisiteLinks,
       prerequisiteTitles: dependencyMetadata.prerequisiteTitles,
       unlocksNextLinks: dependencyMetadata.unlocksNextLinks,

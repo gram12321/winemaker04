@@ -1,6 +1,6 @@
 # Research System Unified Design + Handoff
 **Date:** 2026-05-25
-**Status:** Active living spec. Code-verified on 2026-05-25: core runtime, core UI, and major unlock enforcement are implemented; equipment, vineyard-technique, wine-feature enforcement, and deeper visibility/reveal rules remain active backlog.
+**Status:** Active living spec. Code-verified on 2026-07-14: core runtime, core UI, major unlock enforcement, foundation lanes, and permanent effects are implemented; equipment, vineyard-technique, wine-feature enforcement, balance calibration, and deeper visibility/reveal rules remain active backlog.
 
 ---
 

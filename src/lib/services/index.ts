@@ -11,15 +11,11 @@ export * from './user/highscoreService';
 export * from './user/userSettingsService';
 export * from './user/staffService';
 export * from './user/teamService';
-export * from './user/achievementService';
 export * from './user/wineLogService';
 
 // Finance services
 export * from './finance/economyService';
 export * from './finance/financeService';
-export * from '@/lib/features/loanLender/services/finance/creditRatingService';
-export * from '@/lib/features/loanLender/services/finance/lenderService';
-export * from '@/lib/features/loanLender/services/finance/loanService';
 export * from './finance/wageService';
 
 
@@ -72,9 +68,6 @@ export * from './wine/winery/storageVesselMaintenanceService';
 
 // Prestige services
 export * from './prestige/prestigeService';
-
-// Research services
-export * from '@/lib/features/researchUpgrade/services/research/researchEnforcer';
 
 // Activity system
 export * from './activity';

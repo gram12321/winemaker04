@@ -95,12 +95,12 @@ export const loadWineLog = async (): Promise<WineLogEntry[]> => {
   }
 };
 
-export const loadWineLogByVineyard = async (vineyardId: string): Promise<WineLogEntry[]> => {
+export const loadWineLogByVineyard = async (vineyardId: string, companyId?: string): Promise<WineLogEntry[]> => {
   try {
     const { data, error } = await supabase
       .from(WINE_LOG_TABLE)
       .select('*')
-      .eq('company_id', getCurrentCompanyId())
+      .eq('company_id', companyId || getCurrentCompanyId())
       .eq('vineyard_id', vineyardId)
       .order('bottled_year', { ascending: false })
       .order('bottled_season', { ascending: false })
@@ -118,7 +118,7 @@ export const loadWineLogByVineyard = async (vineyardId: string): Promise<WineLog
  * Get wine production summary for achievement context
  * OPTIMIZATION: Lightweight query for achievement calculations
  */
-export const getWineProductionSummary = async (): Promise<{
+export const getWineProductionSummary = async (companyId?: string): Promise<{
   totalWinesProduced: number;
   totalBottlesProduced: number;
 }> => {
@@ -126,7 +126,7 @@ export const getWineProductionSummary = async (): Promise<{
     const { data, error } = await supabase
       .from(WINE_LOG_TABLE)
       .select('quantity')
-      .eq('company_id', getCurrentCompanyId());
+      .eq('company_id', companyId || getCurrentCompanyId());
 
     if (error) throw error;
 

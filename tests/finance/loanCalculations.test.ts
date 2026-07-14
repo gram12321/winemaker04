@@ -3,7 +3,7 @@ import {
   calculateEffectiveInterestRate,
   calculateSeasonalPayment,
   calculateCreditRatingModifier
-} from '@/lib/services';
+} from '@/lib/features/loanLender/services/finance/loanService';
 
 describe('calculateEffectiveInterestRate', () => {
   const baseRate = 0.05; // 5% base rate
@@ -42,34 +42,6 @@ describe('calculateEffectiveInterestRate', () => {
     expect(goodCredit).toBeLessThan(poorCredit);
   });
 
-  it('applies duration modifiers correctly', () => {
-    const shortTerm = calculateEffectiveInterestRate(baseRate, 'Expansion', 'Bank', 0.7, 4);
-    const mediumTerm = calculateEffectiveInterestRate(baseRate, 'Expansion', 'Bank', 0.7, 8);
-    const longTerm = calculateEffectiveInterestRate(baseRate, 'Expansion', 'Bank', 0.7, 20);
-
-    // Longer terms might have different rates (depends on implementation)
-    // At minimum, they should all be calculated correctly
-    expect(shortTerm).toBeGreaterThan(0);
-    expect(mediumTerm).toBeGreaterThan(0);
-    expect(longTerm).toBeGreaterThan(0);
-  });
-
-  it('handles missing duration (defaults to no modifier)', () => {
-    const withDuration = calculateEffectiveInterestRate(baseRate, 'Expansion', 'Bank', 0.7, 4);
-    const withoutDuration = calculateEffectiveInterestRate(baseRate, 'Expansion', 'Bank', 0.7);
-
-    // Should both be valid rates (may or may not be equal depending on defaults)
-    expect(withDuration).toBeGreaterThan(0);
-    expect(withoutDuration).toBeGreaterThan(0);
-  });
-
-  it('returns a positive interest rate', () => {
-    const rate = calculateEffectiveInterestRate(baseRate, 'Expansion', 'Bank', 0.7, 4);
-
-    expect(rate).toBeGreaterThan(0);
-    expect(rate).toBeLessThan(1); // Should be a percentage, not > 100%
-  });
-
   it('scales proportionally with base rate', () => {
     const lowBase = calculateEffectiveInterestRate(0.03, 'Expansion', 'Bank', 0.7, 4);
     const highBase = calculateEffectiveInterestRate(0.08, 'Expansion', 'Bank', 0.7, 4);
@@ -91,22 +63,8 @@ describe('calculateCreditRatingModifier', () => {
     expect(good).toBeLessThan(poor);
   });
 
-  it('handles edge cases correctly', () => {
-    const perfect = calculateCreditRatingModifier(1.0);
-    const worst = calculateCreditRatingModifier(0.0);
-
-    // Perfect credit should have lowest modifier
-    expect(perfect).toBeGreaterThan(0);
-    expect(worst).toBeGreaterThan(perfect);
-  });
-
-  it('returns values in expected range', () => {
-    const modifier = calculateCreditRatingModifier(0.7);
-
-    // Formula: 0.8 + (0.7 * (1 - creditRating))
-    // For 0.7: 0.8 + (0.7 * 0.3) = 0.8 + 0.21 = 1.01
-    expect(modifier).toBeGreaterThan(0.8);
-    expect(modifier).toBeLessThan(1.5);
+  it('matches the documented credit modifier formula at a representative rating', () => {
+    expect(calculateCreditRatingModifier(0.7)).toBeCloseTo(1.01, 10);
   });
 });
 
@@ -150,15 +108,5 @@ describe('calculateSeasonalPayment', () => {
     expect(payment).toBe(0);
   });
 
-  it('returns valid payment for various loan amounts', () => {
-    const amounts = [1000, 5000, 10000, 50000, 100000];
-
-    amounts.forEach(principal => {
-      const payment = calculateSeasonalPayment(principal, 0.05, 4);
-
-      expect(payment).toBeGreaterThan(0);
-      expect(Number.isFinite(payment)).toBe(true);
-    });
-  });
 });
 

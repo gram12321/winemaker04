@@ -73,12 +73,12 @@ export const insertTransaction = (transactionData: TransactionData) => recordCom
 
 export const insertTransactionWithFundsCheck = (transactionData: TransactionData) => recordCompanyTransaction(transactionData, true);
 
-export const loadTransactions = async (): Promise<Transaction[]> => {
+export const loadTransactions = async (companyId?: string): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .select('*')
-      .eq('company_id', getCurrentCompanyId());
+      .eq('company_id', companyId || getCurrentCompanyId());
 
     if (error) throw error;
     

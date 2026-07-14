@@ -32,12 +32,11 @@ export interface AdminCheatOps {
   recreateBuyGrapeMarketOffers(): Promise<void>;
 }
 
-export interface AdminStaffOps {
+export interface AdminStaffXpOps {
   setStaffXP(staffId: string, category: string, amount: number): Promise<{ success: boolean; message?: string; error?: string }>;
-  addStaffXP(staffId: string, category: string, amount: number): Promise<{ success: boolean; message?: string; error?: string }>;
 }
 
-export type AdminTestLabOperations = AdminCheatOps & Pick<AdminStaffOps, 'setStaffXP'>;
+export type AdminTestLabOperations = AdminCheatOps & AdminStaffXpOps;
 
 export interface AdminTestLabDynamicOptions {
   vineyards: Vineyard[];
@@ -54,7 +53,6 @@ export interface AdminTestLab {
 export interface AdminDashboardDependencies {
   database: AdminDatabaseOps;
   cheats: AdminCheatOps;
-  staff: AdminStaffOps;
   testLab: AdminTestLab;
   renderResearchInspector: () => ReactElement;
 }

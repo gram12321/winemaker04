@@ -5,7 +5,7 @@ import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNor
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
-import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
+import { upsertPrestigeEventBySource, insertPrestigeEvent, insertPrestigeEventIfAbsentBySource, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
 import { getMaxLandValue } from '../wine/winescore/landValueModifierCalculation';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import { calculateCompanyValue } from '../finance/financeService';
@@ -833,7 +833,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
   const fallbackTitle = event.description || fallbackTitleBase;
 
   if (event.metadata) {
-    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    const metadata: any = event.metadata ?? {};
 
     if (event.type === 'company_story') {
       return {
@@ -948,15 +948,8 @@ export function getEventDisplayData(event: PrestigeEvent): {
       };
     }
 
-    if (
-      event.type === 'achievement' &&
-      (
-        (typeof metadata.category === 'string' && metadata.category.toLowerCase() === 'research') ||
-        metadata.projectId ||
-        metadata.projectTitle
-      )
-    ) {
-      const projectTitle = metadata.projectTitle || metadata.projectId || 'Research Project';
+    if (event.type === 'research' && metadata.projectId && metadata.projectTitle) {
+      const projectTitle = metadata.projectTitle;
       return {
         title: `Research Completed: ${projectTitle}`,
         titleBase: 'Research Milestone',
@@ -1041,7 +1034,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
   // Handle penalty events (including dividend changes)
   if (event.type === 'penalty' && event.metadata) {
-    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    const metadata: any = event.metadata ?? {};
     
     // Dividend change events
     if (metadata.event === 'dividend_change') {
@@ -1073,7 +1066,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
   // Handle penalty events (including dividend changes)
   if (event.type === 'penalty' && event.metadata) {
-    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    const metadata: any = event.metadata ?? {};
     
     // Dividend change events
     if (metadata.event === 'dividend_change') {
@@ -1105,7 +1098,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
   // Handle other event types with fallback display
   if (event.type === 'admin_cheat' && event.metadata) {
-    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    const metadata: any = event.metadata ?? {};
     return {
       title: metadata.reason || 'Admin Prestige Grant',
       titleBase: 'Admin Prestige',
@@ -1119,10 +1112,6 @@ export function getEventDisplayData(event: PrestigeEvent): {
       titleBase: event.type,
       amountText: `${event.amount >= 0 ? '+' : ''}${event.amount.toFixed(2)} prestige`,
     };
-  }
-
-  if (event.type === 'achievement' || event.type === 'vineyard_achievement') {
-    console.warn(`Prestige event ${event.id} (${event.type}) is missing metadata; using fallback display.`);
   }
 
   return {
@@ -1314,17 +1303,16 @@ export async function addResearchPrestigeEvent(
 ): Promise<void> {
   const gameState = getGameState();
 
-  await insertPrestigeEvent({
+  await insertPrestigeEventIfAbsentBySource({
     id: uuidv4(),
-    type: 'achievement',
+    type: 'research',
     amount_base: prestigeAmount,
     created_game_week: calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!),
     decay_rate: 0.98,  // Slow decay - research achievements last longer
-    source_id: `research_${projectId}`,
+    source_id: `research:${projectId}`,
     payload: {
       projectTitle,
       projectId,
-      category: 'research',
       description: `Completed research: ${projectTitle}`
     },
   });

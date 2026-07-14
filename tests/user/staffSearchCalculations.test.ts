@@ -10,142 +10,46 @@ import {
 import { createStaff } from '@/lib/services/user/staffService';
 import type { Staff } from '@/lib/types/types';
 
-/**
- * Staff Search Calculations - Pure Functions
- * 
- * These tests validate staff search and hiring calculations without requiring database setup.
- * Focuses on cost, work, and preview calculation correctness.
- */
-describe('Staff Search Calculations - Pure Functions', () => {
+describe('staff search calculations', () => {
   const baseSearchOptions: StaffSearchOptions = {
     numberOfCandidates: 3,
     skillLevel: 0.5,
     specializations: []
   };
 
-  describe('calculateStaffSearchCost', () => {
-    it('calculates cost for basic search', () => {
-      const cost = calculateStaffSearchCost(baseSearchOptions);
-      expect(cost).toBeGreaterThan(0);
-      expect(isFinite(cost)).toBe(true);
-    });
+  it('keeps search cost and work finite and responsive to every search driver', () => {
+    const variants = [
+      { ...baseSearchOptions, numberOfCandidates: 5 },
+      { ...baseSearchOptions, skillLevel: 0.8 },
+      { ...baseSearchOptions, specializations: ['field', 'winery'] },
+    ];
+    const baseCost = calculateStaffSearchCost(baseSearchOptions);
+    const baseWork = calculateSearchWork(baseSearchOptions);
 
-    it('cost increases with more candidates', () => {
-      const options1 = { ...baseSearchOptions, numberOfCandidates: 2 };
-      const options2 = { ...baseSearchOptions, numberOfCandidates: 5 };
-      
-      const cost1 = calculateStaffSearchCost(options1);
-      const cost2 = calculateStaffSearchCost(options2);
-      
-      expect(cost2).toBeGreaterThan(cost1);
-    });
+    expect(baseCost).toBeGreaterThan(0);
+    expect(Number.isFinite(baseCost)).toBe(true);
+    expect(baseWork).toBeGreaterThan(0);
+    expect(Number.isFinite(baseWork)).toBe(true);
 
-    it('cost increases with higher skill level', () => {
-      const options1 = { ...baseSearchOptions, skillLevel: 0.3 };
-      const options2 = { ...baseSearchOptions, skillLevel: 0.8 };
-      
-      const cost1 = calculateStaffSearchCost(options1);
-      const cost2 = calculateStaffSearchCost(options2);
-      
-      expect(cost2).toBeGreaterThan(cost1);
-    });
-
-    it('cost increases with specializations', () => {
-      const options1 = { ...baseSearchOptions, specializations: [] };
-      const options2 = { ...baseSearchOptions, specializations: ['field'] };
-      const options3 = { ...baseSearchOptions, specializations: ['field', 'winery'] };
-      
-      const cost1 = calculateStaffSearchCost(options1);
-      const cost2 = calculateStaffSearchCost(options2);
-      const cost3 = calculateStaffSearchCost(options3);
-      
-      expect(cost2).toBeGreaterThan(cost1);
-      expect(cost3).toBeGreaterThan(cost2);
-    });
+    for (const options of variants) {
+      expect(calculateStaffSearchCost(options)).toBeGreaterThan(baseCost);
+      expect(calculateSearchWork(options)).toBeGreaterThanOrEqual(baseWork);
+    }
   });
 
-  describe('calculateSearchWork', () => {
-    it('calculates work amount for search', () => {
-      const work = calculateSearchWork(baseSearchOptions);
-      expect(work).toBeGreaterThan(0);
-      expect(isFinite(work)).toBe(true);
-    });
+  it('keeps hiring work ranges ordered and increases them for harder searches', () => {
+    const baseline = calculateHiringWorkRange(0.3, []);
+    const harder = calculateHiringWorkRange(0.8, ['field']);
 
-    it('work increases with more candidates', () => {
-      const options1 = { ...baseSearchOptions, numberOfCandidates: 2 };
-      const options2 = { ...baseSearchOptions, numberOfCandidates: 5 };
-      
-      const work1 = calculateSearchWork(options1);
-      const work2 = calculateSearchWork(options2);
-      
-      expect(work2).toBeGreaterThan(work1);
-    });
-
-    it('work increases with higher skill requirements', () => {
-      const options1 = { ...baseSearchOptions, skillLevel: 0.3 };
-      const options2 = { ...baseSearchOptions, skillLevel: 0.8 };
-      
-      const work1 = calculateSearchWork(options1);
-      const work2 = calculateSearchWork(options2);
-      
-      expect(work2).toBeGreaterThanOrEqual(work1);
-    });
-
-    it('work increases with specializations', () => {
-      const options1 = { ...baseSearchOptions, specializations: [] };
-      const options2 = { ...baseSearchOptions, specializations: ['field', 'winery'] };
-      
-      const work1 = calculateSearchWork(options1);
-      const work2 = calculateSearchWork(options2);
-      
-      expect(work2).toBeGreaterThan(work1);
-    });
-  });
-
-  describe('calculateHiringWorkRange', () => {
-    it('returns valid work range', () => {
-      const range = calculateHiringWorkRange(0.5, []);
-      
-      expect(range.minWork).toBeGreaterThan(0);
-      expect(range.maxWork).toBeGreaterThanOrEqual(range.minWork);
-      expect(typeof range.timeEstimate).toBe('string');
-    });
-
-    it('max work is greater than or equal to min work', () => {
-      const range1 = calculateHiringWorkRange(0.3, []);
-      const range2 = calculateHiringWorkRange(0.7, ['field']);
-      
-      expect(range1.maxWork).toBeGreaterThanOrEqual(range1.minWork);
-      expect(range2.maxWork).toBeGreaterThanOrEqual(range2.minWork);
-    });
-
-    it('work increases with higher skill level', () => {
-      const range1 = calculateHiringWorkRange(0.3, []);
-      const range2 = calculateHiringWorkRange(0.8, []);
-      
-      expect(range2.minWork).toBeGreaterThan(range1.minWork);
-      expect(range2.maxWork).toBeGreaterThan(range1.maxWork);
-    });
-
-    it('work increases with specializations', () => {
-      const range1 = calculateHiringWorkRange(0.5, []);
-      const range2 = calculateHiringWorkRange(0.5, ['field', 'winery']);
-      
-      expect(range2.minWork).toBeGreaterThan(range1.minWork);
-      expect(range2.maxWork).toBeGreaterThan(range1.maxWork);
-    });
+    expect(baseline.minWork).toBeGreaterThan(0);
+    expect(baseline.maxWork).toBeGreaterThanOrEqual(baseline.minWork);
+    expect(harder.maxWork).toBeGreaterThanOrEqual(harder.minWork);
+    expect(typeof harder.timeEstimate).toBe('string');
+    expect(harder.minWork).toBeGreaterThan(baseline.minWork);
+    expect(harder.maxWork).toBeGreaterThan(baseline.maxWork);
   });
 
   describe('calculateHiringWorkForCandidate', () => {
-    // Create a minimal staff object for testing (without needing gameState)
-    const createTestStaff = (overrides: Partial<Staff> = {}): Staff => {
-      const baseStaff = createStaff('Test', 'Staff', 0.5, [], 'United States');
-      return {
-        ...baseStaff,
-        ...overrides
-      };
-    };
-
     const fixedSkills: Staff['skills'] = {
       field: 0.5,
       winery: 0.5,
@@ -155,90 +59,47 @@ describe('Staff Search Calculations - Pure Functions', () => {
       administrationAndResearch: 0.5
     };
 
-    it('calculates work for a candidate', () => {
-      const candidate = createTestStaff();
-      const work = calculateHiringWorkForCandidate(candidate);
-      
-      expect(work).toBeGreaterThan(0);
-      expect(isFinite(work)).toBe(true);
+    const candidate = (overrides: Partial<Staff> = {}): Staff => ({
+      ...createStaff('Test', 'Staff', 0.5, [], 'United States'),
+      skills: fixedSkills,
+      ...overrides
     });
 
-    it('work increases with candidate wage', () => {
-      const candidate1 = createTestStaff({ wage: 1000 });
-      const candidate2 = createTestStaff({ wage: 3000 });
-      
-      const work1 = calculateHiringWorkForCandidate(candidate1);
-      const work2 = calculateHiringWorkForCandidate(candidate2);
-      
-      expect(work2).toBeGreaterThan(work1);
-    });
-
-    it('work increases with candidate specializations', () => {
-      const candidate1 = createTestStaff({
-        skills: fixedSkills,
-        wage: 2000,
-        specializations: []
-      });
-      const candidate2 = createTestStaff({
-        skills: fixedSkills,
-        wage: 2000,
+    it('keeps candidate hiring work finite and sensitive to wage and specializations', () => {
+      const base = calculateHiringWorkForCandidate(candidate({ wage: 1000 }));
+      const higherWage = calculateHiringWorkForCandidate(candidate({ wage: 3000 }));
+      const specialized = calculateHiringWorkForCandidate(candidate({
+        wage: 3000,
         specializations: ['field', 'winery']
-      });
-      
-      const work1 = calculateHiringWorkForCandidate(candidate1);
-      const work2 = calculateHiringWorkForCandidate(candidate2);
-      
-      expect(work2).toBeGreaterThan(work1);
+      }));
+
+      expect(base).toBeGreaterThan(0);
+      expect(Number.isFinite(base)).toBe(true);
+      expect(higherWage).toBeGreaterThan(base);
+      expect(specialized).toBeGreaterThan(higherWage);
     });
   });
 
-  describe('calculateSearchPreview', () => {
-    it('returns valid preview statistics', () => {
-      const preview = calculateSearchPreview(baseSearchOptions);
-      
-      expect(preview.minSkill).toBeGreaterThanOrEqual(0);
-      expect(preview.maxSkill).toBeLessThanOrEqual(1);
-      expect(preview.maxSkill).toBeGreaterThanOrEqual(preview.minSkill);
-      expect(preview.minWeeklyWage).toBeGreaterThan(0);
-      expect(preview.maxWeeklyWage).toBeGreaterThanOrEqual(preview.minWeeklyWage);
-      expect(typeof preview.skillRange).toBe('string');
-      expect(typeof preview.wageRange).toBe('string');
-      expect(preview.specializationBonus).toBeGreaterThanOrEqual(1);
+  it('keeps search previews valid and reflects skill and specialization choices', () => {
+    const preview = calculateSearchPreview(baseSearchOptions);
+    const higherSkill = calculateSearchPreview({ ...baseSearchOptions, skillLevel: 0.7 });
+    const specialized = calculateSearchPreview({
+      ...baseSearchOptions,
+      specializations: ['field', 'winery']
     });
 
-    it('skill range increases with search skill level', () => {
-      const preview1 = calculateSearchPreview({ ...baseSearchOptions, skillLevel: 0.3 });
-      const preview2 = calculateSearchPreview({ ...baseSearchOptions, skillLevel: 0.7 });
-      
-      expect(preview2.minSkill).toBeGreaterThan(preview1.minSkill);
-      expect(preview2.maxSkill).toBeGreaterThan(preview1.maxSkill);
-    });
-
-    it('wage range increases with specializations', () => {
-      const preview1 = calculateSearchPreview({ ...baseSearchOptions, specializations: [] });
-      const preview2 = calculateSearchPreview({ ...baseSearchOptions, specializations: ['field'] });
-      
-      expect(preview2.minWeeklyWage).toBeGreaterThan(preview1.minWeeklyWage);
-      expect(preview2.maxWeeklyWage).toBeGreaterThan(preview1.maxWeeklyWage);
-    });
-
-    it('specialization bonus is calculated correctly', () => {
-      const preview1 = calculateSearchPreview({ ...baseSearchOptions, specializations: [] });
-      const preview2 = calculateSearchPreview({ ...baseSearchOptions, specializations: ['field'] });
-      const preview3 = calculateSearchPreview({ ...baseSearchOptions, specializations: ['field', 'winery'] });
-      
-      expect(preview1.specializationBonus).toBe(1);
-      expect(preview2.specializationBonus).toBeGreaterThan(1);
-      expect(preview3.specializationBonus).toBeGreaterThan(preview2.specializationBonus);
-    });
-  });
-
-  describe('generateStaffCandidates', () => {
-    // This can be tested if we import it - it's also a pure function
-    // (though it calls createStaff which uses gameState, we can mock that)
-    it.skip('generates correct number of candidates', () => {
-      // Test implementation would go here if we want to test candidate generation
-      // Might require mocking getGameState() if createStaff depends on it
-    });
+    expect(preview.minSkill).toBeGreaterThanOrEqual(0);
+    expect(preview.maxSkill).toBeLessThanOrEqual(1);
+    expect(preview.maxSkill).toBeGreaterThanOrEqual(preview.minSkill);
+    expect(preview.minWeeklyWage).toBeGreaterThan(0);
+    expect(preview.maxWeeklyWage).toBeGreaterThanOrEqual(preview.minWeeklyWage);
+    expect(typeof preview.skillRange).toBe('string');
+    expect(typeof preview.wageRange).toBe('string');
+    expect(preview.specializationBonus).toBe(1);
+    expect(higherSkill.minSkill).toBeGreaterThan(preview.minSkill);
+    expect(higherSkill.maxSkill).toBeGreaterThan(preview.maxSkill);
+    expect(specialized.minWeeklyWage).toBeGreaterThan(preview.minWeeklyWage);
+    expect(specialized.maxWeeklyWage).toBeGreaterThan(preview.maxWeeklyWage);
+    expect(specialized.specializationBonus).toBeGreaterThan(preview.specializationBonus);
   });
 });

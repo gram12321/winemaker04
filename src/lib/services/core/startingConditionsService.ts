@@ -14,8 +14,8 @@ import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { loanLenderFeature } from '@/lib/features/loanLender';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createStartingVineyard } from '@/lib/database/activities/vineyardDB';
 
 // Preview vineyard type (not yet saved to database)
@@ -390,7 +390,7 @@ export async function applyStartingConditions(
           gameDate.year
         );
 
-        await getResearchUpgradeFeature().setup.grantStartingGrapeUnlock({
+        await researchUpgradeFeature.setup.grantStartingGrapeUnlock({
           companyId,
           grape: condition.startingUnlockedGrape,
           countryId: condition.id,
@@ -419,7 +419,7 @@ export async function applyStartingConditions(
         );
 
         for (const researchId of condition.startingResearch) {
-          await getResearchUpgradeFeature().setup.grantResearchUnlock({
+        await researchUpgradeFeature.setup.grantResearchUnlock({
             researchId,
             companyId,
             gameDate,
@@ -458,7 +458,7 @@ interface StartingLoanResult {
 
 async function applyStartingLoan(config: StartingLoanConfig): Promise<StartingLoanResult> {
   try {
-    const loanId = await getLoanLenderFeature().setup.applyStartingLoan(config);
+    const loanId = await loanLenderFeature.setup.applyStartingLoan(config);
     return { success: true, loanId };
   } catch (error) {
     console.error('Error applying starting loan:', error);

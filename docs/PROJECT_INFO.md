@@ -30,16 +30,19 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Finance/founders | `services/finance/`, `services/user/staffService.ts` | finance views, `FounderPanel.tsx` | transactions, staff founder field, finance/staff constants |
 | Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases and constants |
 | Research | `features/researchUpgrade/`, research constants | `Research.tsx`, admin inspector | research unlock database and view services |
-| Prestige/achievements | `services/prestige/`, user services | prestige, achievements, highscores | prestige event, achievement, highscore databases |
+| Prestige | `services/prestige/` | prestige UI | prestige-event database |
+| Achievements | `features/achievements/` | feature-owned achievement workspace | achievement database adapter |
 
 ## Feature Seams
 
 | Feature | State |
 |---|---|
-| `loanLender` | Active; owns loan/lender services, UI, and activities. |
-| `researchUpgrade` | Active; owns research integration, selectors/view models, and admin inspector. |
-| `admin` | Dev-only compatible-Winemaker slice; host seam exposes availability and page rendering while commands/Test Lab collaborators remain internal. |
-| `boardShare` | No-op by default; public-company/share runtime is not wired. |
+| `loanLender` | Installed feature facade; `loanLenderFeature` owns loan/lender services, UI, activities, and public read/workflow hooks. |
+| `achievements` | Installed feature facade; `achievementsFeature` owns game-specific definitions, company-snapshot evaluation, company-keyed cadence, read models, and the achievement workspace. Core ticks, Research gates, and App routing use its public interface; database adapters and migrations enforce one current-shape unlock/reward per achievement scope so retries and overlapping checks are safe. Vineyard grape-tenure achievements are deferred pending persisted change history. |
+| `researchUpgrade` | Installed feature facade; `researchUpgradeFeature` owns gameplay research integration, selectors/view models, effects, and player UI rendering. Its named `adminIntegration` entry point owns the Admin-only inspector and commands. |
+| `admin` | Development-only compatible-Winemaker slice; `main.tsx` dynamically loads `adminFeature` and passes it explicitly into `App`. |
+| `boardShare` | Installed but intentionally inactive facade; `boardShareFeature` retains the isolated contract while public-company/share gameplay is deferred and is not wired into host behavior. |
+| `weather` | Always-on functional module; its barrel exports weather resolution, operation, market, vineyard, and presentation capabilities. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
 
 ## Boundary Rules
@@ -57,7 +60,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 - Weather is persisted weekly state/forecast plus shared bounded vineyard projection and grape-market context; the feature facade also supplies presentation models.
 - Buy Market persists generic offers and registers Grape Procurement and Storage Vessels adapters for purchase and lifecycle dispatch. One modal shell hosts their domain panels; both use domain-scoped suppliers, relationships, and shared price/scaling mechanics. Cask suppliers rotate 250 L, 500 L, and 1,000 L offers with normalized quality. Empty Vessel is a cancellable winery Maintenance activity that removes the selected vessel's filled volume, reduces the linked batch, and releases only that vessel on completion. Vessel quality effects remain intentionally deferred.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Equipment and vineyard-technique tracks remain future work.
-- Founder economy is active and intentionally smaller than the archived public-company/share design.
+- Founder economy is active and intentionally smaller than the archived public-company/share design; the isolated Board Share facade remains intentionally inactive and does not participate in host wiring.
 - Completed implementation records live under `docs/superpowers/completed/`; active planning documents remain under `specs/` and `plans/`.
 
 ## Test and Documentation Map

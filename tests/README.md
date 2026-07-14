@@ -20,8 +20,13 @@ Vitest discovers files matching `tests/**/*.test.ts`. Prefer the live CLI summar
 
 ```bash
 npm test
+npm run test:full
 npm run test:watch
+npm run test:watch:full
 ```
+
+`npm test` and `npm run test:full` run the deterministic automated suite. The
+Admin Test Lab uses the complete suite through its development-only endpoint.
 
 Targeted runs are useful while developing:
 
@@ -30,9 +35,11 @@ npm test -- tests/admin/testRunnerParser.test.ts
 npm test -- tests/wine/tasteQualityIndexService.test.ts
 ```
 
-The Admin UI also exposes these same automated tests through the development-only `/api/test-run` endpoint using Vitest's JSON reporter. The CLI remains the source of truth.
+The Admin UI exposes the complete automated suite through the development-only
+`/api/test-run` endpoint using Vitest's JSON reporter. The CLI remains the source
+of truth.
 
-Current known caveat from the 2026-05-25 documentation audit: the full suite has two active failing expectations in `tests/user/researchPanelVisibility.test.ts`, both tied to the research UI visibility backlog.
+The full suite currently has no known failing expectations.
 
 ## Conventions
 
@@ -43,16 +50,13 @@ Current known caveat from the 2026-05-25 documentation audit: the full suite has
 - Admin Test Lab fixture helpers run against the active company by design and must tag created fixture data with durable `testlab_...` run ids where records can be tagged.
 - Do not write new tests that depend on React component state as the only cleanup record.
 
-## Integration Tests
+## Database Smoke Tests
 
-Some `tests/user/` workflows exercise Supabase-backed services. They require the normal local Supabase environment variables and should be treated as integration tests even though they run under the same Vitest command.
-
-When adding a new mutating integration test:
-
-- create unique names or ids;
-- clean up records in dependency order;
-- avoid sharing state with a developer's active company;
-- document any required environment variables in the test file.
+Automated tests mock database seams. Live database smoke tests are intentionally
+not part of the npm test suite because they require a dedicated, reachable
+Supabase environment and cleanup-safe test data. If one is added in the future,
+keep it in an explicitly named, opt-in command with isolated records and
+dependency-ordered cleanup.
 
 ## Admin UI Test Systems
 

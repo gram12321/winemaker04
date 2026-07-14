@@ -4,7 +4,13 @@ import {
   calculateResearchCost,
   getResearchProjectWithCalculations
 } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
-import { RESEARCH_PROJECTS, RESEARCH_PROJECT_ECONOMICS } from '@/lib/constants/researchConstants';
+import {
+  RESEARCH_PROJECTS,
+  RESEARCH_PROJECT_ECONOMICS,
+  getResearchProject
+} from '@/lib/constants/researchConstants';
+import { GRAPE_VARIETIES } from '@/lib/types/types';
+import { calculateGrapeDifficulty } from '@/lib/services/wine/features/grapeDifficulty';
 
 /**
  * Research Calculation Tests - Pure Functions
@@ -184,6 +190,26 @@ describe('Research Calculations - Pure Functions', () => {
         // Can calculate work and cost
         expect(() => calculateResearchWork(project.id)).not.toThrow();
         expect(() => calculateResearchCost(project.id)).not.toThrow();
+      }
+    });
+
+    it('keeps grape difficulty aligned with the corresponding research demands', () => {
+      const rows = GRAPE_VARIETIES.map(grape => {
+        const project = getResearchProject(`agri_${grape.toLowerCase().replace(/\s+/g, '_')}`);
+        expect(project, `Missing grape research project for ${grape}`).toBeDefined();
+
+        return {
+          score: Number(calculateGrapeDifficulty(grape).score.toFixed(3)),
+          complexity: project!.complexity,
+          work: calculateResearchWork(project!.id).totalWork,
+          cost: calculateResearchCost(project!.id),
+        };
+      }).sort((left, right) => left.score - right.score);
+
+      for (let index = 1; index < rows.length; index += 1) {
+        expect(rows[index].complexity).toBeGreaterThanOrEqual(rows[index - 1].complexity);
+        expect(rows[index].work).toBeGreaterThanOrEqual(rows[index - 1].work);
+        expect(rows[index].cost).toBeGreaterThanOrEqual(rows[index - 1].cost);
       }
     });
 

@@ -8,7 +8,7 @@ import type { Season } from '@/lib/types/types';
 import { setPlayerBalance } from '@/lib/services/user/userBalanceService';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 import { companyService } from '@/lib/services/user/companyService';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import { awardExperience, getAllStaff } from '@/lib/services/user/staffService';
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
@@ -53,44 +53,6 @@ export async function adminSetStaffXP(
     };
   }
 }
-
-/**
- * Admin function to add XP to a staff member (doesn't replace, adds to current)
- * @param staffId - ID of the staff member
- * @param category - XP category (e.g., 'skill:field', 'grape:Chardonnay')
- * @param amount - Amount of XP to add
- */
-export async function adminAddStaffXP(
-  staffId: string,
-  category: string,
-  amount: number
-): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    const allStaff = await getAllStaff();
-    const staff = allStaff.find(s => s.id === staffId);
-
-    if (!staff) {
-      return {
-        success: false,
-        error: 'Staff member not found'
-      };
-    }
-
-    await awardExperience(staffId, amount, [category]);
-
-    return {
-      success: true,
-      message: `Added ${amount} XP to ${category} for ${staff.name}`
-    };
-  } catch (error) {
-    console.error('Error adding staff XP:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
-
 
 /**
  * Set gold/money for the active company
@@ -577,14 +539,14 @@ export async function adminSetGameDate({ week, season, year }: AdminGameDatePayl
  * Grant all research projects to the active company
  */
 export async function adminGrantAllResearch(): Promise<{ success: boolean; unlocked: number; alreadyUnlocked: number }> {
-  return getResearchUpgradeFeature().admin.grantAllResearch();
+  return researchUpgradeAdminIntegration.grantAllResearch();
 }
 
 /**
  * Remove all research unlocks from the active company
  */
 export async function adminRemoveAllResearch(): Promise<{ success: boolean; removed: number }> {
-  return getResearchUpgradeFeature().admin.removeAllResearch();
+  return researchUpgradeAdminIntegration.removeAllResearch();
 }
 
 /**

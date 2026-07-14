@@ -70,9 +70,6 @@ const mocks = vi.hoisted(() => {
     bulkUpdateWineBatches: vi.fn(async () => true),
     applyFeatureEffectsToBatch: vi.fn(batch => batch),
     applyFeatureLayerAnchors: vi.fn((_batch, anchors) => anchors),
-    boardWeekAdvanced: vi.fn(async () => undefined),
-    boardSeasonStart: vi.fn(async () => undefined),
-    boardYearStart: vi.fn(async () => undefined),
     processSeasonalLoanPayments: vi.fn(async () => undefined),
     enforceEmergencyQuickLoanIfNeeded: vi.fn(async () => undefined),
     restructureForcedLoansIfNeeded: vi.fn(async () => undefined),
@@ -92,6 +89,14 @@ vi.mock('@/lib/features/weather', () => ({
   resolveSeasonalWeatherForecast: mocks.resolveSeasonalWeatherForecast,
 }));
 
+vi.mock('@/lib/features/achievements', () => ({
+  achievementsFeature: {
+    ticks: {
+      checkAfterWeekAdvance: mocks.checkAllAchievements,
+    },
+  },
+}));
+
 vi.mock('@/lib/services', () => ({
   getGameState: mocks.getGameState,
   updateGameState: mocks.updateGameState,
@@ -102,7 +107,6 @@ vi.mock('@/lib/services', () => ({
   checkAndTriggerBookkeeping: mocks.checkAndTriggerBookkeeping,
   processEconomyPhaseTransition: mocks.processEconomyPhaseTransition,
   highscoreService: { submitCompanyHighscores: mocks.submitCompanyHighscores },
-  checkAllAchievements: mocks.checkAllAchievements,
   updateCellarCollectionPrestige: mocks.updateCellarCollectionPrestige,
   calculateCompanyValue: mocks.calculateCompanyValue,
   updateVineyardRipeness: mocks.updateVineyardRipeness,
@@ -164,24 +168,14 @@ vi.mock('@/lib/database/activities/inventoryDB', () => ({
   bulkUpdateWineBatches: mocks.bulkUpdateWineBatches
 }));
 
-vi.mock('@/lib/features/boardShare', () => ({
-  getBoardShareFeature: () => ({
-    ticks: {
-      onWeekAdvanced: mocks.boardWeekAdvanced,
-      onSeasonStart: mocks.boardSeasonStart,
-      onYearStart: mocks.boardYearStart
-    }
-  })
-}));
-
 vi.mock('@/lib/features/loanLender', () => ({
-  getLoanLenderFeature: () => ({
+  loanLenderFeature: {
     ticks: {
       processSeasonalLoanPayments: mocks.processSeasonalLoanPayments,
       enforceEmergencyQuickLoanIfNeeded: mocks.enforceEmergencyQuickLoanIfNeeded,
       restructureForcedLoansIfNeeded: mocks.restructureForcedLoansIfNeeded
     }
-  })
+  }
 }));
 
 describe('processGameTick', () => {
@@ -259,7 +253,6 @@ describe('processGameTick', () => {
     expect(mocks.resolveWeatherWeek).toHaveBeenCalledOnce();
     expect(mocks.updateVineyardAges).toHaveBeenCalledOnce();
     expect(mocks.updateVineyardVineYields).toHaveBeenCalledOnce();
-    expect(mocks.boardYearStart).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
     expect(mocks.processEconomyPhaseTransition).toHaveBeenCalledWith(true);
     expect(mocks.processSeasonalWages).toHaveBeenCalledWith([], true);
     expect(mocks.processSeasonalLoanPayments).toHaveBeenCalledOnce();
@@ -275,8 +268,6 @@ describe('processGameTick', () => {
     expect(mocks.updateCellarCollectionPrestige).toHaveBeenCalledOnce();
     expect(mocks.refreshBuyMarketForSeason).toHaveBeenCalledOnce();
     expect(mocks.processWeeklyBuyMarketLifecycle).not.toHaveBeenCalled();
-    expect(mocks.boardWeekAdvanced).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
-    expect(mocks.boardSeasonStart).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
     expect(mocks.checkAndTriggerBookkeeping).toHaveBeenCalledWith(
       'Spring',
       'Economy phase changed',

@@ -25,10 +25,17 @@ npm run build
 
 ## Architecture Rules
 
+| Pattern | Features | Public interface | Lifecycle |
+|---|---|---|---|
+| Installed feature facade | `achievements`, `loanLender`, `researchUpgrade`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
+| Development-only feature | `admin` | host type passed to `App` | dynamically loaded in Vite development only |
+| Always-on functional module | `weather` | stable function/type barrel | required application capability |
+
 - Keep business logic, validation, calculations, and persistence orchestration out of React components.
 - `*DB.ts` files own Supabase CRUD and row mapping; services own domain rules.
 - Prefer existing barrel exports and shared types. Do not add compatibility branches or migrations unless requested.
-- Current feature seams: `loanLender` and `researchUpgrade` are active; `boardShare` is a no-op shell.
+- Callers import feature barrels, not feature internals or general-service re-exports.
+- `boardShare` is deliberately inactive and has no host wiring while public-company/share gameplay is deferred.
 
 ## Documentation Entry Points
 
@@ -42,7 +49,7 @@ npm run build
 | Research design/status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
 | Weather implementation record | `docs/superpowers/completed/2026-07-10-weather-module-redesign-design.md`, `2026-07-10-weather-module-redesign.md` |
 | Bulk grape market rollout | `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-design.md`, `2026-05-23-bulk-grape-buy-market-execution.md` |
-| Public-company reintroduction references | `docs/superpowers/plans/PublicCompanyPlan.md`, `PublicCompanyImplementation.md` |
+| Public-company reintroduction references | `docs/superpowers/deferred/PublicCompanyPlan.md`, `PublicCompanyImplementation.md` |
 
 ## Current Systems
 
@@ -50,11 +57,11 @@ npm run build
 - Weather is persisted weekly state/forecast, a bounded site-aware vineyard projection, and grape-market context. Weather Center is operational; Winepedia is the technical reference.
 - Sell-side grape trading remains separate from Buy Market. Buy Market supports Grape Procurement plus individually owned fixed-capacity casks; a selected occupied cask can be emptied through a cancellable Empty Vessel maintenance activity without discarding the batch volume held by other casks. Cancelling production preserves any wine already placed in an active vessel plan; only unused reservations are released.
 - Founder economy is active as a light ownership layer: zero founder wages, profitable-year returns, and buyout into salaried staff.
-- Full public-company/share-market runtime is not active.
+- Full public-company/share-market runtime is intentionally inactive, and `boardShare` remains isolated from host wiring.
 
 ## Admin Test Systems
 
-The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixtures. It is loopback-gated, dynamically loaded only in Vite development builds, and fixture cleanup uses durable `testlab_...` run IDs. Its compatible-host requirements live in `src/lib/features/admin/README.md`; `test-viewer/` is legacy reference material.
+The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixtures. It is loopback-gated, dynamically loaded only in Vite development builds, and fixture cleanup uses durable `testlab_...` run IDs. Its explicit host dependency and Winemaker-fork adapter requirements live in `src/lib/features/admin/README.md`.
 
 ## Agent Workflow
 

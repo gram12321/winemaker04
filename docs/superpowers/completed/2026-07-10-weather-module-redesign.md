@@ -121,7 +121,7 @@ export function projectVineyardWeek(input: VineyardWeekProjectionInput): Vineyar
 
 **Files:**
 - Delete: `src/lib/services/finance/weatherService.ts`
-- Modify: `src/lib/services/index.ts`, `CONTEXT.md`, `docs/AIdocs/AIDescriptions_coregame.md`, `docs/PROJECT_INFO.md`, `docs/WineSystem_VariableRelationshipMap.md`, `readme.md`, `docs/superpowers/specs/2026-07-10-weather-module-redesign-design.md`
+- Modify: `src/lib/services/index.ts`, `CONTEXT.md`, `docs/AIdocs/AIDescriptions_coregame.md`, `docs/PROJECT_INFO.md`, `docs/WineSystem_VariableRelationshipMap.md`, `readme.md`, `docs/superpowers/completed/2026-07-10-weather-module-redesign-design.md`
 
 - [ ] Add or adjust regression tests so weather consumers import only `@/lib/features/weather` public exports.
 - [ ] Remove all old service imports, raw weather table imports, and obsolete tests only after all consumers use the module facade.

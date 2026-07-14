@@ -1,25 +1,21 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
+import { NotificationCategory, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { loanLenderFeature } from '@/lib/features/loanLender';
+import { achievementsFeature } from '@/lib/features/achievements';
 import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
-
-// Throttle configuration for expensive, non-critical checks
-const ACHIEVEMENT_CHECK_INTERVAL_WEEKS = 4; // run every 4 weeks
-let lastAchievementCheckAbsoluteWeek = -1;
 
 /**
  * Enhanced time advancement with automatic game events
@@ -79,7 +75,7 @@ const executeGameTick = async (): Promise<void> => {
     // If we're back to Spring, increment year
     if (season === 'Spring') {
       currentYear += 1;
-      await onNewYear(previousYear, currentYear, { week, season, year: currentYear });
+      await onNewYear(previousYear, currentYear);
       await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', NotificationCategory.TIME_CALENDAR);
     }
 
@@ -131,15 +127,6 @@ const executeGameTick = async (): Promise<void> => {
   // Pass season change info and all collected messages if we just changed seasons
   await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
 
-  // Board/share seasonal hooks (e.g. dividends on season start)
-  if (week === 1) {
-    try {
-      await getBoardShareFeature().ticks.onSeasonStart({ week, season, year: currentYear });
-    } catch (error) {
-      console.warn('Error running board/share season-start hooks:', error);
-    }
-  }
-
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);
 
@@ -151,7 +138,7 @@ const executeGameTick = async (): Promise<void> => {
   if (isNewYearTick) {
     triggerTopicUpdate('wine_batches');
     triggerGameUpdate();
-    await getLoanLenderFeature().ticks.restructureForcedLoansIfNeeded();
+    await loanLenderFeature.ticks.restructureForcedLoansIfNeeded();
   }
 
   // Trigger final UI refresh after all weekly effects are processed
@@ -178,11 +165,7 @@ const onSeasonChange = async (_previousSeason: string, _newSeason: string, skipN
 /**
  * Handle effects that happen at the start of a new year
  */
-const onNewYear = async (
-  _previousYear: number,
-  _newYear: number,
-  context?: { week: number; season: string; year: number }
-): Promise<void> => {
+const onNewYear = async (_previousYear: number, _newYear: number): Promise<void> => {
   // New year notification is handled in the main processGameTick function
   // Update vineyard ages
   await updateVineyardAges();
@@ -196,17 +179,6 @@ const onNewYear = async (
     await processYearlyFounderDistributions(staff, _previousYear);
   } catch (error) {
     console.error('Error processing yearly founder distributions:', error);
-  }
-
-  // Run board/share yearly hooks (e.g. growth trend updates)
-  try {
-    await getBoardShareFeature().ticks.onYearStart({
-      week: context?.week ?? 1,
-      season: context?.season ?? 'Spring',
-      year: context?.year ?? _newYear
-    });
-  } catch (error) {
-    console.error('Error running board/share year-start hooks:', error);
   }
 
   // TODO: Add other yearly effects when ready
@@ -315,38 +287,13 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
-    (async () => {
-      try {
-        await getBoardShareFeature().ticks.onWeekAdvanced({
-          week: gameState.week || 1,
-          season: gameState.season || 'Spring',
-          year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
-        });
-      } catch (error) {
-        console.warn('Error running board/share week-advanced hooks:', error);
-      }
-    })()
   ];
 
-  // Throttled, non-blocking achievement checks (decoupled from tick critical path)
+  // Throttled, non-blocking achievement checks are owned by the feature.
   try {
-    const absWeek = calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!);
-    const shouldRunAchievements =
-      lastAchievementCheckAbsoluteWeek < 0 ||
-      absWeek - lastAchievementCheckAbsoluteWeek >= ACHIEVEMENT_CHECK_INTERVAL_WEEKS;
-
-    if (shouldRunAchievements) {
-      lastAchievementCheckAbsoluteWeek = absWeek;
-      // Fire-and-forget; do not await to keep tick latency low
-      void (async () => {
-        try {
-          await checkAllAchievements();
-        } catch (error) {
-          console.warn('Error during throttled achievement checking:', error);
-        }
-      })();
-    }
+    void achievementsFeature.ticks.checkAfterWeekAdvance().catch((error) => {
+      console.warn('Error during throttled achievement checking:', error);
+    });
   } catch (error) {
     console.warn('Failed to schedule achievement checks:', error);
   }
@@ -385,7 +332,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     weeklyTasks.push(
       (async () => {
         try {
-          await getLoanLenderFeature().ticks.processSeasonalLoanPayments();
+        await loanLenderFeature.ticks.processSeasonalLoanPayments();
         } catch (error) {
           console.warn('Error during seasonal loan payments:', error);
         }
@@ -425,7 +372,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   }
 
   try {
-    await getLoanLenderFeature().ticks.enforceEmergencyQuickLoanIfNeeded();
+      await loanLenderFeature.ticks.enforceEmergencyQuickLoanIfNeeded();
   } catch (error) {
     console.warn('Error enforcing emergency quick loan:', error);
   }

@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => {
     listPrestigeEvents: vi.fn(async () => []),
     upsertPrestigeEventBySource: vi.fn(async () => undefined),
     insertPrestigeEvent: vi.fn(async () => undefined),
+    insertPrestigeEventIfAbsentBySource: vi.fn(async () => true),
     loadVineyards: vi.fn(async () => vineyards),
     saveVineyard: vi.fn(async (vineyard: Vineyard) => {
       vineyards = vineyards.map(candidate => candidate.id === vineyard.id ? vineyard : candidate);
@@ -32,7 +33,8 @@ vi.mock('@/lib/database/customers/prestigeEventsDB', () => ({
   listPrestigeEventsForUI: mocks.listPrestigeEventsForUI,
   listPrestigeEvents: mocks.listPrestigeEvents,
   upsertPrestigeEventBySource: mocks.upsertPrestigeEventBySource,
-  insertPrestigeEvent: mocks.insertPrestigeEvent
+  insertPrestigeEvent: mocks.insertPrestigeEvent,
+  insertPrestigeEventIfAbsentBySource: mocks.insertPrestigeEventIfAbsentBySource,
 }));
 
 vi.mock('@/lib/database/activities/vineyardDB', () => ({
@@ -258,29 +260,13 @@ describe('prestige service', () => {
     expect(vineyardEvent.amount_base).not.toBe(0.08);
   });
 
-  it('falls back to a generic achievement display when metadata is missing', async () => {
+  it('shows research-completion events as research milestones', async () => {
     const { getEventDisplayData } = await import('@/lib/services/prestige/prestigeService');
 
     const displayData = getEventDisplayData(prestigeEvent({
-      type: 'achievement',
-      amount: 1.5,
-      metadata: undefined
-    }));
-
-    expect(displayData).toEqual(expect.objectContaining({
-      titleBase: 'Achievement',
-      amountText: '+1.50 prestige'
-    }));
-  });
-
-  it('shows research-completion achievements as research milestones', async () => {
-    const { getEventDisplayData } = await import('@/lib/services/prestige/prestigeService');
-
-    const displayData = getEventDisplayData(prestigeEvent({
-      type: 'achievement',
+      type: 'research',
       amount: 4,
       metadata: {
-        category: 'research',
         projectId: 'fermentation_temp_control',
         projectTitle: 'Temperature Controlled Fermentation'
       } as any
@@ -290,6 +276,22 @@ describe('prestige service', () => {
       title: 'Research Completed: Temperature Controlled Fermentation',
       titleBase: 'Research Milestone',
       amountText: 'Temperature Controlled Fermentation'
+    }));
+  });
+
+  it('writes one source-keyed research prestige event', async () => {
+    const { addResearchPrestigeEvent } = await import('@/lib/services/prestige/prestigeService');
+
+    await addResearchPrestigeEvent('Temperature Controlled Fermentation', 'fermentation_temp_control', 4);
+
+    expect(mocks.insertPrestigeEventIfAbsentBySource).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'research',
+      source_id: 'research:fermentation_temp_control',
+      payload: {
+        projectTitle: 'Temperature Controlled Fermentation',
+        projectId: 'fermentation_temp_control',
+        description: 'Completed research: Temperature Controlled Fermentation',
+      },
     }));
   });
 });

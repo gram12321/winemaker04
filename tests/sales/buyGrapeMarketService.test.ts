@@ -1,9 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUY_MARKET_FIXED_SPREAD, type BuyMarketDemandFactors } from '@/lib/constants';
-import { computeBuyOfferPricePerKg, getBuyGrapeMarketOffers, getBuyOfferPriceBreakdown, getBuyOfferStateLabel, type BuyGrapeMarketOffer } from '@/lib/services/sales/buyGrapeMarketService';
+import { computeBuyOfferPricePerKg, getBuyGrapeMarketOffers, getBuyOfferPriceBreakdown, getBuyOfferStateLabel, recreateBuyGrapeMarketOffers, type BuyGrapeMarketOffer } from '@/lib/services/sales/buyGrapeMarketService';
 
 const mocks = vi.hoisted(() => ({
   getCurrentCompanyId: vi.fn(() => 'company-1'),
+  getCompanyQuery: vi.fn(() => {
+    const query = {
+      eq: vi.fn(),
+      order: vi.fn(),
+      then: (resolve: (value: { data: never[]; error: null }) => unknown) => resolve({ data: [], error: null }),
+    };
+    query.eq.mockReturnValue(query);
+    query.order.mockReturnValue(query);
+    return query;
+  }),
   getGameState: vi.fn(() => ({
     week: 3,
     season: 'Spring',
@@ -164,6 +174,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: mocks.getCurrentCompanyId,
+  getCompanyQuery: mocks.getCompanyQuery,
 }));
 
 vi.mock('@/lib/services/core/gameState', () => ({
@@ -378,7 +389,6 @@ describe('buy grape market service', () => {
       .mockResolvedValueOnce({ data: [{ offer_id: 'stale-offer' }] as never, error: null })
       .mockResolvedValueOnce({ data: [], error: null });
 
-    const { recreateBuyGrapeMarketOffers } = await import('@/lib/services/sales/buyGrapeMarketService');
     await recreateBuyGrapeMarketOffers();
 
     expect(mocks.deleteGrapeMarketOfferRow).toHaveBeenCalledWith('company-1', 'stale-offer');

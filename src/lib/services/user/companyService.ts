@@ -15,7 +15,7 @@ import {
   type Company,
   type CompanyData
 } from '@/lib/database';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 
 export interface CompanyCreateData {
   name: string;
@@ -43,6 +43,11 @@ export interface CompanyStats {
 class CompanyService {
   public async createCompany(data: CompanyCreateData): Promise<{ success: boolean; company?: Company; error?: string }> {
     try {
+      const nameExists = await checkCompanyNameExists(data.name);
+      if (nameExists) {
+        return { success: false, error: 'Company name already exists' };
+      }
+
       let userId: string | null = null;
 
       if (data.userId) {
@@ -61,11 +66,6 @@ class CompanyService {
       } else if (data.associateWithUser) {
         const currentUser = authService.getCurrentUser();
         userId = currentUser ? currentUser.id : null;
-      }
-
-      const nameExists = await checkCompanyNameExists(data.name);
-      if (nameExists) {
-        return { success: false, error: 'Company name already exists' };
       }
 
       const companyData: CompanyData = {
@@ -89,7 +89,7 @@ class CompanyService {
 
       if (company) {
         try {
-          await getLoanLenderFeature().setup.initializeLenders(company.id);
+          await loanLenderFeature.setup.initializeLenders(company.id);
         } catch (error) {
           console.warn('Failed to initialize lenders for new company:', error);
         }

@@ -3,7 +3,7 @@ import { GrapeForwardContract, WineContract } from '@/lib/types/types';
 import { acceptWinePresaleContract, rejectContract } from '@/lib/services/sales/contractService';
 import { getContractGenerationChance } from '@/lib/services/sales/contractGenerationService';
 import { acceptForwardContract, autoDeliverForwardContract, getForwardContracts, rejectForwardContract } from '@/lib/services/sales/forwardContractService';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { FORWARD_CONTRACT_CONFIG } from '@/lib/constants/contractConstants';
 import { formatNumber, formatGameDateFromObject, formatPercent } from '@/lib/utils/utils';
@@ -161,7 +161,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
 
   const loadContractTypeAccess = async () => {
     try {
-      const unlocksService = getResearchUpgradeFeature().unlocks;
+      const unlocksService = researchUpgradeFeature.unlocks;
       const legacyUnlocks = await unlocksService.getUnlockedItems('contract_type');
 
       const unlockedSet = new Set<string>([

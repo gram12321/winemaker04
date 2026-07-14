@@ -1,5 +1,5 @@
 import { getGameState, syncPersistedMoney } from '../core/gameState';
-import type { Season, Transaction } from '@/lib/types/types';
+import type { GameState, Season, Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { SEASON_ORDER, TRANSACTION_CATEGORIES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
@@ -7,11 +7,11 @@ import { CAPITAL_FLOW_TRANSACTION_CATEGORIES } from '@/lib/constants/financeCons
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { insertTransaction as insertTransactionDB, insertTransactionWithFundsCheck, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
-import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { loanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 
-interface FinancialData {
+export interface FinancialData {
   income: number;
   expenses: number;
   netIncome: number;
@@ -31,8 +31,8 @@ interface FinancialData {
   totalEquity: number;
 }
 
-let transactionsCache: Transaction[] = [];
-let transactionsLoadPromise: Promise<Transaction[]> | null = null; // Promise-based cache for parallel calls
+const transactionsCacheByCompany = new Map<string, Transaction[]>();
+const transactionsLoadPromiseByCompany = new Map<string, Promise<Transaction[]>>();
 
 interface PersistedTransactionRow {
   id: string;
@@ -62,9 +62,12 @@ export async function syncPersistedTransaction(row: PersistedTransactionRow): Pr
     recurring: row.recurring,
     money: row.money,
   };
-  if (!transactionsCache.some((cached) => cached.id === transaction.id)) transactionsCache.push(transaction);
-  transactionsLoadPromise = null;
-  transactionsCache.sort((a, b) => {
+  const companyId = getCurrentCompanyId();
+  const companyTransactions = companyId ? transactionsCacheByCompany.get(companyId) : undefined;
+  if (companyTransactions && !companyTransactions.some((cached) => cached.id === transaction.id)) {
+    companyTransactions.push(transaction);
+  }
+  if (companyTransactions) companyTransactions.sort((a, b) => {
     if (a.date.year !== b.date.year) return b.date.year - a.date.year;
     if (a.date.season !== b.date.season) return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
     if (a.date.week !== b.date.week) return b.date.week - a.date.week;
@@ -110,7 +113,6 @@ export const addTransaction = async (
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Failed to insert transaction');
     }
-
     return await syncPersistedTransaction(result.data);
   } catch (error) {
     console.error('Error adding transaction:', error);
@@ -120,61 +122,97 @@ export const addTransaction = async (
 
 // Load transactions from database
 // OPTIMIZATION: Uses promise-based caching to prevent parallel database calls
-export const loadTransactions = async (): Promise<Transaction[]> => {
-  // If there's already a load in progress, return that promise
-  if (transactionsLoadPromise) {
-    return transactionsLoadPromise;
+export const loadTransactions = async (companyId?: string): Promise<Transaction[]> => {
+  const targetCompanyId = companyId || getCurrentCompanyId();
+  const inFlight = transactionsLoadPromiseByCompany.get(targetCompanyId);
+  if (inFlight) {
+    return inFlight;
   }
   
-  // If cache is populated, return it immediately
-  if (transactionsCache.length > 0) {
-    return transactionsCache;
+  const cached = transactionsCacheByCompany.get(targetCompanyId);
+  if (cached) {
+    return cached;
   }
   
-  // Start loading and cache the promise
-  transactionsLoadPromise = (async () => {
+  const loadPromise = (async () => {
     try {
-      const transactions = await loadTransactionsDB();
-      transactionsCache = transactions;
-      transactionsLoadPromise = null; // Clear promise cache after completion
+      const transactions = await loadTransactionsDB(targetCompanyId);
+      transactionsCacheByCompany.set(targetCompanyId, transactions);
+      transactionsLoadPromiseByCompany.delete(targetCompanyId);
       return transactions;
     } catch (error) {
       console.error('Error loading transactions:', error);
-      transactionsLoadPromise = null; // Clear promise cache on error
+      transactionsLoadPromiseByCompany.delete(targetCompanyId);
       return [];
     }
   })();
-  
-  return transactionsLoadPromise;
+  transactionsLoadPromiseByCompany.set(targetCompanyId, loadPromise);
+
+  return loadPromise;
 };
 
 // Get transactions from cache or load from Supabase if cache is empty
 export const getTransactions = (): Transaction[] => {
-  if (transactionsCache.length === 0) {
-    loadTransactions().catch(console.error);
+  const companyId = getCurrentCompanyId();
+  const transactions = transactionsCacheByCompany.get(companyId);
+  if (!transactions) {
+    loadTransactions(companyId).catch(console.error);
     return [];
   }
-  
-  return transactionsCache;
+
+  return transactions;
 };
 
 // Clear transactions cache (useful when transactions are modified externally)
-export const clearTransactionsCache = (): void => {
-  transactionsCache = [];
-  transactionsLoadPromise = null;
+export const clearTransactionsCache = (companyId?: string): void => {
+  if (companyId) {
+    transactionsCacheByCompany.delete(companyId);
+    transactionsLoadPromiseByCompany.delete(companyId);
+    return;
+  }
+
+  transactionsCacheByCompany.clear();
+  transactionsLoadPromiseByCompany.clear();
 };
 
 // Calculate company value (total assets - total liabilities)
 export const calculateCompanyValue = async (): Promise<number> => {
   try {
     const financialData = await calculateFinancialData('year');
-    const totalOutstandingLoans = await getLoanLenderFeature().metrics.calculateTotalOutstandingLoans();
+    const totalOutstandingLoans = await loanLenderFeature.metrics.calculateTotalOutstandingLoans();
     return financialData.totalAssets - totalOutstandingLoans;
   } catch (error) {
     console.error('Error calculating company value:', error);
     return 0;
   }
 };
+
+export async function getCompanyFinancialSnapshot(
+  companyId: string,
+  state: Pick<GameState, 'week' | 'season' | 'currentYear' | 'money'>
+): Promise<{
+  financialData: FinancialData;
+  companyValue: number;
+  transactions: Transaction[];
+}> {
+  const financialData = await calculateFinancialData('year', {
+    week: state.week,
+    season: state.season,
+    year: state.currentYear,
+    companyId,
+    cashMoney: state.money,
+  });
+  const [totalOutstandingLoans, transactions] = await Promise.all([
+    loanLenderFeature.metrics.calculateTotalOutstandingLoans(companyId),
+    loadTransactions(companyId),
+  ]);
+
+  return {
+    financialData,
+    companyValue: financialData.totalAssets - totalOutstandingLoans,
+    transactions,
+  };
+}
 
 export const calculateTotalAssets = async (): Promise<number> => {
   try {
@@ -189,14 +227,20 @@ export const calculateTotalAssets = async (): Promise<number> => {
 // Calculate financial data for income statement and balance sheet
 export const calculateFinancialData = async (
   period: 'weekly' | 'season' | 'year' | 'all',
-  options: { week?: number; season?: string; year?: number } = {}
+  options: {
+    week?: number;
+    season?: string;
+    year?: number;
+    companyId?: string;
+    cashMoney?: number;
+  } = {}
 ): Promise<FinancialData> => {
   const gameState = getGameState();
   
   const [transactions, vineyards, wineBatches] = await Promise.all([
-    loadTransactions(),
-    loadVineyards(),
-    loadWineBatches()
+    loadTransactions(options.companyId),
+    loadVineyards(options.companyId),
+    loadWineBatches(options.companyId)
   ]);
   
   const currentDate = {
@@ -282,7 +326,7 @@ export const calculateFinancialData = async (
     return sum + (batch.quantity * landValuePriceMultiplier * 5);
   }, 0);
   
-  const cashMoney = gameState.money || 0;
+  const cashMoney = options.cashMoney ?? gameState.money ?? 0;
   const fixedAssets = buildingsValue + allVineyardsValue;
   const currentAssets = wineValue + grapesValue;
   const totalAssets = cashMoney + fixedAssets + currentAssets;

@@ -1,6 +1,9 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { StartingLoanConfig } from '@/lib/constants/startingConditions';
 import type { Activity } from '@/lib/types/types';
+import type { ActiveLoanPortfolio } from './services/finance/loanViewService';
+
+export type { ActiveLoanPortfolio };
 
 export interface LoanLenderFinanceTabRegistration {
   id: string;
@@ -37,7 +40,9 @@ export interface LoanLenderSetupHooks {
 }
 
 export interface LoanLenderMetricsHooks {
-  calculateTotalOutstandingLoans(): Promise<number>;
+  calculateTotalOutstandingLoans(companyId?: string): Promise<number>;
+  loadActivePortfolio(): Promise<ActiveLoanPortfolio>;
+  defaultActivePortfolio: ActiveLoanPortfolio;
 }
 
 export interface LoanLenderTickHooks {

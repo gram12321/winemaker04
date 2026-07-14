@@ -214,9 +214,9 @@ export async function sellStorageBackedWineBatch(input: {
   return { data, error };
 }
 
-export const loadWineBatches = async (): Promise<WineBatch[]> => {
+export const loadWineBatches = async (companyId?: string): Promise<WineBatch[]> => {
   try {
-    const { data, error } = await getCompanyQuery(WINE_BATCHES_TABLE)
+    const { data, error } = await getCompanyQuery(WINE_BATCHES_TABLE, companyId)
       .order('harvest_start_year', { ascending: true })
       .order('harvest_start_season', { ascending: true })
       .order('harvest_start_week', { ascending: true });

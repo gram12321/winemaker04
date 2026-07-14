@@ -1,6 +1,6 @@
 # Project Context
 
-Date: 2026-07-13
+Date: 2026-07-14
 Stable terminology and high-value gameplay relationships. See `docs/WineSystem_VariableRelationshipMap.md` for dependency diagrams and `docs/AIdocs/AIDescriptions_coregame.md` for implementation status.
 
 ## Wine Vocabulary
@@ -62,7 +62,7 @@ Implemented enforcement covers grape planting, fermentation methods, staff cap, 
 
 - Founders have zero wages, receive 20% of positive yearly net profit per founder, and can be bought out for 15% of company asset value.
 - Prestige is ledger-derived from permanent (`decay_rate = 0`) and decaying (`0 < decay_rate < 1`) events. Write through `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source metadata.
-- `boardShare` is a no-op seam; share/board constants and database scaffolding are not active public-company runtime.
+- Founder ownership behavior is active. `boardShare` remains an intentionally inactive facade while public-company/share gameplay is deferred and it is not wired into host behavior.
 
 ## Naming Rules
 
