@@ -1,4 +1,4 @@
-import { ACHIEVEMENT_CHECK_INTERVAL_WEEKS } from '@/lib/constants';
+import { ACHIEVEMENT_CHECK_INTERVAL_WEEKS } from '@/lib/constants/achievementConstants';
 import { calculateAbsoluteWeeks, getCurrentCompanyId } from '@/lib/utils';
 import { getGameState } from '@/lib/services/core/gameState';
 import { checkAllAchievements } from './achievementService';

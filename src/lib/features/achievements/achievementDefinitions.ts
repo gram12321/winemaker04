@@ -1,5 +1,5 @@
 import { AchievementConfig } from '@/lib/types/types';
-import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants';
+import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants/achievementConstants';
 import { createTieredAchievements } from './achievementDefinitionUtils';
 
 /**

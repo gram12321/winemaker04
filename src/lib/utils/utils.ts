@@ -1,10 +1,9 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Customer, type Season, WineCharacteristics } from '../types/types';
-import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
 import { Normalize1000To01WithTail } from './calculator';
-import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
@@ -943,6 +942,7 @@ export const RESET_BUTTON_CLASSES = "px-3 py-1 text-sm bg-blue-100 hover:bg-blue
  */
 export async function loadFormattedRelationshipBreakdown(customer: Customer): Promise<string> {
   try {
+    const { calculateRelationshipBreakdown, formatRelationshipBreakdown } = await import('../services/sales/relationshipService');
     const breakdown = await calculateRelationshipBreakdown(customer);
     return formatRelationshipBreakdown(breakdown);
   } catch (error) {
