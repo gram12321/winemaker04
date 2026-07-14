@@ -102,48 +102,81 @@ CREATE UNIQUE INDEX IF NOT EXISTS prestige_events_company_research_source_unique
   ON public.prestige_events (company_id, type, source_id)
   WHERE type = 'research';
 
-ALTER TABLE public.prestige_events
-  ADD CONSTRAINT prestige_events_achievement_shape_check
-  CHECK (
-    type <> 'achievement'
-    OR COALESCE(
-      source_id = 'achievement:' || (payload->>'achievementId')
-        AND NULLIF(payload->>'achievementId', '') IS NOT NULL
-        AND payload->>'event' = 'achievement_unlock',
-      FALSE
-    )
-  );
-
-ALTER TABLE public.prestige_events
-  ADD CONSTRAINT prestige_events_vineyard_achievement_shape_check
-  CHECK (
-    type <> 'vineyard_achievement'
-    OR COALESCE(
-      source_id IS NOT NULL
-        AND source_id = payload->>'vineyardId'
-        AND (
-          payload->>'event' IN ('planting', 'aging', 'improvement', 'harvest')
-          OR (
-            payload->>'event' = 'achievement_unlock'
+-- PostgreSQL has no ADD CONSTRAINT IF NOT EXISTS. These guards make the
+-- migration safe when a previous attempt or an existing schema already has
+-- one or more of the shape constraints.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'prestige_events_achievement_shape_check'
+      AND conrelid = 'public.prestige_events'::regclass
+  ) THEN
+    ALTER TABLE public.prestige_events
+      ADD CONSTRAINT prestige_events_achievement_shape_check
+      CHECK (
+        type <> 'achievement'
+        OR COALESCE(
+          source_id = 'achievement:' || (payload->>'achievementId')
             AND NULLIF(payload->>'achievementId', '') IS NOT NULL
-            AND NULLIF(payload->>'vineyardId', '') IS NOT NULL
-          )
-        ),
-      FALSE
-    )
-  );
+            AND payload->>'event' = 'achievement_unlock',
+          FALSE
+        )
+      );
+  END IF;
+END;
+$$;
 
-ALTER TABLE public.prestige_events
-  ADD CONSTRAINT prestige_events_research_shape_check
-  CHECK (
-    type <> 'research'
-    OR COALESCE(
-      source_id = 'research:' || (payload->>'projectId')
-        AND NULLIF(payload->>'projectId', '') IS NOT NULL
-        AND NULLIF(payload->>'projectTitle', '') IS NOT NULL
-        AND NULLIF(payload->>'description', '') IS NOT NULL,
-      FALSE
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'prestige_events_vineyard_achievement_shape_check'
+      AND conrelid = 'public.prestige_events'::regclass
+  ) THEN
+    ALTER TABLE public.prestige_events
+      ADD CONSTRAINT prestige_events_vineyard_achievement_shape_check
+      CHECK (
+        type <> 'vineyard_achievement'
+        OR COALESCE(
+          source_id IS NOT NULL
+            AND source_id = payload->>'vineyardId'
+            AND (
+              payload->>'event' IN ('planting', 'aging', 'improvement', 'harvest')
+              OR (
+                payload->>'event' = 'achievement_unlock'
+                AND NULLIF(payload->>'achievementId', '') IS NOT NULL
+                AND NULLIF(payload->>'vineyardId', '') IS NOT NULL
+              )
+            ),
+          FALSE
+        )
+      );
+  END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'prestige_events_research_shape_check'
+      AND conrelid = 'public.prestige_events'::regclass
+  ) THEN
+    ALTER TABLE public.prestige_events
+      ADD CONSTRAINT prestige_events_research_shape_check
+      CHECK (
+        type <> 'research'
+        OR COALESCE(
+          source_id = 'research:' || (payload->>'projectId')
+            AND NULLIF(payload->>'projectId', '') IS NOT NULL
+            AND NULLIF(payload->>'projectTitle', '') IS NOT NULL
+            AND NULLIF(payload->>'description', '') IS NOT NULL,
+          FALSE
+        )
+      );
+  END IF;
+END;
+$$;
 
 COMMIT;
