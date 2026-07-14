@@ -82,4 +82,14 @@ describe('Storage Vessel market adapter', () => {
 
     expect(mocks.syncPersistedTransaction).toHaveBeenCalledOnce();
   });
+
+  it('exposes the cask-specific multiplier breakdown used by the market UI', async () => {
+    const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    const breakdown = getStorageVesselPriceBreakdown({ capacityLitres: 500, qualityScore: 0.8, supplierBaseMultiplier: 1.04, supplierRelationshipMultiplier: 0.93, companyPrestige: 500 });
+
+    expect(breakdown.capacityMultiplier).toBe(2);
+    expect(breakdown.qualityMultiplier).toBeCloseTo(1.21, 8);
+    expect(breakdown.supplierBaseMultiplier).toBe(1.04);
+    expect(breakdown.finalPricePerVessel).toBe(breakdown.finalPrice);
+  });
 });

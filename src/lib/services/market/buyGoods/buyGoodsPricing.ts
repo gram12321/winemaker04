@@ -11,6 +11,19 @@ export interface BuyGoodsPriceInput {
   maximumPrice: number;
 }
 
+export interface BuyGoodsPriceBreakdown {
+  basePrice: number;
+  itemMultiplier: number;
+  marketMultiplier: number;
+  supplierRelationshipMultiplier: number;
+  companyPrestigeMultiplier: number;
+  spreadMultiplier: number;
+  unclampedPrice: number;
+  minimumPrice: number;
+  maximumPrice: number;
+  finalPrice: number;
+}
+
 export function getBuyGoodsCompanyScale(companyValue: number, prestige: number, referenceValue = 10_000, maximum = 2.1): number {
   const companyValueScale = companyValue <= 0
     ? 1
@@ -28,11 +41,32 @@ export function getBuyGoodsOfferAvailability(seed: string, companyValue: number,
 }
 
 export function calculateBuyGoodsPrice(input: BuyGoodsPriceInput): number {
-  const price = input.basePrice
-    * (input.itemMultiplier ?? 1)
-    * (input.marketMultiplier ?? 1)
-    * (input.supplierRelationshipMultiplier ?? 1)
-    * getBuyGoodsPrestigePriceMultiplier(input.companyPrestige ?? 0)
-    * (input.spreadMultiplier ?? 1);
-  return clamp(price, input.minimumPrice, input.maximumPrice);
+  return getBuyGoodsPriceBreakdown(input).finalPrice;
+}
+
+export function getBuyGoodsPriceBreakdown(input: BuyGoodsPriceInput): BuyGoodsPriceBreakdown {
+  const itemMultiplier = input.itemMultiplier ?? 1;
+  const marketMultiplier = input.marketMultiplier ?? 1;
+  const supplierRelationshipMultiplier = input.supplierRelationshipMultiplier ?? 1;
+  const companyPrestigeMultiplier = getBuyGoodsPrestigePriceMultiplier(input.companyPrestige ?? 0);
+  const spreadMultiplier = input.spreadMultiplier ?? 1;
+  const unclampedPrice = input.basePrice
+    * itemMultiplier
+    * marketMultiplier
+    * supplierRelationshipMultiplier
+    * companyPrestigeMultiplier
+    * spreadMultiplier;
+
+  return {
+    basePrice: input.basePrice,
+    itemMultiplier,
+    marketMultiplier,
+    supplierRelationshipMultiplier,
+    companyPrestigeMultiplier,
+    spreadMultiplier,
+    unclampedPrice,
+    minimumPrice: input.minimumPrice,
+    maximumPrice: input.maximumPrice,
+    finalPrice: clamp(unclampedPrice, input.minimumPrice, input.maximumPrice),
+  };
 }

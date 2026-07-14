@@ -1,5 +1,8 @@
 export interface StorageVesselSupplierProfile { id: string; name: string; basePriceMultiplier: number; }
 export const STORAGE_VESSEL_SIZES_LITRES = [250, 500, 1000] as const;
+export const STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES = 250;
+export const STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER = 0.65;
+export const STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER = 0.7;
 export const STORAGE_VESSEL_SUPPLIERS: readonly StorageVesselSupplierProfile[] = [
   { id: 'cooperage_duval', name: 'Cooperage Duval', basePriceMultiplier: 1.04 },
   { id: 'nordic_cellar_craft', name: 'Nordic Cellar Craft', basePriceMultiplier: 0.97 },

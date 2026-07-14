@@ -1,5 +1,6 @@
 import {
   getBuyGoodsSupplierPersistenceBonus,
+  BUY_GOODS_SUPPLIER_LEVELS,
   getBuyGoodsSupplierPriorityProfiles,
   getBuyGoodsRelationshipPointsForPurchase,
   getBuyGoodsRelationshipYearlyCap,
@@ -12,13 +13,11 @@ import {
 
 // Grape procurement is a Buy Goods domain adapter. Its relationship rules live in the shared service.
 export type SupplierLoyaltyLevel = BuyGoodsSupplierRelationshipLevel;
-export type SupplierLoyaltyRecord = BuyGoodsSupplierRelationship & { consecutiveYears: number; totalKgPurchased: number; yearLoyaltyPoints: number; };
-export const SUPPLIER_LOYALTY_LEVELS: Record<SupplierLoyaltyLevel, { name: string; minLoyaltyScore: number; benefits: string[] }> = {
-  0: { name: 'Unknown Seller', minLoyaltyScore: 0, benefits: [] }, 1: { name: 'Familiar Seller', minLoyaltyScore: 700, benefits: ['0.99x supplier relationship factor'] }, 2: { name: 'Known Seller', minLoyaltyScore: 2000, benefits: ['0.98x supplier relationship factor'] }, 3: { name: 'Trusted Supplier', minLoyaltyScore: 4600, benefits: ['0.97x supplier relationship factor'] }, 4: { name: 'Preferred Supplier', minLoyaltyScore: 8500, benefits: ['0.95x supplier relationship factor'] }, 5: { name: 'Strategic Supplier', minLoyaltyScore: 14000, benefits: ['0.93x supplier relationship factor'] },
-};
+export type SupplierLoyaltyRecord = BuyGoodsSupplierRelationship;
+export const SUPPLIER_LOYALTY_LEVELS = BUY_GOODS_SUPPLIER_LEVELS;
 export const getSupplierRelationshipPriceMultiplier = getBuyGoodsSupplierRelationshipPriceMultiplier;
 export const getSupplierPersistenceBonus = getBuyGoodsSupplierPersistenceBonus;
-export async function getSupplierLoyalties(supplierIds: string[]): Promise<Record<string, SupplierLoyaltyRecord>> { const relationships = await getBuyGoodsSupplierRelationships('grapes', supplierIds); return Object.fromEntries(Object.entries(relationships).map(([id, relation]) => [id, { ...relation, totalKgPurchased: relation.totalUnitsPurchased, yearLoyaltyPoints: relation.yearRelationshipPoints }])); }
+export async function getSupplierLoyalties(supplierIds: string[]): Promise<Record<string, SupplierLoyaltyRecord>> { return getBuyGoodsSupplierRelationships('grapes', supplierIds); }
 export const getSupplierPriorityProfiles = (limit = 12) => getBuyGoodsSupplierPriorityProfiles('grapes', limit);
 export const recordSupplierPurchase = (supplierId: string, supplierName: string, unitsPurchased: number, _currentYear: number, purchaseValue: number) => recordBuyGoodsSupplierPurchase('grapes', supplierId, supplierName, unitsPurchased, purchaseValue);
 export const getSupplierYearlyTrustCap = (_consecutiveYears: number, companyValue = 0) => getBuyGoodsRelationshipYearlyCap(companyValue);

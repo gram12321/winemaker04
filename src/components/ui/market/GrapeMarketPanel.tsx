@@ -4,6 +4,7 @@ import { Button, DialogFooter } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from './MarketOfferTable';
 import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
+import { BuyGoodsSupplierTrustPanel, getBuyGoodsSupplierTrustColor } from './BuyGoodsSupplierTrustPanel';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
@@ -11,16 +12,11 @@ import {
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
 import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
-import {
-  estimateSupplierTrustPointGain,
-  SUPPLIER_LOYALTY_LEVELS,
-  type SupplierLoyaltyLevel,
-  type SupplierLoyaltyRecord,
-  getSupplierYearlyTrustCap,
-} from '@/lib/services/sales/grapeSupplierLoyaltyService';
+import { getBuyGoodsSupplierTrustPreview, type BuyGoodsSupplierRelationshipLevel } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import { getGameState } from '@/lib/services/core/gameState';
 import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants';
 import type { WineFeature } from '@/lib/types/wineFeatures';
 import type { WeatherState } from '@/lib/types/types';
