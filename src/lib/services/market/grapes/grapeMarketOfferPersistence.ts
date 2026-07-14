@@ -5,8 +5,16 @@ import {
   updateBuyMarketOffer,
   upsertBuyMarketOffers,
 } from '@/lib/database/market/buyMarketOffersDB';
-import type { BuyMarketOfferRecord } from '@/lib/types/market';
+import type { BuyGoodsPriceQuoteInput, BuyMarketOfferRecord } from '@/lib/types/market';
 import type { MarketBatchProvenanceSnapshot, WineBatch } from '@/lib/types/types';
+
+export interface GrapeMarketOfferPriceSnapshot extends BuyGoodsPriceQuoteInput {
+  seasonPriceMultiplier: number;
+  economyPriceMultiplier: number;
+  yearCyclePriceMultiplier: number;
+  volatilityPriceMultiplier: number;
+  volatilityBuyerPriceSensitivityMultiplier: number;
+}
 
 export interface GrapeMarketOfferRow {
   company_id: string;
@@ -21,6 +29,7 @@ export interface GrapeMarketOfferRow {
   quality_score: number;
   base_price_per_kg: number;
   effective_price_per_kg: number;
+  price_snapshot: GrapeMarketOfferPriceSnapshot;
   weeks_on_market: number;
   quality_decay_per_week: number;
   min_quality_floor: number;
@@ -40,8 +49,6 @@ export interface GrapeMarketOfferRow {
   updated_at?: string;
 }
 
-export type BuyMarketOfferRow = GrapeMarketOfferRow;
-
 interface GrapeOfferPayload {
   batchState: GrapeMarketOfferRow['batch_state'];
   grapeVariety: string;
@@ -52,6 +59,7 @@ interface GrapeOfferPayload {
   provenanceSnapshot?: MarketBatchProvenanceSnapshot | null;
   previewSnapshot?: WineBatch | null;
   previewVersion?: number | null;
+  priceSnapshot: GrapeMarketOfferPriceSnapshot;
 }
 
 function toPayload(row: GrapeMarketOfferRow): GrapeOfferPayload {
@@ -65,6 +73,7 @@ function toPayload(row: GrapeMarketOfferRow): GrapeOfferPayload {
     provenanceSnapshot: row.provenance_snapshot,
     previewSnapshot: row.preview_snapshot,
     previewVersion: row.preview_version,
+    priceSnapshot: row.price_snapshot,
   };
 }
 
@@ -83,6 +92,7 @@ function fromPayload(record: BuyMarketOfferRecord): GrapeMarketOfferRow {
     quality_score: payload.qualityScore,
     base_price_per_kg: record.basePricePerUnit,
     effective_price_per_kg: record.effectivePricePerUnit,
+    price_snapshot: payload.priceSnapshot,
     weeks_on_market: payload.weeksOnMarket,
     quality_decay_per_week: payload.qualityDecayPerWeek,
     min_quality_floor: payload.minQualityFloor,
@@ -152,9 +162,3 @@ export async function updateGrapeMarketOfferRow(companyId: string, offerId: stri
 export async function deleteGrapeMarketOfferRow(companyId: string, offerId: string) {
   return deleteBuyMarketOffer(companyId, offerId);
 }
-
-export const getCompanyBuyOfferRows = getCompanyGrapeMarketOfferRows;
-export const getCompanyBuyOfferRow = getCompanyGrapeMarketOfferRow;
-export const upsertBuyOfferRows = upsertGrapeMarketOfferRows;
-export const updateBuyOfferRow = updateGrapeMarketOfferRow;
-export const deleteBuyOfferRow = deleteGrapeMarketOfferRow;

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { STORAGE_VESSEL_OFFER_RETENTION_CHANCE } from '@/lib/constants';
 import type { BuyMarketOfferRecord } from '@/lib/types/market';
+import { deterministicSeasonalVariation } from '@/lib/utils';
 
 const mocks = vi.hoisted(() => ({
   getCurrentCompanyId: vi.fn(() => 'company-1'),
-  getGameState: vi.fn(() => ({ money: 5000, currentYear: 2026, season: 'Spring', week: 1 })),
+  getGameState: vi.fn(() => ({ money: 5000, currentYear: 2026, season: 'Spring', week: 1, prestige: 0 })),
   getCompanyBuyMarketOffer: vi.fn(),
   getCompanyBuyMarketOffers: vi.fn(),
   deleteBuyMarketOffer: vi.fn(),
@@ -14,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   addMessage: vi.fn(async () => undefined),
   triggerTopicUpdate: vi.fn(),
   recordBuyGoodsSupplierPurchase: vi.fn(async () => null),
+  getBuyGoodsSupplierPersistenceBonus: vi.fn<(level: number) => number>(() => 0),
+  getBuyGoodsSupplierRelationships: vi.fn(async () => ({})),
 }));
 
 vi.mock('@/lib/utils/companyUtils', () => ({ getCurrentCompanyId: mocks.getCurrentCompanyId }));
@@ -23,17 +27,19 @@ vi.mock('@/lib/database/market/buyMarketOffersDB', () => ({
   getCompanyBuyMarketOffers: mocks.getCompanyBuyMarketOffers,
   deleteBuyMarketOffer: mocks.deleteBuyMarketOffer,
   updateBuyMarketOffer: mocks.updateBuyMarketOffer,
-  purchaseStorageVesselOfferAtomically: mocks.purchaseStorageVesselOfferAtomically,
   upsertBuyMarketOffers: mocks.upsertBuyMarketOffers,
+}));
+vi.mock('@/lib/database/market/storageVesselMarketOffersDB', () => ({
+  purchaseStorageVesselOfferAtomically: mocks.purchaseStorageVesselOfferAtomically,
 }));
 vi.mock('@/lib/services/finance/financeService', () => ({ calculateCompanyValue: vi.fn(async () => 0), syncPersistedTransaction: mocks.syncPersistedTransaction }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
 vi.mock('@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService', () => ({
   recordBuyGoodsSupplierPurchase: mocks.recordBuyGoodsSupplierPurchase,
-  getBuyGoodsSupplierRelationships: vi.fn(async () => ({})),
+  getBuyGoodsSupplierRelationships: mocks.getBuyGoodsSupplierRelationships,
   getBuyGoodsSupplierRelationshipPriceMultiplier: vi.fn(() => 1),
-  getBuyGoodsSupplierPersistenceBonus: vi.fn(() => 0),
+  getBuyGoodsSupplierPersistenceBonus: mocks.getBuyGoodsSupplierPersistenceBonus,
   getBuyGoodsSupplierPriorityProfiles: vi.fn(async () => []),
 }));
 
@@ -96,6 +102,82 @@ describe('Storage Vessel market adapter', () => {
     expect(breakdown.qualityMultiplier).toBeCloseTo(1.21, 8);
     expect(breakdown.supplierBaseMultiplier).toBe(1.04);
     expect(breakdown.finalPricePerVessel).toBe(breakdown.finalPrice);
+  });
+
+  it('adds supplier persistence to the cask offer retention chance', async () => {
+    mocks.getBuyGoodsSupplierPersistenceBonus.mockImplementation((level: number) => level === 4 ? 0.22 : level === 5 ? 0.8 : 0);
+    const { getStorageVesselOfferRetentionChance } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+
+    expect(getStorageVesselOfferRetentionChance(0)).toBe(0.45);
+    expect(getStorageVesselOfferRetentionChance(4)).toBe(0.67);
+    expect(getStorageVesselOfferRetentionChance(5)).toBe(1);
+  });
+
+  it('retains a cask only because its supplier relationship raises the deterministic chance', async () => {
+    mocks.getGameState.mockReturnValue({ money: 5000, currentYear: 2026, season: 'Summer', week: 1, prestige: 0 });
+    mocks.getBuyGoodsSupplierPersistenceBonus.mockImplementation((level: number) => level === 4 ? 0.22 : 0);
+    mocks.getBuyGoodsSupplierRelationships.mockResolvedValue({
+      cooperage_duval: { level: 4 },
+    });
+    const retentionOfferId = Array.from({ length: 10_000 }, (_, index) => `retention-cask-${index}`)
+      .find((offerId) => {
+        const draw = deterministicSeasonalVariation(`${offerId}:2026:Summer:retention`, 0, 1);
+        return draw > STORAGE_VESSEL_OFFER_RETENTION_CHANCE && draw < STORAGE_VESSEL_OFFER_RETENTION_CHANCE + 0.22;
+      });
+    expect(retentionOfferId).toBeDefined();
+    const retentionDraw = deterministicSeasonalVariation(`${retentionOfferId}:2026:Summer:retention`, 0, 1);
+    expect(retentionDraw).toBeGreaterThan(STORAGE_VESSEL_OFFER_RETENTION_CHANCE);
+    expect(retentionDraw).toBeLessThan(STORAGE_VESSEL_OFFER_RETENTION_CHANCE + 0.22);
+
+    let marketOffers: BuyMarketOfferRecord[] = [{
+      companyId: 'company-1',
+      offerId: retentionOfferId!,
+      wareGroup: 'storage_vessels',
+      sellerId: 'cooperage_duval',
+      sellerName: 'Cooperage Duval',
+      originTag: 'seasonal_supplier',
+      availableUnits: 1,
+      unit: 'vessel',
+      basePricePerUnit: 1000,
+      effectivePricePerUnit: 1000,
+      isPersistent: false,
+      createdYear: 2026,
+      createdSeason: 'Spring',
+      createdWeek: 1,
+      lastRefreshedYear: 2026,
+      lastRefreshedSeason: 'Spring',
+      lastRefreshedWeek: 1,
+      expiresYear: 2026,
+      expiresSeason: 'Summer',
+      expiresWeek: 1,
+      payload: {
+        vesselType: 'cask',
+        material: 'oak',
+        qualityScore: 0.75,
+        productionYear: 2020,
+        capacityLitres: 500,
+        priceSnapshot: { supplierBaseMultiplier: 1.04, supplierRelationshipMultiplier: 1, companyPrestige: 0 },
+      },
+    }];
+    mocks.getCompanyBuyMarketOffers.mockImplementation(async () => ({ data: marketOffers, error: null }));
+    mocks.updateBuyMarketOffer.mockImplementation(async (_companyId: string, offerId: string, patch: Partial<BuyMarketOfferRecord>) => {
+      marketOffers = marketOffers.map((marketOffer) => marketOffer.offerId === offerId ? { ...marketOffer, ...patch } : marketOffer);
+      return { error: null };
+    });
+    mocks.deleteBuyMarketOffer.mockImplementation(async (_companyId: string, offerId: string) => {
+      marketOffers = marketOffers.filter((marketOffer) => marketOffer.offerId !== offerId);
+      return { error: null };
+    });
+    mocks.upsertBuyMarketOffers.mockImplementation(async (records: BuyMarketOfferRecord[]) => {
+      marketOffers = [...marketOffers, ...records];
+      return { error: null };
+    });
+
+    const { getStorageVesselMarketOffers } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    await getStorageVesselMarketOffers();
+
+    expect(mocks.updateBuyMarketOffer).toHaveBeenCalledWith('company-1', retentionOfferId, expect.objectContaining({ lastRefreshedSeason: 'Summer' }));
+    expect(mocks.deleteBuyMarketOffer).not.toHaveBeenCalledWith('company-1', retentionOfferId);
   });
 
   it('retires legacy catalogue rows before generating current supplier offers', async () => {

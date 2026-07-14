@@ -1,6 +1,5 @@
 import { supabase } from '../core/supabase';
 import type { BuyMarketOfferRecord, BuyMarketWareGroup } from '@/lib/types/market';
-import type { Season } from '@/lib/types/types';
 
 const TABLE = 'market_buy_offers';
 
@@ -17,13 +16,13 @@ interface BuyMarketOfferRow {
   effective_price_per_unit: number;
   is_persistent: boolean;
   created_year: number;
-  created_season: Season;
+  created_season: BuyMarketOfferRecord['createdSeason'];
   created_week: number;
   last_refreshed_year: number;
-  last_refreshed_season: Season;
+  last_refreshed_season: BuyMarketOfferRecord['lastRefreshedSeason'];
   last_refreshed_week: number;
   expires_year: number | null;
-  expires_season: Season | null;
+  expires_season: BuyMarketOfferRecord['expiresSeason'];
   expires_week: number | null;
   payload: Record<string, unknown>;
   updated_at?: string;
@@ -137,60 +136,4 @@ export async function releaseBuyMarketOfferUnits(companyId: string, offerId: str
     p_units: units,
   });
   return { released: Boolean(data), error };
-}
-
-export async function purchaseStorageVesselOfferAtomically(input: {
-  companyId: string;
-  purchaseId: string;
-  offerId: string;
-  quantity: number;
-  week: number;
-  season: Season;
-  year: number;
-  description: string;
-  category: string;
-}) {
-  const { data, error } = await supabase.rpc('purchase_storage_vessel_offer', {
-    p_company_id: input.companyId,
-    p_purchase_id: input.purchaseId,
-    p_offer_id: input.offerId,
-    p_quantity: input.quantity,
-    p_week: input.week,
-    p_season: input.season,
-    p_year: input.year,
-    p_description: input.description,
-    p_category: input.category,
-  });
-  return { data, error };
-}
-
-export async function purchaseGrapeMarketOfferAtomically(input: {
-  companyId: string;
-  purchaseId: string;
-  offerId: string;
-  quantity: number;
-  vesselIds: string[];
-  requiredLitres: number;
-  batch: Record<string, unknown>;
-  week: number;
-  season: Season;
-  year: number;
-  description: string;
-  category: string;
-}) {
-  const { data, error } = await supabase.rpc('purchase_grape_market_offer', {
-    p_company_id: input.companyId,
-    p_purchase_id: input.purchaseId,
-    p_offer_id: input.offerId,
-    p_quantity: input.quantity,
-    p_vessel_ids: input.vesselIds,
-    p_required_litres: input.requiredLitres,
-    p_batch: input.batch,
-    p_week: input.week,
-    p_season: input.season,
-    p_year: input.year,
-    p_description: input.description,
-    p_category: input.category,
-  });
-  return { data, error };
 }

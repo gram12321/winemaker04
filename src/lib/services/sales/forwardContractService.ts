@@ -15,7 +15,7 @@ import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { addTransaction, syncPersistedTransaction } from '../finance/financeService';
 import { calculateCompanyValue } from '../finance/financeService';
 import { notificationService } from '../core/notificationService';
-import { NotificationCategory, getRandomFromArray, randomInt } from '../../utils';
+import { NotificationCategory, getNextSeasonDate, getRandomFromArray, randomInt } from '../../utils';
 import { getAvailableBuyers } from './sellGrapesService';
 import { addContractOutcomePrestigeEvent } from '../prestige/prestigeService';
 import { recordBuyerSale } from './grapeBuyerLoyaltyService';
@@ -30,13 +30,6 @@ function getCurrentDate() {
     season: (gameState.season || 'Spring') as Season,
     year: gameState.currentYear || 2024,
   };
-}
-
-function getNextSeason(season: Season, year: number): { season: Season; year: number } {
-  if (season === 'Spring') return { season: 'Summer', year };
-  if (season === 'Summer') return { season: 'Fall', year };
-  if (season === 'Fall') return { season: 'Winter', year };
-  return { season: 'Spring', year: year + 1 };
 }
 
 function isDateAfter(
@@ -136,7 +129,7 @@ export async function generateForwardContracts(): Promise<number> {
     const companyValue = await calculateCompanyValue().catch(() => 0);
 
     const createdAt = getCurrentDate();
-    const due = getNextSeason(createdAt.season, createdAt.year);
+    const due = getNextSeasonDate(createdAt.season, createdAt.year);
 
     const targetStates: ForwardTargetState[] = ['grapes', 'must_ready', 'must_fermenting', 'bottled', 'any'];
     const targetState = getRandomFromArray(targetStates);

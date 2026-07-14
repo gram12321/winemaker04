@@ -7,10 +7,10 @@ import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
 import { BuyGoodsSupplierTrustPanel, getBuyGoodsSupplierTrustColor } from './BuyGoodsSupplierTrustPanel';
 import {
   getStorageVesselMarketOffers,
-  purchaseStorageVesselOffer,
   type StorageVesselMarketOffer,
   type StorageVesselPriceBreakdown,
 } from '@/lib/services/market/storageVessels/storageVesselMarketAdapter';
+import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
 import { formatNumber, getColorClass, getQualityInfo } from '@/lib/utils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
@@ -170,7 +170,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     if (!selectedOffer) return;
     setLoading(true);
     try {
-      const result = await purchaseStorageVesselOffer(selectedOffer.id, selectedQuantity);
+      const result = await purchaseBuyMarketOffer(selectedOffer.id, selectedQuantity);
       if (!result.success) {
         setErrorByOfferId((current) => ({ ...current, [selectedOffer.id]: result.error ?? 'Purchase failed.' }));
         return;

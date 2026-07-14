@@ -6,19 +6,25 @@ import {
   getCompanyBuyMarketOffers,
   updateBuyMarketOffer,
   deleteBuyMarketOffer,
-  purchaseStorageVesselOfferAtomically,
   upsertBuyMarketOffers,
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { deterministicSeasonalVariation, formatNumber } from '@/lib/utils';
+import { deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
+import { purchaseStorageVesselOfferAtomically } from '@/lib/database/market/storageVesselMarketOffersDB';
 import { GAME_INITIALIZATION, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_MAX_PRICE, STORAGE_VESSEL_MIN_PRICE, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER, STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
-import { getBuyGoodsSupplierRelationshipPriceMultiplier, getBuyGoodsSupplierRelationships, recordBuyGoodsSupplierPurchase } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
+import {
+  getBuyGoodsSupplierPersistenceBonus,
+  getBuyGoodsSupplierRelationshipPriceMultiplier,
+  getBuyGoodsSupplierRelationships,
+  recordBuyGoodsSupplierPurchase,
+  type BuyGoodsSupplierRelationship,
+  type BuyGoodsSupplierRelationshipLevel,
+} from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import type { BuyMarketOfferRecord, BuyMarketPurchaseResult } from '@/lib/types/market';
 import type { StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
 import { NotificationCategory, type Season } from '@/lib/types/types';
-import type { BuyGoodsSupplierRelationship } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -47,6 +53,10 @@ export interface StorageVesselPriceBreakdown extends BuyGoodsPriceBreakdown {
   qualityScore: number;
   capacityLitres: number;
   finalPricePerVessel: number;
+}
+
+export function getStorageVesselOfferRetentionChance(level: BuyGoodsSupplierRelationshipLevel): number {
+  return Math.min(1, STORAGE_VESSEL_OFFER_RETENTION_CHANCE + getBuyGoodsSupplierPersistenceBonus(level));
 }
 
 export function getStorageVesselPriceBreakdown(input: {
@@ -128,12 +138,6 @@ function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageV
   };
 }
 
-function getNextSeason(season: Season, year: number): { season: Season; year: number } {
-  const order: Season[] = ['Spring', 'Summer', 'Fall', 'Winter'];
-  const nextIndex = (order.indexOf(season) + 1) % order.length;
-  return { season: order[nextIndex], year: season === 'Winter' ? year + 1 : year };
-}
-
 async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   const { data: existing, error } = await getCompanyBuyMarketOffers(companyId, 'storage_vessels');
   if (error) throw error;
@@ -142,13 +146,14 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   const state = getGameState();
   const createdYear = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
   const createdSeason = state.season ?? GAME_INITIALIZATION.STARTING_SEASON;
-  const expires = getNextSeason(createdSeason, createdYear);
+  const expires = getNextSeasonDate(createdSeason, createdYear);
   const expectedOfferCount = STORAGE_VESSEL_SUPPLIERS.length * STORAGE_VESSEL_SIZES_LITRES.length;
   if (currentOffers.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
 
   const previousOffers = currentOffers;
+  const relationships = await getBuyGoodsSupplierRelationships('storage_vessels', STORAGE_VESSEL_SUPPLIERS.map((supplier) => supplier.id));
   const retainedOffers = previousOffers
-    .filter((offer) => offer.availableUnits > 0 && deterministicSeasonalVariation(`${offer.offerId}:${createdYear}:${createdSeason}:retention`, 0, 1) < STORAGE_VESSEL_OFFER_RETENTION_CHANCE)
+    .filter((offer) => offer.availableUnits > 0 && deterministicSeasonalVariation(`${offer.offerId}:${createdYear}:${createdSeason}:retention`, 0, 1) < getStorageVesselOfferRetentionChance(relationships[offer.sellerId]?.level ?? 0))
     .slice(0, expectedOfferCount);
   const retainedIds = new Set(retainedOffers.map((offer) => offer.offerId));
   await Promise.all(retainedOffers.map((offer) => updateBuyMarketOffer(companyId, offer.offerId, {
@@ -161,7 +166,6 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   })));
 
   const companyValue = await calculateCompanyValue().catch(() => 0);
-  const relationships = await getBuyGoodsSupplierRelationships('storage_vessels', STORAGE_VESSEL_SUPPLIERS.map((supplier) => supplier.id));
   const created = STORAGE_VESSEL_SUPPLIERS.flatMap((supplier) => STORAGE_VESSEL_SIZES_LITRES.map<BuyMarketOfferRecord>((capacityLitres) => {
     const seed = `${state.currentYear}:${state.season}:${supplier.id}:${capacityLitres}`;
     const qualityScore = Number(deterministicSeasonalVariation(`${seed}:quality`, 0.35, 0.95).toFixed(2));

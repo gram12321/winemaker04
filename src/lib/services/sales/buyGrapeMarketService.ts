@@ -4,16 +4,17 @@ import { notificationService } from '../core/notificationService';
 import { companyService } from '../user/companyService';
 import { calculateCompanyValue } from '../finance/financeService';
 import {
-  type BuyMarketOfferRow,
-  deleteBuyOfferRow,
-  getCompanyBuyOfferRow,
-  getCompanyBuyOfferRows,
-  upsertBuyOfferRows,
-  updateBuyOfferRow,
+  type GrapeMarketOfferRow,
+  type GrapeMarketOfferPriceSnapshot,
+  deleteGrapeMarketOfferRow,
+  getCompanyGrapeMarketOfferRow,
+  getCompanyGrapeMarketOfferRows,
+  upsertGrapeMarketOfferRows,
+  updateGrapeMarketOfferRow,
 } from '../market/grapes/grapeMarketOfferPersistence';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { purchaseGrapeMarketOfferAtomically } from '@/lib/database/market/buyMarketOffersDB';
-import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
+import { purchaseGrapeMarketOfferAtomically } from '@/lib/database/market/grapeMarketOffersDB';
+import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getNextSeasonDate, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { BUY_MARKET_FIXED_SPREAD, BASE_BUY_MARKET_PRICE_PER_KG, BUY_MARKET_MAX_PRICE, BUY_MARKET_MIN_PRICE, BUYER_ECONOMY_PRICE_MULTIPLIERS, BUYER_SEASON_PRICE_MULTIPLIERS, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_PREVIEW_LAND_VALUE_WEIGHT, BUY_OFFER_PREVIEW_QUALITY_MAX_MULTIPLIER, BUY_OFFER_PREVIEW_QUALITY_MIN_MULTIPLIER, BUY_OFFER_PREVIEW_VERSION, BUY_OFFER_PREVIEW_WINE_SCORE_WEIGHT, DEFAULT_BUY_MARKET_DEMAND_FACTORS, GAME_INITIALIZATION, MARKET_CRUSHING_PROFILE_BY_COLOR, MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS, MARKET_FERMENTATION_PROFILE_BY_COLOR, MAX_SEASONAL_OFFERS, MIN_SEASONAL_OFFERS, SEASON_ORDER, STATE_DISTRIBUTION, STATE_PREMIUMS, STATE_QUALITY_DECAY_PER_WEEK, WEEKS_PER_SEASON, YEAR_PRICE_CYCLE, type BuyMarketDemandFactors, type BuyOfferBatchState } from '../../constants';
@@ -58,6 +59,7 @@ export interface BuyGrapeMarketOffer {
   qualityScore: number;
   basePricePerKg: number;
   effectivePricePerKg: number;
+  priceSnapshot: GrapeMarketOfferPriceSnapshot;
   weeksOnMarket: number;
   qualityDecayPerWeek: number;
   minQualityFloor: number;
@@ -159,12 +161,12 @@ function pickDeterministic<T>(items: readonly T[], seed: string): T {
   return items[index] as T;
 }
 
-function getOfferSeed(row: Pick<BuyMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'batch_state'>): string {
+function getOfferSeed(row: Pick<GrapeMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'batch_state'>): string {
   return `${row.offer_id}:${row.supplier_id}:${row.grape_variety}:${row.batch_state}`;
 }
 
 function buildOfferProvenanceSnapshot(
-  row: Pick<BuyMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'quality_score' | 'batch_state'>,
+  row: Pick<GrapeMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'quality_score' | 'batch_state'>,
   supplierCountry: Nationality
 ): MarketBatchProvenanceSnapshot {
   const seed = getOfferSeed(row);
@@ -203,7 +205,7 @@ function buildOfferProvenanceSnapshot(
 }
 
 function getMarketStateProfile(
-  row: Pick<BuyMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'batch_state' | 'weeks_on_market'>
+  row: Pick<GrapeMarketOfferRow, 'offer_id' | 'supplier_id' | 'grape_variety' | 'batch_state' | 'weeks_on_market'>
 ): MarketBatchStateProfile {
   const grapeColor = GRAPE_CONST[row.grape_variety as GrapeVariety]?.grapeColor ?? 'white';
   const crushingOptions = cloneStateProfile(MARKET_CRUSHING_PROFILE_BY_COLOR[grapeColor]);
@@ -242,7 +244,7 @@ function getMarketStateProfile(
 }
 
 function buildPreviewDates(
-  row: Pick<BuyMarketOfferRow, 'created_week' | 'created_season' | 'created_year' | 'last_refreshed_week' | 'last_refreshed_season' | 'last_refreshed_year'>
+  row: Pick<GrapeMarketOfferRow, 'created_week' | 'created_season' | 'created_year' | 'last_refreshed_week' | 'last_refreshed_season' | 'last_refreshed_year'>
 ): Pick<CreateMarketWineBatchInput, 'harvestStartDate' | 'harvestEndDate'> {
   const refreshWeek = row.last_refreshed_week ?? row.created_week;
   const refreshSeason = (row.last_refreshed_season ?? row.created_season) as Season;
@@ -263,7 +265,7 @@ function buildPreviewDates(
 }
 
 function toPreviewInput(
-  row: BuyMarketOfferRow,
+  row: GrapeMarketOfferRow,
   provenanceSnapshot: MarketBatchProvenanceSnapshot,
   quantityKg: number = row.available_kg
 ): CreateMarketWineBatchInput {
@@ -280,7 +282,7 @@ function toPreviewInput(
 }
 
 async function buildOfferPreviewArtifacts(
-  row: BuyMarketOfferRow,
+  row: GrapeMarketOfferRow,
   supplierCountry: Nationality,
   quantityKg: number = row.available_kg,
   qualityScoreOverride?: number
@@ -318,8 +320,13 @@ async function resolveSupplierCountry(
 async function hydrateOfferRow(
   companyId: string,
   companyCountry: Nationality,
-  row: BuyMarketOfferRow
-): Promise<BuyMarketOfferRow | null> {
+  row: GrapeMarketOfferRow
+): Promise<GrapeMarketOfferRow | null> {
+  if (!isGrapeMarketOfferPriceSnapshot(row.price_snapshot)) {
+    await deleteGrapeMarketOfferRow(companyId, row.offer_id);
+    return null;
+  }
+
   const hasCompatiblePreview =
     Boolean(row.provenance_snapshot) &&
     Boolean(row.preview_snapshot) &&
@@ -332,12 +339,12 @@ async function hydrateOfferRow(
   try {
     const supplierCountry = await resolveSupplierCountry(companyCountry, row.supplier_id);
     const artifacts = await buildOfferPreviewArtifacts(row, supplierCountry);
-    const hydratedRow: BuyMarketOfferRow = {
+    const hydratedRow: GrapeMarketOfferRow = {
       ...row,
       ...artifacts,
     };
 
-    await updateBuyOfferRow(companyId, row.offer_id, {
+    await updateGrapeMarketOfferRow(companyId, row.offer_id, {
       provenance_snapshot: hydratedRow.provenance_snapshot,
       preview_snapshot: hydratedRow.preview_snapshot,
       preview_version: hydratedRow.preview_version,
@@ -347,13 +354,13 @@ async function hydrateOfferRow(
     return hydratedRow;
   } catch (error) {
     console.warn('Dropping stale buy-market offer that could not be rehydrated.', row.offer_id, error);
-    await deleteBuyOfferRow(companyId, row.offer_id);
+    await deleteGrapeMarketOfferRow(companyId, row.offer_id);
     return null;
   }
 }
 
 function toOfferModel(
-  row: BuyMarketOfferRow,
+  row: GrapeMarketOfferRow,
   demandFactors: BuyMarketDemandFactors,
   supplierLoyaltyById: Record<string, SupplierLoyaltyRecord>
 ): BuyGrapeMarketOffer {
@@ -368,6 +375,7 @@ function toOfferModel(
     qualityScore: row.quality_score,
     basePricePerKg: row.base_price_per_kg,
     effectivePricePerKg: row.effective_price_per_kg,
+    priceSnapshot: row.price_snapshot,
     weeksOnMarket: row.weeks_on_market,
     qualityDecayPerWeek: row.quality_decay_per_week,
     minQualityFloor: row.min_quality_floor,
@@ -410,7 +418,7 @@ function getOfferPreviewValue(previewBatch: WineBatch, sourceQualityScore: numbe
 }
 
 function isOfferExpired(
-  row: Pick<BuyMarketOfferRow, 'expires_year' | 'expires_season' | 'expires_week'>,
+  row: Pick<GrapeMarketOfferRow, 'expires_year' | 'expires_season' | 'expires_week'>,
   now: { year: number; season: Season; week: number }
 ): boolean {
   if (row.expires_year === null || row.expires_season === null || row.expires_week === null) return false;
@@ -421,6 +429,36 @@ function isOfferExpired(
   const expiryAbsoluteWeek = row.expires_year * SEASON_ORDER.length * WEEKS_PER_SEASON + expirySeasonIndex * WEEKS_PER_SEASON + row.expires_week;
 
   return currentAbsoluteWeek >= expiryAbsoluteWeek;
+}
+
+function isGrapeMarketOfferPriceSnapshot(value: unknown): value is GrapeMarketOfferPriceSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Partial<GrapeMarketOfferPriceSnapshot>;
+  return [
+    snapshot.supplierRelationshipMultiplier,
+    snapshot.companyPrestige,
+    snapshot.seasonPriceMultiplier,
+    snapshot.economyPriceMultiplier,
+    snapshot.yearCyclePriceMultiplier,
+    snapshot.volatilityPriceMultiplier,
+    snapshot.volatilityBuyerPriceSensitivityMultiplier,
+  ].every((value) => typeof value === 'number' && Number.isFinite(value));
+}
+
+function createGrapeMarketOfferPriceSnapshot(
+  supplierRelationshipMultiplier: number,
+  companyPrestige: number,
+  demandFactors: BuyMarketDemandFactors,
+): GrapeMarketOfferPriceSnapshot {
+  return {
+    supplierRelationshipMultiplier,
+    companyPrestige,
+    seasonPriceMultiplier: demandFactors.seasonPriceMultiplier,
+    economyPriceMultiplier: demandFactors.economyPriceMultiplier,
+    yearCyclePriceMultiplier: demandFactors.yearCyclePriceMultiplier,
+    volatilityPriceMultiplier: demandFactors.volatilityPriceMultiplier,
+    volatilityBuyerPriceSensitivityMultiplier: demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1,
+  };
 }
 
 async function getSupplierRemainingSeasonCapKg(companyId: string, supplierId: string): Promise<number | null> {
@@ -448,41 +486,42 @@ export function computeBuyOfferPricePerKg(input: {
   economyPhase: EconomyPhase;
   year: number;
   companyPrestige?: number;
-  volatilityMultiplier: number;
+  volatilityMultiplier?: number;
   supplierRelationshipPriceMultiplier?: number;
+  priceSnapshot?: GrapeMarketOfferPriceSnapshot;
   demandFactors?: BuyMarketDemandFactors;
   previewValueMultiplier?: number;
 }): number {
   const qualityMultiplier = toPriceQualityMultiplier(input.qualityScore);
-  const seasonMultiplier = input.demandFactors?.seasonPriceMultiplier ?? BUYER_SEASON_PRICE_MULTIPLIERS[input.season] ?? 1;
-  const economyMultiplier = input.demandFactors?.economyPriceMultiplier ?? BUYER_ECONOMY_PRICE_MULTIPLIERS[input.economyPhase] ?? 1;
-  const yearCycleMultiplier = input.demandFactors?.yearCyclePriceMultiplier ?? getYearCycleMultiplier(input.year);
-  const volatilityMultiplier = input.demandFactors?.volatilityPriceMultiplier ?? input.volatilityMultiplier;
-  const buyerSensitivityMultiplier = input.demandFactors?.volatilityBuyerPriceSensitivityMultiplier ?? 1;
-  const supplierRelationshipPriceMultiplier = input.supplierRelationshipPriceMultiplier ?? 1;
+  const seasonMultiplier = input.priceSnapshot?.seasonPriceMultiplier ?? input.demandFactors?.seasonPriceMultiplier ?? BUYER_SEASON_PRICE_MULTIPLIERS[input.season] ?? 1;
+  const economyMultiplier = input.priceSnapshot?.economyPriceMultiplier ?? input.demandFactors?.economyPriceMultiplier ?? BUYER_ECONOMY_PRICE_MULTIPLIERS[input.economyPhase] ?? 1;
+  const yearCycleMultiplier = input.priceSnapshot?.yearCyclePriceMultiplier ?? input.demandFactors?.yearCyclePriceMultiplier ?? getYearCycleMultiplier(input.year);
+  const volatilityMultiplier = input.priceSnapshot?.volatilityPriceMultiplier ?? input.demandFactors?.volatilityPriceMultiplier ?? input.volatilityMultiplier ?? 1;
+  const buyerSensitivityMultiplier = input.priceSnapshot?.volatilityBuyerPriceSensitivityMultiplier ?? input.demandFactors?.volatilityBuyerPriceSensitivityMultiplier ?? 1;
+  const supplierRelationshipMultiplier = input.priceSnapshot?.supplierRelationshipMultiplier ?? input.supplierRelationshipPriceMultiplier ?? 1;
+  const companyPrestige = input.priceSnapshot?.companyPrestige ?? input.companyPrestige ?? 0;
   return calculateBuyGoodsPrice({
     basePrice: input.basePrice,
     itemMultiplier: qualityMultiplier * (input.previewValueMultiplier ?? 1) * STATE_PREMIUMS[input.state],
     marketMultiplier: seasonMultiplier * economyMultiplier * yearCycleMultiplier * volatilityMultiplier * buyerSensitivityMultiplier,
-    supplierRelationshipMultiplier: supplierRelationshipPriceMultiplier,
-    companyPrestige: input.companyPrestige ?? 0,
+    supplierRelationshipMultiplier,
+    companyPrestige,
     spreadMultiplier: 1 + BUY_MARKET_FIXED_SPREAD,
     minimumPrice: BUY_MARKET_MIN_PRICE,
     maximumPrice: BUY_MARKET_MAX_PRICE,
   });
 }
 
-export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'basePricePerKg' | 'qualityScore' | 'batchState' | 'effectivePricePerKg' | 'demandFactors' | 'supplierLoyalty' | 'previewBatch'>): BuyOfferPriceBreakdown {
-  const companyPrestige = getGameState().prestige ?? 0;
+export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'basePricePerKg' | 'qualityScore' | 'batchState' | 'effectivePricePerKg' | 'previewBatch' | 'priceSnapshot'>): BuyOfferPriceBreakdown {
   const qualityMultiplier = toPriceQualityMultiplier(offer.qualityScore);
   const qualityAdjustedPricePerKg = offer.basePricePerKg * qualityMultiplier;
   const previewValue = getOfferPreviewValue(offer.previewBatch, offer.qualityScore);
-  const seasonPriceMultiplier = offer.demandFactors.seasonPriceMultiplier ?? 1;
-  const economyPriceMultiplier = offer.demandFactors.economyPriceMultiplier ?? 1;
-  const yearCyclePriceMultiplier = offer.demandFactors.yearCyclePriceMultiplier ?? 1;
-  const volatilityPriceMultiplier = offer.demandFactors.volatilityPriceMultiplier ?? 1;
-  const buyerSensitivityMultiplier = offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1;
-  const supplierRelationshipMultiplier = getSupplierRelationshipPriceMultiplier((offer.supplierLoyalty?.level ?? 0) as SupplierLoyaltyLevel);
+  const seasonPriceMultiplier = offer.priceSnapshot.seasonPriceMultiplier;
+  const economyPriceMultiplier = offer.priceSnapshot.economyPriceMultiplier;
+  const yearCyclePriceMultiplier = offer.priceSnapshot.yearCyclePriceMultiplier;
+  const volatilityPriceMultiplier = offer.priceSnapshot.volatilityPriceMultiplier;
+  const buyerSensitivityMultiplier = offer.priceSnapshot.volatilityBuyerPriceSensitivityMultiplier;
+  const supplierRelationshipMultiplier = offer.priceSnapshot.supplierRelationshipMultiplier;
   const statePremiumMultiplier = STATE_PREMIUMS[offer.batchState] ?? 1;
   const marketSpreadMultiplier = 1 + BUY_MARKET_FIXED_SPREAD;
   const commonPriceBreakdown = getBuyGoodsPriceBreakdown({
@@ -490,7 +529,7 @@ export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'base
     itemMultiplier: qualityMultiplier * previewValue.valueMultiplier * statePremiumMultiplier,
     marketMultiplier: seasonPriceMultiplier * economyPriceMultiplier * yearCyclePriceMultiplier * volatilityPriceMultiplier * buyerSensitivityMultiplier,
     supplierRelationshipMultiplier,
-    companyPrestige,
+    companyPrestige: offer.priceSnapshot.companyPrestige,
     spreadMultiplier: marketSpreadMultiplier,
     minimumPrice: BUY_MARKET_MIN_PRICE,
     maximumPrice: BUY_MARKET_MAX_PRICE,
@@ -554,13 +593,6 @@ async function getMarketContext(companyId: string): Promise<{ country: Nationali
   return { country, demandFactors };
 }
 
-function getNextSeason(season: Season, year: number): { season: Season; year: number } {
-  const index = SEASON_ORDER.indexOf(season);
-  const nextSeason = SEASON_ORDER[(index + 1) % SEASON_ORDER.length] as Season;
-  const nextYear = nextSeason === 'Spring' ? year + 1 : year;
-  return { season: nextSeason, year: nextYear };
-}
-
 async function buildNewOffer(
   companyId: string,
   offerIndex: number,
@@ -568,7 +600,7 @@ async function buildNewOffer(
   demandFactors: BuyMarketDemandFactors,
   companyValue: number,
   prestige: number,
-): Promise<BuyMarketOfferRow> {
+): Promise<GrapeMarketOfferRow> {
   const { week, season, year, economyPhase } = getCurrentTime();
   const offerId = `buy_offer_${season.toLowerCase()}_${year}_${offerIndex}_${Math.random().toString(36).slice(2, 7)}`;
   const batchState = getRandomFromArray(STATE_DISTRIBUTION);
@@ -576,9 +608,14 @@ async function buildNewOffer(
   const resolvedSupplierName = supplier.supplierName;
   const resolvedSupplierId = supplier.supplierId;
   const basePricePerKg = Number((BASE_BUY_MARKET_PRICE_PER_KG * supplier.basePriceMultiplier).toFixed(2));
+  const priceSnapshot = createGrapeMarketOfferPriceSnapshot(
+    getSupplierRelationshipPriceMultiplier(supplier.loyaltyLevel),
+    prestige,
+    demandFactors,
+  );
 
-  const expires = getNextSeason(season, year);
-  const baseRow: BuyMarketOfferRow = {
+  const expires = getNextSeasonDate(season, year);
+  const baseRow: GrapeMarketOfferRow = {
     company_id: companyId,
     offer_id: offerId,
     ware_group: 'grapes',
@@ -591,6 +628,7 @@ async function buildNewOffer(
     quality_score: qualityScore,
     base_price_per_kg: basePricePerKg,
     effective_price_per_kg: 0,
+    price_snapshot: priceSnapshot,
     weeks_on_market: 0,
     quality_decay_per_week: STATE_QUALITY_DECAY_PER_WEEK[batchState],
     min_quality_floor: 0.16,
@@ -616,10 +654,7 @@ async function buildNewOffer(
     season,
     economyPhase,
     year,
-    companyPrestige: prestige,
-    volatilityMultiplier: demandFactors.volatilityPriceMultiplier,
-    supplierRelationshipPriceMultiplier: getSupplierRelationshipPriceMultiplier(supplier.loyaltyLevel),
-    demandFactors,
+    priceSnapshot,
     previewValueMultiplier: previewValue.valueMultiplier,
   }).toFixed(2));
 
@@ -638,14 +673,14 @@ function pickPreferredSupplier(
 }
 
 async function ensureOffers(companyId: string): Promise<void> {
-  const { data, error } = await getCompanyBuyOfferRows(companyId);
+  const { data, error } = await getCompanyGrapeMarketOfferRows(companyId);
   if (error) return;
 
-  const rows = ((data || []) as unknown) as BuyMarketOfferRow[];
+  const rows = ((data || []) as unknown) as GrapeMarketOfferRow[];
   const now = getCurrentTime();
-  const activeRows = rows.filter((row) => !isOfferExpired(row, now) && row.available_kg > 0);
+  const activeRows = rows.filter((row) => isGrapeMarketOfferPriceSnapshot(row.price_snapshot) && !isOfferExpired(row, now) && row.available_kg > 0);
   const expiredRows = rows.filter((row) => !activeRows.includes(row));
-  await Promise.all(expiredRows.map((row) => deleteBuyOfferRow(companyId, row.offer_id)));
+  await Promise.all(expiredRows.map((row) => deleteGrapeMarketOfferRow(companyId, row.offer_id)));
   if (activeRows.length > 0) return;
 
   const { country, demandFactors } = await getMarketContext(companyId);
@@ -670,7 +705,7 @@ async function ensureOffers(companyId: string): Promise<void> {
       prestige
     );
   }));
-  await upsertBuyOfferRows(generated);
+  await upsertGrapeMarketOfferRows(generated);
 }
 
 /**
@@ -681,11 +716,11 @@ export async function recreateBuyGrapeMarketOffers(): Promise<void> {
   const companyId = getCurrentCompanyId();
   if (!companyId) throw new Error('No active company selected.');
 
-  const { data, error } = await getCompanyBuyOfferRows(companyId);
+  const { data, error } = await getCompanyGrapeMarketOfferRows(companyId);
   if (error) throw error;
 
-  const rows = ((data || []) as unknown) as BuyMarketOfferRow[];
-  const deletionResults = await Promise.all(rows.map((row) => deleteBuyOfferRow(companyId, row.offer_id)));
+  const rows = ((data || []) as unknown) as GrapeMarketOfferRow[];
+  const deletionResults = await Promise.all(rows.map((row) => deleteGrapeMarketOfferRow(companyId, row.offer_id)));
   const deletionError = deletionResults.find((result) => result.error)?.error;
   if (deletionError) throw deletionError;
 
@@ -699,13 +734,13 @@ export async function getBuyGrapeMarketOffers(): Promise<BuyGrapeMarketOffer[]> 
 
   await ensureOffers(companyId);
 
-  const { data, error } = await getCompanyBuyOfferRows(companyId);
+  const { data, error } = await getCompanyGrapeMarketOfferRows(companyId);
   if (error || !data) return [];
 
   const { country, demandFactors } = await getMarketContext(companyId);
-  const rows = (data as unknown) as BuyMarketOfferRow[];
+  const rows = (data as unknown) as GrapeMarketOfferRow[];
   const hydratedRows = (await Promise.all(rows.map((row) => hydrateOfferRow(companyId, country, row))))
-    .filter((row): row is BuyMarketOfferRow => Boolean(row));
+    .filter((row): row is GrapeMarketOfferRow => Boolean(row));
   const supplierIds = Array.from(new Set(hydratedRows.map((row) => row.supplier_id)));
   const supplierLoyaltyById = await getSupplierLoyalties(supplierIds);
 
@@ -719,7 +754,7 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return;
 
-  const { data, error } = await getCompanyBuyOfferRows(companyId);
+  const { data, error } = await getCompanyGrapeMarketOfferRows(companyId);
   if (error) return;
 
   const { country, demandFactors } = await getMarketContext(companyId);
@@ -732,19 +767,19 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
   const suppliers = [bulkSupplier, ...seasonalSuppliers].filter((supplier): supplier is BuyMarketSupplierProfile => !!supplier);
   if (suppliers.length === 0) return;
 
-  const existingRows = ((data || []) as unknown) as BuyMarketOfferRow[];
+  const existingRows = ((data || []) as unknown) as GrapeMarketOfferRow[];
   const now = getCurrentTime();
   const supplierLoyaltyById = await getSupplierLoyalties(
     Array.from(new Set(existingRows.map((row) => row.supplier_id)))
   );
   const persistentRows = await Promise.all(
     existingRows
-      .filter(row => row.is_persistent && row.available_kg > 0)
+      .filter(row => row.is_persistent && row.available_kg > 0 && isGrapeMarketOfferPriceSnapshot(row.price_snapshot))
       .slice(0, 3)
       .map(async (row) => {
         const supplierCountry = await resolveSupplierCountry(country, row.supplier_id);
-        const expires = getNextSeason(now.season, now.year);
-        const refreshedBaseRow: BuyMarketOfferRow = {
+        const expires = getNextSeasonDate(now.season, now.year);
+        const refreshedBaseRow: GrapeMarketOfferRow = {
           ...row,
           origin_tag: 'trusted_carryover' as const,
           supplier_name: row.supplier_name || 'Seasonal Supplier',
@@ -758,9 +793,15 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
         };
         const artifacts = await buildOfferPreviewArtifacts(refreshedBaseRow, supplierCountry);
         const previewValue = getOfferPreviewValue(artifacts.preview_snapshot, refreshedBaseRow.quality_score);
+        const priceSnapshot = createGrapeMarketOfferPriceSnapshot(
+          getSupplierRelationshipPriceMultiplier((supplierLoyaltyById[row.supplier_id]?.level ?? 0) as SupplierLoyaltyLevel),
+          prestige,
+          demandFactors,
+        );
         return {
           ...refreshedBaseRow,
           ...artifacts,
+          price_snapshot: priceSnapshot,
           effective_price_per_kg: Number(computeBuyOfferPricePerKg({
             basePrice: refreshedBaseRow.base_price_per_kg,
             qualityScore: refreshedBaseRow.quality_score,
@@ -768,10 +809,7 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
             season: now.season,
             economyPhase: now.economyPhase,
             year: now.year,
-            companyPrestige: prestige,
-            volatilityMultiplier: demandFactors.volatilityPriceMultiplier,
-            supplierRelationshipPriceMultiplier: getSupplierRelationshipPriceMultiplier((supplierLoyaltyById[row.supplier_id]?.level ?? 0) as SupplierLoyaltyLevel),
-            demandFactors,
+            priceSnapshot,
             previewValueMultiplier: previewValue.valueMultiplier,
           }).toFixed(2)),
         };
@@ -797,20 +835,20 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
   const retainedIds = new Set(merged.map((row) => row.offer_id));
   const staleRows = existingRows.filter((row) => !retainedIds.has(row.offer_id));
   for (const staleRow of staleRows) {
-    await deleteBuyOfferRow(companyId, staleRow.offer_id);
+    await deleteGrapeMarketOfferRow(companyId, staleRow.offer_id);
   }
 
-  await upsertBuyOfferRows(merged);
+  await upsertGrapeMarketOfferRows(merged);
 }
 
 export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return;
 
-  const { data, error } = await getCompanyBuyOfferRows(companyId);
+  const { data, error } = await getCompanyGrapeMarketOfferRows(companyId);
   if (error || !data) return;
 
-  const rows = (data as unknown) as BuyMarketOfferRow[];
+  const rows = (data as unknown) as GrapeMarketOfferRow[];
   const { week, season, year, economyPhase } = getCurrentTime();
   const { country, demandFactors } = await getMarketContext(companyId);
   const prestige = getGameState().prestige ?? 0;
@@ -818,8 +856,8 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
   const supplierLoyaltyById = await getSupplierLoyalties(supplierIds);
 
   for (const row of rows) {
-    if (row.available_kg <= 0 || isOfferExpired(row, { year, season, week })) {
-      await deleteBuyOfferRow(companyId, row.offer_id);
+    if (!isGrapeMarketOfferPriceSnapshot(row.price_snapshot) || row.available_kg <= 0 || isOfferExpired(row, { year, season, week })) {
+      await deleteGrapeMarketOfferRow(companyId, row.offer_id);
       continue;
     }
 
@@ -829,9 +867,15 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
     const previewRow = { ...row, weeks_on_market: nextWeeksOnMarket };
     const artifacts = await buildOfferPreviewArtifacts(previewRow, supplierCountry, row.available_kg, nextQuality);
     const previewValue = getOfferPreviewValue(artifacts.preview_snapshot, nextQuality);
+    const priceSnapshot = createGrapeMarketOfferPriceSnapshot(
+      getSupplierRelationshipPriceMultiplier((supplierLoyaltyById[row.supplier_id]?.level ?? 0) as SupplierLoyaltyLevel),
+      prestige,
+      demandFactors,
+    );
 
-    await updateBuyOfferRow(companyId, row.offer_id, {
+    await updateGrapeMarketOfferRow(companyId, row.offer_id, {
       quality_score: Number(nextQuality.toFixed(3)),
+      price_snapshot: priceSnapshot,
       effective_price_per_kg: Number(computeBuyOfferPricePerKg({
         basePrice: row.base_price_per_kg,
         qualityScore: nextQuality,
@@ -839,10 +883,7 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
         season,
         economyPhase,
         year,
-        companyPrestige: prestige,
-        volatilityMultiplier: demandFactors.volatilityPriceMultiplier,
-        supplierRelationshipPriceMultiplier: getSupplierRelationshipPriceMultiplier((supplierLoyaltyById[row.supplier_id]?.level ?? 0) as SupplierLoyaltyLevel),
-        demandFactors,
+        priceSnapshot,
         previewValueMultiplier: previewValue.valueMultiplier,
       }).toFixed(2)),
       weeks_on_market: nextWeeksOnMarket,
@@ -859,16 +900,20 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
   if (!companyId) return { success: false, error: 'No active company selected.' };
 
   const roundedQuantity = Math.max(1, Math.round(quantityKg));
-  const { data, error } = await getCompanyBuyOfferRow(companyId, offerId);
+  const { data, error } = await getCompanyGrapeMarketOfferRow(companyId, offerId);
   if (error || !data) {
     return { success: false, error: 'Offer not found.' };
   }
 
   const { country } = await getMarketContext(companyId);
-  const rawOffer = (data as unknown) as BuyMarketOfferRow;
+  const rawOffer = (data as unknown) as GrapeMarketOfferRow;
+  if (!isGrapeMarketOfferPriceSnapshot(rawOffer.price_snapshot)) {
+    await deleteGrapeMarketOfferRow(companyId, offerId);
+    return { success: false, error: 'Offer was refreshed. Please reopen the market.' };
+  }
   const now = getCurrentTime();
   if (isOfferExpired(rawOffer, now)) {
-    await deleteBuyOfferRow(companyId, offerId);
+    await deleteGrapeMarketOfferRow(companyId, offerId);
     return { success: false, error: 'Offer has expired. Please reopen the market.' };
   }
   const offer = await hydrateOfferRow(companyId, country, rawOffer);

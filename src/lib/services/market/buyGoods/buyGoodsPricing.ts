@@ -1,11 +1,10 @@
 import { clamp, deterministicSeasonalVariation, NormalizeScrewed1000To01WithTail } from '@/lib/utils';
+import type { BuyGoodsPriceQuoteInput } from '@/lib/types/market';
 
-export interface BuyGoodsPriceInput {
+export interface BuyGoodsPriceInput extends Partial<BuyGoodsPriceQuoteInput> {
   basePrice: number;
   itemMultiplier?: number;
   marketMultiplier?: number;
-  supplierRelationshipMultiplier?: number;
-  companyPrestige?: number;
   spreadMultiplier?: number;
   minimumPrice: number;
   maximumPrice: number;

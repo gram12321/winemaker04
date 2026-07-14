@@ -1,3 +1,5 @@
+import type { BuyGoodsPriceQuoteInput } from '@/lib/types/market';
+
 export type StorageVesselType = 'cask' | 'steel_tank' | 'concrete_tank' | 'container';
 export type StorageVesselMaterial = 'oak' | 'stainless_steel' | 'concrete' | 'neutral';
 export type StorageVesselOperationalStatus = 'operational' | 'maintenance' | 'retired';
@@ -51,10 +53,8 @@ export interface StorageVessel {
   purchasedWeek: number;
 }
 
-export interface StorageVesselOfferPriceSnapshot {
+export interface StorageVesselOfferPriceSnapshot extends BuyGoodsPriceQuoteInput {
   supplierBaseMultiplier: number;
-  supplierRelationshipMultiplier: number;
-  companyPrestige: number;
 }
 
 export interface StorageVesselOfferPayload {

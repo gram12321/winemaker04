@@ -198,23 +198,28 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
   }, [grapeFilter, stateFilter, sortKey, sortDirection]);
 
   const handleBuy = useCallback(async (offerId: string, quantityKg: number, vesselIds: string[]) => {
-    const result = await purchaseBuyMarketOffer(offerId, quantityKg, { storageVesselIds: vesselIds });
+    setLoading(true);
+    try {
+      const result = await purchaseBuyMarketOffer(offerId, quantityKg, { storageVesselIds: vesselIds });
 
-    if (!result.success) {
-      setErrorByOfferId((current) => ({
-        ...current,
-        [offerId]: result.error || 'Purchase failed.',
-      }));
-      return;
+      if (!result.success) {
+        setErrorByOfferId((current) => ({
+          ...current,
+          [offerId]: result.error || 'Purchase failed.',
+        }));
+        return;
+      }
+
+      setErrorByOfferId((current) => {
+        const next = { ...current };
+        delete next[offerId];
+        return next;
+      });
+
+      onClose();
+    } finally {
+      setLoading(false);
     }
-
-    setErrorByOfferId((current) => {
-      const next = { ...current };
-      delete next[offerId];
-      return next;
-    });
-
-    onClose();
   }, [onClose]);
 
   const grapeFilterOptions = useMemo(() => {

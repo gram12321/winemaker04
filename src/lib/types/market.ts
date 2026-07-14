@@ -3,6 +3,11 @@ import type { Season } from './types';
 export type BuyMarketWareGroup = 'grapes' | 'storage_vessels';
 export type BuyMarketUnit = 'kg' | 'vessel';
 
+export interface BuyGoodsPriceQuoteInput {
+  supplierRelationshipMultiplier: number;
+  companyPrestige: number;
+}
+
 export interface BuyMarketOfferRecord {
   companyId: string;
   offerId: string;
