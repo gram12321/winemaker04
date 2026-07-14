@@ -16,7 +16,7 @@ import { purchaseGrapeMarketOfferAtomically } from '@/lib/database/market/buyMar
 import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { BUY_MARKET_FIXED_SPREAD, BASE_BUY_MARKET_PRICE_PER_KG, BUY_MARKET_MAX_PRICE, BUY_MARKET_MIN_PRICE, BUYER_ECONOMY_PRICE_MULTIPLIERS, BUYER_SEASON_PRICE_MULTIPLIERS, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_PRESTIGE_MAX_DISCOUNT, BUY_OFFER_PREVIEW_LAND_VALUE_WEIGHT, BUY_OFFER_PREVIEW_QUALITY_MAX_MULTIPLIER, BUY_OFFER_PREVIEW_QUALITY_MIN_MULTIPLIER, BUY_OFFER_PREVIEW_VERSION, BUY_OFFER_PREVIEW_WINE_SCORE_WEIGHT, DEFAULT_BUY_MARKET_DEMAND_FACTORS, GAME_INITIALIZATION, MARKET_CRUSHING_PROFILE_BY_COLOR, MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS, MARKET_FERMENTATION_PROFILE_BY_COLOR, MAX_SEASONAL_OFFERS, MIN_SEASONAL_OFFERS, SEASON_ORDER, STATE_DISTRIBUTION, STATE_PREMIUMS, STATE_QUALITY_DECAY_PER_WEEK, WEEKS_PER_SEASON, YEAR_PRICE_CYCLE, type BuyMarketDemandFactors, type BuyOfferBatchState } from '../../constants';
+import { BUY_MARKET_FIXED_SPREAD, BASE_BUY_MARKET_PRICE_PER_KG, BUY_MARKET_MAX_PRICE, BUY_MARKET_MIN_PRICE, BUYER_ECONOMY_PRICE_MULTIPLIERS, BUYER_SEASON_PRICE_MULTIPLIERS, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER, BUY_OFFER_COMPANY_VALUE_REFERENCE, BUY_OFFER_MIN_AVAILABLE_KG, BUY_OFFER_PREVIEW_LAND_VALUE_WEIGHT, BUY_OFFER_PREVIEW_QUALITY_MAX_MULTIPLIER, BUY_OFFER_PREVIEW_QUALITY_MIN_MULTIPLIER, BUY_OFFER_PREVIEW_VERSION, BUY_OFFER_PREVIEW_WINE_SCORE_WEIGHT, DEFAULT_BUY_MARKET_DEMAND_FACTORS, GAME_INITIALIZATION, MARKET_CRUSHING_PROFILE_BY_COLOR, MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS, MARKET_FERMENTATION_PROFILE_BY_COLOR, MAX_SEASONAL_OFFERS, MIN_SEASONAL_OFFERS, SEASON_ORDER, STATE_DISTRIBUTION, STATE_PREMIUMS, STATE_QUALITY_DECAY_PER_WEEK, WEEKS_PER_SEASON, YEAR_PRICE_CYCLE, type BuyMarketDemandFactors, type BuyOfferBatchState } from '../../constants';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_SOIL_TYPES } from '../../constants/vineyardConstants';
 import { NotificationCategory, type EconomyPhase, type GrapeVariety, type MarketBatchProvenanceSnapshot, type MarketOfferOriginTag, type Nationality, type Season, type WineBatch } from '../../types/types';
 import { getBulkBuyer } from './grapeBuyerMarketService';
@@ -35,8 +35,8 @@ import {
   recordSupplierPurchase,
 } from './grapeSupplierLoyaltyService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
-import { calculateBuyGoodsPrice, getBuyGoodsCompanyScale } from '@/lib/services/market/buyGoods/buyGoodsPricing';
+import { calculateAsymmetricalMultiplier } from '../../utils/calculator';
+import { calculateBuyGoodsPrice, getBuyGoodsCompanyScale, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import { calculateFeatureMarketPriceMultiplier, calculateFeatureRiskMarketPriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 import {
   buildMarketPreviewBatch,
@@ -72,7 +72,7 @@ export interface BuyGrapeMarketOffer {
   previewVersion: number;
 }
 
-export interface BuyOfferPriceBreakdown {
+export interface BuyOfferPriceBreakdown extends BuyGoodsPriceBreakdown {
   basePricePerKg: number;
   qualityMultiplier: number;
   qualityAdjustedPricePerKg: number;
@@ -86,8 +86,6 @@ export interface BuyOfferPriceBreakdown {
   yearCyclePriceMultiplier: number;
   volatilityPriceMultiplier: number;
   buyerSensitivityMultiplier: number;
-  supplierRelationshipMultiplier: number;
-  companyPrestigeMultiplier: number;
   statePremiumMultiplier: number;
   marketSpreadMultiplier: number;
   marketFloorPrice: number;
@@ -485,11 +483,21 @@ export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'base
   const volatilityPriceMultiplier = offer.demandFactors.volatilityPriceMultiplier ?? 1;
   const buyerSensitivityMultiplier = offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1;
   const supplierRelationshipMultiplier = getSupplierRelationshipPriceMultiplier((offer.supplierLoyalty?.level ?? 0) as SupplierLoyaltyLevel);
-  const companyPrestigeMultiplier = clamp(1 - NormalizeScrewed1000To01WithTail(companyPrestige) * BUY_OFFER_PRESTIGE_MAX_DISCOUNT, 0.7, 1);
   const statePremiumMultiplier = STATE_PREMIUMS[offer.batchState] ?? 1;
   const marketSpreadMultiplier = 1 + BUY_MARKET_FIXED_SPREAD;
+  const commonPriceBreakdown = getBuyGoodsPriceBreakdown({
+    basePrice: offer.basePricePerKg,
+    itemMultiplier: qualityMultiplier * previewValue.valueMultiplier * statePremiumMultiplier,
+    marketMultiplier: seasonPriceMultiplier * economyPriceMultiplier * yearCyclePriceMultiplier * volatilityPriceMultiplier * buyerSensitivityMultiplier,
+    supplierRelationshipMultiplier,
+    companyPrestige,
+    spreadMultiplier: marketSpreadMultiplier,
+    minimumPrice: BUY_MARKET_MIN_PRICE,
+    maximumPrice: BUY_MARKET_MAX_PRICE,
+  });
 
   return {
+    ...commonPriceBreakdown,
     basePricePerKg: offer.basePricePerKg,
     qualityMultiplier,
     qualityAdjustedPricePerKg,
@@ -504,7 +512,6 @@ export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'base
     volatilityPriceMultiplier,
     buyerSensitivityMultiplier,
     supplierRelationshipMultiplier,
-    companyPrestigeMultiplier,
     statePremiumMultiplier,
     marketSpreadMultiplier,
     marketFloorPrice: BUY_MARKET_MIN_PRICE,

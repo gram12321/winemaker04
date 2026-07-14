@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calculateBuyGoodsPrice, getBuyGoodsCompanyScale, getBuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
-import { getBuyGoodsSupplierTrustPreview } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
+import { BUY_GOODS_SUPPLIER_LEVELS, getBuyGoodsSupplierTrustPreview } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 
 describe('Buy Goods pricing', () => {
   it('scales offer availability with company value and prestige', () => {
@@ -26,12 +26,10 @@ describe('Buy Goods pricing', () => {
     expect(breakdown.unclampedPrice).toBeGreaterThan(breakdown.finalPrice);
   });
 
-  it('previews supplier trust using the same yearly cap as purchase recording', () => {
-    const preview = getBuyGoodsSupplierTrustPreview({ yearGuardYear: 2026, yearRelationshipPoints: 2_590 }, 100, 0, 2026);
+  it('defines shared supplier levels and previews with the same yearly cap used by purchases', () => {
+    expect(BUY_GOODS_SUPPLIER_LEVELS[3]).toMatchObject({ name: 'Trusted Supplier', minLoyaltyScore: 4_600, priceMultiplier: 0.97 });
 
-    expect(preview.rawPoints).toBe(25);
-    expect(preview.appliedPoints).toBe(10);
-    expect(preview.cappedPoints).toBe(15);
-    expect(preview.yearlyCap).toBe(2_600);
+    const preview = getBuyGoodsSupplierTrustPreview({ yearGuardYear: 2026, yearRelationshipPoints: 2_590 }, 100, 0, 2026);
+    expect(preview).toMatchObject({ rawPoints: 25, appliedPoints: 10, cappedPoints: 15, yearlyCap: 2_600 });
   });
 });

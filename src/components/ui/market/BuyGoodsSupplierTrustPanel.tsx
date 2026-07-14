@@ -15,8 +15,8 @@ export function getBuyGoodsSupplierTrustColor(level: BuyGoodsSupplierRelationshi
 
 function getBuyGoodsSupplierTrustIcon(level: BuyGoodsSupplierRelationshipLevel): string {
   if (level === 0) return '○';
-  if (level <= 2) return '◉';
-  if (level <= 4) return '◉';
+  if (level <= 2) return '◔';
+  if (level <= 4) return '◕';
   return '●';
 }
 

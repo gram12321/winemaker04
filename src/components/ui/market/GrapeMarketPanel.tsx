@@ -160,78 +160,6 @@ const PriceCalculationTooltip: React.FC<{
   );
 };
 
-function getTrustIcon(level: SupplierLoyaltyLevel): string {
-  if (level === 0) return '○';
-  if (level <= 2) return '◔';
-  if (level <= 4) return '◕';
-  return '●';
-}
-
-function getTrustColor(level: SupplierLoyaltyLevel): string {
-  if (level === 0) return 'text-gray-400';
-  if (level <= 2) return 'text-blue-300';
-  if (level <= 4) return 'text-cyan-300';
-  return 'text-amber-300';
-}
-
-const SupplierTrustPanel: React.FC<{
-  supplierName?: string;
-  loyalty: SupplierLoyaltyRecord | null;
-  companyValue: number;
-}> = ({ supplierName, loyalty, companyValue }) => {
-  const level = (loyalty?.level ?? 0) as SupplierLoyaltyLevel;
-  const config = SUPPLIER_LOYALTY_LEVELS[level];
-  const nextLevel = level < 5 ? SUPPLIER_LOYALTY_LEVELS[(level + 1) as SupplierLoyaltyLevel] : null;
-  const score = loyalty?.loyaltyScore ?? 0;
-  const scoreToNext = nextLevel ? Math.max(0, nextLevel.minLoyaltyScore - score) : 0;
-  const yearlyCap = getSupplierYearlyTrustCap(Math.max(1, loyalty?.consecutiveYears ?? 1), companyValue);
-
-  return (
-    <div className="rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs space-y-2">
-      <div className="flex justify-between items-center">
-        <span className="font-semibold text-blue-300">{getTrustIcon(level)} Supplier Trust</span>
-        <span className={`font-bold ${getTrustColor(level)}`}>{config.name}</span>
-      </div>
-
-      <div className="flex gap-4 text-gray-400">
-        <span>Supplier: <strong className="text-white">{supplierName ?? loyalty?.supplierName ?? 'Unknown'}</strong></span>
-      </div>
-
-      <div className="flex gap-4 text-gray-400">
-        <span>Total purchases: <strong className="text-white">{(loyalty?.totalPurchases ?? 0)}</strong></span>
-        <span>Streak: <strong className="text-white">{(loyalty?.consecutiveYears ?? 0)} {(loyalty?.consecutiveYears ?? 0) === 1 ? 'year' : 'years'}</strong></span>
-        <span>Total bought: <strong className="text-white">{(loyalty?.totalKgPurchased ?? 0).toLocaleString()} kg</strong></span>
-      </div>
-
-      <div className="flex gap-4 text-gray-300">
-        <span>Trust score: <strong className="text-white">{score.toLocaleString()}</strong></span>
-        <span>Year cap: <strong className="text-white">{(loyalty?.yearLoyaltyPoints ?? 0).toLocaleString()} / {yearlyCap.toLocaleString()}</strong></span>
-      </div>
-
-      {config.benefits.length > 0 && (
-        <ul className="space-y-0.5 text-gray-300">
-          {config.benefits.map((benefit, i) => <li key={i}>• {benefit}</li>)}
-        </ul>
-      )}
-
-      {nextLevel && (
-        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
-          {scoreToNext === 0
-            ? `Ready to advance to ${nextLevel.name}!`
-            : `${scoreToNext.toLocaleString()} trust score to reach ${nextLevel.name}`
-          }
-        </div>
-      )}
-
-      {!loyalty && (
-        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
-          First purchase from this supplier will establish this relationship.
-        </div>
-      )}
-    </div>
-  );
-};
-
 export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) => {
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -246,6 +174,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
   const [purchaseQuantityByOfferId, setPurchaseQuantityByOfferId] = useState<Record<string, number>>({});
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
   const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
+  const currentYear = getGameState().currentYear ?? 0;
 
   const loadOffers = useCallback(async () => {
     setLoading(true);
@@ -382,19 +311,8 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
 
   const trustPreview = useMemo(() => {
     if (!selectedOffer || selectedPurchaseKg <= 0) return null;
-    const loyalty = selectedOffer.supplierLoyalty;
-    const consecutiveYears = Math.max(1, loyalty?.consecutiveYears ?? 1);
-    const yearPoints = Math.max(0, loyalty?.yearLoyaltyPoints ?? 0);
-    const preview = estimateSupplierTrustPointGain(selectedOffer.effectivePricePerKg * selectedPurchaseKg, consecutiveYears, yearPoints, companyValue);
-
-    return {
-      rawPoints: preview.rawPoints,
-      appliedPoints: preview.appliedPoints,
-      cappedPoints: Math.max(0, preview.rawPoints - preview.appliedPoints),
-      yearPoints,
-      yearlyCap: preview.yearlyCap,
-    };
-  }, [companyValue, selectedOffer, selectedPurchaseKg]);
+    return getBuyGoodsSupplierTrustPreview(selectedOffer.supplierLoyalty, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
+  }, [companyValue, currentYear, selectedOffer, selectedPurchaseKg]);
 
   const displayedOffers = useMemo(() => {
     if (showAllOffers) return filteredAndSortedOffers;
@@ -464,7 +382,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
               title="Supplier Trust Level"
               content={<span className="text-xs leading-snug">Persistent trust with this supplier can improve relationship pricing and listing persistence over time.</span>}
             >
-              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getTrustColor((offer.supplierLoyalty?.level ?? 0) as SupplierLoyaltyLevel)}`}>
+              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getBuyGoodsSupplierTrustColor((offer.supplierLoyalty?.level ?? 0) as BuyGoodsSupplierRelationshipLevel)}`}>
                 Trust {offer.supplierLoyalty?.level ?? 0}
               </span>
             </UnifiedTooltip>
@@ -583,10 +501,12 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
               </div>
             )}
 
-            <SupplierTrustPanel
+            <BuyGoodsSupplierTrustPanel
               supplierName={selectedOffer?.supplierName}
-              loyalty={selectedOffer?.supplierLoyalty ?? null}
+              relationship={selectedOffer?.supplierLoyalty ?? null}
               companyValue={companyValue}
+              currentYear={currentYear}
+              unitsLabel="kg"
             />
 
             {priceBreakdown && selectedOffer ? (

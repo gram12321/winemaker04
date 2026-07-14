@@ -1,4 +1,8 @@
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
+import {
+  BUY_GOODS_SUPPLIER_LEVELS,
+  type BuyGoodsSupplierRelationshipLevel,
+} from '@/lib/constants';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
 import {
@@ -8,25 +12,9 @@ import {
 } from '@/lib/database/market/buyGoodsSupplierRelationshipsDB';
 import type { BuyMarketWareGroup } from '@/lib/types/market';
 
-export type BuyGoodsSupplierRelationshipLevel = 0 | 1 | 2 | 3 | 4 | 5;
+export type { BuyGoodsSupplierLevelConfig, BuyGoodsSupplierRelationshipLevel } from '@/lib/constants';
+export { BUY_GOODS_SUPPLIER_LEVELS } from '@/lib/constants';
 export interface BuyGoodsSupplierRelationship { companyId: string; goodsDomain: BuyMarketWareGroup; supplierId: string; supplierName: string; totalPurchases: number; totalUnitsPurchased: number; loyaltyScore: number; level: BuyGoodsSupplierRelationshipLevel; lastPurchaseYear: number | null; consecutiveYears: number; yearUnitsPurchased: number; yearRelationshipPoints: number; yearGuardYear: number | null; }
-
-export interface BuyGoodsSupplierLevelConfig {
-  name: string;
-  minLoyaltyScore: number;
-  priceMultiplier: number;
-  persistenceBonus: number;
-  benefits: string[];
-}
-
-export const BUY_GOODS_SUPPLIER_LEVELS: Record<BuyGoodsSupplierRelationshipLevel, BuyGoodsSupplierLevelConfig> = {
-  0: { name: 'Unknown Seller', minLoyaltyScore: 0, priceMultiplier: 1, persistenceBonus: 0, benefits: [] },
-  1: { name: 'Familiar Seller', minLoyaltyScore: 700, priceMultiplier: .99, persistenceBonus: .05, benefits: ['0.99x supplier relationship factor'] },
-  2: { name: 'Known Seller', minLoyaltyScore: 2000, priceMultiplier: .98, persistenceBonus: .1, benefits: ['0.98x supplier relationship factor'] },
-  3: { name: 'Trusted Supplier', minLoyaltyScore: 4600, priceMultiplier: .97, persistenceBonus: .15, benefits: ['0.97x supplier relationship factor'] },
-  4: { name: 'Preferred Supplier', minLoyaltyScore: 8500, priceMultiplier: .95, persistenceBonus: .22, benefits: ['0.95x supplier relationship factor'] },
-  5: { name: 'Strategic Supplier', minLoyaltyScore: 14000, priceMultiplier: .93, persistenceBonus: .3, benefits: ['0.93x supplier relationship factor'] },
-};
 function levelFor(score: number): BuyGoodsSupplierRelationshipLevel { return ([5, 4, 3, 2, 1, 0] as const).find((level) => score >= BUY_GOODS_SUPPLIER_LEVELS[level].minLoyaltyScore) ?? 0; }
 function mapRow(row: any): BuyGoodsSupplierRelationship { return { companyId: row.company_id, goodsDomain: row.goods_domain, supplierId: row.supplier_id, supplierName: row.supplier_name, totalPurchases: row.total_purchases, totalUnitsPurchased: row.total_units_purchased, loyaltyScore: row.loyalty_score, level: levelFor(row.loyalty_score), lastPurchaseYear: row.last_purchase_year, consecutiveYears: row.consecutive_years ?? 0, yearUnitsPurchased: row.year_units_purchased ?? 0, yearRelationshipPoints: row.year_relationship_points ?? 0, yearGuardYear: row.year_guard_year ?? null }; }
 

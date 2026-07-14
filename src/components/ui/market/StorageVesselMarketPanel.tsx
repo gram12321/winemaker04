@@ -4,6 +4,7 @@ import { Button, DialogFooter } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from './MarketOfferTable';
 import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
+import { BuyGoodsSupplierTrustPanel, getBuyGoodsSupplierTrustColor } from './BuyGoodsSupplierTrustPanel';
 import {
   getStorageVesselMarketOffers,
   purchaseStorageVesselOffer,
@@ -15,12 +16,8 @@ import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
 import { STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES } from '@/lib/constants';
 import {
+  BUY_GOODS_SUPPLIER_LEVELS,
   getBuyGoodsSupplierTrustPreview,
-  getBuyGoodsRelationshipYearlyCap,
-  getBuyGoodsSupplierLevelMinimum,
-  getBuyGoodsSupplierLevelName,
-  type BuyGoodsSupplierRelationship,
-  type BuyGoodsSupplierRelationshipLevel,
 } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 
 interface StorageVesselMarketPanelProps {
@@ -70,47 +67,6 @@ const PriceCalculationTooltip: React.FC<{
     {children}
   </UnifiedTooltip>
 );
-
-const SupplierTrustPanel: React.FC<{
-  supplierName?: string;
-  relationship?: BuyGoodsSupplierRelationship;
-  companyValue: number;
-  currentYear: number;
-}> = ({ supplierName, relationship, companyValue, currentYear }) => {
-  const level = (relationship?.level ?? 0) as BuyGoodsSupplierRelationshipLevel;
-  const nextLevel = level < 5 ? (level + 1) as BuyGoodsSupplierRelationshipLevel : null;
-  const score = relationship?.loyaltyScore ?? 0;
-  const yearlyCap = getBuyGoodsRelationshipYearlyCap(companyValue);
-  const yearPoints = relationship?.yearGuardYear === currentYear ? relationship.yearRelationshipPoints : 0;
-  const scoreToNext = nextLevel === null ? 0 : Math.max(0, getBuyGoodsSupplierLevelMinimum(nextLevel) - score);
-
-  return (
-    <div className="space-y-2 rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs">
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-blue-300">Supplier Trust</span>
-        <span className="font-bold text-cyan-300">Level {level} · {getBuyGoodsSupplierLevelName(level)}</span>
-      </div>
-      <div className="text-gray-400">
-        Supplier: <strong className="text-white">{supplierName ?? relationship?.supplierName ?? 'Select an offer'}</strong>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-gray-400">
-        <span>Purchases: <strong className="text-white">{relationship?.totalPurchases ?? 0}</strong></span>
-        <span>Streak: <strong className="text-white">{relationship?.consecutiveYears ?? 0} {(relationship?.consecutiveYears ?? 0) === 1 ? 'year' : 'years'}</strong></span>
-        <span>Total bought: <strong className="text-white">{relationship?.totalUnitsPurchased ?? 0} vessels</strong></span>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-gray-300">
-        <span>Trust score: <strong className="text-white">{score.toLocaleString()}</strong></span>
-        <span>Year cap: <strong className="text-white">{yearPoints.toLocaleString()} / {yearlyCap.toLocaleString()}</strong></span>
-      </div>
-      {nextLevel && (
-        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
-          {scoreToNext === 0 ? `Ready to advance to ${getBuyGoodsSupplierLevelName(nextLevel)}!` : `${scoreToNext.toLocaleString()} trust score to reach ${getBuyGoodsSupplierLevelName(nextLevel)}`}
-        </div>
-      )}
-      {!relationship && <div className="border-t border-blue-900/40 pt-2 text-amber-300">First purchase from this supplier will establish this relationship.</div>}
-    </div>
-  );
-};
 
 export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> = ({ onClose }) => {
   const [offers, setOffers] = useState<StorageVesselMarketOffer[]>([]);
@@ -178,7 +134,10 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       header: 'Supplier',
       sortable: true,
       className: 'min-w-[180px]',
-      render: (offer) => <div><div className="font-medium text-white">{offer.sellerName}</div><div className="text-[11px] text-cyan-200">Trust {offer.supplierLoyalty?.level ?? 0} · {getBuyGoodsSupplierLevelName((offer.supplierLoyalty?.level ?? 0) as BuyGoodsSupplierRelationshipLevel)}</div></div>,
+      render: (offer) => {
+        const level = offer.supplierLoyalty?.level ?? 0;
+        return <div><div className="font-medium text-white">{offer.sellerName}</div><div className={`text-[11px] ${getBuyGoodsSupplierTrustColor(level)}`}>Trust {level} · {BUY_GOODS_SUPPLIER_LEVELS[level].name}</div></div>;
+      },
     },
     {
       key: 'vessel',
@@ -231,17 +190,15 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium text-cyan-200">Market outlook</span>
           <span className="inline-flex items-center gap-1 rounded border border-emerald-700/70 bg-emerald-900/30 px-2 py-1 text-emerald-200">{marketState.season} rotation</span>
-          <span className="inline-flex items-center gap-1 rounded border border-indigo-700/70 bg-indigo-900/30 px-2 py-1 text-indigo-200">{marketState.economyPhase} economy</span>
-          <span className="inline-flex items-center gap-1 rounded border border-blue-700/70 bg-blue-900/30 px-2 py-1 text-blue-200">{marketState.weatherState ?? 'Clear'} logistics</span>
         </div>
         <div className="mt-2 space-y-1 text-[11px] text-gray-300">
           <div><span className="font-medium text-cyan-300">Supply outlook:</span> {totalAvailable} casks across {offers.length} rotating supplier offers.</div>
           <div><span className="font-medium text-amber-300">Rotation:</span> Unpurchased stock is replaced or retained when the season changes.</div>
-          <div><span className="font-medium text-blue-300">Price outlook:</span> Capacity and quality set the vessel value; supplier terms and reputation adjust it.</div>
+          <div><span className="font-medium text-blue-300">Price outlook:</span> Capacity and quality set vessel value; supplier terms, trust, and reputation adjust the quote.</div>
         </div>
       </div>
 
-      <SupplierTrustPanel supplierName={selectedOffer?.sellerName} relationship={selectedRelationship} companyValue={companyValue} currentYear={currentYear} />
+      <BuyGoodsSupplierTrustPanel supplierName={selectedOffer?.sellerName} relationship={selectedRelationship} companyValue={companyValue} currentYear={currentYear} unitsLabel="vessels" />
 
       {selectedOffer && selectedPriceBreakdown ? (
         <div className="rounded border border-gray-700/70 bg-gray-800 p-3 text-sm">

@@ -19,6 +19,7 @@ export * from './cooperativeConstants';
 export * from './grapeBuyerMarketConstants';
 export * from './grapeSupplierMarketConstants';
 export * from './buyGrapeMarketConstants';
+export * from './buyGoodsConstants';
 export * from './buyMarketConstants';
 export * from './storageVesselConstants';
 export * from './sellGrapesConstants';

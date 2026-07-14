@@ -51,10 +51,17 @@ export interface StorageVessel {
   purchasedWeek: number;
 }
 
+export interface StorageVesselOfferPriceSnapshot {
+  supplierBaseMultiplier: number;
+  supplierRelationshipMultiplier: number;
+  companyPrestige: number;
+}
+
 export interface StorageVesselOfferPayload {
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
   qualityScore: number;
   productionYear: number;
   capacityLitres: number;
+  priceSnapshot: StorageVesselOfferPriceSnapshot;
 }

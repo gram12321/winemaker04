@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BuyMarketOfferRecord } from '@/lib/types/market';
 
 const mocks = vi.hoisted(() => ({
   getCurrentCompanyId: vi.fn(() => 'company-1'),
   getGameState: vi.fn(() => ({ money: 5000, currentYear: 2026, season: 'Spring', week: 1 })),
   getCompanyBuyMarketOffer: vi.fn(),
   getCompanyBuyMarketOffers: vi.fn(),
+  deleteBuyMarketOffer: vi.fn(),
+  updateBuyMarketOffer: vi.fn(),
   purchaseStorageVesselOfferAtomically: vi.fn(async () => ({ data: { transaction: { id: 'tx-1', week: 1, season: 'Spring', year: 2026, amount: -1900, description: 'purchase', category: 'Supplies', recurring: false, money: 3100 }, completedNow: true }, error: null })),
-  upsertBuyMarketOffers: vi.fn(async () => ({ error: null })),
+  upsertBuyMarketOffers: vi.fn(async (_records: BuyMarketOfferRecord[]) => ({ error: null })),
   syncPersistedTransaction: vi.fn(async () => 'tx-1'),
   addMessage: vi.fn(async () => undefined),
   triggerTopicUpdate: vi.fn(),
@@ -18,10 +21,12 @@ vi.mock('@/lib/services/core/gameState', () => ({ getGameState: mocks.getGameSta
 vi.mock('@/lib/database/market/buyMarketOffersDB', () => ({
   getCompanyBuyMarketOffer: mocks.getCompanyBuyMarketOffer,
   getCompanyBuyMarketOffers: mocks.getCompanyBuyMarketOffers,
+  deleteBuyMarketOffer: mocks.deleteBuyMarketOffer,
+  updateBuyMarketOffer: mocks.updateBuyMarketOffer,
   purchaseStorageVesselOfferAtomically: mocks.purchaseStorageVesselOfferAtomically,
   upsertBuyMarketOffers: mocks.upsertBuyMarketOffers,
 }));
-vi.mock('@/lib/services/finance/financeService', () => ({ syncPersistedTransaction: mocks.syncPersistedTransaction }));
+vi.mock('@/lib/services/finance/financeService', () => ({ calculateCompanyValue: vi.fn(async () => 0), syncPersistedTransaction: mocks.syncPersistedTransaction }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
 vi.mock('@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService', () => ({
@@ -91,5 +96,27 @@ describe('Storage Vessel market adapter', () => {
     expect(breakdown.qualityMultiplier).toBeCloseTo(1.21, 8);
     expect(breakdown.supplierBaseMultiplier).toBe(1.04);
     expect(breakdown.finalPricePerVessel).toBe(breakdown.finalPrice);
+  });
+
+  it('retires legacy catalogue rows before generating current supplier offers', async () => {
+    let marketOffers: BuyMarketOfferRecord[] = [offer];
+    mocks.getCompanyBuyMarketOffers.mockImplementation(async () => ({ data: marketOffers, error: null }));
+    mocks.deleteBuyMarketOffer.mockImplementation(async (_companyId: string, offerId: string) => {
+      marketOffers = marketOffers.filter((marketOffer) => marketOffer.offerId !== offerId);
+      return { error: null };
+    });
+    mocks.upsertBuyMarketOffers.mockImplementation(async (records: BuyMarketOfferRecord[]) => {
+      marketOffers = [...marketOffers, ...records];
+      return { error: null };
+    });
+
+    const { getStorageVesselMarketOffers } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    const offers = await getStorageVesselMarketOffers();
+
+    expect(mocks.deleteBuyMarketOffer).toHaveBeenCalledWith('company-1', offer.offerId);
+    expect(mocks.upsertBuyMarketOffers).toHaveBeenCalledOnce();
+    expect(offers).toHaveLength(9);
+    expect(offers[0]).toMatchObject({ sellerId: 'cooperage_duval', payload: { priceSnapshot: expect.any(Object) } });
+    expect(offers[0].priceBreakdown.finalPricePerVessel).toBe(offers[0].pricePerVessel);
   });
 });

@@ -16,7 +16,7 @@ import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import { getBuyGoodsSupplierRelationshipPriceMultiplier, getBuyGoodsSupplierRelationships, recordBuyGoodsSupplierPurchase } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import type { BuyMarketOfferRecord, BuyMarketPurchaseResult } from '@/lib/types/market';
-import type { StorageVesselOfferPayload } from '@/lib/types/storageVessels';
+import type { StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
 import { NotificationCategory, type Season } from '@/lib/types/types';
 import type { BuyGoodsSupplierRelationship } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
@@ -79,21 +79,33 @@ export function getStorageVesselPriceBreakdown(input: {
   };
 }
 
-function getStorageVesselSupplierProfile(supplierId: string) {
-  const supplier = STORAGE_VESSEL_SUPPLIERS.find((profile) => profile.id === supplierId);
-  if (!supplier) throw new Error(`Unknown storage vessel supplier: ${supplierId}`);
-  return supplier;
+function isStorageVesselOfferPriceSnapshot(value: unknown): value is StorageVesselOfferPriceSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Partial<StorageVesselOfferPriceSnapshot>;
+  return typeof snapshot.supplierBaseMultiplier === 'number'
+    && typeof snapshot.supplierRelationshipMultiplier === 'number'
+    && typeof snapshot.companyPrestige === 'number';
 }
 
-function toStorageVesselOffer(record: BuyMarketOfferRecord, supplierLoyalty?: BuyGoodsSupplierRelationship): StorageVesselMarketOffer {
-  const payload = record.payload as unknown as StorageVesselOfferPayload;
-  const supplier = getStorageVesselSupplierProfile(record.sellerId);
+function isCurrentStorageVesselOffer(record: BuyMarketOfferRecord): record is BuyMarketOfferRecord & { payload: StorageVesselOfferPayload } {
+  if (!STORAGE_VESSEL_SUPPLIERS.some((supplier) => supplier.id === record.sellerId) || record.originTag !== 'seasonal_supplier') return false;
+  const payload = record.payload as Partial<StorageVesselOfferPayload>;
+  return payload.vesselType === 'cask'
+    && payload.material === 'oak'
+    && typeof payload.qualityScore === 'number'
+    && typeof payload.productionYear === 'number'
+    && typeof payload.capacityLitres === 'number'
+    && isStorageVesselOfferPriceSnapshot(payload.priceSnapshot);
+}
+
+function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageVesselOfferPayload }, supplierLoyalty?: BuyGoodsSupplierRelationship): StorageVesselMarketOffer {
+  const payload = record.payload;
   const priceBreakdown = getStorageVesselPriceBreakdown({
     capacityLitres: payload.capacityLitres,
     qualityScore: payload.qualityScore,
-    supplierBaseMultiplier: supplier.basePriceMultiplier,
-    supplierRelationshipMultiplier: getBuyGoodsSupplierRelationshipPriceMultiplier(supplierLoyalty?.level ?? 0),
-    companyPrestige: getGameState().prestige ?? 0,
+    supplierBaseMultiplier: payload.priceSnapshot.supplierBaseMultiplier,
+    supplierRelationshipMultiplier: payload.priceSnapshot.supplierRelationshipMultiplier,
+    companyPrestige: payload.priceSnapshot.companyPrestige,
     effectivePricePerVessel: record.effectivePricePerUnit,
   });
 
@@ -125,14 +137,16 @@ function getNextSeason(season: Season, year: number): { season: Season; year: nu
 async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   const { data: existing, error } = await getCompanyBuyMarketOffers(companyId, 'storage_vessels');
   if (error) throw error;
+  const currentOffers = existing.filter(isCurrentStorageVesselOffer);
+  await Promise.all(existing.filter((offer) => !isCurrentStorageVesselOffer(offer)).map((offer) => deleteBuyMarketOffer(companyId, offer.offerId)));
   const state = getGameState();
   const createdYear = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
   const createdSeason = state.season ?? GAME_INITIALIZATION.STARTING_SEASON;
   const expires = getNextSeason(createdSeason, createdYear);
   const expectedOfferCount = STORAGE_VESSEL_SUPPLIERS.length * STORAGE_VESSEL_SIZES_LITRES.length;
-  if (existing.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
+  if (currentOffers.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
 
-  const previousOffers = existing;
+  const previousOffers = currentOffers;
   const retainedOffers = previousOffers
     .filter((offer) => offer.availableUnits > 0 && deterministicSeasonalVariation(`${offer.offerId}:${createdYear}:${createdSeason}:retention`, 0, 1) < STORAGE_VESSEL_OFFER_RETENTION_CHANCE)
     .slice(0, expectedOfferCount);
@@ -152,12 +166,15 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
     const seed = `${state.currentYear}:${state.season}:${supplier.id}:${capacityLitres}`;
     const qualityScore = Number(deterministicSeasonalVariation(`${seed}:quality`, 0.35, 0.95).toFixed(2));
     const productionYear = (state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR) - Math.floor(deterministicSeasonalVariation(`${seed}:age`, 0, 12));
-    const priceBreakdown = getStorageVesselPriceBreakdown({
-      capacityLitres,
-      qualityScore,
+    const priceSnapshot = {
       supplierBaseMultiplier: supplier.basePriceMultiplier,
       supplierRelationshipMultiplier: getBuyGoodsSupplierRelationshipPriceMultiplier(relationships[supplier.id]?.level ?? 0),
       companyPrestige: state.prestige ?? 0,
+    };
+    const priceBreakdown = getStorageVesselPriceBreakdown({
+      capacityLitres,
+      qualityScore,
+      ...priceSnapshot,
     });
     return {
       companyId,
@@ -175,12 +192,12 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
       expiresYear: expires.year,
       expiresSeason: expires.season,
       expiresWeek: 1,
-      payload: { vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres },
+      payload: { vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres, priceSnapshot },
     };
   }));
   const offersNeeded = Math.max(0, expectedOfferCount - retainedOffers.length);
   const activeIds = retainedIds;
-  await Promise.all(existing.filter((offer) => !activeIds.has(offer.offerId)).map((offer) => deleteBuyMarketOffer(companyId, offer.offerId)));
+  await Promise.all(currentOffers.filter((offer) => !activeIds.has(offer.offerId)).map((offer) => deleteBuyMarketOffer(companyId, offer.offerId)));
   await upsertBuyMarketOffers(created.filter((offer) => !activeIds.has(offer.offerId)).slice(0, offersNeeded));
 }
 
@@ -191,7 +208,7 @@ export async function getStorageVesselMarketOffers(): Promise<StorageVesselMarke
   const { data, error } = await getCompanyBuyMarketOffers(companyId, 'storage_vessels');
   if (error) throw error;
   const relationships = await getBuyGoodsSupplierRelationships('storage_vessels', data.map((offer) => offer.sellerId));
-  return data.filter((offer) => offer.availableUnits > 0).map((offer) => toStorageVesselOffer(offer, relationships[offer.sellerId]));
+  return data.filter((offer): offer is BuyMarketOfferRecord & { payload: StorageVesselOfferPayload } => offer.availableUnits > 0 && isCurrentStorageVesselOffer(offer)).map((offer) => toStorageVesselOffer(offer, relationships[offer.sellerId]));
 }
 
 export async function purchaseStorageVesselOffer(offerId: string, quantity: number, purchaseId = uuidv4()): Promise<BuyMarketPurchaseResult> {
