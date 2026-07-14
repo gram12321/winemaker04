@@ -291,18 +291,17 @@ export async function processYearlyFounderDistributions(
     }
 
     const sharePercent = FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT / 100;
-    const totalPaid = await Promise.all(
-      founders.map(async (founder) => {
-        const amount = Math.round(yearlyNetProfit * sharePercent);
-        await addTransaction(
-          -amount,
-          `Founder Return ${previousYear}: ${founder.name} (${FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% of net profit)`,
-          TRANSACTION_CATEGORIES.FOUNDER_RETURN,
-          false
-        );
-        return amount;
-      })
-    );
+    const totalPaid: number[] = [];
+    for (const founder of founders) {
+      const amount = Math.round(yearlyNetProfit * sharePercent);
+      await addTransaction(
+        -amount,
+        `Founder Return ${previousYear}: ${founder.name} (${FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% of net profit)`,
+        TRANSACTION_CATEGORIES.FOUNDER_RETURN,
+        false
+      );
+      totalPaid.push(amount);
+    }
 
     const grandTotal = totalPaid.reduce((sum, v) => sum + v, 0);
 

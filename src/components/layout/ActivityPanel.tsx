@@ -33,11 +33,15 @@ export const ActivityPanel: React.FC = () => {
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
   const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
   const [addingCapacity, setAddingCapacity] = useState(false);
+  const [capacityAdded, setCapacityAdded] = useState(false);
+  const [capacityError, setCapacityError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!capacityActivity) return;
     void getAvailableStorageVessels().then(setAvailableVessels).catch(() => setAvailableVessels([]));
     setSelectedVesselIds([]);
+    setCapacityAdded(false);
+    setCapacityError(null);
   }, [capacityActivity]);
 
   // Drag & drop configuration
@@ -113,13 +117,27 @@ export const ActivityPanel: React.FC = () => {
   };
 
   const handleAddCapacity = async () => {
-    if (!capacityActivity?.params.storagePlanId || selectedVesselIds.length === 0) return;
+    if (!capacityActivity?.params.storagePlanId || (!capacityAdded && selectedVesselIds.length === 0)) return;
     setAddingCapacity(true);
+    setCapacityError(null);
     try {
-      const result = await addStorageVesselCapacity(capacityActivity.params.storagePlanId, selectedVesselIds);
-      if (!result.success) return;
-      await resumeActivity(capacityActivity.id);
+      if (!capacityAdded) {
+        const result = await addStorageVesselCapacity(capacityActivity.params.storagePlanId, selectedVesselIds);
+        if (!result.success) {
+          setCapacityError(result.error ?? 'Could not add Storage Vessel capacity.');
+          return;
+        }
+        setCapacityAdded(true);
+      }
+      const resumed = await resumeActivity(capacityActivity.id);
+      if (!resumed) {
+        setCapacityError('Capacity was added, but the activity could not be resumed. Retry resume without adding more vessels.');
+        return;
+      }
       setCapacityActivity(null);
+    } catch (error) {
+      console.error('Error adding Storage Vessel capacity:', error);
+      setCapacityError('Could not update this activity. Please try again.');
     } finally {
       setAddingCapacity(false);
     }
@@ -378,10 +396,11 @@ export const ActivityPanel: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900">Add Storage Capacity</h2>
             <p className="mt-1 text-sm text-gray-600">This harvest paused because its selected vessels are full. Choose additional vessels, then resume the activity.</p>
             <div className="mt-4 space-y-2">
-              {availableVessels.length === 0 && <p className="text-sm text-red-600">No available Storage Vessels. Buy equipment before resuming.</p>}
-              {availableVessels.map((vessel) => <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 p-2 text-sm"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+              {!capacityAdded && availableVessels.length === 0 && <p className="text-sm text-red-600">No available Storage Vessels. Buy equipment before resuming.</p>}
+              {!capacityAdded && availableVessels.map((vessel) => <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 p-2 text-sm"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
             </div>
-            <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity}>Cancel</Button><Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || selectedVesselIds.length === 0} className="bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Adding…' : 'Add capacity and resume'}</Button></div>
+            {capacityError && <p className="mt-3 text-sm text-red-600">{capacityError}</p>}
+            <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity}>Cancel</Button><Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || (!capacityAdded && selectedVesselIds.length === 0)} className="bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Updating…' : capacityAdded ? 'Retry resume' : 'Add capacity and resume'}</Button></div>
           </div>
         </div>
       )}

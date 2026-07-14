@@ -166,7 +166,11 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
  * Apply a balance already committed by a database transaction without writing
  * that value back over a potentially newer balance.
  */
-export const syncPersistedMoney = async (money: number): Promise<void> => {
+let persistedMoneyVersion = 0;
+
+export const syncPersistedMoney = async (money: number, moneyVersion?: number): Promise<void> => {
+  if (moneyVersion !== undefined && moneyVersion < persistedMoneyVersion) return;
+  if (moneyVersion !== undefined) persistedMoneyVersion = moneyVersion;
   const oldMoney = gameState.money;
   gameState = { ...gameState, money };
   if (currentCompany) currentCompany = { ...currentCompany, money };
@@ -187,6 +191,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     return;
   }
   
+  persistedMoneyVersion = 0;
   currentCompany = company;
   
   // Persist only the lastCompanyId for autologin

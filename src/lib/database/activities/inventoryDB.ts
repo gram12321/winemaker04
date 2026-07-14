@@ -62,15 +62,9 @@ const ensureBatchNumber = async (batch: WineBatch): Promise<void> => {
  * Pure CRUD operations for wine batch/inventory data persistence
  */
 
-export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
-  try {
-    await ensureBatchNumber(batch);
-
-    const { error } = await supabase
-      .from(WINE_BATCHES_TABLE)
-      .upsert({
+export const toWineBatchRow = (batch: WineBatch, companyId = getCurrentCompanyId()) => ({
         id: batch.id,
-        company_id: getCurrentCompanyId(),
+        company_id: companyId,
         vineyard_id: batch.vineyardId,
         vineyard_name: batch.vineyardName,
         grape_variety: batch.grape,
@@ -114,6 +108,19 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         wine_score_bottling_snapshot: batch.wineScoreBottlingSnapshot ?? null,
         aging_progress: Math.round(batch.agingProgress || 0)
       });
+
+export async function prepareWineBatchForInsert(batch: WineBatch, companyId: string): Promise<Record<string, unknown>> {
+  await ensureBatchNumber(batch);
+  return toWineBatchRow(batch, companyId);
+}
+
+export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
+  try {
+    await ensureBatchNumber(batch);
+
+    const { error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .upsert(toWineBatchRow(batch));
 
     if (error) throw error;
   } catch (error) {

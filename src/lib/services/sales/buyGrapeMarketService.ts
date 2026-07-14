@@ -1,4 +1,4 @@
-import { addTransaction } from '../finance/financeService';
+import { syncPersistedTransaction } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { companyService } from '../user/companyService';
@@ -12,7 +12,7 @@ import {
   updateBuyOfferRow,
 } from '../market/grapes/grapeMarketOfferPersistence';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { claimBuyMarketOfferUnits, releaseBuyMarketOfferUnits } from '@/lib/database/market/buyMarketOffersDB';
+import { purchaseGrapeMarketOfferAtomically } from '@/lib/database/market/buyMarketOffersDB';
 import { clamp, clamp01, deterministicSeasonalVariation, formatNumber, getRandomFromArray, randomInt, randomInRange } from '../../utils';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
@@ -40,13 +40,12 @@ import { calculateBuyGoodsPrice, getBuyGoodsCompanyScale } from '@/lib/services/
 import { calculateFeatureMarketPriceMultiplier, calculateFeatureRiskMarketPriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 import {
   buildMarketPreviewBatch,
-  deleteInventoryBatch,
-  saveInventoryBatch,
   type CreateMarketWineBatchInput,
   type MarketBatchStateProfile
 } from '../wine/winery/inventoryService';
-import { activateStoragePlanForBatch, createStorageAllocationPlan, initializeHarvestVolumeLitres, releaseStorageAllocationPlan } from '../wine/winery/storageVesselAllocationService';
+import { initializeHarvestVolumeLitres } from '../wine/winery/storageVesselAllocationService';
 import { v4 as uuidv4 } from 'uuid';
+import { prepareWineBatchForInsert } from '@/lib/database/activities/inventoryDB';
 
 export interface BuyGrapeMarketOffer {
   id: string;
@@ -909,66 +908,31 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
     return { success: false, error: 'Select enough Storage Vessel capacity before purchasing this batch.' };
   }
 
-  const claim = await claimBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
-  if (claim.error || !claim.claimed) {
-    return { success: false, error: 'Offer availability changed. Please reopen the market and try again.' };
-  }
-
-  const storagePlan = await createStorageAllocationPlan({
-    requiredLitres: initializeHarvestVolumeLitres(roundedQuantity),
-    vesselIds: storageVesselIds,
-  });
-  if (!storagePlan.planId) {
-    const release = await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
-    return release.released && !release.error
-      ? { success: false, error: storagePlan.error }
-      : { success: false, error: 'The purchase needs reconciliation before trying again.' };
-  }
-  purchasedBatch.storagePlanId = storagePlan.planId;
   purchasedBatch.volumeLitres = initializeHarvestVolumeLitres(roundedQuantity);
-
-  let batchSaved = false;
-  try {
-    await saveInventoryBatch(purchasedBatch);
-    batchSaved = true;
-    if (!(await activateStoragePlanForBatch(storagePlan.planId, purchasedBatch.id, purchasedBatch.volumeLitres))) {
-      const deleted = await deleteInventoryBatch(purchasedBatch.id).catch(() => false);
-      if (!deleted) {
-        return { success: false, error: 'Could not activate Storage Vessel capacity. The purchase needs reconciliation before trying again.' };
-      }
-      const release = await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
-      return release.released && !release.error
-        ? { success: false, error: 'Could not activate Storage Vessel capacity for this batch.' }
-        : { success: false, error: 'The purchase needs reconciliation before trying again.' };
-    }
-    await addTransaction(
-      -totalCost,
-      `Market Purchase: ${roundedQuantity} kg ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name}`,
-      TRANSACTION_CATEGORIES.SUPPLIES,
-      false,
-      companyId,
-      true,
-    );
-
-  } catch (purchaseError) {
-    const deleted = !batchSaved || (storagePlan.planId ? await deleteInventoryBatch(purchasedBatch.id).catch(() => false) : true);
-    const released = storagePlan.planId ? await releaseStorageAllocationPlan(storagePlan.planId) : true;
-    if (!deleted || !released) {
-      console.error('Failed to clean up a partially completed market purchase:', purchaseError);
-      return { success: false, error: 'The purchase needs reconciliation before trying again.' };
-    }
-    const release = await releaseBuyMarketOfferUnits(companyId, offerId, roundedQuantity);
-    if (!release.released || release.error) {
-      console.error('Failed to restore claimed market offer availability:', release.error);
-      return { success: false, error: 'The purchase needs reconciliation before trying again.' };
-    }
-    console.error('Failed to purchase market offer:', purchaseError);
-    return { success: false, error: 'Could not complete purchase. Please try again.' };
+  const purchase = await purchaseGrapeMarketOfferAtomically({
+    companyId,
+    purchaseId: uuidv4(),
+    offerId,
+    quantity: roundedQuantity,
+    vesselIds: storageVesselIds,
+    requiredLitres: purchasedBatch.volumeLitres,
+    batch: await prepareWineBatchForInsert(purchasedBatch, companyId),
+    week: gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+    season: (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as Season,
+    year: currentYear,
+    description: `Market Purchase: ${roundedQuantity} kg ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name}`,
+    category: TRANSACTION_CATEGORIES.SUPPLIES,
+  });
+  if (purchase.error || !purchase.data?.transaction) {
+    return { success: false, error: 'Offer availability, vessel capacity, or funds changed. Please reopen the market.' };
   }
+  await syncPersistedTransaction(purchase.data.transaction);
 
   try {
-    await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear, totalCost);
-    await recordMarketSupplierPurchase(offer.supplier_id, roundedQuantity, gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR, (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as Season);
+    if (purchase.data.completedNow) {
+      await recordSupplierPurchase(offer.supplier_id, offer.supplier_name, roundedQuantity, currentYear, totalCost);
+      await recordMarketSupplierPurchase(offer.supplier_id, roundedQuantity, gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR, (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as Season);
+    }
     await notificationService.addMessage(
       `Purchased ${roundedQuantity} kg of ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
       'buyGrapeMarketService.purchaseBuyGrapeOffer', 'Market Purchase', NotificationCategory.WINEMAKING_PROCESS

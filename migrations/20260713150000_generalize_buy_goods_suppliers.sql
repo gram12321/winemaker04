@@ -1,7 +1,0 @@
-ALTER TABLE grape_supplier_loyalty RENAME TO buy_goods_supplier_relationships;
-ALTER TABLE buy_goods_supplier_relationships ADD COLUMN goods_domain TEXT NOT NULL DEFAULT 'grapes';
-ALTER TABLE buy_goods_supplier_relationships RENAME COLUMN total_kg_purchased TO total_units_purchased;
-ALTER TABLE buy_goods_supplier_relationships RENAME COLUMN year_kg_purchased TO year_units_purchased;
-ALTER TABLE buy_goods_supplier_relationships DROP CONSTRAINT grape_supplier_loyalty_company_id_supplier_id_key;
-ALTER TABLE buy_goods_supplier_relationships ADD CONSTRAINT buy_goods_supplier_relationships_company_domain_supplier_key UNIQUE (company_id, goods_domain, supplier_id);
-CREATE INDEX idx_buy_goods_supplier_relationships_company_domain ON buy_goods_supplier_relationships(company_id, goods_domain);

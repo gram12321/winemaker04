@@ -44,10 +44,15 @@ interface PersistedTransactionRow {
   category: string;
   recurring: boolean;
   money: number;
+  money_version?: number;
 }
 
+let moneySyncTail: Promise<void> = Promise.resolve();
+
 export async function syncPersistedTransaction(row: PersistedTransactionRow): Promise<string> {
-  await syncPersistedMoney(row.money);
+  const sync = moneySyncTail.then(() => syncPersistedMoney(row.money, row.money_version));
+  moneySyncTail = sync.catch(() => undefined);
+  await sync;
   const transaction: Transaction = {
     id: row.id,
     date: { week: row.week, season: row.season, year: row.year },
@@ -57,7 +62,7 @@ export async function syncPersistedTransaction(row: PersistedTransactionRow): Pr
     recurring: row.recurring,
     money: row.money,
   };
-  transactionsCache.push(transaction);
+  if (!transactionsCache.some((cached) => cached.id === transaction.id)) transactionsCache.push(transaction);
   transactionsLoadPromise = null;
   transactionsCache.sort((a, b) => {
     if (a.date.year !== b.date.year) return b.date.year - a.date.year;

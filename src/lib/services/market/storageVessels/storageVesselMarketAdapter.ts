@@ -1,14 +1,12 @@
-import { addTransaction } from '@/lib/services/finance/financeService';
+import { syncPersistedTransaction } from '@/lib/services/finance/financeService';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { getGameState } from '@/lib/services/core/gameState';
-import { createPurchasedStorageVessels, removePurchasedStorageVessels } from '@/lib/services/wine/winery/storageVesselService';
 import {
   getCompanyBuyMarketOffer,
   getCompanyBuyMarketOffers,
-  claimBuyMarketOfferUnits,
   updateBuyMarketOffer,
   deleteBuyMarketOffer,
-  releaseBuyMarketOfferUnits,
+  purchaseStorageVesselOfferAtomically,
   upsertBuyMarketOffers,
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -22,6 +20,7 @@ import type { StorageVesselOfferPayload } from '@/lib/types/storageVessels';
 import { NotificationCategory, type Season } from '@/lib/types/types';
 import type { BuyGoodsSupplierRelationship } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface StorageVesselMarketOffer {
   id: string;
@@ -72,11 +71,10 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   const createdYear = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
   const createdSeason = state.season ?? GAME_INITIALIZATION.STARTING_SEASON;
   const expires = getNextSeason(createdSeason, createdYear);
-  const currentOfferPrefix = `${STORAGE_VESSEL_OFFER_PREFIX}_${state.currentYear}_${state.season}_`;
   const expectedOfferCount = STORAGE_VESSEL_SUPPLIERS.length * STORAGE_VESSEL_SIZES_LITRES.length;
-  if (existing.filter((offer) => offer.offerId.startsWith(currentOfferPrefix)).length === expectedOfferCount) return;
+  if (existing.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
 
-  const previousOffers = existing.filter((offer) => !offer.offerId.startsWith(currentOfferPrefix));
+  const previousOffers = existing;
   const retainedOffers = previousOffers
     .filter((offer) => offer.availableUnits > 0 && deterministicSeasonalVariation(`${offer.offerId}:${createdYear}:${createdSeason}:retention`, 0, 1) < STORAGE_VESSEL_OFFER_RETENTION_CHANCE)
     .slice(0, expectedOfferCount);
@@ -116,11 +114,10 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
       payload: { vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres },
     };
   }));
-  const currentOfferCount = existing.filter((offer) => offer.offerId.startsWith(currentOfferPrefix)).length;
-  const offersNeeded = Math.max(0, expectedOfferCount - retainedOffers.length - currentOfferCount);
-  const activeIds = new Set([...retainedIds, ...existing.filter((offer) => offer.offerId.startsWith(currentOfferPrefix)).map((offer) => offer.offerId)]);
+  const offersNeeded = Math.max(0, expectedOfferCount - retainedOffers.length);
+  const activeIds = retainedIds;
   await Promise.all(existing.filter((offer) => !activeIds.has(offer.offerId)).map((offer) => deleteBuyMarketOffer(companyId, offer.offerId)));
-  await upsertBuyMarketOffers(created.slice(0, offersNeeded));
+  await upsertBuyMarketOffers(created.filter((offer) => !activeIds.has(offer.offerId)).slice(0, offersNeeded));
 }
 
 export async function getStorageVesselMarketOffers(): Promise<StorageVesselMarketOffer[]> {
@@ -133,7 +130,7 @@ export async function getStorageVesselMarketOffers(): Promise<StorageVesselMarke
   return data.filter((offer) => offer.availableUnits > 0).map((offer) => toStorageVesselOffer(offer, relationships[offer.sellerId]));
 }
 
-export async function purchaseStorageVesselOffer(offerId: string, quantity: number): Promise<BuyMarketPurchaseResult> {
+export async function purchaseStorageVesselOffer(offerId: string, quantity: number, purchaseId = uuidv4()): Promise<BuyMarketPurchaseResult> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, error: 'No active company selected.' };
   const safeQuantity = Math.max(1, Math.round(quantity));
@@ -144,42 +141,24 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
   const totalCost = Number((offer.effectivePricePerUnit * safeQuantity).toFixed(2));
   if ((getGameState().money ?? 0) < totalCost) return { success: false, error: `Insufficient funds. Required ${formatNumber(totalCost, { currency: true, decimals: 0 })}.` };
 
-  const claim = await claimBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
-  if (claim.error || !claim.claimed) return { success: false, error: 'Offer availability changed. Please reopen the market.' };
-
-  let purchasedVesselIds: string[] = [];
-  try {
-    const vessels = await createPurchasedStorageVessels(offer.payload as unknown as StorageVesselOfferPayload, offer.offerId, offer.effectivePricePerUnit, safeQuantity);
-    purchasedVesselIds = vessels.map((vessel) => vessel.id);
-    await addTransaction(-totalCost, `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`, TRANSACTION_CATEGORIES.SUPPLIES, false, companyId, true);
-  } catch (purchaseError) {
-    let removed = purchasedVesselIds.length === 0;
-    try {
-      await removePurchasedStorageVessels(purchasedVesselIds);
-      removed = true;
-    } catch (removeError) {
-      console.error('Failed to remove partially created Storage Vessels:', removeError);
-    }
-    let restored = false;
-    if (removed) {
-      try {
-        const release = await releaseBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
-        restored = release.released && !release.error;
-      } catch (releaseError) {
-        console.error('Failed to restore Storage Vessel offer availability:', releaseError);
-      }
-    }
-    console.error('Failed to purchase Storage Vessel offer:', purchaseError);
-    return removed && restored
-      ? { success: false, error: 'Could not complete Storage Vessel purchase. Please try again.' }
-      : { success: false, error: 'The Storage Vessel purchase needs reconciliation before trying again.' };
-  }
+  const state = getGameState();
+  const purchase = await purchaseStorageVesselOfferAtomically({
+    companyId,
+    purchaseId,
+    offerId: offer.offerId,
+    quantity: safeQuantity,
+    week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+    season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
+    year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
+    description: `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`,
+    category: TRANSACTION_CATEGORIES.SUPPLIES,
+  });
+  if (purchase.error || !purchase.data?.transaction) return { success: false, error: 'Offer availability or funds changed. Please reopen the market.' };
+  await syncPersistedTransaction(purchase.data.transaction);
 
   try {
-    try {
+    if (purchase.data.completedNow) {
       await recordBuyGoodsSupplierPurchase('storage_vessels', offer.sellerId, offer.sellerName, safeQuantity, totalCost);
-    } catch (relationshipError) {
-      console.error('Failed to record Storage Vessel supplier relationship:', relationshipError);
     }
     await notificationService.addMessage(
       `Purchased ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
