@@ -289,16 +289,31 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
               Cancel
             </button>
             
+            {isSubmitDisabled ? (
+              <UnifiedTooltip
+                title="Activity unavailable"
+                content={<p className="text-xs text-gray-200">{disabledMessage}</p>}
+                variant="panel"
+                density="compact"
+              >
+                <span className="inline-block">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded shadow-sm text-white bg-gray-400 cursor-not-allowed"
+                    disabled
+                  >
+                    {submitLabel}
+                  </button>
+                </span>
+              </UnifiedTooltip>
+            ) : (
             <button
               type="submit"
-              className={`px-4 py-2 rounded shadow-sm text-white ${
-                isSubmitDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-wine hover:bg-wine-dark'
-              }`}
-              disabled={isSubmitDisabled}
-              title={isSubmitDisabled ? disabledMessage : ''}
+              className="px-4 py-2 rounded shadow-sm text-white bg-wine hover:bg-wine-dark"
             >
               {submitLabel}
             </button>
+            )}
           </div>
         </form>
       </div>

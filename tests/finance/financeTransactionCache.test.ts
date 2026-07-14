@@ -43,6 +43,8 @@ const mocks = vi.hoisted(() => {
     historicalTransaction,
     newTransaction,
     getGameState: vi.fn(() => ({ week: 2, season: 'Spring', currentYear: 2026, money: 1_000 })),
+    getCurrentCompany: vi.fn(() => ({ id: 'company-a' })),
+    syncPersistedMoney: vi.fn(async () => undefined),
     updateGameState: vi.fn(async () => undefined),
     getCompany: vi.fn(async () => ({ id: 'company-a', money: 1_000 })),
     insertTransaction: vi.fn(async () => ({ success: true, data: persistedTransaction })),
@@ -53,7 +55,9 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@/lib/services/core/gameState', () => ({
   getGameState: mocks.getGameState,
+  getCurrentCompany: mocks.getCurrentCompany,
   updateGameState: mocks.updateGameState,
+  syncPersistedMoney: mocks.syncPersistedMoney,
 }));
 
 vi.mock('@/lib/services/user/companyService', () => ({

@@ -49,6 +49,8 @@ export * from './sales/generateCustomer';
 export * from './sales/generateOrder';
 export * from './sales/grapeBuyerLoyaltyService';
 export * from './sales/grapeSupplierLoyaltyService';
+export * from './market/buyGoods/buyGoodsPricing';
+export * from './market/buyGoods/buyGoodsSupplierRelationshipService';
 export * from './sales/grapeSupplierMarketService';
 export * from './sales/relationshipService';
 export * from './sales/contractGenerationService';
@@ -56,6 +58,13 @@ export * from './sales/contractService';
 export * from './sales/forwardContractService';
 export * from './sales/expirationService';
 export * from './sales/buyGrapeMarketService';
+export * from './market/buyMarketService';
+export * from './market/buyMarketLifecycleService';
+export * from './market/buyMarketDomainRegistry';
+export * from './market/storageVessels/storageVesselMarketAdapter';
+export * from './wine/winery/storageVesselService';
+export * from './wine/winery/storageVesselAllocationService';
+export * from './wine/winery/storageVesselMaintenanceService';
 
 // Prestige services
 export * from './prestige/prestigeService';

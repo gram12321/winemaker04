@@ -22,10 +22,10 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Core state/tick | `src/lib/services/core/` | `src/App.tsx`, layout | `database/core/gamestateDB.ts`, time constants |
 | Vineyard | `src/lib/services/vineyard/` | `Vineyard.tsx`, vineyard modals | `database/activities/vineyardDB.ts`, vineyard/grape constants |
 | Weather | `src/lib/features/weather/`, `constants/weatherConstants.ts` | `WeatherCenter.tsx`, Vineyard tooltips, Winepedia Weather | company-scoped weather fields in `GameState`/`gamestateDB.ts` |
-| Winery/inventory | `src/lib/services/wine/winery/`, `anchors/`, `features/` | `Winery.tsx`, wine modals | `database/activities/inventoryDB.ts`, wine-feature constants |
+| Winery/inventory | `src/lib/services/wine/winery/`, `anchors/`, `features/` | `Winery.tsx`, Equipment, wine modals | `database/activities/inventoryDB.ts`, `database/winery/`, wine-feature constants |
 | Structure/taste/score | `src/lib/wineStructure/`, `services/wine/taste/`, `winescore/` | wine modal tabs and breakdowns | taste and wine-feature constants |
 | Orders/contracts | `services/sales/` | Sales page, order/contract tabs, assignment modal | customer/sales databases, contract constants |
-| Grape markets | buyer/supplier, loyalty, buy/sell, cooperative services | buy/sell modals, Winepedia market tabs | `database/sales/`, market/cooperative constants |
+| Buy Market and grape trading | Buy Market, Grape Procurement, buyer/supplier, loyalty, sell, cooperative modules | Buy Market, sell, and Storage Vessel surfaces | `database/market/`, `database/winery/`, `database/sales/`, market/cooperative constants |
 | Forward pre-sales | `services/sales/forwardContractService.ts` | `ContractsTab.tsx` | `database/sales/contractDB.ts` |
 | Finance/founders | `services/finance/`, `services/user/staffService.ts` | finance views, `FounderPanel.tsx` | transactions, staff founder field, finance/staff constants |
 | Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases and constants |
@@ -58,6 +58,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 ## Current Status
 
 - Weather is persisted weekly state/forecast plus shared bounded vineyard projection and grape-market context; the feature facade also supplies presentation models.
+- Buy Market persists generic offers and registers Grape Procurement and Storage Vessels adapters for purchase and lifecycle dispatch. One modal shell hosts their domain panels; both use domain-scoped suppliers, relationships, and shared price/scaling mechanics. Cask suppliers rotate 250 L, 500 L, and 1,000 L offers with normalized quality. Empty Vessel is a cancellable winery Maintenance activity that removes the selected vessel's filled volume, reduces the linked batch, and releases only that vessel on completion. Vessel quality effects remain intentionally deferred.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Equipment and vineyard-technique tracks remain future work.
 - Founder economy is active and intentionally smaller than the archived public-company/share design; the isolated Board Share facade remains intentionally inactive and does not participate in host wiring.
 - Completed implementation records live under `docs/superpowers/completed/`; active planning documents remain under `specs/` and `plans/`.

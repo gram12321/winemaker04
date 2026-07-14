@@ -86,6 +86,12 @@ export const SPECIALIZED_ROLES: Record<string, {
     skillBonus: 'winery',
     bonusAmount: 0.2
   },
+  maintenance: {
+    title: 'Maintenance Technician',
+    description: 'Specialist in cellar and equipment upkeep',
+    skillBonus: 'maintenance',
+    bonusAmount: 0.2
+  },
   administrationAndResearch: {
     title: 'Administration & Research Manager',
     description: 'Expert in Administration and Research',

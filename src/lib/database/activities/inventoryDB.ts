@@ -1,5 +1,5 @@
 import { supabase } from '../core/supabase';
-import { WineBatch, GrapeVariety } from '../../types/types';
+import { WineBatch, GrapeVariety, Season } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { buildGameDate } from '../dbMapperUtils';
@@ -62,19 +62,15 @@ const ensureBatchNumber = async (batch: WineBatch): Promise<void> => {
  * Pure CRUD operations for wine batch/inventory data persistence
  */
 
-export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
-  try {
-    await ensureBatchNumber(batch);
-
-    const { error } = await supabase
-      .from(WINE_BATCHES_TABLE)
-      .upsert({
+export const toWineBatchRow = (batch: WineBatch, companyId = getCurrentCompanyId()) => ({
         id: batch.id,
-        company_id: getCurrentCompanyId(),
+        company_id: companyId,
         vineyard_id: batch.vineyardId,
         vineyard_name: batch.vineyardName,
         grape_variety: batch.grape,
         quantity: Math.round(batch.quantity),
+        volume_litres: batch.volumeLitres ?? null,
+        storage_plan_id: batch.storagePlanId ?? null,
         state: batch.state,
         fermentation_progress: Math.round(batch.fermentationProgress || 0),
         fermentation_options: batch.fermentationOptions, 
@@ -113,12 +109,110 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         aging_progress: Math.round(batch.agingProgress || 0)
       });
 
+export async function prepareWineBatchForInsert(batch: WineBatch, companyId: string): Promise<Record<string, unknown>> {
+  await ensureBatchNumber(batch);
+  return toWineBatchRow(batch, companyId);
+}
+
+export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
+  try {
+    await ensureBatchNumber(batch);
+
+    const { error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .upsert(toWineBatchRow(batch));
+
     if (error) throw error;
   } catch (error) {
     console.error('Database operation failed:', error);
     throw error;
   }
 };
+
+export async function appendStorageBackedHarvestBatch(companyId: string, batch: WineBatch): Promise<boolean> {
+  if (!batch.storagePlanId) return false;
+  const { data, error } = await supabase.rpc('append_storage_backed_harvest_batch', {
+    p_company_id: companyId,
+    p_batch_id: batch.id,
+    p_plan_id: batch.storagePlanId,
+    p_quantity: batch.quantity,
+    p_volume_litres: batch.volumeLitres,
+    p_land_value_modifier_harvest_snapshot: batch.landValueModifierHarvestSnapshot,
+    p_structure_index_harvest_snapshot: batch.structureIndexHarvestSnapshot,
+    p_taste_quality_index_harvest_snapshot: batch.tasteQualityIndexHarvestSnapshot,
+    p_land_value_modifier: batch.landValueModifier,
+    p_taste_quality_index: batch.tasteQualityIndex,
+    p_structure_index: batch.structureIndex,
+    p_characteristics: batch.characteristics,
+    p_breakdown: batch.breakdown,
+    p_wine_anchors: batch.wineAnchors,
+    p_estimated_price: batch.estimatedPrice,
+    p_harvest_start_week: batch.harvestStartDate.week,
+    p_harvest_start_season: batch.harvestStartDate.season,
+    p_harvest_start_year: batch.harvestStartDate.year,
+    p_harvest_end_week: batch.harvestEndDate.week,
+    p_harvest_end_season: batch.harvestEndDate.season,
+    p_harvest_end_year: batch.harvestEndDate.year,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function bottleStorageBackedWineBatch(input: {
+  companyId: string;
+  batchId: string;
+  quantity: number;
+  bottledWeek: number;
+  bottledSeason: Season;
+  bottledYear: number;
+  tasteQualityIndexBottlingSnapshot: number;
+  landValueModifierBottlingSnapshot: number;
+  structureIndexBottlingSnapshot: number;
+  wineScoreBottlingSnapshot: number;
+}): Promise<boolean> {
+  const { data, error } = await supabase.rpc('bottle_storage_backed_wine_batch', {
+    p_company_id: input.companyId,
+    p_batch_id: input.batchId,
+    p_quantity: input.quantity,
+    p_bottled_week: input.bottledWeek,
+    p_bottled_season: input.bottledSeason,
+    p_bottled_year: input.bottledYear,
+    p_taste_quality_index_bottling_snapshot: input.tasteQualityIndexBottlingSnapshot,
+    p_land_value_modifier_bottling_snapshot: input.landValueModifierBottlingSnapshot,
+    p_structure_index_bottling_snapshot: input.structureIndexBottlingSnapshot,
+    p_wine_score_bottling_snapshot: input.wineScoreBottlingSnapshot,
+    p_released_year: input.bottledYear,
+    p_released_season: input.bottledSeason,
+    p_released_week: input.bottledWeek,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function sellStorageBackedWineBatch(input: {
+  companyId: string;
+  batchId: string;
+  quantity: number;
+  amount: number;
+  description: string;
+  category: string;
+  week: number;
+  season: Season;
+  year: number;
+}) {
+  const { data, error } = await supabase.rpc('sell_storage_backed_wine_batch', {
+    p_company_id: input.companyId,
+    p_batch_id: input.batchId,
+    p_quantity: input.quantity,
+    p_amount: input.amount,
+    p_description: input.description,
+    p_category: input.category,
+    p_week: input.week,
+    p_season: input.season,
+    p_year: input.year,
+  });
+  return { data, error };
+}
 
 export const loadWineBatches = async (companyId?: string): Promise<WineBatch[]> => {
   try {
@@ -146,6 +240,8 @@ export const loadWineBatches = async (companyId?: string): Promise<WineBatch[]> 
         vineyardName: row.vineyard_name,
         grape: grapeVariety,
         quantity: row.quantity,
+        volumeLitres: row.volume_litres ?? undefined,
+        storagePlanId: row.storage_plan_id ?? undefined,
         state: row.state,
         fermentationProgress: row.fermentation_progress || 0,
         fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
@@ -250,6 +346,8 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           vineyard_name: updatedBatch.vineyardName,
           grape_variety: updatedBatch.grape,
           quantity: Math.round(updatedBatch.quantity),
+          volume_litres: updatedBatch.volumeLitres ?? null,
+          storage_plan_id: updatedBatch.storagePlanId ?? null,
           state: updatedBatch.state,
           fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
           fermentation_options: updatedBatch.fermentationOptions,

@@ -1,34 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui';
+import { Button, DialogFooter } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
-import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
-import { MarketQuickBuyRowAction } from '../../market/MarketQuickBuyRowAction';
+import { MarketOfferTable, type MarketOfferTableColumn } from './MarketOfferTable';
+import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
+import { BuyGoodsSupplierTrustPanel, getBuyGoodsSupplierTrustColor } from './BuyGoodsSupplierTrustPanel';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
   getBuyOfferStateLabel,
-  purchaseBuyGrapeOffer,
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
-import {
-  estimateSupplierTrustPointGain,
-  SUPPLIER_LOYALTY_LEVELS,
-  type SupplierLoyaltyLevel,
-  type SupplierLoyaltyRecord,
-  getSupplierYearlyTrustCap,
-} from '@/lib/services/sales/grapeSupplierLoyaltyService';
+import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
+import { getBuyGoodsSupplierTrustPreview, type BuyGoodsSupplierRelationshipLevel } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import { getGameState } from '@/lib/services/core/gameState';
+import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants';
 import type { WineFeature } from '@/lib/types/wineFeatures';
 import type { WeatherState } from '@/lib/types/types';
 import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
+import { getAvailableStorageVessels, initializeHarvestVolumeLitres } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import type { StorageVessel } from '@/lib/types/storageVessels';
 
 type SortDirection = 'asc' | 'desc' | null;
 
-interface BuyFromMarketModalProps {
-  isOpen: boolean;
+interface GrapeMarketPanelProps {
   onClose: () => void;
 }
 
@@ -162,79 +160,7 @@ const PriceCalculationTooltip: React.FC<{
   );
 };
 
-function getTrustIcon(level: SupplierLoyaltyLevel): string {
-  if (level === 0) return '○';
-  if (level <= 2) return '◔';
-  if (level <= 4) return '◕';
-  return '●';
-}
-
-function getTrustColor(level: SupplierLoyaltyLevel): string {
-  if (level === 0) return 'text-gray-400';
-  if (level <= 2) return 'text-blue-300';
-  if (level <= 4) return 'text-cyan-300';
-  return 'text-amber-300';
-}
-
-const SupplierTrustPanel: React.FC<{
-  supplierName?: string;
-  loyalty: SupplierLoyaltyRecord | null;
-  companyValue: number;
-}> = ({ supplierName, loyalty, companyValue }) => {
-  const level = (loyalty?.level ?? 0) as SupplierLoyaltyLevel;
-  const config = SUPPLIER_LOYALTY_LEVELS[level];
-  const nextLevel = level < 5 ? SUPPLIER_LOYALTY_LEVELS[(level + 1) as SupplierLoyaltyLevel] : null;
-  const score = loyalty?.loyaltyScore ?? 0;
-  const scoreToNext = nextLevel ? Math.max(0, nextLevel.minLoyaltyScore - score) : 0;
-  const yearlyCap = getSupplierYearlyTrustCap(Math.max(1, loyalty?.consecutiveYears ?? 1), companyValue);
-
-  return (
-    <div className="rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs space-y-2">
-      <div className="flex justify-between items-center">
-        <span className="font-semibold text-blue-300">{getTrustIcon(level)} Supplier Trust</span>
-        <span className={`font-bold ${getTrustColor(level)}`}>{config.name}</span>
-      </div>
-
-      <div className="flex gap-4 text-gray-400">
-        <span>Supplier: <strong className="text-white">{supplierName ?? loyalty?.supplierName ?? 'Unknown'}</strong></span>
-      </div>
-
-      <div className="flex gap-4 text-gray-400">
-        <span>Total purchases: <strong className="text-white">{(loyalty?.totalPurchases ?? 0)}</strong></span>
-        <span>Streak: <strong className="text-white">{(loyalty?.consecutiveYears ?? 0)} {(loyalty?.consecutiveYears ?? 0) === 1 ? 'year' : 'years'}</strong></span>
-        <span>Total bought: <strong className="text-white">{(loyalty?.totalKgPurchased ?? 0).toLocaleString()} kg</strong></span>
-      </div>
-
-      <div className="flex gap-4 text-gray-300">
-        <span>Trust score: <strong className="text-white">{score.toLocaleString()}</strong></span>
-        <span>Year cap: <strong className="text-white">{(loyalty?.yearLoyaltyPoints ?? 0).toLocaleString()} / {yearlyCap.toLocaleString()}</strong></span>
-      </div>
-
-      {config.benefits.length > 0 && (
-        <ul className="space-y-0.5 text-gray-300">
-          {config.benefits.map((benefit, i) => <li key={i}>• {benefit}</li>)}
-        </ul>
-      )}
-
-      {nextLevel && (
-        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
-          {scoreToNext === 0
-            ? `Ready to advance to ${nextLevel.name}!`
-            : `${scoreToNext.toLocaleString()} trust score to reach ${nextLevel.name}`
-          }
-        </div>
-      )}
-
-      {!loyalty && (
-        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
-          First purchase from this supplier will establish this relationship.
-        </div>
-      )}
-    </div>
-  );
-};
-
-const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose }) => {
+export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) => {
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorByOfferId, setErrorByOfferId] = useState<Record<string, string>>({});
@@ -246,12 +172,18 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
   const [showAllOffers, setShowAllOffers] = useState(false);
   const [companyValue, setCompanyValue] = useState(0);
   const [purchaseQuantityByOfferId, setPurchaseQuantityByOfferId] = useState<Record<string, number>>({});
+  const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
+  const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
+  const currentYear = getGameState().currentYear ?? 0;
 
   const loadOffers = useCallback(async () => {
     setLoading(true);
     try {
       const nextOffers = await getBuyGrapeMarketOffers();
       setOffers(nextOffers);
+      const vessels = await getAvailableStorageVessels();
+      setAvailableVessels(vessels);
+      setSelectedVesselIds([]);
       const computedCompanyValue = await calculateCompanyValue().catch(() => 0);
       setCompanyValue(computedCompanyValue);
     } finally {
@@ -259,39 +191,35 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     }
   }, []);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-    void loadOffers();
-  }, [isOpen, loadOffers]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setShowAllOffers(false);
-    }
-  }, [isOpen]);
+  React.useEffect(() => { void loadOffers(); }, [loadOffers]);
 
   useEffect(() => {
     setShowAllOffers(false);
   }, [grapeFilter, stateFilter, sortKey, sortDirection]);
 
-  const handleBuy = useCallback(async (offerId: string, quantityKg: number) => {
-    const result = await purchaseBuyGrapeOffer(offerId, quantityKg);
+  const handleBuy = useCallback(async (offerId: string, quantityKg: number, vesselIds: string[]) => {
+    setLoading(true);
+    try {
+      const result = await purchaseBuyMarketOffer(offerId, quantityKg, { storageVesselIds: vesselIds });
 
-    if (!result.success) {
-      setErrorByOfferId((current) => ({
-        ...current,
-        [offerId]: result.error || 'Purchase failed.',
-      }));
-      return;
+      if (!result.success) {
+        setErrorByOfferId((current) => ({
+          ...current,
+          [offerId]: result.error || 'Purchase failed.',
+        }));
+        return;
+      }
+
+      setErrorByOfferId((current) => {
+        const next = { ...current };
+        delete next[offerId];
+        return next;
+      });
+
+      onClose();
+    } finally {
+      setLoading(false);
     }
-
-    setErrorByOfferId((current) => {
-      const next = { ...current };
-      delete next[offerId];
-      return next;
-    });
-
-    onClose();
   }, [onClose]);
 
   const grapeFilterOptions = useMemo(() => {
@@ -381,21 +309,15 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     return getOfferQuantity(selectedOffer);
   }, [getOfferQuantity, selectedOffer]);
 
+  const selectedVesselCapacity = useMemo(() => availableVessels
+    .filter((vessel) => selectedVesselIds.includes(vessel.id))
+    .reduce((total, vessel) => total + vessel.capacityLitres, 0), [availableVessels, selectedVesselIds]);
+  const requiredStorageLitres = initializeHarvestVolumeLitres(selectedPurchaseKg);
+
   const trustPreview = useMemo(() => {
     if (!selectedOffer || selectedPurchaseKg <= 0) return null;
-    const loyalty = selectedOffer.supplierLoyalty;
-    const consecutiveYears = Math.max(1, loyalty?.consecutiveYears ?? 1);
-    const yearPoints = Math.max(0, loyalty?.yearLoyaltyPoints ?? 0);
-    const preview = estimateSupplierTrustPointGain(selectedPurchaseKg, consecutiveYears, yearPoints, companyValue);
-
-    return {
-      rawPoints: preview.rawPoints,
-      appliedPoints: preview.appliedPoints,
-      cappedPoints: Math.max(0, preview.rawPoints - preview.appliedPoints),
-      yearPoints,
-      yearlyCap: preview.yearlyCap,
-    };
-  }, [companyValue, selectedOffer, selectedPurchaseKg]);
+    return getBuyGoodsSupplierTrustPreview(selectedOffer.supplierLoyalty, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
+  }, [companyValue, currentYear, selectedOffer, selectedPurchaseKg]);
 
   const displayedOffers = useMemo(() => {
     if (showAllOffers) return filteredAndSortedOffers;
@@ -465,7 +387,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               title="Supplier Trust Level"
               content={<span className="text-xs leading-snug">Persistent trust with this supplier can improve relationship pricing and listing persistence over time.</span>}
             >
-              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getTrustColor((offer.supplierLoyalty?.level ?? 0) as SupplierLoyaltyLevel)}`}>
+              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getBuyGoodsSupplierTrustColor((offer.supplierLoyalty?.level ?? 0) as BuyGoodsSupplierRelationshipLevel)}`}>
                 Trust {offer.supplierLoyalty?.level ?? 0}
               </span>
             </UnifiedTooltip>
@@ -545,16 +467,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     },
   ], [errorByOfferId, getOfferQuantity, headerWithTooltip, loading]);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
-        <DialogHeader>
-          <DialogTitle className="text-amber-400 text-lg">Buy from Market</DialogTitle>
-          <DialogDescription className="sr-only">
-            Browse and purchase grape market offers, compare quality and pricing pressure, and buy directly from each row.
-          </DialogDescription>
-        </DialogHeader>
-
+  return <>
         <div className="space-y-4">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
             {selectedOffer?.demandFactors ? (
@@ -593,10 +506,12 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               </div>
             )}
 
-            <SupplierTrustPanel
+            <BuyGoodsSupplierTrustPanel
               supplierName={selectedOffer?.supplierName}
-              loyalty={selectedOffer?.supplierLoyalty ?? null}
+              relationship={selectedOffer?.supplierLoyalty ?? null}
               companyValue={companyValue}
+              currentYear={currentYear}
+              unitsLabel="kg"
             />
 
             {priceBreakdown && selectedOffer ? (
@@ -713,6 +628,18 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               No offers match the current filters.
             </div>
           )}
+
+          {selectedOffer && (
+            <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm">
+              <div className="font-medium text-cyan-200">Assign Storage Vessels</div>
+              <div className="mt-1 text-xs text-gray-300">This purchase creates a WineBatch and requires capacity now. Initial planning uses {STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG} L/kg as a temporary bootstrap ratio; future operation losses and conversions will update volume.</div>
+              <div className="mt-2 flex justify-between text-xs"><span>Selected capacity</span><span className={selectedVesselCapacity >= requiredStorageLitres ? 'text-green-300' : 'text-red-300'}>{selectedVesselCapacity.toLocaleString()} L / {requiredStorageLitres.toLocaleString()} L</span></div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {availableVessels.length === 0 && <div className="text-red-300">Buy a Storage Vessel before purchasing grapes.</div>}
+                {availableVessels.map((vessel) => <label key={vessel.id} className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/50 p-2 text-xs"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
@@ -728,9 +655,9 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             onClick={() => {
               if (!selectedOffer) return;
               const safeQty = Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg));
-              void handleBuy(selectedOffer.id, safeQty);
+              void handleBuy(selectedOffer.id, safeQty, selectedVesselIds);
             }}
-            disabled={loading || !selectedOffer || !priceBreakdown}
+            disabled={loading || !selectedOffer || !priceBreakdown || selectedVesselCapacity < requiredStorageLitres}
             className="bg-amber-600 hover:bg-amber-500 text-white"
           >
             {loading
@@ -738,9 +665,5 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               : `Buy for ${priceBreakdown ? formatNumber(selectedTotalCost, { currency: true, decimals: 0 }) : '—'}`}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  </>;
 };
-
-export default BuyFromMarketModal;

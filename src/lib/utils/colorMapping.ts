@@ -1,5 +1,5 @@
 // ===== CONSOLIDATED COLOR MAPPING SYSTEM =====
-// Foundation: 5 core skill colors + system + sub-categories for finer distinctions
+// Foundation: 6 core skill colors + system + sub-categories for finer distinctions
 
 /**
  * Color scheme interface for consistent styling across the application
@@ -19,7 +19,7 @@ export interface ColorScheme {
  * PRIMARY COLOR MAPPING - Foundation of all colors in the game
  * 
  * Hierarchy:
- * - 5 Core Skills (field, winery, administration, sales, maintenance)
+ * - 6 Core Skills (field, winery, maintenance, finance, sales, administration)
  * - System category (for generic system messages)
  * - Sub-categories (variants of main categories for finer distinctions)
  */
@@ -46,6 +46,17 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     icon: 'text-purple-500',
     badge: 'bg-purple-100 text-purple-700 border-purple-200',
     ring: 'ring-purple-200'
+  },
+
+  // Maintenance / Cellar and Equipment Upkeep - Teal
+  'maintenance': {
+    primary: '#14b8a6',      // teal-500
+    background: 'bg-teal-50',
+    border: 'border-teal-200',
+    text: 'text-teal-700',
+    icon: 'text-teal-500',
+    badge: 'bg-teal-100 text-teal-700 border-teal-200',
+    ring: 'ring-teal-200'
   },
 
   // Finance & Staff (formerly Administration) - Blue
@@ -134,12 +145,13 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
 };
 
 /**
- * SKILL_COLORS - Convenience constant for the 5 core skill colors
+ * SKILL_COLORS - Convenience constant for the 6 core skill colors
  * Extracted from COLOR_MAPPING for easy access to just the skill colors
  */
 export const SKILL_COLORS = {
   field: COLOR_MAPPING['field'].primary,
   winery: COLOR_MAPPING['winery'].primary,
+  maintenance: COLOR_MAPPING['maintenance'].primary,
   financeAndStaff: COLOR_MAPPING['financeAndStaff'].primary,
   sales: COLOR_MAPPING['sales'].primary,
   administrationAndResearch: COLOR_MAPPING['administrationAndResearch'].primary

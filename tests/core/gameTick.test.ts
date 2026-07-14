@@ -54,8 +54,8 @@ const mocks = vi.hoisted(() => {
     processWeeklyFermentation: vi.fn(async () => undefined),
     processSeasonalWages: vi.fn(async () => 'Seasonal wages paid'),
     processYearlyFounderDistributions: vi.fn(async () => undefined),
-    processWeeklyBuyGrapeOfferDecay: vi.fn(async () => undefined),
-    refreshBuyGrapeMarketForSeason: vi.fn(async () => undefined),
+    processWeeklyBuyMarketLifecycle: vi.fn(async () => undefined),
+    refreshBuyMarketForSeason: vi.fn(async () => undefined),
     generateContracts: vi.fn(async () => undefined),
     generateForwardContracts: vi.fn(async () => undefined),
     expireOldContracts: vi.fn(async () => undefined),
@@ -118,8 +118,8 @@ vi.mock('@/lib/services', () => ({
   processWeeklyFermentation: mocks.processWeeklyFermentation,
   processSeasonalWages: mocks.processSeasonalWages,
   processYearlyFounderDistributions: mocks.processYearlyFounderDistributions,
-  processWeeklyBuyGrapeOfferDecay: mocks.processWeeklyBuyGrapeOfferDecay,
-  refreshBuyGrapeMarketForSeason: mocks.refreshBuyGrapeMarketForSeason,
+  processWeeklyBuyMarketLifecycle: mocks.processWeeklyBuyMarketLifecycle,
+  refreshBuyMarketForSeason: mocks.refreshBuyMarketForSeason,
   generateForwardContracts: mocks.generateForwardContracts,
   expireAndDefaultForwardContracts: mocks.expireAndDefaultForwardContracts
 }));
@@ -266,8 +266,8 @@ describe('processGameTick', () => {
     expect(mocks.processWeeklyFermentation).toHaveBeenCalledOnce();
     expect(mocks.processWeeklyFeatureRisks).toHaveBeenCalledOnce();
     expect(mocks.updateCellarCollectionPrestige).toHaveBeenCalledOnce();
-    expect(mocks.refreshBuyGrapeMarketForSeason).toHaveBeenCalledOnce();
-    expect(mocks.processWeeklyBuyGrapeOfferDecay).not.toHaveBeenCalled();
+    expect(mocks.refreshBuyMarketForSeason).toHaveBeenCalledOnce();
+    expect(mocks.processWeeklyBuyMarketLifecycle).not.toHaveBeenCalled();
     expect(mocks.checkAndTriggerBookkeeping).toHaveBeenCalledWith(
       'Spring',
       'Economy phase changed',

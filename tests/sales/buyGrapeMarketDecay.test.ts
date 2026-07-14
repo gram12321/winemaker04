@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { processWeeklyBuyGrapeOfferDecay } from '@/lib/services/sales/buyGrapeMarketService';
+import { DEFAULT_BUY_MARKET_DEMAND_FACTORS } from '@/lib/constants';
+import { computeBuyOfferPricePerKg, processWeeklyBuyGrapeOfferDecay } from '@/lib/services/sales/buyGrapeMarketService';
 
 const mocks = vi.hoisted(() => {
   const rows: any[] = [];
@@ -20,10 +21,10 @@ const mocks = vi.hoisted(() => {
     getBulkSupplier: vi.fn(async () => ({ supplierId: 'supplier-a', country: 'France' })),
     getSeasonalSuppliers: vi.fn(async () => ([{ supplierId: 'supplier-b', country: 'France' }])),
     getSupplierLoyalties: vi.fn(async () => ({})),
-    getSupplierRelationshipPriceMultiplier: vi.fn(() => 1),
-    getCompanyBuyOfferRows: vi.fn(async () => ({ data: rows, error: null })),
-    updateBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
-    deleteBuyOfferRow: vi.fn(async () => ({ data: null, error: null })),
+    getSupplierRelationshipPriceMultiplier: vi.fn<(level: number) => number>(() => 1),
+    getCompanyGrapeMarketOfferRows: vi.fn(async () => ({ data: rows, error: null })),
+    updateGrapeMarketOfferRow: vi.fn(async () => ({ data: null, error: null })),
+    deleteGrapeMarketOfferRow: vi.fn(async () => ({ data: null, error: null })),
     buildMarketPreviewBatch: vi.fn(async (input: any) => ({
       id: 'preview-batch',
       vineyardId: 'market_purchase',
@@ -112,12 +113,12 @@ vi.mock('@/lib/services/sales/grapeSupplierLoyaltyService', async () => {
   };
 });
 
-vi.mock('@/lib/database/sales/buyMarketOffersDB', () => ({
-  getCompanyBuyOfferRows: mocks.getCompanyBuyOfferRows,
-  updateBuyOfferRow: mocks.updateBuyOfferRow,
-  deleteBuyOfferRow: mocks.deleteBuyOfferRow,
-  upsertBuyOfferRows: vi.fn(),
-  getCompanyBuyOfferRow: vi.fn(),
+vi.mock('@/lib/services/market/grapes/grapeMarketOfferPersistence', () => ({
+  getCompanyGrapeMarketOfferRows: mocks.getCompanyGrapeMarketOfferRows,
+  updateGrapeMarketOfferRow: mocks.updateGrapeMarketOfferRow,
+  deleteGrapeMarketOfferRow: mocks.deleteGrapeMarketOfferRow,
+  upsertGrapeMarketOfferRows: vi.fn(),
+  getCompanyGrapeMarketOfferRow: vi.fn(),
 }));
 
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
@@ -165,6 +166,15 @@ describe('buy grape market weekly decay', () => {
         quality_decay_per_week: 0.1,
         min_quality_floor: 0.45,
         base_price_per_kg: 3,
+        price_snapshot: {
+          supplierRelationshipMultiplier: 1,
+          companyPrestige: 0,
+          seasonPriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.seasonPriceMultiplier,
+          economyPriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.economyPriceMultiplier,
+          yearCyclePriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.yearCyclePriceMultiplier,
+          volatilityPriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.volatilityPriceMultiplier,
+          volatilityBuyerPriceSensitivityMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.volatilityBuyerPriceSensitivityMultiplier ?? 1,
+        },
         batch_state: 'grapes',
         weeks_on_market: 1,
         created_year: 2026,
@@ -203,17 +213,51 @@ describe('buy grape market weekly decay', () => {
   });
 
   it('deletes empty offers and decays active offer quality with floor protection', async () => {
+    mocks.getGameState.mockReturnValue({
+      week: 3,
+      season: 'Spring',
+      currentYear: 2026,
+      economyPhase: 'Stable',
+      prestige: 650,
+      money: 100000,
+    });
+    mocks.getSupplierLoyalties.mockResolvedValue({
+      'supplier-b': { level: 4 },
+    });
+    mocks.getSupplierRelationshipPriceMultiplier.mockImplementation((level: number) => level === 4 ? 0.95 : 1);
+
     await processWeeklyBuyGrapeOfferDecay();
 
-    expect(mocks.deleteBuyOfferRow).toHaveBeenCalledWith('company-1', 'expired-offer');
-    expect(mocks.deleteBuyOfferRow).toHaveBeenCalledWith('company-1', 'time-expired-offer');
-    expect(mocks.updateBuyOfferRow).toHaveBeenCalledWith(
+    const refreshedPriceSnapshot = {
+      supplierRelationshipMultiplier: 0.95,
+      companyPrestige: 650,
+      seasonPriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.seasonPriceMultiplier,
+      economyPriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.economyPriceMultiplier,
+      yearCyclePriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.yearCyclePriceMultiplier,
+      volatilityPriceMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.volatilityPriceMultiplier,
+      volatilityBuyerPriceSensitivityMultiplier: DEFAULT_BUY_MARKET_DEMAND_FACTORS.volatilityBuyerPriceSensitivityMultiplier ?? 1,
+    };
+    const expectedPrice = Number(computeBuyOfferPricePerKg({
+      basePrice: 3,
+      qualityScore: 0.45,
+      state: 'grapes',
+      season: 'Spring',
+      economyPhase: 'Stable',
+      year: 2026,
+      previewValueMultiplier: 1,
+      priceSnapshot: refreshedPriceSnapshot,
+    }).toFixed(2));
+
+    expect(mocks.deleteGrapeMarketOfferRow).toHaveBeenCalledWith('company-1', 'expired-offer');
+    expect(mocks.deleteGrapeMarketOfferRow).toHaveBeenCalledWith('company-1', 'time-expired-offer');
+    expect(mocks.updateGrapeMarketOfferRow).toHaveBeenCalledWith(
       'company-1',
       'active-offer',
       expect.objectContaining({
         quality_score: 0.45,
         weeks_on_market: 2,
-        effective_price_per_kg: expect.any(Number),
+        price_snapshot: refreshedPriceSnapshot,
+        effective_price_per_kg: expectedPrice,
         preview_version: expect.any(Number),
         preview_snapshot: expect.any(Object),
         provenance_snapshot: expect.any(Object),

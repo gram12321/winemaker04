@@ -31,9 +31,10 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         team_ids: staff.teamIds || [],
         skill_field: staff.skills.field,
         skill_winery: staff.skills.winery,
+        skill_maintenance: staff.skills.maintenance,
         skill_administration: staff.skills.financeAndStaff,
         skill_sales: staff.skills.sales,
-        skill_maintenance: staff.skills.administrationAndResearch,
+        skill_administration_and_research: staff.skills.administrationAndResearch,
         workforce: staff.workforce,
         hire_date_week: staff.hireDate.week,
         hire_date_season: staff.hireDate.season,
@@ -88,9 +89,10 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
       skills: {
         field: row.skill_field,
         winery: row.skill_winery,
+        maintenance: row.skill_maintenance,
         financeAndStaff: row.skill_administration,
         sales: row.skill_sales,
-        administrationAndResearch: row.skill_maintenance
+        administrationAndResearch: row.skill_administration_and_research
       },
       experience: row.experience || {},
       workforce: row.workforce || 50,
@@ -165,9 +167,10 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
       skills: {
         field: data.skill_field,
         winery: data.skill_winery,
+        maintenance: data.skill_maintenance,
         financeAndStaff: data.skill_administration,
         sales: data.skill_sales,
-        administrationAndResearch: data.skill_maintenance
+        administrationAndResearch: data.skill_administration_and_research
       },
       experience: data.experience || {},
       workforce: data.workforce || 50,

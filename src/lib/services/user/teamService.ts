@@ -47,6 +47,14 @@ export function getDefaultTeams(): StaffTeam[] {
     },
     {
       id: uuidv4(),
+      name: 'Maintenance Team',
+      description: 'Maintain cellar equipment and facilities',
+      memberIds: [],
+      icon: '🔧',
+      defaultTaskTypes: ['maintenance']
+    },
+    {
+      id: uuidv4(),
       name: 'Sales Team',
       description: 'Manage your sales force',
       memberIds: [],
@@ -54,6 +62,39 @@ export function getDefaultTeams(): StaffTeam[] {
       defaultTaskTypes: ['sales']
     }
   ];
+}
+
+function upgradeDefaultMaintenanceTeam(teams: StaffTeam[]): StaffTeam[] {
+  let changed = false;
+  const updatedTeams = teams.map((team) => {
+    const isDefaultWineryTeam = team.name === 'Winery Team'
+      && (team.defaultTaskTypes.includes('crushing') || team.defaultTaskTypes.includes('fermentation'));
+    if (!isDefaultWineryTeam || !team.defaultTaskTypes.includes('maintenance')) return team;
+    changed = true;
+    return { ...team, defaultTaskTypes: team.defaultTaskTypes.filter((taskType) => taskType !== 'maintenance') };
+  });
+
+  const maintenanceTeam = updatedTeams.find((team) => team.name === 'Maintenance Team');
+  if (!maintenanceTeam) {
+    return [
+      ...updatedTeams,
+      {
+        id: uuidv4(),
+        name: 'Maintenance Team',
+        description: 'Maintain cellar equipment and facilities',
+        memberIds: [],
+        icon: '🔧',
+        defaultTaskTypes: ['maintenance'],
+      },
+    ];
+  }
+  if (!maintenanceTeam.defaultTaskTypes.includes('maintenance')) {
+    return updatedTeams.map((team) => team.id === maintenanceTeam.id
+      ? { ...team, defaultTaskTypes: [...team.defaultTaskTypes, 'maintenance'] }
+      : team);
+  }
+
+  return changed ? updatedTeams : teams;
 }
 
 /**
@@ -335,8 +376,10 @@ export async function initializeTeamsSystem(): Promise<void> {
     const dbTeams = await loadTeamsFromDb();
 
     if (dbTeams.length > 0) {
-      // Load teams from database
-      updateGameState({ teams: dbTeams });
+      // Move the built-in Maintenance task class off Winery and into its own team.
+      const teams = upgradeDefaultMaintenanceTeam(dbTeams);
+      if (teams !== dbTeams) await saveTeamsToDb(teams);
+      updateGameState({ teams });
     } else {
       // No teams in database, create default teams
       const defaultTeams = getDefaultTeams();

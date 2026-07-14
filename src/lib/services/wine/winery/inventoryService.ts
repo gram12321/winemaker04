@@ -1,7 +1,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics, GameDate, MarketBatchProvenanceSnapshot, MarketOfferOriginTag, Vineyard, WineBatchOriginSnapshot, WineBatchState } from '../../../types/types';
-import { saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
+import { appendStorageBackedHarvestBatch, saveWineBatch, loadWineBatches, updateWineBatch, getWineBatchById } from '../../../database/activities/inventoryDB';
+import { consumeStorageBackedWineBatch } from '@/lib/database/winery/storageVesselsDB';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { getGameState } from '@/lib/services/core/gameState';
+import { GAME_INITIALIZATION } from '@/lib/constants';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
@@ -26,6 +30,7 @@ import { appendAnchorEffects, buildAnchorEffectsFromNeutral, diffAnchorEffects }
 import { CrushingOptions, modifyCrushingCharacteristics } from '../characteristics/crushingCharacteristics';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { applyCrushingToWineAnchors, applyFermentationSetupToWineAnchors, applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
+import { activateStoragePlanForBatch, canStoragePlanHoldVolume, initializeHarvestVolumeLitres } from './storageVesselAllocationService';
 
 const DEFAULT_TASTE_QUALITY_INDEX = 0.5;
 
@@ -47,6 +52,7 @@ export interface CreateMarketWineBatchInput {
   quantity: number;
   harvestStartDate: GameDate;
   harvestEndDate: GameDate;
+  storagePlanId?: string;
   stateProfile?: MarketBatchStateProfile;
 }
 
@@ -504,29 +510,24 @@ async function buildMarketStateBatch(input: CreateMarketWineBatchInput): Promise
 // ===== WINE BATCH OPERATIONS =====
 
 /**
- * Find existing compatible wine batch that can be combined with new harvest
- * Compatible batches must have same vineyard ID and same vintage (harvest year)
- * @param vineyardId - ID of the vineyard
- * @param grape - Grape variety
- * @param harvestYear - Year the grapes were harvested
- * @returns Compatible wine batch or null if none found
+ * Finds a grapes-stage batch that can continue across separate harvest activities.
+ * A batch can only be unified when it already has its own active Storage Vessel plan;
+ * the caller must still confirm that the plan has room for the incoming harvest.
  */
-async function findCompatibleWineBatch(
+export async function findCompatibleWineBatch(
   vineyardId: string,
   grape: GrapeVariety,
   harvestYear: number
 ): Promise<WineBatch | null> {
-  const existingBatches = await loadWineBatches();
-  
-  // Find existing batch with same vineyard, grape, and vintage that's still in 'grapes' stage
-  const compatibleBatch = existingBatches.find(batch => 
+  const batches = await loadWineBatches();
+  return batches.find((batch) =>
     batch.vineyardId === vineyardId &&
     batch.grape === grape &&
     batch.harvestStartDate.year === harvestYear &&
-    batch.state === 'grapes' // Only combine with batches still in grape stage
-  );
-  
-  return compatibleBatch || null;
+    batch.state === 'grapes' &&
+    Boolean(batch.storagePlanId) &&
+    (batch.volumeLitres ?? 0) > 0
+  ) ?? null;
 }
 
 /**
@@ -647,15 +648,29 @@ export async function createWineBatchFromHarvest(
   grape: GrapeVariety,
   quantity: number,
   harvestStartDate: GameDate,  // Required: activity start date
-  harvestEndDate: GameDate     // Required: current harvest date for this batch
+  harvestEndDate: GameDate,     // Required: current harvest date for this batch
+  storagePlanId?: string,
+  plannedBatchId?: string
 ): Promise<WineBatch> {
+  if (!storagePlanId) {
+    throw new Error('Storage Vessel allocation is required before creating a wine batch.');
+  }
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
 
   if (!vineyard) {
     throw new Error(`Vineyard not found: ${vineyardId}`);
   }
-  const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestStartDate.year);
+  const existingBatch = plannedBatchId ? await getWineBatchById(plannedBatchId) : null;
+  if (existingBatch && (
+    existingBatch.vineyardId !== vineyardId ||
+    existingBatch.grape !== grape ||
+    existingBatch.harvestStartDate.year !== harvestStartDate.year ||
+    existingBatch.state !== 'grapes' ||
+    existingBatch.storagePlanId !== storagePlanId
+  )) {
+    throw new Error('The selected harvest batch no longer matches its Storage Vessel allocation.');
+  }
   const prestigeData = await calculateCurrentPrestige();
 
   const incomingBatch = await buildHarvestStageBatch({
@@ -669,6 +684,9 @@ export async function createWineBatchFromHarvest(
     companyPrestige: prestigeData.companyPrestige,
     vineyardPrestige: vineyard.vineyardPrestige
   });
+  incomingBatch.id = plannedBatchId ?? incomingBatch.id;
+  incomingBatch.storagePlanId = storagePlanId;
+  incomingBatch.volumeLitres = initializeHarvestVolumeLitres(quantity);
 
   if (existingBatch) {
     const combinedBatch = combineWineBatches(
@@ -686,17 +704,32 @@ export async function createWineBatchFromHarvest(
       vineyard.vineyardPrestige
     );
     combinedBatch.estimatedPrice = estimatedPrice;
+    combinedBatch.storagePlanId = storagePlanId;
+    combinedBatch.volumeLitres = initializeHarvestVolumeLitres(combinedBatch.quantity);
     const startCandidate = existingBatch.harvestStartDate;
     const endCandidate = existingBatch.harvestEndDate;
     combinedBatch.harvestStartDate = getAbsoluteWeek(harvestStartDate) < getAbsoluteWeek(startCandidate) ? harvestStartDate : startCandidate;
     combinedBatch.harvestEndDate = getAbsoluteWeek(harvestEndDate) > getAbsoluteWeek(endCandidate) ? harvestEndDate : endCandidate;
 
-    await saveWineBatch(combinedBatch);
+    if (!(await canStoragePlanHoldVolume(storagePlanId, combinedBatch.volumeLitres))) {
+      throw new Error('Selected Storage Vessels do not have enough capacity for this harvest.');
+    }
+
+    const companyId = getCurrentCompanyId();
+    if (!companyId || !(await appendStorageBackedHarvestBatch(companyId, combinedBatch))) {
+      throw new Error('Could not update the harvested batch and Storage Vessel volume.');
+    }
     triggerGameUpdate();
     return combinedBatch;
   }
 
   await saveWineBatch(incomingBatch);
+  if (!(await activateStoragePlanForBatch(storagePlanId, incomingBatch.id, incomingBatch.volumeLitres))) {
+    if (!(await deleteInventoryBatch(incomingBatch.id))) {
+      throw new Error('Could not activate Storage Vessel allocation; the harvest batch needs reconciliation.');
+    }
+    throw new Error('Could not activate Storage Vessel allocation for the harvested batch.');
+  }
   triggerGameUpdate();
   return incomingBatch;
 }
@@ -706,13 +739,30 @@ export async function buildMarketPreviewBatch(input: CreateMarketWineBatchInput)
 }
 
 export async function createWineBatchFromMarketSource(input: CreateMarketWineBatchInput): Promise<WineBatch> {
+  if (!input.storagePlanId) {
+    throw new Error('Storage Vessel allocation is required before creating a market wine batch.');
+  }
   const batch = await buildMarketStateBatch(input);
+  batch.storagePlanId = input.storagePlanId;
+  batch.volumeLitres = initializeHarvestVolumeLitres(input.quantity);
+  if (!(await canStoragePlanHoldVolume(input.storagePlanId, batch.volumeLitres))) {
+    throw new Error('Selected Storage Vessels do not have enough capacity for this market batch.');
+  }
   await saveWineBatch(batch);
+  if (!(await activateStoragePlanForBatch(input.storagePlanId, batch.id, batch.volumeLitres))) {
+    if (!(await deleteInventoryBatch(batch.id))) {
+      throw new Error('Could not activate Storage Vessel allocation; the market batch needs reconciliation.');
+    }
+    throw new Error('Could not activate Storage Vessel allocation for the market batch.');
+  }
   triggerGameUpdate();
   return batch;
 }
 
 export async function saveInventoryBatch(batch: WineBatch): Promise<void> {
+  if (batch.state !== 'bottled' && (!batch.storagePlanId || batch.volumeLitres === undefined || batch.volumeLitres <= 0)) {
+    throw new Error('Storage Vessel allocation is required for every non-bottled wine batch.');
+  }
   await saveWineBatch(batch);
 }
 
@@ -749,6 +799,30 @@ export async function updateInventoryBatch(batchId: string, updates: Partial<Win
     triggerGameUpdate();
   }
   return success;
+}
+
+export async function deleteInventoryBatch(batchId: string): Promise<boolean> {
+  const batch = await getInventoryBatchById(batchId);
+  if (!batch) return false;
+  return consumeInventoryBatchQuantity(batchId, batch.quantity);
+}
+
+/** Remove inventory while keeping a non-bottled batch's storage plan and fill volumes in sync. */
+export async function consumeInventoryBatchQuantity(batchId: string, quantity: number): Promise<boolean> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId || !Number.isFinite(quantity) || quantity <= 0) return false;
+  const state = getGameState();
+  const result = await consumeStorageBackedWineBatch({
+    companyId,
+    batchId,
+    quantity,
+    releasedYear: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
+    releasedSeason: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
+    releasedWeek: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+  });
+  if (!result.consumed || result.error) return false;
+  triggerGameUpdate();
+  return true;
 }
 
 // Format completed wine name

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
-import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity';
+import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillKey, getRelevantSkillName } from '@/lib/services/activity';
 import { getTeamForCategory, notificationService, updateActivity } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
@@ -94,6 +94,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
     : 0;
 
   const relevantSkill = getRelevantSkillName(activity.category);
+  const relevantSkillKey = getRelevantSkillKey(activity.category);
 
   // Get the team that auto-assigns to this activity
   const defaultTeam = getTeamForCategory(activity.category);
@@ -104,7 +105,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
     <div className="w-full sm:w-60">
       <StaffSkillBarsList
         staff={staff}
-        relevantSkill={relevantSkill.toLowerCase() as any}
+        relevantSkill={relevantSkillKey}
         taskCountMap={staffTaskCounts}
       />
     </div>
@@ -208,7 +209,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           )}
 
           <p className="text-xs text-gray-400 mt-2">
-            Primary skill: <span className="font-medium" style={{ color: getSkillColor(relevantSkill.toLowerCase() as any) }}>{relevantSkill}</span>
+            Primary skill: <span className="font-medium" style={{ color: getSkillColor(relevantSkillKey) }}>{relevantSkill}</span>
           </p>
         </div>
 

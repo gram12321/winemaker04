@@ -8,6 +8,7 @@ export enum WorkCategory {
   HARVESTING = 'HARVESTING',
   CRUSHING = 'CRUSHING',
   FERMENTATION = 'FERMENTATION',
+  MAINTENANCE = 'MAINTENANCE',
   CLEARING = 'CLEARING',
   BUILDING = 'BUILDING',
   UPGRADING = 'UPGRADING',
@@ -247,6 +248,8 @@ export interface WineBatch {
   vineyardName: string;
   grape: GrapeVariety;
   quantity: number; // in kg or bottles
+  volumeLitres?: number; // Current physical liquid volume for non-bottled storage allocation
+  storagePlanId?: string; // Required for non-bottled batches
   batchNumber?: number; // Sequential identifier for duplicate vintage/vineyard batches
   batchGroupSize?: number; // Total batches sharing the same vintage/vineyard combination
   state: WineBatchState;
@@ -851,6 +854,7 @@ export interface Activity {
 }
 
 export interface ActivityCreationOptions {
+  id?: string;
   category: WorkCategory;
   title: string;
   totalWork: number;
@@ -861,6 +865,7 @@ export interface ActivityCreationOptions {
   activityDetails?: string;
   // Skip the default activity creation notification (useful for combined notifications)
   skipNotification?: boolean;
+  initialStatus?: Activity['status'];
 }
 
 export interface ActivityProgress {
@@ -911,6 +916,7 @@ export enum NotificationCategory {
 export interface StaffSkills {
   field: number;        // Vineyard work
   winery: number;       // Wine production
+  maintenance: number;  // Cellar and equipment upkeep
   financeAndStaff: number; // Finance and staff management
   sales: number;        // Sales and marketing
   administrationAndResearch: number;  // Administration and research

@@ -8,6 +8,8 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
+import { canStoragePlanHoldVolume, getStoragePlanCapacityLitres, initializeHarvestVolumeLitres } from '../wine/winery/storageVesselAllocationService';
+import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import {
@@ -795,18 +797,19 @@ export async function handlePartialHarvesting(
   activity: Activity, 
   oldCompletedWork: number, 
   newCompletedWork: number
-): Promise<void> {
+): Promise<{ storageCapacityBlocked: boolean; params?: Activity['params'] }> {
+  let updatedParams: Activity['params'] | undefined;
   try {
     const workProgress = newCompletedWork / activity.totalWork;
     const oldProgress = oldCompletedWork / activity.totalWork;
     const progressThisTick = workProgress - oldProgress;
     
-    if (progressThisTick <= 0) return; // No progress this tick
+    if (progressThisTick <= 0) return { storageCapacityBlocked: false }; // No progress this tick
     
     const vineyards = await loadVineyards();
     const vineyard = vineyards.find(v => v.id === activity.targetId);
     
-    if (!vineyard || !vineyard.grape) return;
+    if (!vineyard || !vineyard.grape) return { storageCapacityBlocked: false };
     
     // Calculate current total yield based on current ripeness
     const currentTotalYield = calculateVineyardYield(vineyard);
@@ -814,8 +817,8 @@ export async function handlePartialHarvesting(
     // Get the harvest progress as a percentage (0-1)
     const harvestProgress = workProgress;
     
-    // Calculate how much should be harvested by now based on current yield
-    const expectedHarvestedByNow = currentTotalYield * harvestProgress;
+    const harvestBaseline = activity.params.harvestBaseline || 0;
+    const expectedHarvestedByNow = calculateHarvestedByProgress(currentTotalYield, harvestBaseline, harvestProgress);
     const previouslyHarvested = activity.params.harvestedSoFar || 0;
     
     // Calculate how much to harvest this tick
@@ -823,6 +826,25 @@ export async function handlePartialHarvesting(
     
     // Only create wine batch if we're harvesting at least 0.1kg this tick (allow small batches)
     if (yieldThisTick >= 0.1) {
+      let harvestQuantityThisTick = yieldThisTick;
+      let capacityBlocked = false;
+      const plannedVolume = initializeHarvestVolumeLitres(previouslyHarvested + harvestQuantityThisTick);
+      if (!activity.params.storagePlanId) {
+        await updateActivityInDb(activity.id, { status: 'paused', params: { ...activity.params, storageCapacityBlocked: true } });
+        return { storageCapacityBlocked: true };
+      }
+      if (!(await canStoragePlanHoldVolume(activity.params.storagePlanId, plannedVolume))) {
+        const capacityLitres = await getStoragePlanCapacityLitres(activity.params.storagePlanId);
+        const usedLitres = initializeHarvestVolumeLitres(previouslyHarvested);
+        const remainingLitres = Math.max(0, capacityLitres - usedLitres);
+        const capacityLimitedKg = Math.floor((remainingLitres / STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG) * 100) / 100;
+        harvestQuantityThisTick = Math.min(yieldThisTick, capacityLimitedKg);
+        capacityBlocked = true;
+        if (harvestQuantityThisTick < 0.1) {
+          await updateActivityInDb(activity.id, { status: 'paused', params: { ...activity.params, storageCapacityBlocked: true } });
+          return { storageCapacityBlocked: true };
+        }
+      }
       const gameState = getGameState();
       
       // Create harvest dates: start is activity start, end is current date
@@ -840,25 +862,30 @@ export async function handlePartialHarvesting(
       
       // Create wine batch for this tick's harvest
       // Round to 2 decimal places to preserve small batches
-      const roundedYield = Math.round(yieldThisTick * 100) / 100;
+      const roundedYield = Math.round(harvestQuantityThisTick * 100) / 100;
       await createWineBatchFromHarvest(
         vineyard.id,
         vineyard.name,
         vineyard.grape,
         roundedYield,
         harvestStartDate,
-        harvestEndDate
+        harvestEndDate,
+        activity.params.storagePlanId,
+        activity.params.outputBatchId
       );
       
       // Update the harvested amount in activity params
-      const newHarvestedSoFar = previouslyHarvested + yieldThisTick;
+      const newHarvestedSoFar = previouslyHarvested + harvestQuantityThisTick;
+      updatedParams = {
+        ...activity.params,
+        harvestedSoFar: newHarvestedSoFar,
+        ...(capacityBlocked ? { storageCapacityBlocked: true } : {}),
+        // Store current total yield for completion handler
+        currentTotalYield: currentTotalYield
+      };
       await updateActivityInDb(activity.id, {
-        params: {
-          ...activity.params,
-          harvestedSoFar: newHarvestedSoFar,
-          // Store current total yield for completion handler
-          currentTotalYield: currentTotalYield
-        }
+        ...(capacityBlocked ? { status: 'paused' as const } : {}),
+        params: updatedParams,
       });
       
       // Update vineyard status to show progress
@@ -867,9 +894,15 @@ export async function handlePartialHarvesting(
         status: 'Growing'
       };
       await saveVineyard(updatedVineyard);
+      return { storageCapacityBlocked: capacityBlocked, params: updatedParams };
     }
   } catch (error) {
     console.error(`Error in partial harvesting for activity ${activity.id}:`, error);
   }
+  return { storageCapacityBlocked: false, ...(updatedParams ? { params: updatedParams } : {}) };
+}
+
+export function calculateHarvestedByProgress(totalYield: number, harvestBaseline: number, progress: number): number {
+  return harvestBaseline + Math.max(0, totalYield - harvestBaseline) * Math.max(0, Math.min(1, progress));
 }
 

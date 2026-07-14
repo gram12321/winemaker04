@@ -1,13 +1,12 @@
-import { getGameState, updateGameState } from '../core/gameState';
-import type { GameState, Transaction } from '@/lib/types/types';
+import { getGameState, syncPersistedMoney } from '../core/gameState';
+import type { GameState, Season, Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { SEASON_ORDER, TRANSACTION_CATEGORIES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 import { CAPITAL_FLOW_TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { companyService } from '../user/companyService';
-import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
+import { insertTransaction as insertTransactionDB, insertTransactionWithFundsCheck, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
@@ -35,31 +34,63 @@ export interface FinancialData {
 const transactionsCacheByCompany = new Map<string, Transaction[]>();
 const transactionsLoadPromiseByCompany = new Map<string, Promise<Transaction[]>>();
 
+interface PersistedTransactionRow {
+  id: string;
+  week: number;
+  season: Season;
+  year: number;
+  amount: number;
+  description: string;
+  category: string;
+  recurring: boolean;
+  money: number;
+  money_version?: number;
+}
+
+let moneySyncTail: Promise<void> = Promise.resolve();
+
+export async function syncPersistedTransaction(row: PersistedTransactionRow): Promise<string> {
+  const sync = moneySyncTail.then(() => syncPersistedMoney(row.money, row.money_version));
+  moneySyncTail = sync.catch(() => undefined);
+  await sync;
+  const transaction: Transaction = {
+    id: row.id,
+    date: { week: row.week, season: row.season, year: row.year },
+    amount: row.amount,
+    description: row.description,
+    category: row.category,
+    recurring: row.recurring,
+    money: row.money,
+  };
+  const companyId = getCurrentCompanyId();
+  const companyTransactions = companyId ? transactionsCacheByCompany.get(companyId) : undefined;
+  if (companyTransactions && !companyTransactions.some((cached) => cached.id === transaction.id)) {
+    companyTransactions.push(transaction);
+  }
+  if (companyTransactions) companyTransactions.sort((a, b) => {
+    if (a.date.year !== b.date.year) return b.date.year - a.date.year;
+    if (a.date.season !== b.date.season) return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
+    if (a.date.week !== b.date.week) return b.date.week - a.date.week;
+    return b.id.localeCompare(a.id);
+  });
+  triggerGameUpdate();
+  return row.id;
+}
+
 // Add a new transaction to the system
 export const addTransaction = async (
   amount: number,
   description: string,
   category: string,
   recurring = false,
-  companyId?: string
+  companyId?: string,
+  requireFunds = false,
 ): Promise<string> => {
   try {
     if (!companyId) {
       companyId = getCurrentCompanyId();
     }
-    
-    let currentMoney = 0;
-    if (companyId) {
-      const company = await companyService.getCompany(companyId);
-      if (company) {
-        currentMoney = company.money;
-      }
-    } else {
-      const gameState = getGameState();
-      currentMoney = gameState.money || 0;
-    }
-    
-    const newMoney = currentMoney + amount;
+    if (!companyId) throw new Error('No active company selected.');
     
     const gameState = getGameState();
     
@@ -69,60 +100,20 @@ export const addTransaction = async (
       description,
       category,
       recurring,
-      money: newMoney,
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024,
       created_at: new Date().toISOString()
     };
     
-    await updateGameState({ money: newMoney });
-    
-    triggerGameUpdate();
-    
-    const result = await insertTransactionDB(transactionData);
+    const result = requireFunds
+      ? await insertTransactionWithFundsCheck(transactionData)
+      : await insertTransactionDB(transactionData);
     
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Failed to insert transaction');
     }
-    
-    const newTransaction: Transaction = {
-      id: result.data.id,
-      date: {
-        week: result.data.week,
-        season: result.data.season,
-        year: result.data.year
-      },
-      amount: result.data.amount,
-      description: result.data.description,
-      category: result.data.category,
-      recurring: result.data.recurring,
-      money: result.data.money
-    };
-    
-    const inFlightLoad = transactionsLoadPromiseByCompany.get(companyId);
-    if (inFlightLoad) {
-      await inFlightLoad;
-    }
-    transactionsLoadPromiseByCompany.delete(companyId);
-    const companyTransactions = transactionsCacheByCompany.get(companyId);
-    if (companyTransactions && !companyTransactions.some((transaction) => transaction.id === newTransaction.id)) {
-      companyTransactions.push(newTransaction);
-      companyTransactions.sort((a, b) => {
-        if (a.date.year !== b.date.year) return b.date.year - a.date.year;
-        if (a.date.season !== b.date.season) {
-          return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
-        }
-        if (a.date.week !== b.date.week) return b.date.week - a.date.week;
-        // For same week transactions, sort by ID (newer transactions have higher IDs)
-        return b.id.localeCompare(a.id);
-      });
-    }
-
-    // Notify listeners again now that the persisted transaction is available to finance readers.
-    triggerGameUpdate();
-    
-    return result.data.id;
+    return await syncPersistedTransaction(result.data);
   } catch (error) {
     console.error('Error adding transaction:', error);
     throw error;

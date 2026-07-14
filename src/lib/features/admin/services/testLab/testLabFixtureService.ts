@@ -19,6 +19,8 @@ import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStr
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { withTestLabPrefix } from './runId';
+import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
+import { createStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
 
 export interface TestLabCompanyResult {
   company: Awaited<ReturnType<typeof companyService.getCompany>>;
@@ -402,13 +404,34 @@ export async function createGrapeBatch(
   // Tag the batch's vineyard name with the run id so cleanup can find it even when
   // the vineyard itself belongs to the user's real company and has no prefix.
   const batchVineyardName = withTestLabPrefix(runId, result.vineyard.name);
+  const vesselId = uuidv4();
+  const inserted = await insertStorageVessels([{
+    id: vesselId,
+    companyId: result.company.id,
+    vesselType: 'container',
+    material: 'neutral',
+    qualityScore: 0.5,
+    productionYear: harvestDate.year,
+    capacityLitres: 10000,
+    acquisitionPrice: 0,
+    sourceOfferId: `test_lab_${runId}`,
+    operationalStatus: 'operational',
+    occupancy: 'available',
+    purchasedYear: harvestDate.year,
+    purchasedSeason: harvestDate.season,
+    purchasedWeek: harvestDate.week,
+  }]);
+  if (inserted.error) throw inserted.error;
+  const plan = await createStorageAllocationPlan({ requiredLitres: numberParam(params, 'quantityKg', 1200) * 0.5, vesselIds: [vesselId] });
+  if (!plan.planId) throw new Error(plan.error || 'Could not reserve test-lab storage vessel.');
   const batch = await createWineBatchFromHarvest(
     result.vineyard.id,
     batchVineyardName,
     result.vineyard.grape || 'Pinot Noir',
     numberParam(params, 'quantityKg', 1200),
     harvestDate,
-    harvestDate
+    harvestDate,
+    plan.planId
   );
   const hydratedBatch = await applyAndPersistBatchOverrides(batch, result.vineyard, params);
 

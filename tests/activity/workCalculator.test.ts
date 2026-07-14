@@ -17,6 +17,7 @@ const createStaff = (overrides: Partial<Staff> = {}): Staff => {
   const defaultSkills = {
     field: 0.5,
     winery: 0.5,
+    maintenance: 0.5,
     administrationAndResearch: 0.5,
     sales: 0.5,
     financeAndStaff: 0.5
@@ -88,6 +89,7 @@ describe('calculateStaffWorkContribution', () => {
       skills: {
         field: 0.8,
         winery: 0.4,
+        maintenance: 0.4,
         administrationAndResearch: 0.2,
         sales: 0.3,
         financeAndStaff: 0.3
@@ -101,6 +103,7 @@ describe('calculateStaffWorkContribution', () => {
       skills: {
         field: 0.5,
         winery: 0.6,
+        maintenance: 0.6,
         administrationAndResearch: 0.4,
         sales: 0.3,
         financeAndStaff: 0.2
@@ -118,6 +121,22 @@ describe('calculateStaffWorkContribution', () => {
 
     expect(contribution).toBeCloseTo(64, 0);
   });
+
+  it('uses the dedicated Maintenance skill for maintenance work', () => {
+    const staff = createStaff({
+      workforce: 100,
+      skills: {
+        field: 0.5,
+        winery: 1,
+        maintenance: 0.2,
+        administrationAndResearch: 0.5,
+        sales: 0.5,
+        financeAndStaff: 0.5,
+      },
+    });
+
+    expect(calculateStaffWorkContribution([staff], WorkCategory.MAINTENANCE, new Map())).toBe(20);
+  });
 });
 
 describe('calculateEstimatedWeeks', () => {
@@ -130,6 +149,7 @@ describe('calculateEstimatedWeeks', () => {
         skills: {
           field: 0.8,
           winery: 0.4,
+          maintenance: 0.4,
           administrationAndResearch: 0.2,
           sales: 0.3,
           financeAndStaff: 0.3
@@ -142,6 +162,7 @@ describe('calculateEstimatedWeeks', () => {
         skills: {
           field: 0.5,
           winery: 0.6,
+          maintenance: 0.6,
           administrationAndResearch: 0.4,
           sales: 0.3,
           financeAndStaff: 0.2

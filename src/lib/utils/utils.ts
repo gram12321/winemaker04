@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Customer, WineCharacteristics } from '../types/types';
+import { Customer, type Season, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
 import { Normalize1000To01WithTail } from './calculator';
@@ -414,6 +414,12 @@ export function calculateCompanyWeeks(
   currentYear: number
 ): number {
   return calculateAbsoluteWeeks(currentWeek, currentSeason, currentYear, 1, 'Spring', foundedYear);
+}
+
+export function getNextSeasonDate(season: Season, year: number): { season: Season; year: number } {
+  const nextSeasonIndex = (SEASON_ORDER.indexOf(season) + 1) % SEASON_ORDER.length;
+  const nextSeason = SEASON_ORDER[nextSeasonIndex] as Season;
+  return { season: nextSeason, year: nextSeason === 'Spring' ? year + 1 : year };
 }
 
 // ========================================

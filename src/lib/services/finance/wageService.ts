@@ -25,8 +25,9 @@ export function calculateWage(skills: StaffSkills, specializations: string[] = [
     skills.winery +
     skills.financeAndStaff +
     skills.sales +
-    skills.administrationAndResearch
-  ) / 5;
+    skills.administrationAndResearch +
+    skills.maintenance
+  ) / 6;
 
   // Add bonus for specialized roles (30% per specialization, multiplicative)
   const specializationBonus = specializations.length > 0 ?
@@ -42,12 +43,12 @@ export function calculateWage(skills: StaffSkills, specializations: string[] = [
 
 /**
  * Calculate theoretical maximum wage for normalization
- * Based on max skill level (1.0) and max specializations (5)
+ * Based on max skill level (1.0) and max specializations (6)
  * Formula: (BASE_WEEKLY_WAGE + maxSkill * SKILL_WAGE_MULTIPLIER) * maxSpecializationBonus
  */
 export function getMaxWage(): number {
   const maxSkill = 1.0;
-  const maxSpecializations = 5;
+  const maxSpecializations = 6;
   const specializationBonus = Math.pow(1.3, maxSpecializations); // 30% per specialization
 
   return (BASE_WEEKLY_WAGE + maxSkill * SKILL_WAGE_MULTIPLIER) * specializationBonus;
@@ -290,18 +291,17 @@ export async function processYearlyFounderDistributions(
     }
 
     const sharePercent = FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT / 100;
-    const totalPaid = await Promise.all(
-      founders.map(async (founder) => {
-        const amount = Math.round(yearlyNetProfit * sharePercent);
-        await addTransaction(
-          -amount,
-          `Founder Return ${previousYear}: ${founder.name} (${FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% of net profit)`,
-          TRANSACTION_CATEGORIES.FOUNDER_RETURN,
-          false
-        );
-        return amount;
-      })
-    );
+    const totalPaid: number[] = [];
+    for (const founder of founders) {
+      const amount = Math.round(yearlyNetProfit * sharePercent);
+      await addTransaction(
+        -amount,
+        `Founder Return ${previousYear}: ${founder.name} (${FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% of net profit)`,
+        TRANSACTION_CATEGORIES.FOUNDER_RETURN,
+        false
+      );
+      totalPaid.push(amount);
+    }
 
     const grandTotal = totalPaid.reduce((sum, v) => sum + v, 0);
 

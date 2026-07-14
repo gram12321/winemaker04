@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import { loadWineBatches, saveWineBatch, deleteWineBatch } from '../../database/activities/inventoryDB';
+import { loadWineBatches } from '../../database/activities/inventoryDB';
 import {
+  deliverForwardContractInventory,
   getForwardContractById,
   getOpenForwardContracts,
   loadForwardContracts,
@@ -11,15 +12,16 @@ import { FORWARD_CONTRACT_CONFIG, CONTRACT_PRESTIGE_CONFIG } from '../../constan
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { getGameState, getCurrentPrestige } from '../core/gameState';
 import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
-import { addTransaction } from '../finance/financeService';
+import { addTransaction, syncPersistedTransaction } from '../finance/financeService';
 import { calculateCompanyValue } from '../finance/financeService';
 import { notificationService } from '../core/notificationService';
-import { NotificationCategory, getRandomFromArray, randomInt } from '../../utils';
+import { NotificationCategory, getNextSeasonDate, getRandomFromArray, randomInt } from '../../utils';
 import { getAvailableBuyers } from './sellGrapesService';
 import { addContractOutcomePrestigeEvent } from '../prestige/prestigeService';
 import { recordBuyerSale } from './grapeBuyerLoyaltyService';
 import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { GrapeForwardContract, ForwardTargetState, Season } from '../../types/types';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
 function getCurrentDate() {
   const gameState = getGameState();
@@ -28,13 +30,6 @@ function getCurrentDate() {
     season: (gameState.season || 'Spring') as Season,
     year: gameState.currentYear || 2024,
   };
-}
-
-function getNextSeason(season: Season, year: number): { season: Season; year: number } {
-  if (season === 'Spring') return { season: 'Summer', year };
-  if (season === 'Summer') return { season: 'Fall', year };
-  if (season === 'Fall') return { season: 'Winter', year };
-  return { season: 'Spring', year: year + 1 };
 }
 
 function isDateAfter(
@@ -134,7 +129,7 @@ export async function generateForwardContracts(): Promise<number> {
     const companyValue = await calculateCompanyValue().catch(() => 0);
 
     const createdAt = getCurrentDate();
-    const due = getNextSeason(createdAt.season, createdAt.year);
+    const due = getNextSeasonDate(createdAt.season, createdAt.year);
 
     const targetStates: ForwardTargetState[] = ['grapes', 'must_ready', 'must_fermenting', 'bottled', 'any'];
     const targetState = getRandomFromArray(targetStates);
@@ -287,70 +282,67 @@ export async function autoDeliverForwardContract(contractId: string): Promise<{ 
 
     let deliverRemaining = remaining;
     let deliveredNow = 0;
+    const consumptions: Array<{ batchId: string; quantity: number }> = [];
 
     for (const batch of eligible) {
       if (deliverRemaining <= 0) break;
       const deliveredFromBatch = Math.min(batch.quantity, deliverRemaining);
-      const updatedQty = batch.quantity - deliveredFromBatch;
       deliveredNow += deliveredFromBatch;
       deliverRemaining -= deliveredFromBatch;
-
-      if (updatedQty <= 0) {
-        await deleteWineBatch(batch.id);
-      } else {
-        await saveWineBatch({ ...batch, quantity: updatedQty });
-      }
+      consumptions.push({ batchId: batch.id, quantity: deliveredFromBatch });
     }
 
     const newDelivered = contract.deliveredKg + deliveredNow;
+    const fulfilled = newDelivered >= contract.quantityKg;
+    const now = getCurrentDate();
+    const companyId = getCurrentCompanyId();
+    if (!companyId) return { success: false, message: 'No active company selected' };
+    const delivery = await deliverForwardContractInventory({
+      companyId,
+      contractId,
+      consumptions,
+      newDelivered,
+      fulfilled,
+      paymentAmount: fulfilled ? contract.finalPaymentAmount : 0,
+      paymentDescription: `Forward contract final settlement: ${contract.buyerName}`,
+      paymentCategory: TRANSACTION_CATEGORIES.FORWARD_FINAL_SETTLEMENT_IN,
+      week: now.week,
+      season: now.season,
+      year: now.year,
+    });
+    if (delivery.error || !delivery.data) throw delivery.error ?? new Error('Could not persist forward delivery.');
+    const transaction = delivery.data.transaction;
+    if (transaction) await syncPersistedTransaction(transaction);
 
-    if (newDelivered >= contract.quantityKg) {
-      const now = getCurrentDate();
-      await addTransaction(
-        contract.finalPaymentAmount,
-        `Forward contract final settlement: ${contract.buyerName}`,
-        TRANSACTION_CATEGORIES.FORWARD_FINAL_SETTLEMENT_IN,
-        false
-      );
-
+    if (fulfilled) {
       try {
         await recordBuyerSale(contract.buyerId, contract.quantityKg, now.year);
+        await addContractOutcomePrestigeEvent({
+          outcome: 'forward_fulfilled',
+          baseAmount: CONTRACT_PRESTIGE_CONFIG.forwardFulfillBase,
+          description: `Forward contract fulfilled for ${contract.buyerName}`,
+          metadata: { contractId: contract.id, quantityKg: contract.quantityKg },
+        });
+        await notificationService.addMessage(
+          `Forward contract fulfilled for ${contract.buyerName}. Final payment €${contract.finalPaymentAmount.toFixed(2)} received.`,
+          'forwardContractService.autoDeliverForwardContract',
+          'Forward Contract Fulfilled',
+          NotificationCategory.SALES_ORDERS
+        );
       } catch (error) {
-        console.warn('Failed to apply buyer loyalty for fulfilled forward contract:', error);
+        console.warn('Forward delivery completed without optional follow-up:', error);
       }
-
-      await addContractOutcomePrestigeEvent({
-        outcome: 'forward_fulfilled',
-        baseAmount: CONTRACT_PRESTIGE_CONFIG.forwardFulfillBase,
-        description: `Forward contract fulfilled for ${contract.buyerName}`,
-        metadata: { contractId: contract.id, quantityKg: contract.quantityKg },
-      });
-
-      await updateForwardContract(contractId, {
-        delivered_kg: contract.quantityKg,
-        status: 'fulfilled',
-        settled_week: now.week,
-        settled_season: now.season,
-        settled_year: now.year,
-      });
-
-      await notificationService.addMessage(
-        `Forward contract fulfilled for ${contract.buyerName}. Final payment €${contract.finalPaymentAmount.toFixed(2)} received.`,
-        'forwardContractService.autoDeliverForwardContract',
-        'Forward Contract Fulfilled',
-        NotificationCategory.SALES_ORDERS
-      );
     } else {
-      await updateForwardContract(contractId, {
-        delivered_kg: newDelivered,
-      });
-
-      await notificationService.addMessage(
-        `Partial forward delivery: ${deliveredNow.toLocaleString()} kg delivered to ${contract.buyerName}. ${Math.max(0, contract.quantityKg - newDelivered).toLocaleString()} kg remaining.`,
-        'forwardContractService.autoDeliverForwardContract',
-        'Forward Contract Progress',
-        NotificationCategory.SALES_ORDERS
-      );
+      try {
+        await notificationService.addMessage(
+          `Partial forward delivery: ${deliveredNow.toLocaleString()} kg delivered to ${contract.buyerName}. ${Math.max(0, contract.quantityKg - newDelivered).toLocaleString()} kg remaining.`,
+          'forwardContractService.autoDeliverForwardContract',
+          'Forward Contract Progress',
+          NotificationCategory.SALES_ORDERS
+        );
+      } catch (error) {
+        console.warn('Forward delivery completed without notification:', error);
+      }
     }
 
     triggerTopicUpdate('contracts');

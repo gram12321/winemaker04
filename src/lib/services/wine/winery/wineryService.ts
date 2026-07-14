@@ -2,11 +2,13 @@
 import { WineBatch, WorkCategory } from '../../../types/types';
 import { isFermentationActionAvailable } from './fermentationManager';
 import { getGameState } from '../../core/gameState';
+import { isBatchEmptyingInProgress } from './storageVesselMaintenanceService';
 
 // ===== Helper Functions =====
 
 // Check if action is available for a batch
 export function isActionAvailable(batch: WineBatch, action: 'crush' | 'ferment' | 'bottle'): boolean {
+  if (isBatchEmptyingInProgress(batch.id)) return false;
   switch (action) {
     case 'crush':
       if (batch.state !== 'grapes') return false;

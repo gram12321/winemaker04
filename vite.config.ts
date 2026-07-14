@@ -89,7 +89,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'node',
-    include: ['tests/**/*.test.ts']
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts'],
+    maxWorkers: 4,
+    testTimeout: 10000,
   }
 })

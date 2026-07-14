@@ -1,6 +1,5 @@
 import { WineBatch } from '../../../types/types';
-import { updateInventoryBatch } from './inventoryService';
-import { loadWineBatches, bulkUpdateWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
+import { bottleStorageBackedWineBatch, loadWineBatches, bulkUpdateWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
 import { processEventTrigger } from '../features/featureService';
@@ -15,6 +14,10 @@ import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
 import { applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
 import { diffAnchorEffects } from '../debug/wineAnchorEffectUtils';
+import { assertBatchHasUsableStorage } from './storageVesselAllocationService';
+import { isBatchEmptyingInProgress } from './storageVesselMaintenanceService';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 
 /**
  * Fermentation Manager
@@ -29,9 +32,16 @@ export async function startFermentationActivity(
   options: FermentationOptions
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (isBatchEmptyingInProgress(batch.id)) {
+      return { success: false, error: 'This batch is scheduled to be emptied.' };
+    }
     // Validate batch state
     if (batch.state !== 'must_ready') {
       return { success: false, error: 'Batch must be in must_ready stage for fermentation' };
+    }
+    const storageValidation = await assertBatchHasUsableStorage(batch);
+    if (!storageValidation.valid) {
+      return { success: false, error: storageValidation.reason };
     }
 
     // Calculate work and cost
@@ -72,6 +82,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   if (!batch || batch.state !== 'must_fermenting') {
     return false;
   }
+  if (isBatchEmptyingInProgress(batch.id)) return false;
 
   const gameState = getGameState();
 
@@ -81,23 +92,24 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   const landValueModifierBottlingSnapshot = batch.landValueModifier;
 
   // Preserve all wine batch values and update necessary fields + create bottling snapshots
-  const success = await updateInventoryBatch(batchId, {
-    state: 'bottled',
-    quantity: Math.floor(batch.quantity / 1.5), // Convert kg to bottles (1.5kg per bottle)
-    bottledDate: {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
-    },
-    // Create immutable snapshots at bottling for historical records (WineLog)
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return false;
+  const success = await bottleStorageBackedWineBatch({
+    companyId,
+    batchId,
+    quantity: batch.quantity / 1.5,
+    bottledWeek: gameState.week || 1,
+    bottledSeason: gameState.season || 'Spring',
+    bottledYear: gameState.currentYear || 2024,
     tasteQualityIndexBottlingSnapshot,
     landValueModifierBottlingSnapshot,
     structureIndexBottlingSnapshot: batch.structureIndex,
-    wineScoreBottlingSnapshot: wineScoreBottlingSnapshot
+    wineScoreBottlingSnapshot,
   });
 
   // Record the bottled wine in the production log and trigger bottling events
   if (success) {
+    triggerGameUpdate();
     try {
       // Get the updated batch to record in the log
       const updatedBatches = await loadWineBatches();

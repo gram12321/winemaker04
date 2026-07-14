@@ -53,6 +53,7 @@ describe('staff search calculations', () => {
     const fixedSkills: Staff['skills'] = {
       field: 0.5,
       winery: 0.5,
+      maintenance: 0.5,
       financeAndStaff: 0.5,
       sales: 0.5,
       administrationAndResearch: 0.5

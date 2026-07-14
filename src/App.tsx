@@ -15,6 +15,7 @@ import Winepedia from './components/pages/Winepedia.tsx';
 import { WeatherCenterPage } from './components/pages/WeatherCenter';
 import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
+import Equipment from './components/pages/Equipment';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
 import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
@@ -132,6 +133,8 @@ function App({ adminFeature }: AppProps) {
         return <Vineyard />;
       case 'winery':
         return <Winery />;
+      case 'equipment':
+        return <Equipment onNavigate={handleNavigate} />;
       case 'sales':
         return <Sales onNavigateToWinepedia={() => setCurrentPage('winepedia-customers')} />;
       case 'finance':

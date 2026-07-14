@@ -66,6 +66,7 @@ function staff(overrides: Partial<Staff> = {}): Staff {
     skills: {
       field: 0.4,
       winery: 0.8,
+      maintenance: 0.4,
       financeAndStaff: 0.4,
       sales: 0.3,
       administrationAndResearch: 0.4
@@ -113,6 +114,17 @@ describe('staff and team workflow', () => {
       id: 'team-1',
       name: 'Winery Team'
     }));
+  });
+
+  it('creates a dedicated default Maintenance Team task class', async () => {
+    const { getDefaultTeams, getTeamForCategory } = await import('@/lib/services/user/teamService');
+    const defaultTeams = getDefaultTeams();
+
+    expect(defaultTeams.find((candidate) => candidate.name === 'Maintenance Team')).toMatchObject({
+      defaultTaskTypes: ['maintenance'],
+    });
+    mocks.setState({ ...mocks.getState(), teams: defaultTeams });
+    expect(getTeamForCategory(WorkCategory.MAINTENANCE)).toMatchObject({ name: 'Maintenance Team' });
   });
 
   it('assigns and removes staff from a team in both game state and persistence', async () => {

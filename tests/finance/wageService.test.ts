@@ -5,6 +5,7 @@ import type { StaffSkills } from '@/lib/types/types';
 const baseSkills: StaffSkills = {
   field: 0.5,
   winery: 0.5,
+  maintenance: 0.5,
   administrationAndResearch: 0.5,
   sales: 0.5,
   financeAndStaff: 0.5
@@ -15,6 +16,7 @@ describe('calculateWage', () => {
     const skills: StaffSkills = {
       field: 0.5,
       winery: 0.5,
+      maintenance: 0.5,
       administrationAndResearch: 0.5,
       sales: 0.5,
       financeAndStaff: 0.5
@@ -25,6 +27,37 @@ describe('calculateWage', () => {
     // Base: 500 + (0.5 * 1000) = 500 + 500 = 1000
     // No specialization bonus
     expect(wage).toBe(1000);
+  });
+
+  it('increases wage with higher average skills', () => {
+    const lowSkills: StaffSkills = {
+      field: 0.3,
+      winery: 0.3,
+      maintenance: 0.3,
+      administrationAndResearch: 0.3,
+      sales: 0.3,
+      financeAndStaff: 0.3
+    };
+
+    const highSkills: StaffSkills = {
+      field: 0.8,
+      winery: 0.8,
+      maintenance: 0.8,
+      administrationAndResearch: 0.8,
+      sales: 0.8,
+      financeAndStaff: 0.8
+    };
+
+    const lowWage = calculateWage(lowSkills, []);
+    const highWage = calculateWage(highSkills, []);
+
+    expect(highWage).toBeGreaterThan(lowWage);
+  });
+
+  it('includes maintenance in the average skill', () => {
+    const withoutMaintenance = { ...baseSkills, maintenance: 0 };
+    const withMaintenance = { ...baseSkills, maintenance: 1 };
+    expect(calculateWage(withMaintenance)).toBeGreaterThan(calculateWage(withoutMaintenance));
   });
 
   it('applies specialization bonus multiplicatively', () => {
@@ -56,6 +89,7 @@ describe('calculateWage', () => {
     const skills: StaffSkills = {
       field: 0.333,
       winery: 0.333,
+      maintenance: 0.333,
       administrationAndResearch: 0.333,
       sales: 0.333,
       financeAndStaff: 0.333
@@ -72,6 +106,7 @@ describe('calculateWage', () => {
     ['minimum skills', {
       field: 0,
       winery: 0,
+      maintenance: 0,
       administrationAndResearch: 0,
       sales: 0,
       financeAndStaff: 0
@@ -79,6 +114,7 @@ describe('calculateWage', () => {
     ['maximum skills', {
       field: 1.0,
       winery: 1.0,
+      maintenance: 1.0,
       administrationAndResearch: 1.0,
       sales: 1.0,
       financeAndStaff: 1.0
@@ -86,6 +122,7 @@ describe('calculateWage', () => {
     ['mixed skills', {
       field: 0.8,
       winery: 0.6,
+      maintenance: 0.6,
       administrationAndResearch: 0.4,
       sales: 0.7,
       financeAndStaff: 0.5
