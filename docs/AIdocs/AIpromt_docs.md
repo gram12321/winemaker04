@@ -11,11 +11,11 @@ Use this when updating project documentation after implementation work.
 | `docs/AIdocs/AIDescriptions_coregame.md` | Current implemented game systems and known not-yet-implemented systems. |
 | `docs/PROJECT_INFO.md` | File structure, ownership map, and major module locations. |
 | `docs/WineSystem_VariableRelationshipMap.md` | Variable relationships, diagrams, and game-flow dependencies. |
-| `docs/superpowers/plans/TasteSystem_WineFolly_Research.md` | Taste research, implemented taste model, and future taste-system ideas. |
+| `docs/superpowers/deferred/TasteSystem_WineFolly_Research.md` | Taste research, implemented taste model, and intentionally deferred taste-system ideas. |
 | `docs/superpowers/specs/` | Design specs and decisions for larger work. |
 | `docs/superpowers/plans/` | Implementation plans and acceptance notes. |
 | `docs/superpowers/completed/` | Completed or superseded implementation docs kept for traceability. |
-| `docs/superpowers/plans/PublicCompanyPlan.md`, `docs/superpowers/plans/PublicCompanyImplementation.md` | Historical implemented public-company/share docs kept as reintroduction references; not current mainline runtime. |
+| `docs/superpowers/deferred/PublicCompanyPlan.md`, `docs/superpowers/deferred/PublicCompanyImplementation.md` | Historical public-company/share docs kept as deferred reintroduction references; not current mainline runtime. |
 | `docs/versionlog.md` | Version history. |
 | `skills/winemaker-game/SKILL.md` | Repository routing, project guardrails, and required agent workflow. |
 | `skills/superpowers/` | Reusable planning, worktree, subagent, parallel-dispatch, review, and verification skills. |

@@ -1,7 +1,9 @@
 # Research Foundation Lanes Design
 **Date:** 2026-05-25
-**Status:** Draft for review
+**Status:** Implemented design record. Code-verified on 2026-07-14: foundation IDs, the first-pass admin effect, company-age eligibility, staff productivity effects, and the grant chain are present in current mainline.
 **Owner:** Gameplay progression
+
+Implementation note: current mainline also completes the intended foundation-lane rollout. The renamed IDs are persisted through migration, starting conditions no longer pre-unlock the admin foundation, age/achievement/company-value guards are enforced, and admin/staff/grant effects are represented by runtime unlocks or permanent effects. Optional grant cadence/quality modifiers and later experimental branches remain outside this design.
 
 ## 1. Objective
 Redesign early research progression into three distinct foundation lanes that control access to the broader tree through different guard types.

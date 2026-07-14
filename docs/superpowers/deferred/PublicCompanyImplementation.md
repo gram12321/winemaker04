@@ -1,6 +1,6 @@
 # Public Company & Share System Documentation
 
-Status: Historical implemented feature and reintroduction reference. Current mainline code-verified on 2026-05-25.
+Status: Deferred historical implementation and reintroduction reference. Current mainline code-verified on 2026-07-14; public-company/share gameplay remains intentionally inactive behind the isolated `boardShare` facade.
 
 This document describes the larger public-company/share system that was implemented in an earlier code line and later removed or disabled from active mainline. Keep it as a reference for reintroducing that system.
 

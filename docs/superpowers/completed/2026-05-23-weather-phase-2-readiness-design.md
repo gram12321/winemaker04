@@ -11,7 +11,7 @@ This document defines the final Phase 2 design for extending weather into vineya
 
 Source lineage:
 - `docs/superpowers/completed/2026-05-23-weather-forecast-volatility-design.md`
-- `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` (bulk grape market iteration context)
+- `docs/superpowers/deferred/2026-05-20-early-game-balance-founder-economy.md` (bulk grape market iteration context)
 
 This Phase 2 design applies weather to:
 - vineyard health progression

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getCompanyStats: vi.fn(),
   checkCompanyNameExists: vi.fn(),
   initializeLenders: vi.fn(),
+  getCurrentUser: vi.fn(),
 }));
 
 vi.mock('@/lib/database', () => ({
@@ -35,6 +36,14 @@ vi.mock('@/lib/features/loanLender', () => ({
     },
   },
 }));
+
+vi.mock('@/lib/services/user/authService', () => ({
+  authService: {
+    getCurrentUser: mocks.getCurrentUser,
+  },
+}));
+
+import { companyService } from '@/lib/services/user/companyService';
 
 const persistedCompany = {
   id: 'company-1',
@@ -59,11 +68,10 @@ describe('companyService.createCompany', () => {
     mocks.insertCompany.mockResolvedValue({ success: true, data: { id: 'company-1' } });
     mocks.getCompanyById.mockResolvedValue(persistedCompany);
     mocks.initializeLenders.mockResolvedValue(undefined);
+    mocks.getCurrentUser.mockReturnValue(null);
   });
 
   it('creates a user, persists the company, and initializes lenders', async () => {
-    const { companyService } = await import('@/lib/services/user/companyService');
-
     const result = await companyService.createCompany({
       name: 'Test Estate',
       associateWithUser: true,
@@ -90,8 +98,6 @@ describe('companyService.createCompany', () => {
   });
 
   it('creates an unassociated company without inserting a user', async () => {
-    const { companyService } = await import('@/lib/services/user/companyService');
-
     const result = await companyService.createCompany({
       name: 'Solo Estate',
       associateWithUser: false,
@@ -107,8 +113,6 @@ describe('companyService.createCompany', () => {
 
   it('rejects duplicate names before creating a user or company', async () => {
     mocks.checkCompanyNameExists.mockResolvedValue(true);
-    const { companyService } = await import('@/lib/services/user/companyService');
-
     await expect(companyService.createCompany({
       name: 'Existing Estate',
       associateWithUser: true,
@@ -124,8 +128,6 @@ describe('companyService.createCompany', () => {
 
   it('returns persistence failures without claiming success', async () => {
     mocks.insertCompany.mockResolvedValue({ success: false, error: 'database unavailable' });
-    const { companyService } = await import('@/lib/services/user/companyService');
-
     await expect(companyService.createCompany({ name: 'Unavailable Estate' })).resolves.toEqual({
       success: false,
       error: 'database unavailable',

@@ -2,6 +2,7 @@
 
 Date: 2026-03-26
 Last implementation sync: 2026-05-21
+Status: Core taste design implemented; descriptor-level scoring, deeper typicity, and unified customer taste preferences are intentionally deferred.
 
 ## Current Conclusion
 

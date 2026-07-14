@@ -1,6 +1,6 @@
 # Project Context
 
-Date: 2026-07-12
+Date: 2026-07-14
 Stable terminology and high-value gameplay relationships. See `docs/WineSystem_VariableRelationshipMap.md` for dependency diagrams and `docs/AIdocs/AIDescriptions_coregame.md` for implementation status.
 
 ## Wine Vocabulary
@@ -16,7 +16,7 @@ Stable terminology and high-value gameplay relationships. See `docs/WineSystem_V
 | Lifecycle | Post-creation evolution | features, oxidation, bottle aging, prestige |
 | Weather | Weekly state/forecast and operation modifiers | state, intensity, pattern, confidence, site exposure, planting/harvesting operation impact |
 | Market | Buyer/supplier demand and supply | economy, weather, loyalty, grape/batch state |
-| Storage vessels | Individually owned cellar equipment purchased through Market offers; each vessel has a fixed capacity at purchase | casks, steel tanks, concrete tanks, containers, vessel type, capacity, material, purchase price, vessel state; future inputs to taste, structure, price, vineyard, and winery operations |
+| Storage vessels | Deferred cellar-equipment concept; no Storage Vessel runtime is active on current mainline | casks, steel tanks, concrete tanks, containers, vessel type, capacity, material, purchase price, vessel state; future inputs to taste, structure, price, vineyard, and winery operations |
 | Ownership | Founder and future board/share concepts | `isFounder`, Founder Return, `boardShare` facade |
 | Outcomes | Progression/economy outputs | price, contracts, grape sales, prestige, achievements |
 

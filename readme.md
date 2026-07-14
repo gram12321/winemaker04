@@ -49,7 +49,7 @@ npm run build
 | Research design/status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
 | Weather implementation record | `docs/superpowers/completed/2026-07-10-weather-module-redesign-design.md`, `2026-07-10-weather-module-redesign.md` |
 | Bulk grape market rollout | `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-design.md`, `2026-05-23-bulk-grape-buy-market-execution.md` |
-| Public-company reintroduction references | `docs/superpowers/plans/PublicCompanyPlan.md`, `PublicCompanyImplementation.md` |
+| Public-company reintroduction references | `docs/superpowers/deferred/PublicCompanyPlan.md`, `PublicCompanyImplementation.md` |
 
 ## Current Systems
 

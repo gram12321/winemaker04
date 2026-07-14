@@ -2,7 +2,7 @@
 Date: 2026-05-24
 Scope anchor: founder-economy design thread and downstream systems from v0.24+ (bulk buy/sell market, weather, research, achievements)
 
-Status: Superseded audit snapshot. Rechecked on 2026-05-25: this audit is still useful for market/weather/research lineage, but its founder-economy core status is stale. Founder wage replacement, yearly profit share, buyout, `isFounder` persistence, and Founder Panel UI are now implemented. Remaining founder gaps are automatic conversion milestones, separate founder-equity table, story-triggered reveals, startup advisor, country archetypes, and founder tests.
+Status: Completed historical audit, superseded by the 2026-07-14 documentation review. Its founder-economy conclusions remain useful as lineage: the founder compensation slice is implemented, while broader onboarding/equity ideas remain deferred because the public-company/share runtime is intentionally inactive.
 
 ## Executive Summary
 The founder-economy initiative has materially shipped in adjacent mechanics (bulk grape sell/buy economy, weather layer, research progression hardening), but the original founder-specific labor/equity model is still mostly unimplemented.
@@ -19,7 +19,7 @@ Based on current version history in docs/versionlog.md:
 
 ## Design Doc Status Matrix
 
-### 1) docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md
+### 1) docs/superpowers/deferred/2026-05-20-early-game-balance-founder-economy.md
 Status: Partially Implemented (adjacent systems shipped; founder wage/profit-share slice now shipped; broader founder onboarding remains open)
 
 Implemented:
@@ -121,7 +121,7 @@ Implemented:
   - src/lib/services/sales/grapeBuyerMarketService.ts
   - src/lib/services/sales/buyGrapeMarketService.ts
 
-### 5) docs/superpowers/specs/2026-05-23-weather-phase-2-readiness-design.md
+### 5) docs/superpowers/completed/2026-05-23-weather-phase-2-readiness-design.md
 Status: Largely Implemented (with explicit deferred parts still deferred)
 
 Implemented:

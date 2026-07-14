@@ -1,7 +1,9 @@
 # Harvest Forward and Pre-Sale Contracts (Minimal Design)
 Created: 2026-05-25
-Status: Draft for review
-Scope: Minimal v1 design only (no implementation in this step)
+Status: Implemented design record. Code-verified on 2026-07-14: wine pre-sale and harvest-forward lifecycles are present in current mainline, including persistence, UI, tick expiry/default handling, settlement, and Admin test fixtures.
+Scope: Minimal v1 design; later balancing and deeper contract policy remain follow-up work.
+
+Implementation note: v1 books advances as income, uses the configured 25% wine / 30% forward advance rates and 20% advance-based default penalty, allows the implemented forward target states including `any`, and generates offers through the weekly runtime/Admin test path. The open decisions below are retained as historical follow-up questions rather than current blockers.
 
 ## 1. Why This Is Two Features
 The original 4.6 idea is valid but splits into two distinct systems:

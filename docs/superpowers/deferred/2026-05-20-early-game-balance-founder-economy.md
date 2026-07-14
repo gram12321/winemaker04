@@ -1,6 +1,6 @@
 # Early-Game Balance: Founder Economy & Starting Conditions
 **Created:** 2026-05-20  
-**Status:** Partially implemented. Code-verified on 2026-05-25: founder wage replacement, yearly profit-share distributions, founder buyout, staff `isFounder` persistence, and Founder Panel UI are now shipped; story-triggered staff reveals, startup advisor, separate founder-equity table, and broader country archetypes remain open.
+**Status:** Deferred after partial implementation. Code-verified on 2026-07-14: founder wage replacement, yearly profit-share distributions, founder buyout, staff `isFounder` persistence, and Founder Panel UI are shipped. Story-triggered staff reveals, startup advisor, separate founder-equity persistence, broader country archetypes, and founder-specific tests remain deferred while the larger public-company/share runtime is intentionally inactive.
 **Branch context:** taste  
 
 ---
@@ -196,7 +196,7 @@ An optional **pre-sale contract** at company creation or early game:
 This is thematically real: en primeur (wine futures) is a foundational part of Bordeaux's economy.
 
 Detailed split-design for this section (Wine Pre-Sale Contracts + Harvest Forward Contracts):
-`docs/superpowers/specs/2026-05-25-harvest-forward-presale-contracts-design.md`
+`docs/superpowers/completed/2026-05-25-harvest-forward-presale-contracts-design.md`
 
 ---
 

@@ -26,7 +26,7 @@ For implementation workflow, also use:
 
 For taste, structure, or contracts work, also read:
 
-- `docs/superpowers/plans/TasteSystem_WineFolly_Research.md`
+- `docs/superpowers/deferred/TasteSystem_WineFolly_Research.md`
 - `docs/superpowers/completed/2026-05-20-taste-quality-index-design.md`
 - `docs/superpowers/completed/2026-05-20-taste-quality-index.md`
 - `docs/superpowers/completed/2026-05-20-contract-taste-site-ui.md`
