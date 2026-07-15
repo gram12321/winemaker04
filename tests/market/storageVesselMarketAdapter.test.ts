@@ -85,6 +85,26 @@ describe('Storage Vessel market adapter', () => {
     expect(mocks.syncPersistedTransaction).not.toHaveBeenCalled();
   });
 
+  it('reports Supabase authentication failures instead of misreporting funds or availability', async () => {
+    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { status: 401, message: 'Invalid JWT' } } as any);
+    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+
+    await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({
+      success: false,
+      error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.',
+    });
+  });
+
+  it('reports an unapplied purchase RPC migration clearly', async () => {
+    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { status: 404, code: 'PGRST202', message: 'function is missing' } } as any);
+    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+
+    await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({
+      success: false,
+      error: 'The market purchase update is not installed in this database. Apply the latest migrations and reload the market.',
+    });
+  });
+
   it('keeps a paid purchase when its notification fails', async () => {
     mocks.addMessage.mockRejectedValueOnce(new Error('notification failed'));
     const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');

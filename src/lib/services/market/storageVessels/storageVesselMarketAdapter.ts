@@ -238,7 +238,18 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     description: `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`,
     category: TRANSACTION_CATEGORIES.SUPPLIES,
   });
-  if (purchase.error || !purchase.data?.transaction) return { success: false, error: 'Offer availability or funds changed. Please reopen the market.' };
+  if (purchase.error || !purchase.data?.transaction) {
+    const rpcError = purchase.error as { status?: number; code?: string; message?: string } | null;
+    if (rpcError?.status === 401) {
+      console.error('Storage Vessel purchase rejected by Supabase authentication:', rpcError.message ?? purchase.error);
+      return { success: false, error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.' };
+    }
+    if (rpcError?.status === 404 || rpcError?.code === 'PGRST202') {
+      console.error('Storage Vessel purchase RPC is missing from Supabase:', rpcError.message ?? purchase.error);
+      return { success: false, error: 'The market purchase update is not installed in this database. Apply the latest migrations and reload the market.' };
+    }
+    return { success: false, error: 'Offer availability or funds changed. Please reopen the market.' };
+  }
   await syncPersistedTransaction(purchase.data.transaction);
 
   try {
