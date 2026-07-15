@@ -608,6 +608,17 @@ ALTER TABLE buy_goods_supplier_relationships
   ADD COLUMN IF NOT EXISTS year_guard_year INTEGER;
 
 UPDATE buy_goods_supplier_relationships SET year_relationship_points = GREATEST(year_relationship_points, COALESCE(year_loyalty_points, 0));
+
+-- 20260713180000_add_staff_maintenance_skill.sql
+-- Preserve the existing administration/research skill before resetting the
+-- long-standing skill_maintenance column to the new Maintenance skill.
+ALTER TABLE staff
+  ADD COLUMN IF NOT EXISTS skill_administration_and_research NUMERIC NOT NULL DEFAULT 0.3;
+
+UPDATE staff
+SET skill_administration_and_research = skill_maintenance
+WHERE skill_administration_and_research = 0.3;
+
 UPDATE staff SET skill_maintenance = 0.3 WHERE skill_maintenance = skill_administration_and_research;
 
 CREATE OR REPLACE FUNCTION record_buy_goods_supplier_purchase(

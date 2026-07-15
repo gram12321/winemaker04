@@ -12,7 +12,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { getWineProductionSummary, loadWineLogByVineyard } from '@/lib/database/core/wineLogDB';
 import { v4 as uuidv4 } from 'uuid';
-import { triggerGameUpdate } from '@/hooks';
+import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { resolveWineLogAchievementScore } from './achievementScoreUtils';
@@ -20,7 +20,7 @@ import { getSalesSummary, loadWineOrders } from '@/lib/database/customers/salesD
 import { loadWineContracts } from '@/lib/database/sales/contractDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import type { AchievementStats, AchievementWorkspace } from './featureTypes';
-import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants';
+import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants/achievementConstants';
 
 const EXCLUDED_REVENUE_DESCRIPTIONS = new Set(['Starting Capital', 'Starting Capital Adjustment']);
 const BULK_GRAPE_SALE_MARKER = 'Grape Sale:';
