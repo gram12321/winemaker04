@@ -240,7 +240,9 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
   });
   if (purchase.error || !purchase.data?.transaction) {
     const rpcError = purchase.error as { status?: number; code?: string; message?: string } | null;
-    if (rpcError?.status === 401) {
+    // PostgREST exposes an HTTP 401 as `code: "401"` in some Supabase client
+    // versions rather than populating `status`. Treat both shapes identically.
+    if (rpcError?.status === 401 || rpcError?.code === '401') {
       console.error('Storage Vessel purchase rejected by Supabase authentication:', rpcError.message ?? purchase.error);
       return { success: false, error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.' };
     }

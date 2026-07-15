@@ -95,6 +95,16 @@ describe('Storage Vessel market adapter', () => {
     });
   });
 
+  it('recognizes a PostgREST authentication error returned as a string code', async () => {
+    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { code: '401', message: 'JWT expired' } } as any);
+    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+
+    await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({
+      success: false,
+      error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.',
+    });
+  });
+
   it('reports an unapplied purchase RPC migration clearly', async () => {
     mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { status: 404, code: 'PGRST202', message: 'function is missing' } } as any);
     const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
