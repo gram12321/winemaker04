@@ -1,6 +1,6 @@
 # Staff Task Specialization and Grape Mastery Implementation Plan
 
-Status: Proposed implementation plan. No runtime code is changed by this document.
+Status: Superseded on 2026-07-15 by `docs/superpowers/plans/2026-07-15-staff-task-and-grape-specialization-refactor.md`. This earlier proposal retained the broad-role specialization schema and added a separate task-mastery/provenance architecture; the replacement plan uses a clean database cutover and rewrites the existing specialization and activity-work paths first.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
