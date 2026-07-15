@@ -10,9 +10,11 @@ const mocks = vi.hoisted(() => ({
   getCompanyBuyMarketOffers: vi.fn(),
   deleteBuyMarketOffer: vi.fn(),
   updateBuyMarketOffer: vi.fn(),
-  purchaseStorageVesselOfferAtomically: vi.fn(async () => ({ data: { transaction: { id: 'tx-1', week: 1, season: 'Spring', year: 2026, amount: -1900, description: 'purchase', category: 'Supplies', recurring: false, money: 3100 }, completedNow: true }, error: null })),
+  claimBuyMarketOfferUnits: vi.fn(async () => ({ claimed: true, error: null })),
+  releaseBuyMarketOfferUnits: vi.fn(async () => ({ released: true, error: null })),
+  addTransaction: vi.fn(async () => 'tx-1'),
+  insertStorageVessels: vi.fn(async () => ({ data: [], error: null })),
   upsertBuyMarketOffers: vi.fn(async (_records: BuyMarketOfferRecord[]) => ({ error: null })),
-  syncPersistedTransaction: vi.fn(async () => 'tx-1'),
   addMessage: vi.fn(async () => undefined),
   triggerTopicUpdate: vi.fn(),
   recordBuyGoodsSupplierPurchase: vi.fn(async () => null),
@@ -28,11 +30,11 @@ vi.mock('@/lib/database/market/buyMarketOffersDB', () => ({
   deleteBuyMarketOffer: mocks.deleteBuyMarketOffer,
   updateBuyMarketOffer: mocks.updateBuyMarketOffer,
   upsertBuyMarketOffers: mocks.upsertBuyMarketOffers,
+  claimBuyMarketOfferUnits: mocks.claimBuyMarketOfferUnits,
+  releaseBuyMarketOfferUnits: mocks.releaseBuyMarketOfferUnits,
 }));
-vi.mock('@/lib/database/market/storageVesselMarketOffersDB', () => ({
-  purchaseStorageVesselOfferAtomically: mocks.purchaseStorageVesselOfferAtomically,
-}));
-vi.mock('@/lib/services/finance/financeService', () => ({ calculateCompanyValue: vi.fn(async () => 0), syncPersistedTransaction: mocks.syncPersistedTransaction }));
+vi.mock('@/lib/database/winery/storageVesselsDB', () => ({ insertStorageVessels: mocks.insertStorageVessels }));
+vi.mock('@/lib/services/finance/financeService', () => ({ calculateCompanyValue: vi.fn(async () => 0), addTransaction: mocks.addTransaction }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
 vi.mock('@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService', () => ({
@@ -63,8 +65,11 @@ describe('Storage Vessel market adapter', () => {
     const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
     await expect(purchaseStorageVesselOffer(offer.offerId, 2)).resolves.toEqual({ success: true });
 
-    expect(mocks.purchaseStorageVesselOfferAtomically).toHaveBeenCalledWith(expect.objectContaining({ companyId: 'company-1', offerId: offer.offerId, quantity: 2 }));
-    expect(mocks.syncPersistedTransaction).toHaveBeenCalledOnce();
+    expect(mocks.claimBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', offer.offerId, 2);
+    expect(mocks.addTransaction).toHaveBeenCalledWith(-1900, expect.any(String), 'Supplies', false, 'company-1', true);
+    expect(mocks.insertStorageVessels).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ companyId: 'company-1', capacityLitres: 225, operationalStatus: 'operational' }),
+    ]));
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('storage_vessels');
   });
 
@@ -72,47 +77,28 @@ describe('Storage Vessel market adapter', () => {
     const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
     const result = await purchaseStorageVesselOffer(offer.offerId, 4);
     expect(result.success).toBe(false);
-    expect(mocks.purchaseStorageVesselOfferAtomically).not.toHaveBeenCalled();
+    expect(mocks.claimBuyMarketOfferUnits).not.toHaveBeenCalled();
   });
 
-  it('leaves no client-side compensation path when the atomic purchase is rejected', async () => {
-    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: new Error('insufficient funds') } as any);
+  it('does not charge when the offer claim is rejected', async () => {
+    mocks.claimBuyMarketOfferUnits.mockResolvedValueOnce({ claimed: false, error: null });
     const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
 
     const result = await purchaseStorageVesselOffer(offer.offerId, 1);
 
     expect(result.success).toBe(false);
-    expect(mocks.syncPersistedTransaction).not.toHaveBeenCalled();
+    expect(mocks.addTransaction).not.toHaveBeenCalled();
   });
 
-  it('reports Supabase authentication failures instead of misreporting funds or availability', async () => {
-    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { status: 401, message: 'Invalid JWT' } } as any);
+  it('releases a claimed offer when the standard transaction rejects the payment', async () => {
+    mocks.addTransaction.mockRejectedValueOnce(new Error('Insufficient funds'));
     const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
 
     await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({
       success: false,
-      error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.',
+      error: 'Insufficient funds. Please reopen the market and try again.',
     });
-  });
-
-  it('recognizes a PostgREST authentication error returned as a string code', async () => {
-    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { code: '401', message: 'JWT expired' } } as any);
-    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
-
-    await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({
-      success: false,
-      error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.',
-    });
-  });
-
-  it('reports an unapplied purchase RPC migration clearly', async () => {
-    mocks.purchaseStorageVesselOfferAtomically.mockResolvedValueOnce({ data: null, error: { status: 404, code: 'PGRST202', message: 'function is missing' } } as any);
-    const { purchaseStorageVesselOffer } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
-
-    await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({
-      success: false,
-      error: 'The market purchase update is not installed in this database. Apply the latest migrations and reload the market.',
-    });
+    expect(mocks.releaseBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', offer.offerId, 1);
   });
 
   it('keeps a paid purchase when its notification fails', async () => {
@@ -121,7 +107,7 @@ describe('Storage Vessel market adapter', () => {
 
     await expect(purchaseStorageVesselOffer(offer.offerId, 1)).resolves.toEqual({ success: true });
 
-    expect(mocks.syncPersistedTransaction).toHaveBeenCalledOnce();
+    expect(mocks.addTransaction).toHaveBeenCalledOnce();
   });
 
   it('exposes the cask-specific multiplier breakdown used by the market UI', async () => {

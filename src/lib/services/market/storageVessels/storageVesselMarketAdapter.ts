@@ -1,4 +1,4 @@
-import { syncPersistedTransaction } from '@/lib/services/finance/financeService';
+import { addTransaction, calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { getGameState } from '@/lib/services/core/gameState';
 import {
@@ -7,12 +7,13 @@ import {
   updateBuyMarketOffer,
   deleteBuyMarketOffer,
   upsertBuyMarketOffers,
+  claimBuyMarketOfferUnits,
+  releaseBuyMarketOfferUnits,
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { purchaseStorageVesselOfferAtomically } from '@/lib/database/market/storageVesselMarketOffersDB';
 import { GAME_INITIALIZATION, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_MAX_PRICE, STORAGE_VESSEL_MIN_PRICE, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER, STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
-import { calculateCompanyValue } from '@/lib/services/finance/financeService';
+import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import {
   getBuyGoodsSupplierPersistenceBonus,
@@ -23,7 +24,7 @@ import {
   type BuyGoodsSupplierRelationshipLevel,
 } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import type { BuyMarketOfferRecord, BuyMarketPurchaseResult } from '@/lib/types/market';
-import type { StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
+import type { StorageVessel, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
 import { NotificationCategory, type Season } from '@/lib/types/types';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { v4 as uuidv4 } from 'uuid';
@@ -215,49 +216,68 @@ export async function getStorageVesselMarketOffers(): Promise<StorageVesselMarke
   return data.filter((offer): offer is BuyMarketOfferRecord & { payload: StorageVesselOfferPayload } => offer.availableUnits > 0 && isCurrentStorageVesselOffer(offer)).map((offer) => toStorageVesselOffer(offer, relationships[offer.sellerId]));
 }
 
-export async function purchaseStorageVesselOffer(offerId: string, quantity: number, purchaseId = uuidv4()): Promise<BuyMarketPurchaseResult> {
+export async function purchaseStorageVesselOffer(offerId: string, quantity: number): Promise<BuyMarketPurchaseResult> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, error: 'No active company selected.' };
   const safeQuantity = Math.max(1, Math.round(quantity));
   const { data: offer, error } = await getCompanyBuyMarketOffer(companyId, offerId);
   if (error || !offer || offer.wareGroup !== 'storage_vessels') return { success: false, error: 'Storage Vessel offer not found.' };
   if (safeQuantity > offer.availableUnits) return { success: false, error: `Requested quantity exceeds available vessels (${offer.availableUnits}).` };
+  const payload = offer.payload as unknown as StorageVesselOfferPayload;
 
   const totalCost = Number((offer.effectivePricePerUnit * safeQuantity).toFixed(2));
   if ((getGameState().money ?? 0) < totalCost) return { success: false, error: `Insufficient funds. Required ${formatNumber(totalCost, { currency: true, decimals: 0 })}.` };
 
   const state = getGameState();
-  const purchase = await purchaseStorageVesselOfferAtomically({
-    companyId,
-    purchaseId,
-    offerId: offer.offerId,
-    quantity: safeQuantity,
+  const date = {
     week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
     season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
     year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
-    description: `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`,
-    category: TRANSACTION_CATEGORIES.SUPPLIES,
-  });
-  if (purchase.error || !purchase.data?.transaction) {
-    const rpcError = purchase.error as { status?: number; code?: string; message?: string } | null;
-    // PostgREST exposes an HTTP 401 as `code: "401"` in some Supabase client
-    // versions rather than populating `status`. Treat both shapes identically.
-    if (rpcError?.status === 401 || rpcError?.code === '401') {
-      console.error('Storage Vessel purchase rejected by Supabase authentication:', rpcError.message ?? purchase.error);
-      return { success: false, error: 'Supabase authentication failed. Please sign in again or check the deployed Supabase URL and anon key.' };
-    }
-    if (rpcError?.status === 404 || rpcError?.code === 'PGRST202') {
-      console.error('Storage Vessel purchase RPC is missing from Supabase:', rpcError.message ?? purchase.error);
-      return { success: false, error: 'The market purchase update is not installed in this database. Apply the latest migrations and reload the market.' };
-    }
+  };
+  const { claimed, error: claimError } = await claimBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
+  if (claimError || !claimed) {
     return { success: false, error: 'Offer availability or funds changed. Please reopen the market.' };
   }
-  await syncPersistedTransaction(purchase.data.transaction);
 
   try {
-    if (purchase.data.completedNow) {
-      await recordBuyGoodsSupplierPurchase('storage_vessels', offer.sellerId, offer.sellerName, safeQuantity, totalCost);
-    }
+    await addTransaction(
+      -totalCost,
+      `Market Purchase: ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName}`,
+      TRANSACTION_CATEGORIES.SUPPLIES,
+      false,
+      companyId,
+      true,
+    );
+  } catch (transactionError) {
+    await releaseBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
+    console.error('Storage Vessel purchase transaction failed:', transactionError);
+    return { success: false, error: 'Insufficient funds. Please reopen the market and try again.' };
+  }
+
+  const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, () => ({
+    id: uuidv4(),
+    companyId,
+    vesselType: payload.vesselType,
+    material: payload.material,
+    qualityScore: payload.qualityScore,
+    productionYear: payload.productionYear,
+    capacityLitres: payload.capacityLitres,
+    acquisitionPrice: offer.effectivePricePerUnit,
+    sourceOfferId: offer.offerId,
+    operationalStatus: 'operational',
+    occupancy: 'available',
+    purchasedYear: date.year,
+    purchasedSeason: date.season,
+    purchasedWeek: date.week,
+  }));
+  const { error: vesselError } = await insertStorageVessels(vessels);
+  if (vesselError) {
+    console.error('Storage Vessel purchase could not persist purchased vessels:', vesselError);
+    return { success: false, error: 'Payment succeeded, but the cask could not be saved. Please reload before trying again.' };
+  }
+
+  try {
+    await recordBuyGoodsSupplierPurchase('storage_vessels', offer.sellerId, offer.sellerName, safeQuantity, totalCost);
     await notificationService.addMessage(
       `Purchased ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
       'storageVesselMarketAdapter.purchaseStorageVesselOffer',
