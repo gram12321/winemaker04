@@ -194,6 +194,38 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
 // ===== DERIVED HELPERS =====
 
 /**
+ * Check whether a persisted value is an existing activity category with a
+ * task-mastery experience track.
+ */
+export function isStaffSpecializationCategory(value: unknown): value is WorkCategory {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(WORK_CATEGORY_INFO, value);
+}
+
+/**
+ * Get every currently implemented task-mastery category. Sales intentionally
+ * has no entry because it does not yet have a WorkCategory.
+ */
+export function getStaffSpecializationCategories(): WorkCategory[] {
+  return Object.keys(WORK_CATEGORY_INFO) as WorkCategory[];
+}
+
+export function getStaffSpecializationDisplayName(category: WorkCategory): string {
+  return WORK_CATEGORY_INFO[category].displayName;
+}
+
+export function getStaffSpecializationDescription(category: WorkCategory): string {
+  return `Specialist in ${getStaffSpecializationDisplayName(category).toLowerCase()} work`;
+}
+
+export function getStaffSpecializationIcon(category: WorkCategory): string {
+  return WORK_CATEGORY_INFO[category].icon;
+}
+
+export function getStaffSpecializationPrimarySkill(category: WorkCategory): keyof StaffSkills {
+  return WORK_CATEGORY_INFO[category].skill;
+}
+
+/**
  * Check whether a category uses density adjustments
  */
 export function isDensityBased(category: WorkCategory): boolean {

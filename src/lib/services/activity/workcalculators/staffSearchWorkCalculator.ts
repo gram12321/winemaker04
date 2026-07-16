@@ -1,15 +1,20 @@
 // Staff Search Work Calculator
 // Calculates work required for staff search and hiring activities
 
-import { Staff, WorkCategory } from '@/lib/types/types';
+import { Staff, WorkCategory, SpecializedRole } from '@/lib/types/types';
 import { calculateTotalWork } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER } from '@/lib/constants/staffConstants';
+import { BASE_WEEKLY_WAGE, DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, SKILL_WAGE_MULTIPLIER, STAFF_HIRING_SKILL_RANGE_MAX_BASE, STAFF_HIRING_SKILL_RANGE_MIN_SCALE, STAFF_HIRING_SPECIALIZATION_WORK_BASE, STAFF_HIRING_WAGE_REFERENCE, STAFF_SEARCH_BASE_COST, STAFF_SEARCH_CANDIDATE_COST_EXPONENT, STAFF_SEARCH_SKILL_COST_EXPONENT, STAFF_SEARCH_SKILL_MULTIPLIER_OFFSET, STAFF_SEARCH_SKILL_MULTIPLIER_SCALE, STAFF_SEARCH_SPECIALIZATION_COST_MULTIPLIER, STAFF_SEARCH_SPECIALIZATION_WORK_BASE, STAFF_SEARCH_WORK_SKILL_SCALE, STAFF_SEARCH_WORK_SKILL_THRESHOLD } from '@/lib/constants/staffConstants';
+import { getDistinctSpecializationSkillGroupCount } from '@/lib/services/finance/wageService';
 
 export interface StaffSearchOptions {
   numberOfCandidates: number;
   skillLevel: number;
-  specializations: string[];
+  specializedRoles: SpecializedRole[];
+}
+
+function getSpecializationSkillGroupCount(specializedRoles: SpecializedRole[] = []): number {
+  return getDistinctSpecializationSkillGroupCount(specializedRoles);
 }
 
 export interface SearchWorkEstimate {
@@ -28,19 +33,17 @@ export interface HiringWorkEstimate {
  * Calculate the cost of a staff search
  */
 export function calculateStaffSearchCost(options: StaffSearchOptions): number {
-  const { numberOfCandidates, skillLevel, specializations } = options;
-  const baseCost = 2000;
+  const { numberOfCandidates, skillLevel, specializedRoles } = options;
+  const baseCost = STAFF_SEARCH_BASE_COST;
   
   // Get skill multiplier (0.1 -> 1.0, 1.0 -> 10.0)
-  const skillMultiplier = 0.5 + (skillLevel * 9.5); // 1.0 to 10.0
+  const skillMultiplier = STAFF_SEARCH_SKILL_MULTIPLIER_OFFSET + (skillLevel * STAFF_SEARCH_SKILL_MULTIPLIER_SCALE); // 1.0 to 10.0
   
   // Exponential scaling based on candidates and skill
-  const candidateScaling = Math.pow(numberOfCandidates, 1.5);
-  const skillScaling = Math.pow(skillMultiplier, 1.8);
+  const candidateScaling = Math.pow(numberOfCandidates, STAFF_SEARCH_CANDIDATE_COST_EXPONENT);
+  const skillScaling = Math.pow(skillMultiplier, STAFF_SEARCH_SKILL_COST_EXPONENT);
   
-  // Linear scaling for specialized roles (2x per role)
-  const specializationMultiplier = specializations.length > 0 ? 
-    Math.pow(2, specializations.length) : 1;
+  const specializationMultiplier = Math.pow(STAFF_SEARCH_SPECIALIZATION_COST_MULTIPLIER, getSpecializationSkillGroupCount(specializedRoles));
   
   // Combine all scalings
   const totalMultiplier = candidateScaling * skillScaling * specializationMultiplier;
@@ -52,15 +55,16 @@ export function calculateStaffSearchCost(options: StaffSearchOptions): number {
  * Calculate work required for staff search activity
  */
 export function calculateSearchWork(options: StaffSearchOptions): number {
-  const { numberOfCandidates, skillLevel, specializations } = options;
+  const { numberOfCandidates, skillLevel, specializedRoles } = options;
   
   const rate = TASK_RATES[WorkCategory.STAFF_SEARCH];
   const initialWork = INITIAL_WORK[WorkCategory.STAFF_SEARCH];
   
   // Calculate skill and specialization modifiers
-  const searchSkillModifier = skillLevel > 0.5 ? (skillLevel - 0.5) * 0.4 : 0;
-  const searchSpecModifier = specializations.length > 0 ? 
-    Math.pow(1.3, specializations.length) - 1 : 0;
+  const searchSkillModifier = skillLevel > STAFF_SEARCH_WORK_SKILL_THRESHOLD
+    ? (skillLevel - STAFF_SEARCH_WORK_SKILL_THRESHOLD) * STAFF_SEARCH_WORK_SKILL_SCALE
+    : 0;
+  const searchSpecModifier = Math.pow(STAFF_SEARCH_SPECIALIZATION_WORK_BASE, getSpecializationSkillGroupCount(specializedRoles)) - 1;
   
   const workModifiers = [searchSkillModifier, searchSpecModifier];
   
@@ -76,15 +80,14 @@ export function calculateSearchWork(options: StaffSearchOptions): number {
  */
 export function calculateHiringWorkRange(
   skillLevel: number, 
-  specializations: string[]
+  specializedRoles: SpecializedRole[] = []
 ): HiringWorkEstimate {
   // Get min/max possible skills for this search level
-  const minSkill = skillLevel * 0.4;  // Minimum possible skill
-  const maxSkill = 0.6 + (skillLevel * 0.4);  // Maximum possible skill
+  const minSkill = skillLevel * STAFF_HIRING_SKILL_RANGE_MIN_SCALE;  // Minimum possible skill
+  const maxSkill = STAFF_HIRING_SKILL_RANGE_MAX_BASE + (skillLevel * STAFF_HIRING_SKILL_RANGE_MIN_SCALE);  // Maximum possible skill
   
   // Calculate wages based on min/max skills
-  const specializationBonus = specializations.length > 0 ? 
-    Math.pow(1.3, specializations.length) : 1;
+  const specializationBonus = Math.pow(1 + DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, getSpecializationSkillGroupCount(specializedRoles));
   const minWeeklyWage = (BASE_WEEKLY_WAGE + (minSkill * SKILL_WAGE_MULTIPLIER)) * specializationBonus;
   const maxWeeklyWage = (BASE_WEEKLY_WAGE + (maxSkill * SKILL_WAGE_MULTIPLIER)) * specializationBonus;
 
@@ -94,10 +97,10 @@ export function calculateHiringWorkRange(
   
   // Calculate modifiers
   const skillModifier = Math.pow(skillLevel * 2, 2) - 1;     // Skill impact
-  const specModifier = Math.pow(1.5, specializations.length) - 1;  // Role impact
+  const specModifier = Math.pow(STAFF_HIRING_SPECIALIZATION_WORK_BASE, getSpecializationSkillGroupCount(specializedRoles)) - 1;
   
   // Min work calculation
-  const minWageModifier = Math.pow(minWeeklyWage / 1000, 2) - 1;
+  const minWageModifier = Math.pow(minWeeklyWage / STAFF_HIRING_WAGE_REFERENCE, 2) - 1;
   const minWork = calculateTotalWork(1, {
     rate,
     initialWork,
@@ -105,7 +108,7 @@ export function calculateHiringWorkRange(
   });
   
   // Max work calculation
-  const maxWageModifier = Math.pow(maxWeeklyWage / 1000, 2) - 1;
+  const maxWageModifier = Math.pow(maxWeeklyWage / STAFF_HIRING_WAGE_REFERENCE, 2) - 1;
   const maxWork = calculateTotalWork(1, {
     rate,
     initialWork,
@@ -144,8 +147,8 @@ export function calculateHiringWorkForCandidate(candidate: Staff): number {
   ) / 5;
   
   const skillModifier = Math.pow(avgSkill * 2, 2) - 1;
-  const specModifier = Math.pow(1.5, candidate.specializations.length) - 1;
-  const wageModifier = Math.pow(candidate.wage / 1000, 2) - 1;
+  const specModifier = Math.pow(STAFF_HIRING_SPECIALIZATION_WORK_BASE, getSpecializationSkillGroupCount(candidate.specializedRoles)) - 1;
+  const wageModifier = Math.pow(candidate.wage / STAFF_HIRING_WAGE_REFERENCE, 2) - 1;
   
   return calculateTotalWork(1, {
     rate,
@@ -172,12 +175,11 @@ export interface SearchPreviewStats {
 export function calculateSearchPreview(options: StaffSearchOptions): SearchPreviewStats {
   // Calculate skill range based on search level
   // These values match the generateRandomSkills function logic
-  const minSkill = options.skillLevel * 0.4;  // Minimum possible skill
-  const maxSkill = 0.6 + (options.skillLevel * 0.4);  // Maximum possible skill
+  const minSkill = options.skillLevel * STAFF_HIRING_SKILL_RANGE_MIN_SCALE;  // Minimum possible skill
+  const maxSkill = STAFF_HIRING_SKILL_RANGE_MAX_BASE + (options.skillLevel * STAFF_HIRING_SKILL_RANGE_MIN_SCALE);  // Maximum possible skill
   
   // Calculate specialization bonus (matches calculateWage logic)
-  const specializationBonus = options.specializations.length > 0 ? 
-    Math.pow(1.3, options.specializations.length) : 1;
+  const specializationBonus = Math.pow(1 + DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, getSpecializationSkillGroupCount(options.specializedRoles));
   
   // Calculate wage range using same formula as calculateWage
   const minWeeklyWage = (BASE_WEEKLY_WAGE + (minSkill * SKILL_WAGE_MULTIPLIER)) * specializationBonus;
@@ -191,7 +193,7 @@ export function calculateSearchPreview(options: StaffSearchOptions): SearchPrevi
     maxWeeklyWage,
     wageRange: `${Math.round(minWeeklyWage)} - ${Math.round(maxWeeklyWage)}`,
     specializationBonus,
-    specializationBonusText: options.specializations.length > 0 
+    specializationBonusText: options.specializedRoles.length > 0
       ? `+${Math.round((specializationBonus - 1) * 100)}% wage bonus`
       : 'None'
   };

@@ -66,14 +66,6 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
             value={`${formatNumber(effectiveContribution, { decimals: 0 })} / wk`}
             monospaced
           />
-          {staff.specializations.includes(skillKey) && (
-            <div className="mt-2 pt-2 border-t border-gray-600">
-              <TooltipRow
-                label="Specialization:"
-                value="+20%"
-              />
-            </div>
-          )}
         </TooltipSection>
       </div>
     );

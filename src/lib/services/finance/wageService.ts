@@ -1,37 +1,46 @@
 ﻿// Wage Service
 // Centralized wage calculation, normalization, and color coding utilities
 
-import { Staff, StaffSkills } from '@/lib/types/types';
+import { Staff, StaffSkills, SpecializedRole } from '@/lib/types/types';
 import { getColorClass, getBadgeColorClasses, formatNumber } from '@/lib/utils/utils';
-import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER, FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT } from '@/lib/constants/staffConstants';
+import { BASE_WEEKLY_WAGE, DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, SKILL_WAGE_MULTIPLIER, FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { getGameState } from '../core/gameState';
 import { addTransaction, calculateFinancialData } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
+import { calculateEffectiveSkill } from '@/lib/services/user/staffSkillService';
 
 // ===== WAGE CALCULATION =====
 
 /**
- * Calculate weekly wage based on skills and specializations
+ * Calculate weekly wage based on effective primary skills and innate career roles.
  * @param skills Staff skills object
- * @param specializations Array of specialization keys
  * @returns Weekly wage in euros
  */
-export function calculateWage(skills: StaffSkills, specializations: string[] = []): number {
+export function getDistinctSpecializationSkillGroupCount(specializedRoles: SpecializedRole[] = []): number {
+  return new Set(specializedRoles).size;
+}
+
+export function calculateWage(
+  skills: StaffSkills,
+  specializedRoles: SpecializedRole[] = [],
+  experience: Record<string, number> = {},
+): number {
   // Calculate average skill
   const avgSkill = (
-    skills.field +
-    skills.winery +
-    skills.financeAndStaff +
-    skills.sales +
-    skills.administrationAndResearch +
-    skills.maintenance
+    calculateEffectiveSkill(skills.field, experience['skill:field'] || 0) +
+    calculateEffectiveSkill(skills.winery, experience['skill:winery'] || 0) +
+    calculateEffectiveSkill(skills.financeAndStaff, experience['skill:financeAndStaff'] || 0) +
+    calculateEffectiveSkill(skills.sales, experience['skill:sales'] || 0) +
+    calculateEffectiveSkill(skills.administrationAndResearch, experience['skill:administrationAndResearch'] || 0) +
+    calculateEffectiveSkill(skills.maintenance, experience['skill:maintenance'] || 0)
   ) / 6;
 
-  // Add bonus for specialized roles (30% per specialization, multiplicative)
-  const specializationBonus = specializations.length > 0 ?
-    Math.pow(1.3, specializations.length) : 1;
+  const specializationBonus = Math.pow(
+    1 + DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM,
+    getDistinctSpecializationSkillGroupCount(specializedRoles)
+  );
 
   // Calculate weekly wage
   const weeklyWage = (BASE_WEEKLY_WAGE + (avgSkill * SKILL_WAGE_MULTIPLIER)) * specializationBonus;
@@ -43,13 +52,13 @@ export function calculateWage(skills: StaffSkills, specializations: string[] = [
 
 /**
  * Calculate theoretical maximum wage for normalization
- * Based on max skill level (1.0) and max specializations (6)
+ * Based on max skill level (1.0) and every represented career-role skill group.
  * Formula: (BASE_WEEKLY_WAGE + maxSkill * SKILL_WAGE_MULTIPLIER) * maxSpecializationBonus
  */
 export function getMaxWage(): number {
   const maxSkill = 1.0;
-  const maxSpecializations = 6;
-  const specializationBonus = Math.pow(1.3, maxSpecializations); // 30% per specialization
+  const maxSpecializationSkillGroups = new Set(Object.values(SPECIALIZED_ROLES).map(role => role.skillBonus)).size;
+  const specializationBonus = Math.pow(1 + DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, maxSpecializationSkillGroups);
 
   return (BASE_WEEKLY_WAGE + maxSkill * SKILL_WAGE_MULTIPLIER) * specializationBonus;
 }

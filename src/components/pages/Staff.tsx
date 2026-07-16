@@ -2,13 +2,12 @@
 // Main page for viewing and managing staff members
 
 import React, { useMemo, useState } from 'react';
-import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam, getWageColorClass, getAllActivities } from '@/lib/services';
+import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam, getWageColorClass, getAllActivities, getStaffExperiencePresentation } from '@/lib/services';
 import type { Staff } from '@/lib/types/types';
-import { formatNumber, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
-import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
+import { formatNumber, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
+import { getSkillLevelInfo, SPECIALIZED_ROLES, getTaskTypeDisplayName } from '@/lib/constants';
 import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffSearchOptionsModal, StaffSearchResultsModal, StaffModal, StaffSkillBarsList } from '@/components/ui';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
-import { getTaskTypeDisplayName } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/types/types';
 import { useGameState, useGameStateWithData } from '@/hooks';
 
@@ -701,6 +700,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
               const skillInfo = getSkillLevelInfo(staff.skillLevel);
               const assignedTaskCount = staffTaskCounts.get(staff.id) ?? 0;
               const taskLabel = totalActiveTasks === 1 ? 'task' : 'tasks';
+              const experiencePresentation = getStaffExperiencePresentation(staff);
 
               return (
                 <div
@@ -777,21 +777,29 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                       </div>
                     </div>
 
-                    {staff.specializations.length > 0 && (
+                    {staff.specializedRoles.length > 0 && (
                       <div className="flex gap-1">
-                        {staff.specializations.map(spec => (
-                          <Badge key={spec} variant="secondary" className="text-2xs flex items-center gap-1">
-                            <span>{getSpecializationIcon(spec)}</span>
-                            <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
+                        {staff.specializedRoles.map(role => (
+                          <Badge key={role} variant="secondary" className="text-2xs bg-amber-100 text-amber-900" title={SPECIALIZED_ROLES[role].description}>
+                            {SPECIALIZED_ROLES[role].title}
                           </Badge>
                         ))}
                       </div>
                     )}
+                    {experiencePresentation.taskMastery.length > 0 && (
+                      <span className="text-2xs text-emerald-700">Task mastery: {experiencePresentation.taskMastery.map(mastery => mastery.label).join(', ')}</span>
+                    )}
                   </div>
+
+                  {experiencePresentation.grapeMastery.length > 0 && (
+                    <div className="mt-1 text-2xs text-purple-700">
+                      Grape mastery: {experiencePresentation.grapeMastery.map(mastery => mastery.label).join(', ')}
+                    </div>
+                  )}
 
                   {/* Experience */}
                   <div className="text-2xs text-gray-500 mt-1">
-                    Total XP: {formatNumber(Object.values(staff.experience || {}).reduce((sum, val) => sum + val, 0), { decimals: 0 })}
+                    Total XP: {formatNumber(experiencePresentation.totalXP, { decimals: 0 })}
                   </div>
 
                   {/* Hire Date */}

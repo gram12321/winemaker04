@@ -4,7 +4,7 @@ import { formatNumber } from '@/lib/utils';
 import { getAllStaff, buyoutFounder, calculateCompanyValue } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
 import { Crown, AlertCircle } from 'lucide-react';
-import { FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT, FOUNDER_BUYOUT_PERCENT_OF_ASSETS } from '@/lib/constants/staffConstants';
+import { FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT, FOUNDER_BUYOUT_PERCENT_OF_ASSETS, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 
 export function FounderPanel() {
   const [buyingOut, setBuyingOut] = useState<string | null>(null);
@@ -67,7 +67,9 @@ export function FounderPanel() {
                     </Badge>
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {founder.nationality} · {founder.specializations.join(', ')} ·{' '}
+                    {founder.nationality} · {founder.specializedRoles.length > 0
+                      ? founder.specializedRoles.map(role => SPECIALIZED_ROLES[role].title).join(', ')
+                      : 'General worker'} ·{' '}
                     <span className="text-amber-700 font-medium">
                       {FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT}% of yearly profit at year-end
                     </span>
@@ -105,7 +107,7 @@ export function FounderPanel() {
             </p>
             <p>
               After buyout the founder becomes a salaried employee and their wage is calculated
-              from their skills and specializations.
+              from their skills and career roles.
             </p>
           </div>
         </div>

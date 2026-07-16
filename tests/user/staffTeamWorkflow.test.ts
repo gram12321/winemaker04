@@ -62,7 +62,7 @@ function staff(overrides: Partial<Staff> = {}): Staff {
     name: 'Ada Cellar',
     nationality: 'France',
     skillLevel: 0.5,
-    specializations: ['winery'],
+    specializedRoles: [],
     skills: {
       field: 0.4,
       winery: 0.8,
@@ -147,24 +147,30 @@ describe('staff and team workflow', () => {
     expect(mocks.getState().teams[0].memberIds).toEqual([]);
   });
 
-  it('awards experience by category and increases effective skill toward the cap', async () => {
+  it('awards experience by category, increases effective skill, and recalculates only primary-skill wage growth', async () => {
     const { awardExperience, calculateEffectiveSkill } = await import('@/lib/services/user/staffService');
 
     expect(calculateEffectiveSkill(0.5, 0)).toBe(0.5);
     expect(calculateEffectiveSkill(0.5, 100000)).toBeGreaterThan(0.5);
     expect(calculateEffectiveSkill(0.5, 100000)).toBeLessThanOrEqual(1);
 
-    await awardExperience('staff-1', 12, ['skill:winery', 'grape:Pinot Noir']);
+    const { calculateWage } = await import('@/lib/services/finance/wageService');
+    const startingWage = calculateWage(mocks.getState().staff[0].skills, mocks.getState().staff[0].specializedRoles);
+    await awardExperience('staff-1', 100000, ['skill:winery']);
+    const primarySkillWage = mocks.getState().staff[0].wage;
+    await awardExperience('staff-1', 100000, ['grape:Pinot Noir']);
 
     expect(mocks.getState().staff[0].experience).toEqual({
-      'skill:winery': 12,
-      'grape:Pinot Noir': 12
+      'skill:winery': 100000,
+      'grape:Pinot Noir': 100000
     });
+    expect(primarySkillWage).toBeGreaterThan(startingWage);
+    expect(mocks.getState().staff[0].wage).toBe(primarySkillWage);
     expect(mocks.saveStaffToDb).toHaveBeenCalledWith(expect.objectContaining({
       id: 'staff-1',
       experience: {
-        'skill:winery': 12,
-        'grape:Pinot Noir': 12
+        'skill:winery': 100000,
+        'grape:Pinot Noir': 100000
       }
     }));
   });

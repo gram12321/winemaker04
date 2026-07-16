@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { SpecializedRole } from '@/lib/types/types';
 import { StaffSearchOptions, calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity/activitymanagers/staffSearchManager';
-import { SPECIALIZED_ROLES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
-import { formatNumber, getSpecializationIcon } from '@/lib/utils';
+import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
+import { formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui';
 import { X } from 'lucide-react';
 
@@ -19,7 +20,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
   const [options, setOptions] = useState<StaffSearchOptions>({
     numberOfCandidates: 5,
     skillLevel: 0.3,
-    specializations: []
+    specializedRoles: []
   });
 
   // Preview calculations for search results
@@ -67,7 +68,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
     });
 
     // Hiring work calculation (range)
-    const hiring = calculateHiringWorkRange(options.skillLevel, options.specializations);
+    const hiring = calculateHiringWorkRange(options.skillLevel, options.specializedRoles);
     setHiringWorkEstimate({
       minWork: hiring.minWork,
       maxWork: hiring.maxWork
@@ -156,30 +157,22 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
 
               {/* Specializations */}
               <div>
-                <label className="block text-sm font-medium text-white mb-3">
-                  Specializations (optional)
-                </label>
-                <div className="space-y-2">
-                  {Object.entries(SPECIALIZED_ROLES).map(([key, role]) => (
-                    <label key={key} className="flex items-start cursor-pointer">
+                <label className="block text-sm font-medium text-white mb-3">Broad Roles (optional)</label>
+                <div className="space-y-2 mb-6">
+                  {(Object.keys(SPECIALIZED_ROLES) as SpecializedRole[]).map(role => (
+                    <label key={role} className="flex items-start cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={options.specializations.includes(key)}
-                        onChange={(e) => {
-                          const newSpecs = e.target.checked
-                            ? [...options.specializations, key]
-                            : options.specializations.filter(s => s !== key);
-                          setOptions(prev => ({ ...prev, specializations: newSpecs }));
-                        }}
-                        className="mr-3 mt-1 h-4 w-4 rounded border-gray-500 bg-gray-700 text-green-600 focus:ring-green-500"
+                        checked={options.specializedRoles.includes(role)}
+                        onChange={event => setOptions(previous => ({
+                          ...previous,
+                          specializedRoles: event.target.checked
+                            ? [...previous.specializedRoles, role]
+                            : previous.specializedRoles.filter(current => current !== role),
+                        }))}
+                        className="mr-3 mt-1 h-4 w-4 rounded border-gray-500 bg-gray-700 text-amber-600 focus:ring-amber-500"
                       />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-white flex items-center gap-2">
-                          <span>{getSpecializationIcon(key)}</span>
-                          <span>{role.title}</span>
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5">{role.description}</div>
-                      </div>
+                      <div><div className="text-sm font-medium text-white">{SPECIALIZED_ROLES[role].title}</div><div className="text-xs text-gray-400">{SPECIALIZED_ROLES[role].description}</div></div>
                     </label>
                   ))}
                 </div>
@@ -218,13 +211,13 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                     <div className="bg-green-600 rounded-lg p-3">
                       <div className="text-lg font-bold text-white text-center">{previewStats.wageRange}</div>
                       <div className="text-xs text-green-100 mt-1 text-center">
-                        Based on skill level and specializations. Paid seasonally.
+                        Based on XP-adjusted primary skills and specialized roles. Paid seasonally.
                       </div>
                     </div>
                   </div>
 
                   {/* Specialization Bonus */}
-                  {options.specializations.length > 0 && (
+                  {options.specializedRoles.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-white mb-2">Wage Bonus</h4>
                       <div className="bg-purple-600 rounded-lg p-3">

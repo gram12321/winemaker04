@@ -4,10 +4,10 @@
 import React, { useState, useEffect } from 'react';
 import { createStaff, addStaff, getAllStaff, getRandomFirstName, getRandomLastName, getRandomNationality, generateRandomSkills, calculateWage } from '@/lib/services';
 import { BASE_STAFF_LIMIT } from '@/lib/constants/researchConstants';
-import { Nationality, StaffSkills } from '@/lib/types/types';
+import { Nationality, StaffSkills, SpecializedRole } from '@/lib/types/types';
 import { formatNumber, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
-import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
+import { NATIONALITIES, getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
@@ -28,6 +28,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
   const [lastName, setLastName] = useState('');
   const [nationality, setNationality] = useState<Nationality>('United States');
   const [skillLevel, setSkillLevel] = useState(0.3);
+  const [specializedRoles, setSpecializedRoles] = useState<SpecializedRole[]>([]);
   const [previewSkills, setPreviewSkills] = useState<StaffSkills | null>(null);
   const [previewWage, setPreviewWage] = useState(0);
   const [staffLimit, setStaffLimit] = useState(BASE_STAFF_LIMIT);
@@ -36,11 +37,11 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
 
   // Generate preview when skill level changes
   useEffect(() => {
-    const skills = generateRandomSkills(skillLevel, []);
-    const wage = calculateWage(skills, []);
+    const skills = generateRandomSkills(skillLevel, specializedRoles);
+    const wage = calculateWage(skills, specializedRoles);
     setPreviewSkills(skills);
     setPreviewWage(wage);
-  }, [skillLevel]);
+  }, [skillLevel, specializedRoles]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -107,8 +108,10 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       firstName.trim(),
       lastName.trim(),
       skillLevel,
-      [],
-      nationality
+      nationality,
+      undefined,
+      false,
+      specializedRoles
     );
 
     const result = await addStaff(staff);
@@ -119,6 +122,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       setLastName('');
       setNationality('United States');
       setSkillLevel(0.3);
+      setSpecializedRoles([]);
     }
   };
 
@@ -264,6 +268,19 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                   />
                   <p className="text-xs text-gray-400">{skillInfo.description}</p>
                 </div>
+              </div>
+            </div>
+
+            {/* Skills Preview */}
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="font-semibold text-white mb-3">Broad Roles</h3>
+              <div className="space-y-2">
+                {(Object.keys(SPECIALIZED_ROLES) as SpecializedRole[]).map(role => (
+                  <label key={role} className="flex items-start cursor-pointer">
+                    <input type="checkbox" checked={specializedRoles.includes(role)} onChange={event => setSpecializedRoles(current => event.target.checked ? [...current, role] : current.filter(value => value !== role))} className="mr-3 mt-1 h-4 w-4" />
+                    <span><span className="text-sm text-white block">{SPECIALIZED_ROLES[role].title}</span><span className="text-xs text-gray-400">{SPECIALIZED_ROLES[role].description}</span></span>
+                  </label>
+                ))}
               </div>
             </div>
 

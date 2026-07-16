@@ -8,7 +8,7 @@ function researchStaff(overrides: Partial<Staff> = {}): Staff {
     name: 'Research Specialist',
     nationality: 'France',
     skillLevel: 0.5,
-    specializations: [],
+    specializedRoles: [],
     skills: {
       field: 0.5,
       winery: 0.5,

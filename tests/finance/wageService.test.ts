@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateWage } from '@/lib/services/finance/wageService';
-import type { StaffSkills } from '@/lib/types/types';
+import { type StaffSkills } from '@/lib/types/types';
 
 const baseSkills: StaffSkills = {
   field: 0.5,
@@ -12,7 +12,7 @@ const baseSkills: StaffSkills = {
 };
 
 describe('calculateWage', () => {
-  it('calculates base wage for average skills without specializations', () => {
+  it('calculates base wage for average skills without career roles', () => {
     const skills: StaffSkills = {
       field: 0.5,
       winery: 0.5,
@@ -60,23 +60,30 @@ describe('calculateWage', () => {
     expect(calculateWage(withMaintenance)).toBeGreaterThan(calculateWage(withoutMaintenance));
   });
 
-  it('applies specialization bonus multiplicatively', () => {
+  it('includes primary-skill XP in the wage calculation', () => {
+    const noXpWage = calculateWage(baseSkills);
+    const fieldXpWage = calculateWage(baseSkills, [], { 'skill:field': 100_000_000 });
+
+    expect(fieldXpWage).toBeGreaterThan(noXpWage);
+  });
+
+  it('applies broad-role wage premiums multiplicatively', () => {
     const skills = baseSkills;
 
     const noSpecialization = calculateWage(skills, []);
     const oneSpecialization = calculateWage(skills, ['field']);
     const twoSpecializations = calculateWage(skills, ['field', 'winery']);
-    const threeSpecializations = calculateWage(skills, ['field', 'winery', 'administrationAndResearch']);
+    const threeSpecializations = calculateWage(skills, ['field', 'winery', 'maintenance']);
 
     // Base wage: 500 + (0.5 * 1000) = 1000
 
     // 1 specialization: 1000 * 1.3 = 1300
     expect(oneSpecialization).toBeGreaterThan(noSpecialization);
 
-    // 2 specializations: 1000 * 1.3^2 = 1000 * 1.69 = 1690
+    // Two distinct primary-skill groups: 1000 * 1.3^2 = 1690.
     expect(twoSpecializations).toBeGreaterThan(oneSpecialization);
 
-    // 3 specializations: 1000 * 1.3^3 = 1000 * 2.197 = 2197
+    // Three distinct primary-skill groups: 1000 * 1.3^3 = 2197.
     expect(threeSpecializations).toBeGreaterThan(twoSpecializations);
 
     // Verify the multiplication is correct
@@ -131,14 +138,28 @@ describe('calculateWage', () => {
     expect(calculateWage(skills, [])).toBe(expected);
   });
 
-  it('handles multiple specializations correctly', () => {
+  it('handles multiple broad roles correctly', () => {
     const skills = baseSkills;
 
-    const wage = calculateWage(skills, ['field', 'winery', 'administrationAndResearch', 'sales', 'financeAndStaff']);
+    const fieldTaskWage = calculateWage(skills, ['field']);
+    const multipleFieldTaskWage = calculateWage(skills, ['field']);
+    const wage = calculateWage(skills, ['field', 'winery', 'maintenance', 'financeAndStaff', 'administrationAndResearch']);
 
     // Base: 1000
-    // 5 specializations: 1000 * 1.3^5 = 1000 * 3.71293 ≈ 3713
+    // Five distinct primary-skill groups: 1000 * 1.3^5 ≈ 3713.
+    expect(multipleFieldTaskWage).toBe(fieldTaskWage);
     expect(wage).toBeCloseTo(1000 * Math.pow(1.3, 5), 0);
+  });
+
+  it('includes broad roles in wage premiums without double-counting their skill group', () => {
+    const baseWage = calculateWage(baseSkills);
+    const fieldRoleWage = calculateWage(baseSkills, ['field']);
+    const duplicatedFieldWage = calculateWage(baseSkills, ['field']);
+    const fieldAndWineryWage = calculateWage(baseSkills, ['field', 'winery']);
+
+    expect(fieldRoleWage).toBeCloseTo(baseWage * 1.3, 0);
+    expect(duplicatedFieldWage).toBe(fieldRoleWage);
+    expect(fieldAndWineryWage).toBeCloseTo(baseWage * Math.pow(1.3, 2), 0);
   });
 });
 

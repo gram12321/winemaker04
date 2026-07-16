@@ -10,6 +10,7 @@ export * from './user/companyService';
 export * from './user/highscoreService';
 export * from './user/userSettingsService';
 export * from './user/staffService';
+export * from './user/staffPresentationService';
 export * from './user/teamService';
 export * from './user/wineLogService';
 

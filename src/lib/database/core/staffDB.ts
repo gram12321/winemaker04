@@ -2,7 +2,8 @@
 // Pure CRUD operations for staff data persistence in Supabase
 
 import { supabase } from './supabase';
-import { Staff } from '@/lib/types/types';
+import { Staff, SpecializedRole } from '@/lib/types/types';
+import { isSpecializedRole } from '@/lib/constants/staffConstants';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { buildGameDate } from '../dbMapperUtils';
 
@@ -11,6 +12,10 @@ import { buildGameDate } from '../dbMapperUtils';
  */
 export async function saveStaffToDb(staff: Staff): Promise<boolean> {
   try {
+    if (!Array.isArray(staff.specializedRoles) || !staff.specializedRoles.every(isSpecializedRole)) {
+      throw new Error('Staff specializedRoles must be an array of valid roles.');
+    }
+
     const companyId = getCurrentCompanyId();
     if (!companyId) {
       console.error('No company ID found to save staff.');
@@ -25,7 +30,7 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         name: staff.name,
         nationality: staff.nationality,
         skill_level: staff.skillLevel,
-        specializations: staff.specializations,
+        specialized_roles: staff.specializedRoles,
         wage: staff.wage,
         is_founder: staff.isFounder ?? false,
         team_ids: staff.teamIds || [],
@@ -50,8 +55,19 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error in saveStaffToDb:', error);
-    return false;
+    throw error;
   }
+}
+
+function readSpecializedRoles(row: Record<string, unknown>): SpecializedRole[] {
+  if (!Object.prototype.hasOwnProperty.call(row, 'specialized_roles')) {
+    throw new Error('Staff schema is missing required specialized_roles column.');
+  }
+  const specializedRoles = row.specialized_roles;
+  if (!Array.isArray(specializedRoles) || !specializedRoles.every(isSpecializedRole)) {
+    throw new Error('Staff specialized_roles must be an array of valid roles.');
+  }
+  return specializedRoles;
 }
 
 /**
@@ -82,7 +98,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
       name: row.name,
       nationality: row.nationality,
       skillLevel: row.skill_level,
-      specializations: row.specializations || [],
+      specializedRoles: readSpecializedRoles(row),
       wage: row.wage,
       isFounder: row.is_founder ?? false,
       teamIds: row.team_ids || [],
@@ -100,7 +116,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
     }));
   } catch (error) {
     console.error('Error in loadStaffFromDb:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -161,7 +177,7 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
       name: data.name,
       nationality: data.nationality,
       skillLevel: data.skill_level,
-      specializations: data.specializations || [],
+      specializedRoles: readSpecializedRoles(data),
       wage: data.wage,
       teamIds: data.team_ids || [],
       skills: {
@@ -182,6 +198,6 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
     };
   } catch (error) {
     console.error('Error in getStaffByIdFromDb:', error);
-    return null;
+    throw error;
   }
 }

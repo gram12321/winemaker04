@@ -6,6 +6,8 @@ export * from './activitymanagers/activityManager';
 export * from './activitymanagers/staffSearchManager';
 export * from './activitymanagers/bookkeepingManager';
 export * from './activitymanagers/landSearchManager';
+export * from './activityWorkContext';
+export * from './activityWorkPreviewService';
 // Work calculators
 export * from './workcalculators/workCalculator';
 export * from './workcalculators/clearingWorkCalculator';

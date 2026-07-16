@@ -39,6 +39,7 @@ flowchart LR
 | Markets | Wine/grape state, economy, weather, loyalty, research | Orders, contracts, grape prices, Buy Market offers, purchases, revenue |
 | Storage vessels | Buy Market cask suppliers, allocation plans, Empty Vessel Maintenance activities | Individually owned cellar assets from rotating supplier offers, with capacity and normalized quality; Empty Vessel uses the dedicated Maintenance staff skill/team, removes the selected allocation's filled volume, and releases only that vessel; future explicit winery/vineyard effect inputs |
 | Progression | Sales, scores, assets, research | Prestige, achievements, highscores, gates |
+| Staff competency | Primary skill from work category, broad specialized role, learned exact task mastery, applied grape-aware XP | Activity work allocation, role wage premium, staff previews |
 
 ## Invariants
 
@@ -50,6 +51,7 @@ flowchart LR
 - Static market tuning belongs in `src/lib/constants/`; UI consumes service-prepared models rather than database rows or service-local tuning.
 - Research modifies access/scaling or explicit upstream inputs; it does not bypass structure/taste computation.
 - Prestige writes use `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source and decay metadata.
+- Staff work has one category-derived primary skill. Learned `task:<WorkCategory>` mastery provides a bounded matching-task bonus; learned `grape:<variety>` mastery is a separate bounded overlay only for planting, harvesting, crushing, and fermentation setup. The applied allocation, after weather/team/storage/final-tick limits, is the sole source of staff XP. Sales has a primary skill but no task mastery until a Sales category exists.
 
 ## Core Subsystems
 

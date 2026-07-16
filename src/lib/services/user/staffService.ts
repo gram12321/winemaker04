@@ -1,17 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Staff, StaffSkills, Nationality } from '@/lib/types/types';
+import { Staff, StaffSkills, Nationality, SpecializedRole } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { saveStaffToDb, loadStaffFromDb, deleteStaffFromDb } from '@/lib/database/core/staffDB';
 import {
   getMaleNamesForNationality,
   getFemaleNamesForNationality,
   getLastNamesForNationality,
-  NATIONALITIES
+  NATIONALITIES,
+  isSpecializedRole
 } from '@/lib/constants/staffConstants';
 import { calculateWage } from '../finance/wageService';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { normalizeXP } from '@/lib/utils/calculator';
 import { getRandomFromArray } from '@/lib/utils';
 import { calculateCompanyValue } from '../finance/financeService';
 import { FOUNDER_BUYOUT_PERCENT_OF_ASSETS } from '@/lib/constants/staffConstants';
@@ -28,20 +28,17 @@ import { addTransaction } from '../finance/financeService';
  * @param rawXP The raw experience points
  * @returns Effective skill level (0-1)
  */
-export function calculateEffectiveSkill(baseSkill: number, rawXP: number): number {
-  const xpNormalized = normalizeXP(rawXP);
-  // Ensure baseSkill is within 0-1 for the calculation (though it should be already)
-  const safeBase = Math.max(0, Math.min(1, baseSkill));
-
-  // XP fills the remaining gap to 1.0
-  return safeBase + (xpNormalized * (1 - safeBase));
-}
+export { calculateEffectiveSkill } from './staffSkillService';
 
 /**
- * Generate random skills based on skill level and specializations
+ * Generate random skills based on skill level and broad specialized roles.
  * Based on v3's skill generation logic
  */
-export function generateRandomSkills(skillModifier: number = 0.5, specializations: string[] = []): StaffSkills {
+export function generateRandomSkills(
+  skillModifier: number = 0.5,
+  specializedRoles: SpecializedRole[] = [],
+): StaffSkills {
+  const specializedSkills = new Set(specializedRoles);
   const getSkillValue = (isSpecialized: boolean): number => {
     // Base skill draws from range influenced by overall desired skill level
     const baseValue = (Math.random() * 0.6) + (skillModifier * 0.4);
@@ -63,12 +60,12 @@ export function generateRandomSkills(skillModifier: number = 0.5, specialization
   };
 
   return {
-    field: getSkillValue(specializations.includes('field')),
-    winery: getSkillValue(specializations.includes('winery')),
-    maintenance: getSkillValue(specializations.includes('maintenance')),
-    financeAndStaff: getSkillValue(specializations.includes('financeAndStaff')),
-    sales: getSkillValue(specializations.includes('sales')),
-    administrationAndResearch: getSkillValue(specializations.includes('administrationAndResearch'))
+    field: getSkillValue(specializedSkills.has('field')),
+    winery: getSkillValue(specializedSkills.has('winery')),
+    maintenance: getSkillValue(specializedSkills.has('maintenance')),
+    financeAndStaff: getSkillValue(specializedSkills.has('financeAndStaff')),
+    sales: getSkillValue(false),
+    administrationAndResearch: getSkillValue(specializedSkills.has('administrationAndResearch'))
   };
 }
 
@@ -107,23 +104,27 @@ export function createStaff(
   firstName: string,
   lastName: string,
   skillLevel: number = 0.3,
-  specializations: string[] = [],
   nationality: Nationality = 'United States',
   skills?: StaffSkills,
-  isFounder: boolean = false
+  isFounder: boolean = false,
+  specializedRoles: SpecializedRole[] = [],
 ): Staff {
   const gameState = getGameState();
-  const calculatedSkills = skills || generateRandomSkills(skillLevel, specializations);
+  if (!specializedRoles.every(isSpecializedRole)) {
+    throw new Error('Staff specialized roles must be valid roles.');
+  }
+
+  const calculatedSkills = skills || generateRandomSkills(skillLevel, specializedRoles);
 
   return {
     id: uuidv4(),
     name: `${firstName} ${lastName}`,
     nationality,
     skillLevel,
-    specializations,
+    specializedRoles,
     skills: calculatedSkills,
     // Founders earn profit share instead of wages; wage is set to 0
-    wage: isFounder ? 0 : calculateWage(calculatedSkills, specializations),
+    wage: isFounder ? 0 : calculateWage(calculatedSkills, specializedRoles, {}),
     isFounder,
     workforce: 50,
     hireDate: {
@@ -240,7 +241,7 @@ export async function buyoutFounder(staffId: string): Promise<string | null> {
     }
 
     // Recalculate a proper salaried wage for the now-converted employee
-    const newWage = calculateWage(staff.skills, staff.specializations);
+    const newWage = calculateWage(staff.skills, staff.specializedRoles, staff.experience);
 
     const updatedStaff: Staff = { ...staff, isFounder: false, wage: newWage };
 
@@ -284,7 +285,13 @@ export async function awardExperience(staffId: string, amount: number, categorie
     newExperience[category] = (newExperience[category] || 0) + amount;
   }
 
-  const updatedStaff = { ...staff, experience: newExperience };
+  const updatedStaff: Staff = {
+    ...staff,
+    experience: newExperience,
+    wage: staff.isFounder
+      ? 0
+      : calculateWage(staff.skills, staff.specializedRoles, newExperience),
+  };
 
   // Update game state
   const gameState = getGameState();

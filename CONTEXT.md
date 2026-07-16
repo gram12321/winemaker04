@@ -69,3 +69,11 @@ Implemented enforcement covers grape planting, fermentation methods, staff cap, 
 - Structure, Taste Quality, and land value are separate concepts; do not use one as an alias for another.
 - Weather and research modify explicit upstream inputs/access rules, not score formulas through hidden side effects.
 - Business logic should not add fallback aliases for renamed fields. Update this file and the relationship map before making descriptors or deferred systems player-visible.
+
+## Staff Competency Model
+
+- Every `WorkCategory` maps to exactly one existing primary staff skill through `WORK_CATEGORY_INFO` (Field, Winery, Maintenance, Finance & Staff, or Administration & Research). Sales remains a valid primary skill but has no task mastery because no Sales work category exists yet.
+- `Staff.specializedRoles` is a persisted broad career-role array (`Vineyard Manager`, `Master Winemaker`, and the other `SPECIALIZED_ROLES`). A matching role adds its speed bonus to every activity using that role's primary skill and contributes its distinct primary-skill wage premium.
+- Exact task mastery is learned only through `Staff.experience["task:<WorkCategory>"]`. It grants a bounded bonus only when that exact category is worked; it is not recruited, persisted in a separate column, or part of wage premiums. The old specialization columns were removed in a breaking schema cutover.
+- `Staff.experience` keeps broad-skill XP under `skill:<primarySkill>` and learned grape mastery under `grape:<GrapeVariety>`. Grape mastery is a separate bounded bonus for matching Pinot/variety work only in planting, harvesting, crushing, and fermentation setup; clearing and non-grape activities never receive grape XP.
+- The activity work calculator is the single source for work shares. XP is awarded only from its applied allocation after weather, team, storage, and final-tick limits, so assignment changes affect future ticks only.

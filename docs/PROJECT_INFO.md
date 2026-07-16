@@ -28,6 +28,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Buy Market and grape trading | Buy Market, Grape Procurement, buyer/supplier, loyalty, sell, cooperative modules | Buy Market, sell, and Storage Vessel surfaces | `database/market/`, `database/winery/`, `database/sales/`, market/cooperative constants |
 | Forward pre-sales | `services/sales/forwardContractService.ts` | `ContractsTab.tsx` | `database/sales/contractDB.ts` |
 | Finance/founders | `services/finance/`, `services/user/staffService.ts` | finance views, `FounderPanel.tsx` | transactions, staff founder field, finance/staff constants |
+| Staff competency/work | `services/activity/workcalculators/workCalculator.ts`, `services/activity/activityWorkContext.ts`, `services/user/staffService.ts`, `services/finance/wageService.ts` | Staff page and staff/activity modals | `database/core/staffDB.ts`, `staff.specialized_roles`, staff/activity constants |
 | Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases and constants |
 | Research | `features/researchUpgrade/`, research constants | `Research.tsx`, admin inspector | research unlock database and view services |
 | Prestige | `services/prestige/` | prestige UI | prestige-event database |
@@ -54,6 +55,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 - Reusable market tuning belongs in `src/lib/constants/`; service-local constants and compatibility re-exports are not canonical.
 - Inventory persistence for market purchases, order fulfillment, and contract fulfillment routes through `inventoryService`.
 - Do not retain dead compatibility exports or add fallback aliases for renamed fields.
+- Staff primary skills remain category-derived. `specializedRoles` persists broad career roles; exact `task:<WorkCategory>` and `grape:<variety>` mastery are learned namespaced staff experience resolved by the activity work calculator. Sales gains task mastery only when a Sales work category exists.
 
 ## Current Status
 

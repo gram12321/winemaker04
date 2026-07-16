@@ -1,7 +1,7 @@
 // Staff System Constants
 // Centralized configuration for staff-related constants
 
-import { Nationality, StaffSkills } from '@/lib/types/types';
+import { Nationality, StaffSkills, SpecializedRole } from '@/lib/types/types';
 import { NAMES } from './namesConstants';
 
 // ===== WAGE CALCULATION CONSTANTS =====
@@ -65,67 +65,58 @@ export function getSkillLevelInfo(skillLevel: number): { name: string; descripti
   return SKILL_LEVELS[rounded] || SKILL_LEVELS[0.5];
 }
 
-// ===== SPECIALIZATION DEFINITIONS =====
+// ===== LEARNED TASK MASTERY DEFINITIONS =====
 
-// Specialization roles (reserved for future implementation)
-export const SPECIALIZED_ROLES: Record<string, {
+// Mastering an exact activity category through task XP grants up to this extra work.
+export const MAX_TASK_MASTERY_BONUS = 0.2;
+
+// Grape mastery contributes a smaller additive bonus than learned task mastery.
+export const MAX_GRAPE_MASTERY_BONUS = 0.1;
+
+// Role, task, and grape bonuses are additive, but never exceed this combined cap.
+export const MAX_COMBINED_SPECIALIZATION_BONUS = 0.5;
+
+// Each distinct primary-skill group represented by innate specialized roles raises wages by this amount.
+export const DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM = 0.3;
+
+// Broad career roles retained from the original staff system. These are a
+// distinct persisted capability from learned exact activity task mastery.
+export const SPECIALIZED_ROLES: Record<SpecializedRole, {
   title: string;
   description: string;
   skillBonus: keyof StaffSkills;
   bonusAmount: number;
 }> = {
-  field: {
-    title: 'Vineyard Manager',
-    description: 'Expert in vineyard operations',
-    skillBonus: 'field',
-    bonusAmount: 0.2
-  },
-  winery: {
-    title: 'Master Winemaker',
-    description: 'Specialist in wine production',
-    skillBonus: 'winery',
-    bonusAmount: 0.2
-  },
-  maintenance: {
-    title: 'Maintenance Technician',
-    description: 'Specialist in cellar and equipment upkeep',
-    skillBonus: 'maintenance',
-    bonusAmount: 0.2
-  },
-  administrationAndResearch: {
-    title: 'Administration & Research Manager',
-    description: 'Expert in Administration and Research',
-    skillBonus: 'administrationAndResearch',
-    bonusAmount: 0.2
-  },
-  sales: {
-    title: 'Sales Director',
-    description: 'Specialist in wine marketing and sales',
-    skillBonus: 'sales',
-    bonusAmount: 0.2
-  },
-  financeAndStaff: {
-    title: 'Finance Director',
-    description: 'Expert in finance and staff management',
-    skillBonus: 'financeAndStaff',
-    bonusAmount: 0.2
-  }
+  field: { title: 'Vineyard Manager', description: 'Expert in vineyard operations', skillBonus: 'field', bonusAmount: 0.2 },
+  winery: { title: 'Master Winemaker', description: 'Specialist in wine production', skillBonus: 'winery', bonusAmount: 0.2 },
+  maintenance: { title: 'Maintenance Technician', description: 'Specialist in cellar and equipment upkeep', skillBonus: 'maintenance', bonusAmount: 0.2 },
+  administrationAndResearch: { title: 'Administration & Research Manager', description: 'Expert in Administration and Research', skillBonus: 'administrationAndResearch', bonusAmount: 0.2 },
+  sales: { title: 'Sales Director', description: 'Specialist in wine marketing and sales', skillBonus: 'sales', bonusAmount: 0.2 },
+  financeAndStaff: { title: 'Finance Director', description: 'Expert in finance and staff management', skillBonus: 'financeAndStaff', bonusAmount: 0.2 },
 };
 
-// ===== HELPER FUNCTIONS =====
-
-/**
- * Get display name for staff role based on specializations
- */
-export function getStaffRoleDisplayName(specializations: string[]): string {
-  if (specializations.length === 0) {
-    return 'General Worker';
-  }
-
-  // Get the first specialization and use its display name
-  const firstSpecialization = specializations[0];
-  return SPECIALIZED_ROLES[firstSpecialization]?.title || firstSpecialization;
+export function isSpecializedRole(value: unknown): value is SpecializedRole {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(SPECIALIZED_ROLES, value);
 }
+
+export function getStaffRoleDisplayName(specializedRoles: SpecializedRole[]): string {
+  return specializedRoles.length === 0 ? 'General Worker' : SPECIALIZED_ROLES[specializedRoles[0]].title;
+}
+
+// Staff-search scaling stays centralized with the rest of the staff tuning.
+export const STAFF_SEARCH_SPECIALIZATION_COST_MULTIPLIER = 2;
+export const STAFF_SEARCH_SPECIALIZATION_WORK_BASE = 1.3;
+export const STAFF_HIRING_SPECIALIZATION_WORK_BASE = 1.5;
+export const STAFF_SEARCH_BASE_COST = 2000;
+export const STAFF_SEARCH_SKILL_MULTIPLIER_OFFSET = 0.5;
+export const STAFF_SEARCH_SKILL_MULTIPLIER_SCALE = 9.5;
+export const STAFF_SEARCH_CANDIDATE_COST_EXPONENT = 1.5;
+export const STAFF_SEARCH_SKILL_COST_EXPONENT = 1.8;
+export const STAFF_SEARCH_WORK_SKILL_THRESHOLD = 0.5;
+export const STAFF_SEARCH_WORK_SKILL_SCALE = 0.4;
+export const STAFF_HIRING_SKILL_RANGE_MIN_SCALE = 0.4;
+export const STAFF_HIRING_SKILL_RANGE_MAX_BASE = 0.6;
+export const STAFF_HIRING_WAGE_REFERENCE = 1000;
 
 // ===== EXPERIENCE & LEVELING CONSTANTS =====
 

@@ -55,6 +55,41 @@ export async function insertPrestigeEvent(
   if (error) throw error;
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === '23505';
+}
+
+async function insertPrestigeEventIfMissing(
+  row: Omit<PrestigeEventRow, 'company_id'> & { source_id: string },
+  companyId: string,
+  payloadMatch?: Record<string, unknown>,
+): Promise<boolean> {
+  let query = supabase
+    .from('prestige_events')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('type', row.type)
+    .eq('source_id', row.source_id);
+
+  if (payloadMatch) {
+    query = query.contains('payload', payloadMatch);
+  }
+
+  const { data, error } = await query.limit(1);
+  if (error) throw error;
+  if (data && data.length > 0) return false;
+
+  const { error: insertError } = await supabase
+    .from('prestige_events')
+    .insert([{ ...row, company_id: companyId }]);
+
+  if (insertError && !isUniqueViolation(insertError)) throw insertError;
+  return !insertError;
+}
+
 /**
  * Insert a source-keyed event once for the active company.
  *
@@ -64,13 +99,7 @@ export async function insertPrestigeEventIfAbsentBySource(
   row: Omit<PrestigeEventRow, 'company_id'> & { source_id: string },
   companyId?: string
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from('prestige_events')
-    .insert([{ ...row, company_id: companyId || getCurrentCompanyId() }]);
-
-  if (!error) return true;
-  if (error.code === '23505') return false;
-  throw error;
+  return insertPrestigeEventIfMissing(row, companyId || getCurrentCompanyId());
 }
 
 /** Insert one vineyard reward per company, vineyard, and achievement. */
@@ -82,13 +111,11 @@ export async function insertVineyardAchievementPrestigeEventIfAbsent(
   },
   companyId?: string
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from('prestige_events')
-    .insert([{ ...row, company_id: companyId || getCurrentCompanyId() }]);
-
-  if (!error) return true;
-  if (error.code === '23505') return false;
-  throw error;
+  return insertPrestigeEventIfMissing(
+    row,
+    companyId || getCurrentCompanyId(),
+    { event: row.payload.event, achievementId: row.payload.achievementId },
+  );
 }
 
 export async function listPrestigeEvents(companyId?: string): Promise<PrestigeEventRow[]> {

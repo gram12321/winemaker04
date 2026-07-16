@@ -922,13 +922,16 @@ export interface StaffSkills {
   administrationAndResearch: number;  // Administration and research
 }
 
+/** Broad career role. A role improves every activity using its primary skill. */
+export type SpecializedRole = keyof StaffSkills;
+
 // Staff member interface
 export interface Staff {
   id: string;
   name: string;
   nationality: Nationality;
   skillLevel: number;  // 0-1 scale, overall skill level
-  specializations: string[]; // Array of specialization keys (e.g., 'field', 'winery')
+  specializedRoles: SpecializedRole[]; // Broad innate career roles
   wage: number;        // Monthly wage in euros (0 for founders — they earn profit share instead)
   isFounder?: boolean; // True while the staff member is a founding partner; cleared on buyout
   teamIds: string[];   // Multiple team assignments (replaces single teamId)
@@ -962,7 +965,7 @@ export interface PendingStaffCandidates {
   searchOptions: {
     numberOfCandidates: number;
     skillLevel: number;
-    specializations: string[];
+    specializedRoles: SpecializedRole[];
   };
   timestamp: number;
 }

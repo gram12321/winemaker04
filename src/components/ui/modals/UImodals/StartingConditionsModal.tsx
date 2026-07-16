@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '../../shadCN/button';
 import { ScrollArea } from '../../shadCN/scroll-area';
 import { StartingCountry, STARTING_CONDITIONS, getStartingCountries } from '@/lib/constants/startingConditions';
+import { SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import {
   generateVineyardPreview,
   applyStartingConditions,
@@ -325,7 +326,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                           {member.firstName} {member.lastName}
                         </span>
                         <span className="text-gray-500 text-right">
-                          {member.specializations.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
+                          {member.specializedRoles.map(role => `${SPECIALIZED_ROLES[role].title} — ${SPECIALIZED_ROLES[role].description}`).join('; ') || 'General Worker'}
                         </span>
                       </div>
                     ))}
