@@ -4,6 +4,7 @@
 import { Staff, StaffSkills, SpecializedRole } from '@/lib/types/types';
 import { getColorClass, getBadgeColorClasses, formatNumber } from '@/lib/utils/utils';
 import { BASE_WEEKLY_WAGE, DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, SKILL_WAGE_MULTIPLIER, FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
+import { WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
 import { getGameState } from '../core/gameState';
 import { addTransaction, calculateFinancialData } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
@@ -94,10 +95,10 @@ export function getWageColorClass(wage: number, period: 'weekly' | 'seasonal' | 
   // Adjust maximum wage based on period to ensure consistent coloring
   switch (period) {
     case 'seasonal':
-      maxWage = weeklyMaxWage * 12; // 12 weeks per season
+      maxWage = weeklyMaxWage * WEEKS_PER_SEASON;
       break;
     case 'annual':
-      maxWage = weeklyMaxWage * 48; // 48 weeks per year
+      maxWage = weeklyMaxWage * WEEKS_PER_YEAR;
       break;
     case 'weekly':
     default:
@@ -136,7 +137,7 @@ export function calculateTotalWeeklyWages(staff: { wage: number }[]): number {
  * @returns Total seasonal wages
  */
 export function calculateTotalSeasonalWages(staff: { wage: number }[]): number {
-  return calculateTotalWeeklyWages(staff) * 12;
+  return calculateTotalWeeklyWages(staff) * WEEKS_PER_SEASON;
 }
 
 /**
@@ -220,7 +221,7 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
     }
 
     // Calculate total seasonal wages (12 weeks per season)
-    const totalWages = staff.reduce((sum, member) => sum + (member.wage * 12), 0);
+    const totalWages = staff.reduce((sum, member) => sum + (member.wage * WEEKS_PER_SEASON), 0);
 
     if (totalWages === 0) {
       return null; // No wages to pay

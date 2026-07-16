@@ -70,6 +70,30 @@ function readSpecializedRoles(row: Record<string, unknown>): SpecializedRole[] {
   return specializedRoles;
 }
 
+function mapStaffRow(row: Record<string, any>): Staff {
+  return {
+    id: row.id,
+    name: row.name,
+    nationality: row.nationality,
+    skillLevel: row.skill_level,
+    specializedRoles: readSpecializedRoles(row),
+    wage: row.wage,
+    isFounder: row.is_founder ?? false,
+    teamIds: row.team_ids || [],
+    skills: {
+      field: row.skill_field,
+      winery: row.skill_winery,
+      maintenance: row.skill_maintenance,
+      financeAndStaff: row.skill_administration,
+      sales: row.skill_sales,
+      administrationAndResearch: row.skill_administration_and_research
+    },
+    experience: row.experience || {},
+    workforce: row.workforce || 50,
+    hireDate: buildGameDate(row.hire_date_week, row.hire_date_season, row.hire_date_year)!
+  };
+}
+
 /**
  * Load all staff members for the current company
  */
@@ -93,27 +117,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
     }
 
     // Convert database records to Staff objects
-    return (data || []).map(row => ({
-      id: row.id,
-      name: row.name,
-      nationality: row.nationality,
-      skillLevel: row.skill_level,
-      specializedRoles: readSpecializedRoles(row),
-      wage: row.wage,
-      isFounder: row.is_founder ?? false,
-      teamIds: row.team_ids || [],
-      skills: {
-        field: row.skill_field,
-        winery: row.skill_winery,
-        maintenance: row.skill_maintenance,
-        financeAndStaff: row.skill_administration,
-        sales: row.skill_sales,
-        administrationAndResearch: row.skill_administration_and_research
-      },
-      experience: row.experience || {},
-      workforce: row.workforce || 50,
-      hireDate: buildGameDate(row.hire_date_week, row.hire_date_season, row.hire_date_year)!
-    }));
+    return (data || []).map(mapStaffRow);
   } catch (error) {
     console.error('Error in loadStaffFromDb:', error);
     throw error;
@@ -172,30 +176,7 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
       return null;
     }
 
-    return {
-      id: data.id,
-      name: data.name,
-      nationality: data.nationality,
-      skillLevel: data.skill_level,
-      specializedRoles: readSpecializedRoles(data),
-      wage: data.wage,
-      teamIds: data.team_ids || [],
-      skills: {
-        field: data.skill_field,
-        winery: data.skill_winery,
-        maintenance: data.skill_maintenance,
-        financeAndStaff: data.skill_administration,
-        sales: data.skill_sales,
-        administrationAndResearch: data.skill_administration_and_research
-      },
-      experience: data.experience || {},
-      workforce: data.workforce || 50,
-      hireDate: {
-        week: data.hire_date_week,
-        season: data.hire_date_season,
-        year: data.hire_date_year
-      }
-    };
+    return mapStaffRow(data);
   } catch (error) {
     console.error('Error in getStaffByIdFromDb:', error);
     throw error;

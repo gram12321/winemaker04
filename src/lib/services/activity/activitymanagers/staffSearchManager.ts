@@ -8,9 +8,10 @@ import { addTransaction } from '../../finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getSkillLevelInfo, isSpecializedRole, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import {
-  StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats,
-  calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
-  calculateHiringWorkForCandidate, calculateSearchPreview
+  StaffSearchOptions,
+  calculateStaffSearchCost,
+  calculateSearchWork,
+  calculateHiringWorkForCandidate
 } from '../workcalculators/staffSearchWorkCalculator';
 import { formatNumber } from '@/lib/utils/utils';
 
@@ -236,13 +237,3 @@ export function clearPendingCandidates(): void {
     pendingStaffCandidates: undefined
   });
 }
-
-// Re-export types and functions from calculator for convenience
-export type { StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats };
-export {
-  calculateStaffSearchCost,
-  calculateSearchWork,
-  calculateHiringWorkRange,
-  calculateHiringWorkForCandidate,
-  calculateSearchPreview
-};

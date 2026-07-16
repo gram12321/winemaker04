@@ -76,6 +76,9 @@ export const MAX_GRAPE_MASTERY_BONUS = 0.1;
 // Role, task, and grape bonuses are additive, but never exceed this combined cap.
 export const MAX_COMBINED_SPECIALIZATION_BONUS = 0.5;
 
+// Team work scaling exponent for diminishing returns.
+export const TEAM_DIMINISHING_RETURNS_EXPONENT = 0.92;
+
 // Each distinct primary-skill group represented by innate specialized roles raises wages by this amount.
 export const DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM = 0.3;
 
@@ -97,10 +100,6 @@ export const SPECIALIZED_ROLES: Record<SpecializedRole, {
 
 export function isSpecializedRole(value: unknown): value is SpecializedRole {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(SPECIALIZED_ROLES, value);
-}
-
-export function getStaffRoleDisplayName(specializedRoles: SpecializedRole[]): string {
-  return specializedRoles.length === 0 ? 'General Worker' : SPECIALIZED_ROLES[specializedRoles[0]].title;
 }
 
 // Staff-search scaling stays centralized with the rest of the staff tuning.

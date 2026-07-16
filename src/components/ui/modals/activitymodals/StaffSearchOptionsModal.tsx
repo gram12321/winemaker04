@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { SpecializedRole } from '@/lib/types/types';
-import { StaffSearchOptions, calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity/activitymanagers/staffSearchManager';
+import { StaffSearchOptions, calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui';
@@ -23,57 +23,17 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
     specializedRoles: []
   });
 
-  // Preview calculations for search results
-  const [previewStats, setPreviewStats] = useState<{
-    skillRange: string;
-    wageRange: string;
-    specializationBonus: string;
-  }>({
-    skillRange: 'Calculating...',
-    wageRange: 'Calculating...',
-    specializationBonus: 'None'
-  });
-
-  const [searchWorkEstimate, setSearchWorkEstimate] = useState<{ totalWork: number; cost: number }>({
-    totalWork: 0,
-    cost: 0
-  });
-
-  // Hiring work estimate (range based on candidate quality spread)
-  const [hiringWorkEstimate, setHiringWorkEstimate] = useState<{ minWork: number; maxWork: number }>({
-    minWork: 0,
-    maxWork: 0
-  });
-
-  // Calculate preview stats whenever options change
-  useEffect(() => {
-    const preview = calculateSearchPreview(options);
-    
-    setPreviewStats({
-      skillRange: preview.skillRange,
-      wageRange: `${formatNumber(preview.minWeeklyWage, { currency: true })} - ${formatNumber(preview.maxWeeklyWage, { currency: true })}`,
-      specializationBonus: preview.specializationBonusText
-    });
-  }, [options]);
-
-  // Calculate work estimates whenever options change
-  useEffect(() => {
-    // Search work calculation
-    const totalWork = calculateSearchWork(options);
-    const cost = calculateStaffSearchCost(options);
-
-    setSearchWorkEstimate({
-      totalWork: totalWork,
-      cost: cost
-    });
-
-    // Hiring work calculation (range)
-    const hiring = calculateHiringWorkRange(options.skillLevel, options.specializedRoles);
-    setHiringWorkEstimate({
-      minWork: hiring.minWork,
-      maxWork: hiring.maxWork
-    });
-  }, [options]);
+  const preview = calculateSearchPreview(options);
+  const previewStats = {
+    skillRange: preview.skillRange,
+    wageRange: `${formatNumber(preview.minWeeklyWage, { currency: true })} - ${formatNumber(preview.maxWeeklyWage, { currency: true })}`,
+    specializationBonus: preview.specializationBonusText,
+  };
+  const searchWorkEstimate = {
+    totalWork: calculateSearchWork(options),
+    cost: calculateStaffSearchCost(options),
+  };
+  const hiringWorkEstimate = calculateHiringWorkRange(options.skillLevel, options.specializedRoles);
 
 
   // Handle submit

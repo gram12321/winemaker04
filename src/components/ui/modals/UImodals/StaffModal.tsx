@@ -4,7 +4,7 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getColorClass } from '@/lib/utils';
 import { getWageColorClass, getAllTeams, getAllActivities, getStaffExperiencePresentation } from '@/lib/services';
 import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext } from '@/lib/services/activity';
-import { WORK_CATEGORY_INFO, getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
+import { WORK_CATEGORY_INFO, getSkillLevelInfo, SPECIALIZED_ROLES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
 import { useGameState, useGameStateWithData } from '@/hooks';
 
@@ -148,17 +148,17 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                   <span className={`font - medium ${getWageColorClass(staff.wage, 'weekly')} `}>{formatNumber(staff.wage, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Seasonal Wage (12 weeks):</span>
-                  <span className={`font - medium ${getWageColorClass(staff.wage * 12, 'seasonal')} `}>{formatNumber(staff.wage * 12, { currency: true })}</span>
+                  <span className="text-gray-400">Seasonal Wage ({WEEKS_PER_SEASON} weeks):</span>
+                  <span className={`font - medium ${getWageColorClass(staff.wage * WEEKS_PER_SEASON, 'seasonal')} `}>{formatNumber(staff.wage * WEEKS_PER_SEASON, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Annual Wage (48 weeks):</span>
-                  <span className={`font - medium ${getWageColorClass(staff.wage * 48, 'annual')} `}>{formatNumber(staff.wage * 48, { currency: true })}</span>
+                  <span className="text-gray-400">Annual Wage ({WEEKS_PER_YEAR} weeks):</span>
+                  <span className={`font - medium ${getWageColorClass(staff.wage * WEEKS_PER_YEAR, 'annual')} `}>{formatNumber(staff.wage * WEEKS_PER_YEAR, { currency: true })}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 mt-3">
                 Wages are calculated from XP-adjusted primary skills and the distinct primary-skill groups represented by broad roles.
-                Payments are processed at the start of each season (every 12 weeks).
+                Payments are processed at the start of each season (every {WEEKS_PER_SEASON} weeks).
                 {staff.specializedRoles.length > 0 && (
                   <span className="block mt-1">Broad role bonuses apply to every activity using the matching primary skill.</span>
                 )}

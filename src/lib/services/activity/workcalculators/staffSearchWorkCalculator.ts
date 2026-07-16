@@ -17,12 +17,6 @@ function getSpecializationSkillGroupCount(specializedRoles: SpecializedRole[] = 
   return getDistinctSpecializationSkillGroupCount(specializedRoles);
 }
 
-export interface SearchWorkEstimate {
-  totalWork: number;
-  timeEstimate: string;
-  cost: number;
-}
-
 export interface HiringWorkEstimate {
   minWork: number;
   maxWork: number;
