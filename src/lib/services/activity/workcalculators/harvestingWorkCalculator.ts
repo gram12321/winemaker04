@@ -1,11 +1,10 @@
-import { Vineyard, GrapeVariety } from '@/lib/types/types';
+import { Vineyard, GrapeVariety, WorkCategory } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
 import { HARVEST_YIELD_RATE, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { WorkCategory } from '@/lib/services/activity';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
-import { getAltitudeRating, calculateVineyardYield } from '@/lib/services';
-import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
+import { calculateVineyardYield } from '@/lib/services';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
+import { getGrapeFragilityModifier, getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 
 /**
  * Calculate work required for harvesting vineyards
@@ -15,9 +14,9 @@ export function calculateHarvestWork(
 ): { totalWork: number; expectedYield: number; factors: WorkFactor[] } {
   const expectedYield = calculateVineyardYield(vineyard);
   const grape = vineyard.grape as GrapeVariety; // ensured by caller
-  const fragilityModifier = getFragilityModifier(grape);
-  const altitudeModifier = getAltitudeModifier(vineyard);
-  const soilModifier = getSoilTypeModifier(vineyard.soil);
+  const fragilityModifier = getGrapeFragilityModifier(grape);
+  const altitudeModifier = getVineyardAltitudeModifier(vineyard);
+  const soilModifier = getVineyardSoilModifier(vineyard.soil);
 
   // Overgrowth penalty for harvest: vegetation + debris only (weighted)
   const overgrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
@@ -53,9 +52,7 @@ export function calculateHarvestWork(
   if (altitudeModifier > 0) {
     factors.push({ label: 'Altitude Impact', value: 'Difficult conditions', modifier: altitudeModifier, modifierLabel: 'harvest difficulty' });
   }
-  if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
-    factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
-  }
+  factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
 
   if (overgrowth.vegetation > 0 || overgrowth.debris > 0) {
     factors.push({
@@ -67,40 +64,4 @@ export function calculateHarvestWork(
   }
 
   return { totalWork, expectedYield, factors };
-}
-
-/**
- * Get fragility modifier for grape variety
- */
-function getFragilityModifier(grape: GrapeVariety): number {
-  const meta = GRAPE_CONST[grape];
-  return meta?.fragile ?? 0; // 0..1, higher means more work
-}
-
-/**
- * Get altitude modifier for vineyard
- */
-function getAltitudeModifier(vineyard: Vineyard): number {
-  // Higher altitude rating should increase work (penalty up to +100%)
-  const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
-  return rating; // 0..1
-}
-
-/**
- * Get soil type modifier for vineyard
- */
-function getSoilTypeModifier(soil: string[]): number {
-  let totalModifier = 0;
-  let validSoils = 0;
-  
-  soil.forEach(soilType => {
-    const modifier = SOIL_DIFFICULTY_MODIFIERS[soilType as keyof typeof SOIL_DIFFICULTY_MODIFIERS];
-    if (modifier !== undefined) {
-      totalModifier += modifier;
-      validSoils++;
-    }
-  });
-  
-  // Average the modifiers if multiple soil types
-  return validSoils > 0 ? totalModifier / validSoils : 0;
 }

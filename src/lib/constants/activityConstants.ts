@@ -67,6 +67,12 @@ export const CLEARING_TASKS = {
   }
 } as const;
 
+export type ClearingTask = typeof CLEARING_TASKS[keyof typeof CLEARING_TASKS];
+
+export function getClearingTask(taskId: string): ClearingTask | undefined {
+  return Object.values(CLEARING_TASKS).find(task => task.id === taskId);
+}
+
 // Define initial work for each category
 export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.PLANTING]: 30,

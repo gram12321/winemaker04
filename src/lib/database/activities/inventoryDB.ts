@@ -330,6 +330,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
     // Load all batches once
     const batches = await loadWineBatches();
     const batchMap = new Map(batches.map(b => [b.id, b]));
+    const companyId = getCurrentCompanyId();
 
     // Prepare upsert data
     const upsertData = updates
@@ -338,53 +339,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
         if (!batch) return null;
 
         const updatedBatch = { ...batch, ...partialUpdates };
-        
-        return {
-          id: updatedBatch.id,
-          company_id: getCurrentCompanyId(),
-          vineyard_id: updatedBatch.vineyardId,
-          vineyard_name: updatedBatch.vineyardName,
-          grape_variety: updatedBatch.grape,
-          quantity: Math.round(updatedBatch.quantity),
-          volume_litres: updatedBatch.volumeLitres ?? null,
-          storage_plan_id: updatedBatch.storagePlanId ?? null,
-          state: updatedBatch.state,
-          fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
-          fermentation_options: updatedBatch.fermentationOptions,
-          land_value_modifier_harvest_snapshot: updatedBatch.landValueModifierHarvestSnapshot,
-          structure_index_harvest_snapshot: updatedBatch.structureIndexHarvestSnapshot,
-          taste_quality_index_harvest_snapshot: updatedBatch.tasteQualityIndexHarvestSnapshot,
-          land_value_modifier: updatedBatch.landValueModifier,
-          taste_quality_index: updatedBatch.tasteQualityIndex,
-          structure_index: updatedBatch.structureIndex,
-          characteristics: updatedBatch.characteristics,
-          breakdown: updatedBatch.breakdown,
-          estimated_price: updatedBatch.estimatedPrice,
-          asking_price: updatedBatch.askingPrice,
-          grape_color: updatedBatch.grapeColor,
-          natural_yield: updatedBatch.naturalYield,
-          fragile: updatedBatch.fragile,
-          prone_to_oxidation: updatedBatch.proneToOxidation,
-          features: updatedBatch.features || [],
-          origin_snapshot: updatedBatch.originSnapshot ?? null,
-          wine_anchors: updatedBatch.wineAnchors,
-          harvest_start_week: Math.round(updatedBatch.harvestStartDate.week),
-          harvest_start_season: updatedBatch.harvestStartDate.season,
-          harvest_start_year: Math.round(updatedBatch.harvestStartDate.year),
-          batch_number: updatedBatch.batchNumber ?? null,
-          batch_group_size: updatedBatch.batchGroupSize ?? null,
-          harvest_end_week: Math.round(updatedBatch.harvestEndDate.week),
-          harvest_end_season: updatedBatch.harvestEndDate.season,
-          harvest_end_year: Math.round(updatedBatch.harvestEndDate.year),
-          bottled_week: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.week) : null,
-          bottled_season: updatedBatch.bottledDate?.season,
-          bottled_year: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.year) : null,
-          taste_quality_index_bottling_snapshot: updatedBatch.tasteQualityIndexBottlingSnapshot ?? null,
-          land_value_modifier_bottling_snapshot: updatedBatch.landValueModifierBottlingSnapshot ?? null,
-          structure_index_bottling_snapshot: updatedBatch.structureIndexBottlingSnapshot ?? null,
-          wine_score_bottling_snapshot: updatedBatch.wineScoreBottlingSnapshot ?? null,
-          aging_progress: Math.round(updatedBatch.agingProgress || 0)
-        };
+        return toWineBatchRow(updatedBatch, companyId);
       })
       .filter(Boolean);
 

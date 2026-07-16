@@ -1,6 +1,6 @@
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { CLEARING_TASKS } from '../../constants/activityConstants';
+import { calculateClearingHealth } from './clearingRules';
 
 /**
  * Update vineyard health by applying health improvements from clearing activities
@@ -21,42 +21,8 @@ export async function updateVineyardHealth(
       throw new Error(`Vineyard with ID ${vineyardId} not found`);
     }
 
-    let newHealth = vineyard.vineyardHealth;
     const intensity = replantingIntensity / 100;
-    
-    // Apply additive health improvements first
-    if (tasks['clear-vegetation']) {
-      const task = Object.values(CLEARING_TASKS).find(t => t.id === 'clear-vegetation');
-      if (task && 'healthImprovement' in task && task.healthImprovement) {
-        newHealth = Math.min(1.0, newHealth + task.healthImprovement);
-      }
-    }
-    if (tasks['remove-debris']) {
-      const task = Object.values(CLEARING_TASKS).find(t => t.id === 'remove-debris');
-      if (task && 'healthImprovement' in task && task.healthImprovement) {
-        newHealth = Math.min(1.0, newHealth + task.healthImprovement);
-      }
-    }
-    
-    // Handle setHealth tasks (uproot and replant) - these set absolute values
-    if (tasks['uproot-vines']) {
-      const uprootTask = Object.values(CLEARING_TASKS).find(t => t.id === 'uproot-vines');
-      if (uprootTask && 'setHealth' in uprootTask && uprootTask.setHealth !== undefined) {
-        // Blend current health with set health based on intensity
-        newHealth = newHealth * (1 - intensity) + uprootTask.setHealth * intensity;
-      }
-    }
-    
-    if (tasks['replant-vines']) {
-      const replantTask = Object.values(CLEARING_TASKS).find(t => t.id === 'replant-vines');
-      if (replantTask && 'setHealth' in replantTask && replantTask.setHealth !== undefined) {
-        // Blend current health with set health based on intensity
-        newHealth = newHealth * (1 - intensity) + replantTask.setHealth * intensity;
-      }
-    }
-    
-    // Ensure health stays within bounds
-    newHealth = Math.max(0.1, Math.min(1.0, newHealth));
+    const newHealth = calculateClearingHealth(vineyard.vineyardHealth, tasks, replantingIntensity);
     
     
     // Handle vine age reduction for replanting and status reset for uprooting
@@ -144,24 +110,5 @@ export async function updateVineyardHealth(
   } catch (error) {
     console.error('Error updating vineyard health:', error);
     throw error;
-  }
-}
-
-/**
- * Get all vineyards that can be cleared (have some health below 100%)
- */
-export async function getClearableVineyards(): Promise<Array<{ id: string; name: string; health: number; canImprove: boolean }>> {
-  try {
-    const vineyards = await loadVineyards();
-    
-    return vineyards.map(vineyard => ({
-      id: vineyard.id,
-      name: vineyard.name,
-      health: vineyard.vineyardHealth,
-      canImprove: vineyard.vineyardHealth < 1.0
-    }));
-  } catch (error) {
-    console.error('Error getting clearable vineyards:', error);
-    return [];
   }
 }

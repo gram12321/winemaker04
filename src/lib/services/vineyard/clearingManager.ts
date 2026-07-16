@@ -1,5 +1,5 @@
 import { Activity, WorkCategory } from '@/lib/types/types';
-import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
+import { getClearingTask } from '@/lib/constants/activityConstants';
 import { createActivity } from '../activity/activitymanagers/activityManager';
 import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../core/notificationService';
@@ -119,7 +119,7 @@ export async function completeClearingActivity(activity: Activity): Promise<void
     const taskNames = Object.entries(tasks)
       .filter(([_, isSelected]) => isSelected)
       .map(([taskId, _]) => {
-        const task = Object.values(CLEARING_TASKS).find(t => t.id === taskId);
+        const task = getClearingTask(taskId);
         return task?.name || taskId;
       });
     

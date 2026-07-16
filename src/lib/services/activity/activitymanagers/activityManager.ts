@@ -1,12 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory } from '@/lib/types/types';
+import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, getTeamForCategory, handlePartialPlanting, handlePartialHarvesting } from '@/lib/services';
 import { completeLandSearch } from './landSearchManager';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
 import { awardExperience } from '@/lib/services/user/staffService';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateAppliedStaffWorkAllocation, WorkCategory } from '@/lib/services/activity';
+import { calculateAppliedStaffWorkAllocation } from '../workcalculators/workCalculator';
+import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
+import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
+import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
 import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext } from '../activityWorkPreviewService';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
@@ -322,6 +325,11 @@ export async function getAllActivities(): Promise<Activity[]> {
   return activities.filter(activity => activity.status === 'active' || activity.status === 'paused');
 }
 
+async function refreshVisibleActivities(triggerUpdate = true): Promise<void> {
+  updateGameState({ activities: await getAllActivities() });
+  if (triggerUpdate) triggerGameUpdateImmediate();
+}
+
 /**
  * Get activity by ID
  */
@@ -337,9 +345,7 @@ export async function updateActivity(activityId: string, updates: Partial<Activi
       return false;
     }
 
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-    triggerGameUpdateImmediate();
+    await refreshVisibleActivities();
     return true;
   } catch (error) {
     console.error('Error updating activity:', error);
@@ -363,9 +369,7 @@ export async function pauseActivity(activityId: string): Promise<boolean> {
     }
     const success = await updateActivityInDb(activityId, { status: 'paused' });
     if (success) {
-      const currentActivities = await getAllActivities();
-      updateGameState({ activities: currentActivities });
-      triggerGameUpdateImmediate();
+      await refreshVisibleActivities();
     }
     return success;
   } catch (error) {
@@ -393,9 +397,7 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
       params: { ...activity.params, storageCapacityBlocked: false },
     });
     if (success) {
-      const currentActivities = await getAllActivities();
-      updateGameState({ activities: currentActivities });
-      triggerGameUpdateImmediate();
+      await refreshVisibleActivities();
     }
     return success;
   } catch (error) {
@@ -407,9 +409,7 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
 export async function activateActivityWithParams(activityId: string, params: Record<string, any>): Promise<boolean> {
   const success = await updateActivityInDb(activityId, { status: 'active', params });
   if (success) {
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-    triggerGameUpdateImmediate();
+    await refreshVisibleActivities();
   }
   return success;
 }
@@ -443,9 +443,7 @@ export async function completeActivityNow(activityId: string): Promise<{ success
 
     await removeActivityFromDb(completedActivity.id);
 
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-    triggerGameUpdateImmediate();
+    await refreshVisibleActivities();
 
     return { success: true, activity: completedActivity };
   } catch (error) {
@@ -479,8 +477,7 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
         await releaseReservedStorageAllocationPlan(activity.params.storagePlanId);
       }
       // Update local game state
-      const currentActivities = await getAllActivities();
-      updateGameState({ activities: currentActivities });
+      await refreshVisibleActivities(false);
 
       // Trigger immediate UI update for critical activity cancellation
       triggerGameUpdateImmediate();
@@ -599,13 +596,7 @@ export async function progressActivities(): Promise<void> {
     }
 
     // Update local game state
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-
-    // Trigger immediate UI update if any activities were completed
-    if (completedActivities.length > 0) {
-      triggerGameUpdateImmediate();
-    }
+    await refreshVisibleActivities(completedActivities.length > 0);
 
   } catch (error) {
     console.error('Error progressing activities:', error);

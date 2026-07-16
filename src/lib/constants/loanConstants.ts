@@ -2,9 +2,6 @@ import { LenderType } from '../types/types';
 // Lender search base cost
 export const LENDER_SEARCH_BASE_COST = 2000;
 
-// Take loan base cost
-export const TAKE_LOAN_BASE_COST = 1000;
-
 // Lender type distribution (must sum to 1.0)
 export const LENDER_TYPE_DISTRIBUTION = {
   'Bank': 0.25,
