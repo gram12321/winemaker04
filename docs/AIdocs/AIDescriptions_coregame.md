@@ -1,6 +1,6 @@
 # Core Game Mechanics
 
-Last code-verified: 2026-07-13
+Last code-verified: 2026-07-16
 
 Current implementation orientation for agents and maintainers. `CONTEXT.md` is authoritative for vocabulary; `docs/PROJECT_INFO.md` for ownership; code and tests for final behavior.
 
@@ -44,9 +44,9 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 ### Finance, Staff, and Progression
 
 - Finance statements, cash flow, asset value, loans/lenders, staff/team work, activities, founder economy, prestige, achievements, and highscores are active. `achievementsFeature` owns the game-specific catalog, evaluation, company-keyed tick cadence, read models, and player page; its database adapter remains under `database/core/`. Each evaluation captures one company and game-state snapshot, and unlock plus company/vineyard prestige uniqueness is enforced in persistence so overlapping checks are retry-safe; malformed retired achievement rows are discarded rather than translated. Vineyard grape-tenure achievements remain deferred until grape-change history is persisted.
-  Maintenance is a distinct persisted staff skill and task class; the default Maintenance Team handles it separately from Winery's crushing and fermentation work. Staff can hold broad `specializedRoles` and learned task/grape mastery; activity work stacks applicable bounded bonuses, while wages count broad-role primary-skill groups once.
-- Staff use one primary skill per activity category. Learned `task:<WorkCategory>` experience only improves its exact task, while learned `grape:<variety>` is a separate bounded bonus for grape-aware planting, harvesting, crushing, and fermentation setup. Sales remains a primary skill without task mastery until a Sales activity exists.
-- `workCalculator.ts` supplies the one staff-work allocation used by previews and ticks. The tick awards broad-skill and eligible grape XP only from persisted applied work, so final-tick, weather, storage, and assignment changes cannot over-credit staff.
+  Maintenance is a distinct persisted staff skill and task class; the default Maintenance Team handles it separately from Winery's crushing and fermentation work. Staff can hold broad `specializedRoles` and learned task/grape mastery; role, task, and grape bonuses are additive and capped, while wages count broad-role primary-skill groups once.
+- Staff use one primary skill per activity category. `specializedRoles` is an innate persisted career-role array with six title-bearing roles; a matching role adds its 20% bonus to every activity using that primary skill. Learned `task:<WorkCategory>` improves only its exact implemented task, while learned `grape:<variety>` is a separate bounded bonus for grape-aware planting, harvesting, crushing, and fermentation. Sales remains a primary skill without task mastery until a Sales activity exists.
+- `workCalculator.ts` supplies the one staff-work allocation used by previews and ticks. The tick awards broad-skill, task, and eligible grape XP only from persisted applied work, so final-tick, weather, storage, and assignment changes cannot over-credit staff. The old `specializations` and interim `task_specializations` columns have been removed; only `specialized_roles` and the existing experience map persist this model.
 - Founders have zero wages, receive yearly positive-profit returns, and can be bought out into salaried staff.
 - Prestige is derived from the `prestige_events` ledger with permanent and decaying sources; it feeds pricing, land value, gates, achievements, and UI.
 - Research projects use work profiles and prestige/prerequisite/company-value/buyer-loyalty/achievement gates. Active unlocks cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Current permanent effect: vineyard health-decay multiplier.

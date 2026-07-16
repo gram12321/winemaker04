@@ -1,6 +1,6 @@
 # Early-Game Balance: Founder Economy & Starting Conditions
 **Created:** 2026-05-20  
-**Status:** Deferred after partial implementation. Code-verified on 2026-07-14: founder wage replacement, yearly profit-share distributions, founder buyout, staff `isFounder` persistence, and Founder Panel UI are shipped. Story-triggered staff reveals, startup advisor, separate founder-equity persistence, broader country archetypes, and founder-specific tests remain deferred while the larger public-company/share runtime is intentionally inactive.
+**Status:** Deferred after partial implementation. Code-verified on 2026-07-16: founder wage replacement, yearly profit-share distributions, founder buyout, staff `isFounder` persistence, and Founder Panel UI are shipped. Story-triggered staff reveals, startup advisor, separate founder-equity persistence, broader country archetypes, and founder-specific tests remain deferred while the larger public-company/share runtime is intentionally inactive.
 **Branch context:** taste  
 
 ---
@@ -16,6 +16,8 @@ The user flagged that starting staff wages create severe early-game balance prob
 ## 2. Technical Background
 
 ### Wage Formula
+
+**Current formula note (2026-07-16):** The historical formula and estimates below predate the staff competency refactor. Current salaried wages use XP-adjusted broad primary skills and one 30% multiplier per represented broad-role skill group. Learned task and grape mastery improve work only; they do not raise wages. Founders have zero weekly wage while they remain founders. Recalculate any balance values from `wageService.ts` and the current starting conditions before using this document for tuning.
 ```
 wage/week = (BASE_WEEKLY_WAGE[500] + avgSkillLevel × SKILL_WAGE_MULTIPLIER[1000]) × 1.3^numSpecializations
 ```

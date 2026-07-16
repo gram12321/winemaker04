@@ -53,6 +53,7 @@ npm run build
 
 ## Current Systems
 
+- Staff competency has three complementary layers: primary skills are the category-derived baseline; persisted broad career roles apply across their matching primary skill; and applied activity work earns exact task mastery. Grape-aware work also earns grape mastery for its variety. The shared work calculator applies the bounded bonuses and is the source for previews and weekly activity progress.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression; permanent effects currently include vineyard health-decay reduction.
 - Weather is persisted weekly state/forecast, a bounded site-aware vineyard projection, and grape-market context. Weather Center is operational; Winepedia is the technical reference.
 - Sell-side grape trading remains separate from Buy Market. Buy Market supports Grape Procurement plus individually owned fixed-capacity casks; a selected occupied cask can be emptied through a cancellable Empty Vessel maintenance activity without discarding the batch volume held by other casks. Cancelling production preserves any wine already placed in an active vessel plan; only unused reservations are released.
