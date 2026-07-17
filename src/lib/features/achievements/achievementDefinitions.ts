@@ -14,7 +14,7 @@ import { createTieredAchievements } from './achievementDefinitionUtils';
 // ===== FINANCIAL ACHIEVEMENTS =====
 
 // Money Accumulation Series (billions max)
-export const MONEY_ACCUMULATION_ACHIEVEMENTS = createTieredAchievements(
+const MONEY_ACCUMULATION_ACHIEVEMENTS = createTieredAchievements(
   'money_accumulation',
   'Wealth Builder',
   'Accumulate €{threshold} in cash reserves',
@@ -26,7 +26,7 @@ export const MONEY_ACCUMULATION_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Revenue Generation Series (billions max)
-export const REVENUE_GENERATION_ACHIEVEMENTS = createTieredAchievements(
+const REVENUE_GENERATION_ACHIEVEMENTS = createTieredAchievements(
   'revenue_generation',
   'Revenue Master',
   'Generate €{threshold} in total sales revenue',
@@ -38,7 +38,7 @@ export const REVENUE_GENERATION_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Total Assets (10x higher than money/revenue)
-export const TOTAL_ASSETS_ACHIEVEMENTS = createTieredAchievements(
+const TOTAL_ASSETS_ACHIEVEMENTS = createTieredAchievements(
   'total_assets',
   'Asset Accumulator',
   'Accumulate {threshold} in total assets',
@@ -50,7 +50,7 @@ export const TOTAL_ASSETS_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Cellar Wine Value (same as money/revenue)
-export const CELLAR_VALUE_ACHIEVEMENTS = createTieredAchievements(
+const CELLAR_VALUE_ACHIEVEMENTS = createTieredAchievements(
   'cellar_value',
   'Cellar Master',
   'Have {threshold} worth of wine in cellar',
@@ -62,7 +62,7 @@ export const CELLAR_VALUE_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Vineyard Value (smaller than company-wide achievements)
-export const VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
+const VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_value',
   'Land Baron',
   'Own a single vineyard worth {threshold}',
@@ -74,7 +74,7 @@ export const VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Combined Vineyard Value (sum across all holdings)
-export const TOTAL_VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
+const TOTAL_VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
   'total_vineyard_value',
   'Estate Mogul',
   'Own vineyards totaling {threshold} in value',
@@ -87,7 +87,7 @@ export const TOTAL_VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
 
 // ===== TIME-BASED ACHIEVEMENTS =====
 
-export const TIME_ACHIEVEMENTS = createTieredAchievements(
+const TIME_ACHIEVEMENTS = createTieredAchievements(
   'time_survival',
   'Vintage Veteran',
   'Operate your winery for {threshold} years',
@@ -101,7 +101,7 @@ export const TIME_ACHIEVEMENTS = createTieredAchievements(
 // ===== PRODUCTION ACHIEVEMENTS =====
 
 // Wine Variety Production Series (much harder since vineyard counts as variety)
-export const WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
+const WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
   'wine_variety',
   'Wine Creator',
   'Produce {threshold} different wine varieties',
@@ -113,7 +113,7 @@ export const WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Bottle Production Series (×10 exponential with higher max)
-export const BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
+const BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
   'bottle_production',
   'Bottle Master',
   'Produce {threshold} bottles of wine',
@@ -127,7 +127,7 @@ export const BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
 // ===== SALES ACHIEVEMENTS =====
 
 // Sales Count Series (×10 exponential for realistic sales frequency)
-export const SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
+const SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
   'sales_count',
   'Sales Professional',
   'Complete {threshold} wine sales',
@@ -138,7 +138,7 @@ export const SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-export const BULK_GRAPE_SALES_ACHIEVEMENTS = createTieredAchievements(
+const BULK_GRAPE_SALES_ACHIEVEMENTS = createTieredAchievements(
   'bulk_grape_sales',
   'Bulk Channel Operator',
   'Complete {threshold} bulk grape sales',
@@ -149,7 +149,7 @@ export const BULK_GRAPE_SALES_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-export const BULK_GRAPE_KG_ACHIEVEMENTS = createTieredAchievements(
+const BULK_GRAPE_KG_ACHIEVEMENTS = createTieredAchievements(
   'bulk_grape_kg_sold',
   'Harvest Outlet Specialist',
   'Sell {threshold} kg grapes through bulk channel',
@@ -160,7 +160,7 @@ export const BULK_GRAPE_KG_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-export const BULK_GRAPE_MULTIPLIER_ACHIEVEMENTS = createTieredAchievements(
+const BULK_GRAPE_MULTIPLIER_ACHIEVEMENTS = createTieredAchievements(
   'bulk_grape_multiplier',
   'High Multiplier Bulk Deal',
   'Complete a bulk grape sale at {threshold}x multiplier or higher',
@@ -173,7 +173,7 @@ export const BULK_GRAPE_MULTIPLIER_ACHIEVEMENTS = createTieredAchievements(
 
 // ===== PRESTIGE ACHIEVEMENTS =====
 
-export const PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
+const PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
   'prestige_master',
   'Prestige Master',
   'Accumulate {threshold} prestige points',
@@ -186,7 +186,7 @@ export const PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
 
 // ===== VINEYARD ACHIEVEMENTS =====
 
-export const VINEYARD_ACHIEVEMENTS = createTieredAchievements(
+const VINEYARD_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_empire',
   'Vineyard Empire',
   'Own {threshold} vineyards',
@@ -200,7 +200,7 @@ export const VINEYARD_ACHIEVEMENTS = createTieredAchievements(
 // ===== CONTRACT ACHIEVEMENTS =====
 
 // Single Contract Bottle Sales (×5 exponential for realistic contract sizes)
-export const SINGLE_CONTRACT_BOTTLES_ACHIEVEMENTS = createTieredAchievements(
+const SINGLE_CONTRACT_BOTTLES_ACHIEVEMENTS = createTieredAchievements(
   'single_contract_bottles',
   'Big Deal',
   'Sell {threshold} bottles in a single contract',
@@ -212,7 +212,7 @@ export const SINGLE_CONTRACT_BOTTLES_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Single Contract Value (×10 exponential for financial values)
-export const SINGLE_CONTRACT_VALUE_ACHIEVEMENTS = createTieredAchievements(
+const SINGLE_CONTRACT_VALUE_ACHIEVEMENTS = createTieredAchievements(
   'single_contract_value',
   'Mega Sale',
   'Sell {threshold} worth of wine in a single contract',
@@ -227,7 +227,7 @@ export const SINGLE_CONTRACT_VALUE_ACHIEVEMENTS = createTieredAchievements(
 
 // Meta Achievement: Achievement Completion Percentage
 // Excludes itself from completion calculation to avoid chicken-and-egg problem
-export const ACHIEVEMENT_COMPLETION_ACHIEVEMENTS = createTieredAchievements(
+const ACHIEVEMENT_COMPLETION_ACHIEVEMENTS = createTieredAchievements(
   'achievement_completion',
   'Achievement Hunter',
   'Complete {threshold}% of all achievements',
@@ -241,7 +241,7 @@ export const ACHIEVEMENT_COMPLETION_ACHIEVEMENTS = createTieredAchievements(
 // ===== WINE PRODUCTION ACHIEVEMENTS =====
 
 // Different Grape Varieties (realistic for 5-6 grape varieties)
-export const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
+const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
   'different_grapes',
   'Grape Explorer',
   'Produce wines from {threshold} different grape varieties',
@@ -253,7 +253,7 @@ export const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Wine Taste Quality Threshold (realistic for 99.999 max)
-export const WINE_TASTE_QUALITY_INDEX_ACHIEVEMENTS = createTieredAchievements(
+const WINE_TASTE_QUALITY_INDEX_ACHIEVEMENTS = createTieredAchievements(
   'wine_taste_quality_index',
   'Taste Quality Master',
   'Produce a wine with taste quality rating of {threshold}',
@@ -265,7 +265,7 @@ export const WINE_TASTE_QUALITY_INDEX_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Wine structure index threshold (realistic for 99.999 max)
-export const WINE_STRUCTURE_INDEX_ACHIEVEMENTS = createTieredAchievements(
+const WINE_STRUCTURE_INDEX_ACHIEVEMENTS = createTieredAchievements(
   'wine_structure_index',
   'Structure Virtuoso',
   'Produce a wine with structure index rating of {threshold}',
@@ -277,7 +277,7 @@ export const WINE_STRUCTURE_INDEX_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Wine Score Threshold (realistic for 99.999 max)
-export const WINE_SCORE_ACHIEVEMENTS = createTieredAchievements(
+const WINE_SCORE_ACHIEVEMENTS = createTieredAchievements(
   'wine_score',
   'Score Champion',
   'Produce a wine with wine score of {threshold}',
@@ -289,7 +289,7 @@ export const WINE_SCORE_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Wine Price Threshold
-export const WINE_PRICE_ACHIEVEMENTS = createTieredAchievements(
+const WINE_PRICE_ACHIEVEMENTS = createTieredAchievements(
   'wine_price',
   'Premium Producer',
   'Produce a wine with estimated price of {threshold} per bottle',
@@ -303,7 +303,7 @@ export const WINE_PRICE_ACHIEVEMENTS = createTieredAchievements(
 // ===== SALES ACHIEVEMENTS =====
 
 // Sales Price Percentage (Over Estimated)
-export const SALES_PRICE_OVER_ACHIEVEMENTS = createTieredAchievements(
+const SALES_PRICE_OVER_ACHIEVEMENTS = createTieredAchievements(
   'sales_price_over',
   'Price Maximizer',
   'Sell wine for {threshold}% over the asking price',
@@ -315,7 +315,7 @@ export const SALES_PRICE_OVER_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Sales Price Percentage (Under Estimated) - for volume sales
-export const SALES_PRICE_UNDER_ACHIEVEMENTS = createTieredAchievements(
+const SALES_PRICE_UNDER_ACHIEVEMENTS = createTieredAchievements(
   'sales_price_under',
   'Volume Seller',
   'Sell wine for {threshold}% under the asking price',
@@ -329,7 +329,7 @@ export const SALES_PRICE_UNDER_ACHIEVEMENTS = createTieredAchievements(
 // ===== TIME-BASED ACHIEVEMENTS =====
 
 // Prestige by Year (realistic early game goals)
-export const PRESTIGE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+const PRESTIGE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'prestige_by_year',
   'Early Prestige',
   `Achieve {threshold} prestige before year ${ACHIEVEMENT_DEADLINE_YEARS.prestige}`,
@@ -341,7 +341,7 @@ export const PRESTIGE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Revenue by Year (smaller than general revenue achievements)
-export const REVENUE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+const REVENUE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'revenue_by_year',
   'Yearly Revenue',
   'Generate {threshold} revenue in a single year',
@@ -353,7 +353,7 @@ export const REVENUE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Assets by Year (smaller than general assets achievements)
-export const ASSETS_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+const ASSETS_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'assets_by_year',
   'Rapid Growth',
   `Accumulate {threshold} assets before year ${ACHIEVEMENT_DEADLINE_YEARS.assets}`,
@@ -365,7 +365,7 @@ export const ASSETS_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Hectares by Year (smaller than general hectares achievements)
-export const HECTARES_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+const HECTARES_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
   'hectares_by_year',
   'Land Rush',
   `Own {threshold} hectares before year ${ACHIEVEMENT_DEADLINE_YEARS.hectares}`,
@@ -379,7 +379,7 @@ export const HECTARES_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
 // ===== LAND ACHIEVEMENTS =====
 
 // Total Hectares (×5 exponential for realistic land ownership)
-export const TOTAL_HECTARES_ACHIEVEMENTS = createTieredAchievements(
+const TOTAL_HECTARES_ACHIEVEMENTS = createTieredAchievements(
   'total_hectares',
   'Land Baron',
   'Own {threshold} hectares of vineyard land',
@@ -391,7 +391,7 @@ export const TOTAL_HECTARES_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Average Hectare Value (×10 exponential for financial values)
-export const AVERAGE_HECTARE_VALUE_ACHIEVEMENTS = createTieredAchievements(
+const AVERAGE_HECTARE_VALUE_ACHIEVEMENTS = createTieredAchievements(
   'average_hectare_value',
   'Prime Real Estate',
   'Own vineyards with average value above {threshold} per hectare',
@@ -404,21 +404,8 @@ export const AVERAGE_HECTARE_VALUE_ACHIEVEMENTS = createTieredAchievements(
 
 // ===== VINEYARD-SPECIFIC ACHIEVEMENTS =====
 
-// Vineyard Time Achievements (realistic for 200 year max)
-export const VINEYARD_TIME_ACHIEVEMENTS = createTieredAchievements(
-  'vineyard_time',
-  'Vineyard Veteran',
-  'Maintain the same grape variety in a vineyard for {threshold} years',
-  '📅',
-  'vineyard',
-  'vineyard_time_same_grape',
-  [5, 25, 50, 100, 200], // Realistic progression: 5, 25, 50, 100, 200 years (max 200)
-  [],
-  { includeVineyard: true, vineyardDecayMultiplier: 0.3 } // Vineyard events decay much faster
-);
-
 // Vineyard Wine Variety Achievements (realistic for 5-6 grape varieties)
-export const VINEYARD_WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
+const VINEYARD_WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_wine_variety',
   'Vineyard Explorer',
   'Produce {threshold} different grape varieties from the same vineyard',
@@ -431,7 +418,7 @@ export const VINEYARD_WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Vineyard Bottle Production Achievements (lower than company production)
-export const VINEYARD_BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
+const VINEYARD_BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_bottle_production',
   'Vineyard Producer',
   'Produce {threshold} bottles from a single vineyard',
@@ -444,7 +431,7 @@ export const VINEYARD_BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Vineyard Sales Count Achievements (lower than company sales)
-export const VINEYARD_SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
+const VINEYARD_SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_sales_count',
   'Vineyard Sales Master',
   'Make {threshold} sales from wines produced in a single vineyard',
@@ -457,7 +444,7 @@ export const VINEYARD_SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
 );
 
 // Vineyard Prestige Achievements (realistic for 5-10k practical max)
-export const VINEYARD_PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
+const VINEYARD_PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_prestige',
   'Vineyard Legend',
   'Achieve {threshold} prestige from a single vineyard',

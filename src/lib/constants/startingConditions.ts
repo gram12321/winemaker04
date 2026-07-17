@@ -1,4 +1,4 @@
-import type { Aspect, Nationality, LenderType, GrapeVariety } from '@/lib/types/types';
+import { type Aspect, type Nationality, type LenderType, type GrapeVariety, type SpecializedRole } from '@/lib/types/types';
 
 export type StartingCountry = Nationality;
 
@@ -7,7 +7,7 @@ export interface StartingStaffMember {
   lastName: string;
   nationality: Nationality;
   skillLevel: number;
-  specializations: string[];
+  specializedRoles: SpecializedRole[];
   isFounder?: boolean; // If true, staff starts as a founding partner (0 wages, profit share)
 }
 
@@ -75,7 +75,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Latosha',
         nationality: 'France',
         skillLevel: 0.5,
-        specializations: ['winery'],
+        specializedRoles: ['winery'],
         isFounder: true
       },
       {
@@ -83,7 +83,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Latosha',
         nationality: 'France',
         skillLevel: 0.5,
-        specializations: ['administrationAndResearch'],
+        specializedRoles: ['administrationAndResearch'],
         isFounder: true
       }
     ],
@@ -132,7 +132,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'De Luca',
         nationality: 'Italy',
         skillLevel: 0.5,
-        specializations: ['winery'],
+        specializedRoles: ['winery'],
         isFounder: true
       },
       {
@@ -140,7 +140,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'De Luca',
         nationality: 'Italy',
         skillLevel: 0.5,
-        specializations: ['field'],
+        specializedRoles: ['field'],
         isFounder: true
       }
     ],
@@ -189,7 +189,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.5,
-        specializations: ['winery'],
+        specializedRoles: ['winery'],
         isFounder: true
       },
       {
@@ -197,7 +197,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.5,
-        specializations: ['financeAndStaff'],
+        specializedRoles: ['financeAndStaff'],
         isFounder: true
       },
       {
@@ -205,7 +205,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.7,
-        specializations: ['sales'],
+        specializedRoles: ['sales'],
         isFounder: true
       },
       {
@@ -213,7 +213,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.2,
-        specializations: ['administrationAndResearch'],
+        specializedRoles: ['administrationAndResearch'],
         isFounder: true
       }
     ],
@@ -253,7 +253,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Torres',
         nationality: 'Spain',
         skillLevel: 0.5,
-        specializations: ['winery'],
+        specializedRoles: ['winery'],
         isFounder: true
       }
     ],
@@ -295,7 +295,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Mondavi',
         nationality: 'United States',
         skillLevel: 0.5,
-        specializations: ['winery'],
+        specializedRoles: ['winery'],
         isFounder: true
       },
       {
@@ -303,7 +303,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Mondavi',
         nationality: 'United States',
         skillLevel: 0.5,
-        specializations: ['administrationAndResearch'],
+        specializedRoles: ['administrationAndResearch'],
         isFounder: true
       }
     ],

@@ -54,8 +54,18 @@ const mocks = vi.hoisted(() => {
     completeFermentationSetup: vi.fn(async () => undefined),
     completeEmptyStorageVesselActivity: vi.fn(async () => ({ success: true, batch: { grape: 'Pinot Noir' }, vesselName: '2024 - 500 L oak cask' })),
     completeBookkeeping: vi.fn(async () => undefined),
-    calculateStaffWorkContribution: vi.fn(() => 0),
-    calculateIndividualStaffContribution: vi.fn(() => 0),
+    calculateStaffWorkAllocation: vi.fn(() => ({ totalWork: 0, contributions: new Map() })),
+    calculateAppliedStaffWorkAllocation: vi.fn((allocation, requestedWork) => {
+      const totalWork = Math.max(0, Math.min(requestedWork, allocation.totalWork));
+      const contributions = new Map();
+      let allocated = 0;
+      [...allocation.contributions.entries()].forEach(([staffId, contribution]: [string, number], index, entries) => {
+        const share = index === entries.length - 1 ? totalWork - allocated : totalWork * (contribution / allocation.totalWork);
+        contributions.set(staffId, share);
+        allocated += share;
+      });
+      return { totalWork, contributions };
+    }),
     completeStaffSearch: vi.fn(async () => undefined),
     completeHiringProcess: vi.fn(async () => undefined),
     completeLandSearch: vi.fn(async () => undefined),
@@ -103,8 +113,13 @@ vi.mock('@/lib/services/activity', () => ({
   completeCrushing: mocks.completeCrushing,
   completeFermentationSetup: mocks.completeFermentationSetup,
   completeBookkeeping: mocks.completeBookkeeping,
-  calculateStaffWorkContribution: mocks.calculateStaffWorkContribution,
-  calculateIndividualStaffContribution: mocks.calculateIndividualStaffContribution
+  calculateStaffWorkAllocation: mocks.calculateStaffWorkAllocation,
+  calculateAppliedStaffWorkAllocation: mocks.calculateAppliedStaffWorkAllocation
+}));
+
+vi.mock('@/lib/services/activity/workcalculators/workCalculator', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/services/activity/workcalculators/workCalculator')>(),
+  calculateStaffWorkAllocation: mocks.calculateStaffWorkAllocation,
 }));
 
 vi.mock('@/lib/services/activity/activitymanagers/staffSearchManager', () => ({
@@ -398,8 +413,7 @@ describe('activity lifecycle', () => {
       activeActivity({ id: 'planting-1', category: WorkCategory.PLANTING }),
       activeActivity({ id: 'clearing-1', category: WorkCategory.CLEARING })
     ]);
-    mocks.calculateStaffWorkContribution.mockReturnValue(10);
-    mocks.calculateIndividualStaffContribution.mockReturnValue(10);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
     const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
 
     await progressActivities();
@@ -452,8 +466,7 @@ describe('activity lifecycle', () => {
     mocks.setActivities([
       activeActivity({ id: 'harvesting-1', category: WorkCategory.HARVESTING, totalWork: 6 })
     ]);
-    mocks.calculateStaffWorkContribution.mockReturnValue(10);
-    mocks.calculateIndividualStaffContribution.mockReturnValue(10);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
     const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
 
     await progressActivities();
@@ -461,6 +474,163 @@ describe('activity lifecycle', () => {
     expect(mocks.updateActivityInDb).toHaveBeenCalledWith('harvesting-1', { completedWork: 6 });
     expect(mocks.removeActivityFromDb).toHaveBeenCalledWith('harvesting-1');
     expect(mocks.getActivities()).toEqual([]);
+  });
+
+  it('awards only final-tick applied work and never grape XP to a non-grape activity', async () => {
+    mocks.setState({ ...mocks.getGameState(), staff: [{ id: 'staff-1' }] });
+    mocks.setActivities([
+      activeActivity({
+        id: 'final-clearing-1',
+        category: WorkCategory.CLEARING,
+        totalWork: 6,
+        params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir' },
+      }),
+    ]);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
+    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+
+    await progressActivities();
+
+    expect(mocks.awardExperience).toHaveBeenCalledWith('staff-1', 6, ['skill:field', 'task:CLEARING']);
+    expect(mocks.updateActivityInDb).toHaveBeenCalledWith('final-clearing-1', { completedWork: 6 });
+  });
+
+  it('uses harvest-permitted work for XP and persists harvest progress and params once', async () => {
+    mocks.setState({ ...mocks.getGameState(), staff: [{ id: 'staff-1' }] });
+    mocks.setActivities([
+      activeActivity({
+        id: 'storage-clipped-harvest',
+        category: WorkCategory.HARVESTING,
+        totalWork: 20,
+        targetId: 'vineyard-1',
+        params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', harvestedSoFar: 10 },
+      }),
+    ]);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
+    mocks.handlePartialHarvesting.mockResolvedValueOnce({
+      storageCapacityBlocked: true,
+      completedWork: 4,
+      status: 'paused',
+      params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', harvestedSoFar: 14, storageCapacityBlocked: true },
+    });
+    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+
+    await progressActivities();
+
+    expect(mocks.awardExperience).toHaveBeenCalledWith('staff-1', 4, ['skill:field', 'task:HARVESTING', 'grape:Pinot Noir']);
+    expect(mocks.updateActivityInDb).toHaveBeenCalledWith('storage-clipped-harvest', {
+      completedWork: 4,
+      status: 'paused',
+      params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', harvestedSoFar: 14, storageCapacityBlocked: true },
+    });
+    expect(mocks.updateActivityInDb).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not award XP or complete an activity when progress persistence fails', async () => {
+    mocks.setState({ ...mocks.getGameState(), staff: [{ id: 'staff-1' }] });
+    mocks.setActivities([
+      activeActivity({ id: 'persistence-failure-1', category: WorkCategory.CLEARING, totalWork: 6 }),
+    ]);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
+    mocks.updateActivityInDb.mockResolvedValueOnce(false);
+    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+
+    await progressActivities();
+
+    expect(mocks.awardExperience).not.toHaveBeenCalled();
+    expect(mocks.removeActivityFromDb).not.toHaveBeenCalled();
+    expect(mocks.getActivities()).toEqual([expect.objectContaining({ id: 'persistence-failure-1', completedWork: 0 })]);
+  });
+
+  it('awards XP only for each worker\'s applied ticks when assignments change', async () => {
+    mocks.setState({
+      ...mocks.getGameState(),
+      staff: [{ id: 'staff-1' }, { id: 'staff-2' }],
+    });
+    mocks.setActivities([
+      activeActivity({
+        id: 'assignment-change-1',
+        category: WorkCategory.CLEARING,
+        totalWork: 100,
+        params: { assignedStaffIds: ['staff-1'] },
+      }),
+    ]);
+    mocks.calculateStaffWorkAllocation.mockImplementation((...args: unknown[]) => {
+      const staff = args[0] as Array<{ id: string }>;
+      return {
+      totalWork: staff.length * 10,
+      contributions: new Map(staff.map(member => [member.id, 10])),
+      };
+    });
+    const { progressActivities, updateActivity } = await import('@/lib/services/activity/activitymanagers/activityManager');
+
+    await progressActivities();
+    await updateActivity('assignment-change-1', { params: { assignedStaffIds: ['staff-1', 'staff-2'] } });
+    await progressActivities();
+    await updateActivity('assignment-change-1', { params: { assignedStaffIds: ['staff-2'] } });
+    await progressActivities();
+
+    expect(mocks.awardExperience.mock.calls).toEqual([
+      ['staff-1', 10, ['skill:field', 'task:CLEARING']],
+      ['staff-1', 10, ['skill:field', 'task:CLEARING']],
+      ['staff-2', 10, ['skill:field', 'task:CLEARING']],
+      ['staff-2', 10, ['skill:field', 'task:CLEARING']],
+    ]);
+    expect(mocks.getActivities()).toEqual([
+      expect.objectContaining({ id: 'assignment-change-1', completedWork: 40 }),
+    ]);
+  });
+
+  it('shares tick task counts, grape context, weather, and research options with assignment previews', async () => {
+    const previewActivity = activeActivity({
+      id: 'preview-parity-1',
+      category: WorkCategory.PLANTING,
+      params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir' },
+    });
+    mocks.setState({
+      ...mocks.getGameState(),
+      weatherState: 'Heat',
+      weatherIntensity: 'Severe',
+      staff: [{ id: 'staff-1' }],
+    });
+    mocks.setActivities([
+      previewActivity,
+      activeActivity({ id: 'other-task-1', category: WorkCategory.CLEARING, params: { assignedStaffIds: ['staff-1'] } }),
+    ]);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
+    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { getActivityStaffWorkContext } = await import('@/lib/services/activity/activityWorkPreviewService');
+
+    const previewContext = await getActivityStaffWorkContext(
+      previewActivity,
+      mocks.getActivities(),
+      mocks.getGameState(),
+      ['staff-1'],
+    );
+    await progressActivities();
+
+    expect(previewContext.staffTaskCounts.get('staff-1')).toBe(2);
+    expect(previewContext.grapeVariety).toBe('Pinot Noir');
+    expect(previewContext.workMultiplier).toBe(0.6);
+    const tickCalls = mocks.calculateStaffWorkAllocation.mock.calls as unknown as Array<[
+      unknown,
+      WorkCategory,
+      Map<string, number>,
+      unknown,
+      unknown,
+    ]>;
+    const tickCall = tickCalls.find(([, category]) => category === WorkCategory.PLANTING);
+    expect(tickCall?.[2].get('staff-1')).toBe(previewContext.staffTaskCounts.get('staff-1'));
+    expect(tickCall?.[3]).toBe(previewContext.grapeVariety);
+    expect(tickCall?.[4]).toEqual(previewContext.staffContributionOptions);
+  });
+
+  it('accepts grape snapshots only for grape-aware activity categories', async () => {
+    const { getActivityGrapeContext } = await import('@/lib/services/activity/activityWorkContext');
+
+    expect(getActivityGrapeContext(activeActivity({ category: WorkCategory.PLANTING, params: { grape: 'Pinot Noir' } }))).toBe('Pinot Noir');
+    expect(getActivityGrapeContext(activeActivity({ category: WorkCategory.CLEARING, params: { grape: 'Pinot Noir' } }))).toBeUndefined();
+    expect(getActivityGrapeContext(activeActivity({ category: WorkCategory.HARVESTING, params: { grape: 'not-a-grape' } }))).toBeUndefined();
   });
 
   it('completes a harvest with the increment persisted during its final work tick', async () => {
@@ -476,8 +646,7 @@ describe('activity lifecycle', () => {
         params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', storagePlanId: 'plan-1', outputBatchId: 'batch-1', harvestedSoFar: 50 },
       }),
     ]);
-    mocks.calculateStaffWorkContribution.mockReturnValue(10);
-    mocks.calculateIndividualStaffContribution.mockReturnValue(10);
+    mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
     mocks.handlePartialHarvesting.mockResolvedValueOnce({
       storageCapacityBlocked: false,
       params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', storagePlanId: 'plan-1', outputBatchId: 'batch-1', harvestedSoFar: 100, currentTotalYield: 100 },

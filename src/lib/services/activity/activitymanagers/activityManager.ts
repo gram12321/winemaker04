@@ -1,12 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory } from '@/lib/types/types';
+import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, getTeamForCategory, handlePartialPlanting, handlePartialHarvesting } from '@/lib/services';
 import { completeLandSearch } from './landSearchManager';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
 import { awardExperience } from '@/lib/services/user/staffService';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
+import { calculateAppliedStaffWorkAllocation } from '../workcalculators/workCalculator';
+import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
+import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
+import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
+import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext } from '../activityWorkPreviewService';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { releaseStorageAllocationPlan, releaseReservedStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
@@ -321,6 +325,11 @@ export async function getAllActivities(): Promise<Activity[]> {
   return activities.filter(activity => activity.status === 'active' || activity.status === 'paused');
 }
 
+async function refreshVisibleActivities(triggerUpdate = true): Promise<void> {
+  updateGameState({ activities: await getAllActivities() });
+  if (triggerUpdate) triggerGameUpdateImmediate();
+}
+
 /**
  * Get activity by ID
  */
@@ -336,9 +345,7 @@ export async function updateActivity(activityId: string, updates: Partial<Activi
       return false;
     }
 
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-    triggerGameUpdateImmediate();
+    await refreshVisibleActivities();
     return true;
   } catch (error) {
     console.error('Error updating activity:', error);
@@ -362,9 +369,7 @@ export async function pauseActivity(activityId: string): Promise<boolean> {
     }
     const success = await updateActivityInDb(activityId, { status: 'paused' });
     if (success) {
-      const currentActivities = await getAllActivities();
-      updateGameState({ activities: currentActivities });
-      triggerGameUpdateImmediate();
+      await refreshVisibleActivities();
     }
     return success;
   } catch (error) {
@@ -392,9 +397,7 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
       params: { ...activity.params, storageCapacityBlocked: false },
     });
     if (success) {
-      const currentActivities = await getAllActivities();
-      updateGameState({ activities: currentActivities });
-      triggerGameUpdateImmediate();
+      await refreshVisibleActivities();
     }
     return success;
   } catch (error) {
@@ -406,9 +409,7 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
 export async function activateActivityWithParams(activityId: string, params: Record<string, any>): Promise<boolean> {
   const success = await updateActivityInDb(activityId, { status: 'active', params });
   if (success) {
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-    triggerGameUpdateImmediate();
+    await refreshVisibleActivities();
   }
   return success;
 }
@@ -442,9 +443,7 @@ export async function completeActivityNow(activityId: string): Promise<{ success
 
     await removeActivityFromDb(completedActivity.id);
 
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-    triggerGameUpdateImmediate();
+    await refreshVisibleActivities();
 
     return { success: true, activity: completedActivity };
   } catch (error) {
@@ -478,8 +477,7 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
         await releaseReservedStorageAllocationPlan(activity.params.storagePlanId);
       }
       // Update local game state
-      const currentActivities = await getAllActivities();
-      updateGameState({ activities: currentActivities });
+      await refreshVisibleActivities(false);
 
       // Trigger immediate UI update for critical activity cancellation
       triggerGameUpdateImmediate();
@@ -504,67 +502,30 @@ export async function progressActivities(): Promise<void> {
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
-    const researchEffects = await researchUpgradeFeature.effects.getPermanentEffects();
-    const weather = createWeatherWeekContext(gameState);
-    const season = gameState.season ?? 'Spring';
-
-    // Build staff task count map from active activities only
-    const staffTaskCounts = new Map<string, number>();
-    for (const activity of activities) {
-      const assignedStaffIds = activity.params.assignedStaffIds || [];
-      for (const staffId of assignedStaffIds) {
-        staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
-      }
-    }
 
     // Process each active activity
     for (const activity of activities) {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
-      const grapeVariety = activity.params.grape; // Get grape variety for XP bonus
-      const staffContributionOptions = {
-        allStaffWorkMultiplier: researchEffects.allStaffWorkMultiplier,
-        ...(isResearchActivity(activity) ? { researchSkillMultiplier: researchEffects.researchSkillMultiplier } : {}),
-      };
-      const weatherImpact = getWeatherWorkImpact(activity, weather, season);
+      const workContext = await getActivityStaffWorkContext(
+        activity,
+        activities,
+        gameState,
+        assignedStaffIds,
+      );
 
-      // Calculate work contribution from staff (0 if no staff assigned)
-      let workThisTick = 0;
-      if (assignedStaff.length > 0 && weatherImpact.workMultiplier > 0) {
-        workThisTick = calculateStaffWorkContribution(
-          assignedStaff,
-          activity.category,
-          staffTaskCounts,
-          grapeVariety,
-          staffContributionOptions,
-        ) * weatherImpact.workMultiplier;
-
-        // Award XP to assigned staff
-        const relevantSkill = WORK_CATEGORY_INFO[activity.category].skill;
-        const xpCategories = [`skill:${relevantSkill}`];
-
-        // Add grape variety XP if applicable
-        if (grapeVariety) {
-          xpCategories.push(`grape:${grapeVariety}`);
-        }
-
-        for (const staff of assignedStaff) {
-          const contribution = calculateIndividualStaffContribution(
-            staff,
-            activity.category,
-            staffTaskCounts,
-            grapeVariety,
-            staffContributionOptions,
-          ) * weatherImpact.workMultiplier;
-          // Award XP equal to contribution
-          await awardExperience(staff.id, contribution, xpCategories);
-        }
-      }
+      // Calculate preliminary team work. XP is deliberately delayed until the
+      // persistable work amount (weather, final-tick, and storage limits) is known.
+      const preliminaryAllocation = calculateActivityStaffWorkPreview(
+        activity,
+        assignedStaff,
+        workContext,
+      ).allocation;
 
       const oldCompletedWork = activity.completedWork;
-      const newCompletedWork = Math.min(
+      let newCompletedWork = Math.min(
         activity.totalWork,
-        activity.completedWork + workThisTick
+        activity.completedWork + preliminaryAllocation.totalWork
       );
 
       // Handle partial planting for PLANTING activities
@@ -575,14 +536,40 @@ export async function progressActivities(): Promise<void> {
       // Handle partial harvesting for HARVESTING activities
       let storageCapacityBlocked = false;
       let harvestedParams: Activity['params'] | undefined;
+      let statusUpdate: Activity['status'] | undefined;
       if (activity.category === WorkCategory.HARVESTING && activity.targetId) {
         const harvestProgress = await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
         storageCapacityBlocked = harvestProgress?.storageCapacityBlocked ?? false;
         harvestedParams = harvestProgress?.params;
+        newCompletedWork = harvestProgress?.completedWork
+          ?? (storageCapacityBlocked ? oldCompletedWork : newCompletedWork);
+        statusUpdate = harvestProgress?.status;
       }
 
-      // Update the activity
-      await updateActivityInDb(activity.id, { completedWork: storageCapacityBlocked ? oldCompletedWork : newCompletedWork });
+      const appliedAllocation = calculateAppliedStaffWorkAllocation(
+        preliminaryAllocation,
+        newCompletedWork - oldCompletedWork,
+      );
+      const update: Partial<Activity> = {
+        completedWork: newCompletedWork,
+        ...(harvestedParams ? { params: harvestedParams } : {}),
+        ...(statusUpdate ? { status: statusUpdate } : {}),
+      };
+      const persisted = await updateActivityInDb(activity.id, update);
+      if (!persisted) {
+        console.error(`Failed to persist progress for activity ${activity.id}; skipping XP and completion.`);
+        continue;
+      }
+
+      if (appliedAllocation.totalWork > 0) {
+        const relevantSkill = WORK_CATEGORY_INFO[activity.category].skill;
+        const xpCategories = [`skill:${relevantSkill}`, `task:${activity.category}`];
+        if (workContext.grapeVariety) xpCategories.push(`grape:${workContext.grapeVariety}`);
+
+        for (const [staffId, appliedWork] of appliedAllocation.contributions) {
+          await awardExperience(staffId, appliedWork, xpCategories);
+        }
+      }
 
       // Check if activity is complete
       if (!storageCapacityBlocked && newCompletedWork >= activity.totalWork) {
@@ -609,36 +596,11 @@ export async function progressActivities(): Promise<void> {
     }
 
     // Update local game state
-    const currentActivities = await getAllActivities();
-    updateGameState({ activities: currentActivities });
-
-    // Trigger immediate UI update if any activities were completed
-    if (completedActivities.length > 0) {
-      triggerGameUpdateImmediate();
-    }
+    await refreshVisibleActivities(completedActivities.length > 0);
 
   } catch (error) {
     console.error('Error progressing activities:', error);
   }
-}
-
-function getWeatherWorkImpact(
-  activity: Activity,
-  weather: ReturnType<typeof createWeatherWeekContext>,
-  season: NonNullable<ReturnType<typeof getGameState>['season']>,
-): { workMultiplier: number } {
-  if (activity.category !== WorkCategory.PLANTING && activity.category !== WorkCategory.HARVESTING) {
-    return { workMultiplier: 1 };
-  }
-
-  const operation = activity.category === WorkCategory.PLANTING ? 'planting' : 'harvesting';
-  const impact = resolveWeatherOperationImpact({
-    weather,
-    operation,
-    season,
-  });
-
-  return { workMultiplier: impact.allowed ? impact.workMultiplier : 0 };
 }
 
 /**
@@ -661,33 +623,16 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     const allStaff = gameState.staff || [];
     const allActivities = await getAllActivities();
 
-    // Build staff task count map from active activities only (paused don't consume staff time)
-    const staffTaskCounts = new Map<string, number>();
-    for (const act of allActivities.filter(a => a.status === 'active')) {
-      const assignedStaffIds = act.params.assignedStaffIds || [];
-      for (const staffId of assignedStaffIds) {
-        staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
-      }
-    }
-
     // Get staff assigned to this activity
     const assignedStaffIds = activity.params.assignedStaffIds || [];
     const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
-    const grapeVariety = activity.params.grape;
-    const researchEffects = isResearchActivity(activity)
-      ? await researchUpgradeFeature.effects.getPermanentEffects()
-      : null;
-    const staffContributionOptions = isResearchActivity(activity)
-      ? { researchSkillMultiplier: researchEffects?.researchSkillMultiplier ?? 1 }
-      : undefined;
+    const workContext = await getActivityStaffWorkContext(activity, allActivities, gameState, assignedStaffIds);
 
     if (assignedStaff.length > 0) {
-      // Calculate actual work contribution per week
-      const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety, staffContributionOptions);
+      const { workPerWeek, weeksToComplete } = calculateActivityStaffWorkPreview(activity, assignedStaff, workContext);
 
       if (workPerWeek > 0) {
-        const weeksRemaining = Math.ceil(remainingWork / workPerWeek);
-        timeRemaining = weeksRemaining === 1 ? '1 week' : `${weeksRemaining} weeks`;
+        timeRemaining = weeksToComplete === 1 ? '1 week' : `${weeksToComplete} weeks`;
       } else {
         timeRemaining = 'No progress';
       }
@@ -702,15 +647,6 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     isComplete,
     timeRemaining: isComplete ? 'Complete' : timeRemaining
   };
-}
-
-function isResearchActivity(activity: Activity): boolean {
-  const activityType = typeof activity.params?.type === 'string'
-    ? activity.params.type.toLowerCase()
-    : '';
-
-  return activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH
-    && (activityType === 'research' || typeof activity.params?.researchId === 'string');
 }
 
 /**

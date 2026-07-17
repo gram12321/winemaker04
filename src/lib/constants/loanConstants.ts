@@ -2,9 +2,6 @@ import { LenderType } from '../types/types';
 // Lender search base cost
 export const LENDER_SEARCH_BASE_COST = 2000;
 
-// Take loan base cost
-export const TAKE_LOAN_BASE_COST = 1000;
-
 // Lender type distribution (must sum to 1.0)
 export const LENDER_TYPE_DISTRIBUTION = {
   'Bank': 0.25,
@@ -36,8 +33,8 @@ export const LENDER_PARAMS: Record<LenderType, {
     flexibilityRange: [0.5, 0.8],
     originationFeeRange: {
       basePercentRange: [0.015, 0.025], // 1.5-2.5% base fee (more realistic for business loans)
-      minFeeRange: [800, 1500], // €800-1500 minimum
-      maxFeeRange: [12000, 20000], // €12k-20k maximum
+      minFeeRange: [800, 1500], // EUR 800-1500 minimum
+      maxFeeRange: [12000, 20000], // EUR 12k-20k maximum
       creditRatingModifierRange: [0.6, 0.8], // 20-40% discount for excellent credit
       durationModifierRange: [1.0, 1.2] // 0-20% premium for long-term
     }
@@ -50,8 +47,8 @@ export const LENDER_PARAMS: Record<LenderType, {
     flexibilityRange: [0.6, 0.9],
     originationFeeRange: {
       basePercentRange: [0.025, 0.035], // 2.5-3.5% base fee (higher for investment funds)
-      minFeeRange: [1500, 3000], // €1.5k-3k minimum
-      maxFeeRange: [25000, 40000], // €25k-40k maximum
+      minFeeRange: [1500, 3000], // EUR 1.5k-3k minimum
+      maxFeeRange: [25000, 40000], // EUR 25k-40k maximum
       creditRatingModifierRange: [0.7, 0.9], // 10-30% discount for excellent credit
       durationModifierRange: [1.0, 1.3] // 0-30% premium for long-term
     }
@@ -64,8 +61,8 @@ export const LENDER_PARAMS: Record<LenderType, {
     flexibilityRange: [0.3, 0.7],
     originationFeeRange: {
       basePercentRange: [0.045, 0.07], // 4.5-7% base fee (largest proportional hit among traditional lenders)
-      minFeeRange: [400, 1000], // €400-1000 minimum
-      maxFeeRange: [7000, 12000], // €7k-12k maximum
+      minFeeRange: [400, 1000], // EUR 400-1000 minimum
+      maxFeeRange: [7000, 12000], // EUR 7k-12k maximum
       creditRatingModifierRange: [0.85, 1.25], // 15% discount to 25% premium based on credit
       durationModifierRange: [0.95, 1.45] // Slightly higher premium for long-term adjustments
     }
@@ -103,7 +100,23 @@ export const LOAN_DURATION_RANGES = {
 // Lender generation
 export const LENDER_GENERATION = {
   MIN_LENDERS: 25,
-  MAX_LENDERS: 65
+  MAX_LENDERS: 65,
+  MIN_PER_TYPE: 3,
+} as const;
+
+export const LENDER_AVAILABILITY = {
+  MAX_PRESTIGE_REQUIREMENT_REDUCTION: 20,
+} as const;
+
+export const LENDER_SEARCH = {
+  DEFAULT_OFFERS: 10,
+  MAX_OFFERS: 20,
+  MAX_TYPE_FILTER_WORK_BONUS: 0.5,
+} as const;
+
+export const LOAN_LIQUIDATION = {
+  MAX_SINGLE_ASSET_PORTFOLIO_PERCENT: 0.5,
+  SALE_PENALTY_RATE: 0.25,
 } as const;
 
 // Lender type interest rate multipliers
@@ -136,6 +149,21 @@ export const CREDIT_RATING = {
   
   // Blacklist duration
   BLACKLIST_DURATION_SEASONS: 40, // 10 years
+} as const;
+
+export const LOAN_LIMIT_SCALING = {
+  MIN_ASSET_FACTOR: 0.2,
+  MAX_ASSET_FACTOR: 0.65,
+  MIN_RATING_MULTIPLIER: 0.8,
+  MAX_RATING_MULTIPLIER: 1.5,
+  ROUNDING_STEP: 1000
+} as const;
+
+export const LOAN_PRESTIGE_FAME_SCALING = {
+  EMERGENCY_QUICK: { rate: 0.01, cap: 10 },
+  WARNING_2: { rate: 0.02, cap: 25 },
+  RESTRUCTURE: { rate: 0.04, cap: 75 },
+  DEFAULT: { rate: 0.08, cap: 175 }
 } as const;
 
 // New comprehensive credit rating penalties

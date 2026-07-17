@@ -2,7 +2,8 @@
 // Pure CRUD operations for staff data persistence in Supabase
 
 import { supabase } from './supabase';
-import { Staff } from '@/lib/types/types';
+import { Staff, SpecializedRole } from '@/lib/types/types';
+import { isSpecializedRole } from '@/lib/constants/staffConstants';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { buildGameDate } from '../dbMapperUtils';
 
@@ -11,6 +12,10 @@ import { buildGameDate } from '../dbMapperUtils';
  */
 export async function saveStaffToDb(staff: Staff): Promise<boolean> {
   try {
+    if (!Array.isArray(staff.specializedRoles) || !staff.specializedRoles.every(isSpecializedRole)) {
+      throw new Error('Staff specializedRoles must be an array of valid roles.');
+    }
+
     const companyId = getCurrentCompanyId();
     if (!companyId) {
       console.error('No company ID found to save staff.');
@@ -25,7 +30,7 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         name: staff.name,
         nationality: staff.nationality,
         skill_level: staff.skillLevel,
-        specializations: staff.specializations,
+        specialized_roles: staff.specializedRoles,
         wage: staff.wage,
         is_founder: staff.isFounder ?? false,
         team_ids: staff.teamIds || [],
@@ -50,8 +55,43 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error in saveStaffToDb:', error);
-    return false;
+    throw error;
   }
+}
+
+function readSpecializedRoles(row: Record<string, unknown>): SpecializedRole[] {
+  if (!Object.prototype.hasOwnProperty.call(row, 'specialized_roles')) {
+    throw new Error('Staff schema is missing required specialized_roles column.');
+  }
+  const specializedRoles = row.specialized_roles;
+  if (!Array.isArray(specializedRoles) || !specializedRoles.every(isSpecializedRole)) {
+    throw new Error('Staff specialized_roles must be an array of valid roles.');
+  }
+  return specializedRoles;
+}
+
+function mapStaffRow(row: Record<string, any>): Staff {
+  return {
+    id: row.id,
+    name: row.name,
+    nationality: row.nationality,
+    skillLevel: row.skill_level,
+    specializedRoles: readSpecializedRoles(row),
+    wage: row.wage,
+    isFounder: row.is_founder ?? false,
+    teamIds: row.team_ids || [],
+    skills: {
+      field: row.skill_field,
+      winery: row.skill_winery,
+      maintenance: row.skill_maintenance,
+      financeAndStaff: row.skill_administration,
+      sales: row.skill_sales,
+      administrationAndResearch: row.skill_administration_and_research
+    },
+    experience: row.experience || {},
+    workforce: row.workforce || 50,
+    hireDate: buildGameDate(row.hire_date_week, row.hire_date_season, row.hire_date_year)!
+  };
 }
 
 /**
@@ -77,30 +117,10 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
     }
 
     // Convert database records to Staff objects
-    return (data || []).map(row => ({
-      id: row.id,
-      name: row.name,
-      nationality: row.nationality,
-      skillLevel: row.skill_level,
-      specializations: row.specializations || [],
-      wage: row.wage,
-      isFounder: row.is_founder ?? false,
-      teamIds: row.team_ids || [],
-      skills: {
-        field: row.skill_field,
-        winery: row.skill_winery,
-        maintenance: row.skill_maintenance,
-        financeAndStaff: row.skill_administration,
-        sales: row.skill_sales,
-        administrationAndResearch: row.skill_administration_and_research
-      },
-      experience: row.experience || {},
-      workforce: row.workforce || 50,
-      hireDate: buildGameDate(row.hire_date_week, row.hire_date_season, row.hire_date_year)!
-    }));
+    return (data || []).map(mapStaffRow);
   } catch (error) {
     console.error('Error in loadStaffFromDb:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -156,32 +176,9 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
       return null;
     }
 
-    return {
-      id: data.id,
-      name: data.name,
-      nationality: data.nationality,
-      skillLevel: data.skill_level,
-      specializations: data.specializations || [],
-      wage: data.wage,
-      teamIds: data.team_ids || [],
-      skills: {
-        field: data.skill_field,
-        winery: data.skill_winery,
-        maintenance: data.skill_maintenance,
-        financeAndStaff: data.skill_administration,
-        sales: data.skill_sales,
-        administrationAndResearch: data.skill_administration_and_research
-      },
-      experience: data.experience || {},
-      workforce: data.workforce || 50,
-      hireDate: {
-        week: data.hire_date_week,
-        season: data.hire_date_season,
-        year: data.hire_date_year
-      }
-    };
+    return mapStaffRow(data);
   } catch (error) {
     console.error('Error in getStaffByIdFromDb:', error);
-    return null;
+    throw error;
   }
 }

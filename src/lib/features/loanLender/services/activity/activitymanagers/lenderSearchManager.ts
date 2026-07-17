@@ -1,18 +1,17 @@
-﻿import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { Activity, WorkCategory, NotificationCategory, LenderSearchOptions, LoanOffer } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService } from '@/lib/services/core/notificationService';
-import { addTransaction } from '@/lib/services/finance/financeService';
+import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
-import { calculateLenderSearchWork, calculateLenderSearchCost } from '@/lib/services/activity/workcalculators/lenderSearchWorkCalculator';
-import { loadLenders } from '@/lib/database/core/lendersDB';
-import { calculateLenderAvailability } from '@/lib/features/loanLender/services/finance/lenderService';
-import { calculateEffectiveInterestRate, calculateOriginationFee, getCurrentCreditRating, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
+import { buildLenderSearchQuote } from '@/lib/features/loanLender/services/finance/loanQuoteService';
+import { calculateLenderAvailability, getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
+import { getCurrentCreditRating, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
+import { calculateLoanTerms } from '@/lib/features/loanLender/services/finance/loanCalculations';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
-import { calculateTotalAssets } from '@/lib/services/finance/financeService';
-import { formatNumber } from '@/lib/utils/utils';
+import { formatNumber } from '@/lib/utils';
 
 /**
  * Start a lender search activity
@@ -20,8 +19,9 @@ import { formatNumber } from '@/lib/utils/utils';
 export async function startLenderSearch(options: LenderSearchOptions): Promise<string | null> {
   try {
     const gameState = getGameState();
-    const searchCost = calculateLenderSearchCost(options);
-    const { totalWork } = calculateLenderSearchWork(options);
+    const searchQuote = buildLenderSearchQuote(options);
+    const searchCost = searchQuote.totalCost;
+    const { totalWork } = searchQuote;
 
     // Check if we have enough money (skip for free searches)
     const currentMoney = gameState.money || 0;
@@ -120,7 +120,7 @@ export async function completeLenderSearch(activity: Activity): Promise<void> {
  */
 async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOffer[]> {
   const gameState = getGameState();
-  const allLenders = await loadLenders();
+  const allLenders = await getAllLenders();
 
   // Filter by lender types if specified
   let eligibleLenders = allLenders;
@@ -166,30 +166,20 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
       minDuration + Math.random() * (maxDuration - minDuration)
     );
 
-    // Calculate loan terms
-    const effectiveRate = calculateEffectiveInterestRate(
-      lender.baseInterestRate,
-      gameState.economyPhase || 'Stable',
-      lender.type,
+    const loanTerms = calculateLoanTerms(
+      lender,
+      principalAmount,
+      durationSeasons,
       creditRating,
-      durationSeasons
+      gameState.economyPhase || 'Stable'
     );
-
-    const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveRate, durationSeasons);
-    const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
-    const totalInterest = (seasonalPayment * durationSeasons) - principalAmount;
-    const totalExpenses = originationFee + totalInterest;
 
     offers.push({
       id: uuidv4(),
       lender,
       principalAmount,
       durationSeasons,
-      effectiveInterestRate: effectiveRate,
-      seasonalPayment,
-      originationFee,
-      totalInterest,
-      totalExpenses,
+      ...loanTerms,
       isAvailable: availability.isAvailable && !lender.blacklisted,
       unavailableReason: lender.blacklisted
         ? 'Blacklisted due to previous default'
@@ -200,23 +190,4 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
   }
 
   return offers;
-}
-
-/**
- * Calculate seasonal payment using loan amortization
- */
-function calculateSeasonalPayment(principal: number, rate: number, seasons: number): number {
-  if (rate === 0) {
-    return principal / seasons;
-  }
-  return principal * (rate * Math.pow(1 + rate, seasons)) / (Math.pow(1 + rate, seasons) - 1);
-}
-
-/**
- * Clear pending lender search results
- */
-export function clearPendingLenderSearchResults(): void {
-  updateGameState({
-    pendingLenderSearchResults: undefined
-  });
 }

@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => {
     getGameState: vi.fn(() => ({ week: 5, season: 'Fall', currentYear: 2026 })),
     updateGameState: vi.fn(async () => undefined),
     createWineBatchFromHarvest: vi.fn(async () => undefined),
+    canStoragePlanHoldVolume: vi.fn(async () => true),
+    getStoragePlanCapacityLitres: vi.fn(async () => 1000),
     getResearchPermanentEffects: vi.fn(async () => ({ vineyardHealthDecayMultiplier: 0.8, activeEffects: [] })),
     createWeatherWeekContext: vi.fn((state: any) => ({
       date: { year: state.currentYear ?? 2024, season: state.season ?? 'Spring', week: state.week ?? 1 },
@@ -98,8 +100,8 @@ vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
 }));
 vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
   initializeHarvestVolumeLitres: (kg: number) => Math.ceil(kg * 0.5),
-  canStoragePlanHoldVolume: vi.fn(async () => true),
-  getStoragePlanCapacityLitres: vi.fn(async () => 1000),
+  canStoragePlanHoldVolume: mocks.canStoragePlanHoldVolume,
+  getStoragePlanCapacityLitres: mocks.getStoragePlanCapacityLitres,
 }));
 
 vi.mock('@/lib/features/researchUpgrade/services/research/researchPermanentEffectsService', () => ({
@@ -279,7 +281,7 @@ describe('vineyard lifecycle services', () => {
     mocks.setActivities([harvestActivity]);
     const { handlePartialHarvesting } = await import('@/lib/services/vineyard/vineyardManager');
 
-    await handlePartialHarvesting(harvestActivity, 0, 50);
+    const result = await handlePartialHarvesting(harvestActivity, 0, 50);
 
     expect(mocks.createWineBatchFromHarvest).toHaveBeenCalledWith(
       'vineyard-1',
@@ -291,17 +293,47 @@ describe('vineyard lifecycle services', () => {
       'plan-1',
       'batch-1'
     );
-    expect(mocks.updateActivityInDb).toHaveBeenCalledWith('activity-1', {
-      params: expect.objectContaining({
-        harvestedSoFar: expect.any(Number),
-        currentTotalYield: expect.any(Number)
-      })
-    });
+    expect(result.params).toEqual(expect.objectContaining({
+      harvestedSoFar: expect.any(Number),
+      currentTotalYield: expect.any(Number),
+    }));
+    expect(mocks.updateActivityInDb).not.toHaveBeenCalled();
     expect(mocks.saveVineyard).toHaveBeenCalledWith(expect.objectContaining({
       id: 'vineyard-1',
       status: 'Growing'
     }));
   }, 15000);
+
+  it('pauses without progress or XP-producing output when storage is missing or a portion is below 0.1kg', async () => {
+    const { handlePartialHarvesting } = await import('@/lib/services/vineyard/vineyardManager');
+
+    const noStorage = await handlePartialHarvesting(activity({ totalWork: 100, params: { harvestedSoFar: 0 } }), 0, 50);
+    expect(noStorage).toMatchObject({ storageCapacityBlocked: true, completedWork: 0, status: 'paused' });
+
+    const tinyPortion = await handlePartialHarvesting(
+      activity({ totalWork: 1000000, params: { harvestedSoFar: 0, storagePlanId: 'plan-1' } }),
+      0,
+      1,
+    );
+    expect(tinyPortion).toMatchObject({ storageCapacityBlocked: true, completedWork: 0, status: 'paused' });
+    expect(mocks.createWineBatchFromHarvest).not.toHaveBeenCalled();
+  });
+
+  it('returns only capacity-permitted work when a storage plan is full', async () => {
+    mocks.canStoragePlanHoldVolume.mockResolvedValueOnce(false);
+    mocks.getStoragePlanCapacityLitres.mockResolvedValueOnce(1);
+    const { handlePartialHarvesting } = await import('@/lib/services/vineyard/vineyardManager');
+
+    const result = await handlePartialHarvesting(
+      activity({ totalWork: 100, params: { harvestedSoFar: 0, storagePlanId: 'plan-1' } }),
+      0,
+      50,
+    );
+
+    expect(result).toMatchObject({ storageCapacityBlocked: true, status: 'paused' });
+    expect(result.completedWork).toBeGreaterThan(0);
+    expect(result.completedWork).toBeLessThan(50);
+  });
 
   it('keeps appended harvest progress available when a later vineyard-status save fails', async () => {
     const harvestActivity = activity({ totalWork: 100, completedWork: 0, params: { storagePlanId: 'plan-1', outputBatchId: 'batch-1' } });

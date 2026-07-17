@@ -34,3 +34,9 @@ dist-ssr
 # Old iterations directory
 docs/old_iterations/
 .worktrees/
+
+# Agent handoff artifacts
+.superpowers/sdd/*.md
+.superpowers/sdd/*/*.md
+!.superpowers/sdd/Completed/
+!.superpowers/sdd/Completed/*.md

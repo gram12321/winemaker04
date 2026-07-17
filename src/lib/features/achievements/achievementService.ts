@@ -1,6 +1,6 @@
-import { AchievementConfig, AchievementWithStatus, AchievementUnlock, GameState, Transaction, WineOrder } from '@/lib/types/types';
+import type { AchievementConfig, AchievementWithStatus, AchievementUnlock, GameState, Transaction, WineOrder } from '@/lib/types/types';
 import { ALL_ACHIEVEMENTS } from './achievementDefinitions';
-import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked, getAchievementUnlock } from '@/lib/database/core/achievementsDB';
+import { unlockAchievement, getAllAchievementUnlocks, getAchievementUnlock } from '@/lib/database/core/achievementsDB';
 import {
   insertPrestigeEventIfAbsentBySource,
   insertVineyardAchievementPrestigeEventIfAbsent,
@@ -228,16 +228,15 @@ async function buildAchievementContext(
   const { bestSalePriceOverAskingPercent, bestSalePriceUnderAskingPercent } = getSalePricePercentages(fulfilledOrders);
   
   // Load wine log entries for quality/structure index/price tracking
-  const allWineLogEntries = [];
-  for (const vineyard of vineyards) {
+  const wineLogEntriesByVineyard = await Promise.all(vineyards.map(async (vineyard) => {
     try {
-      const vineyardEntries = await loadWineLogByVineyard(vineyard.id, companyId);
-      allWineLogEntries.push(...vineyardEntries);
+      return await loadWineLogByVineyard(vineyard.id, companyId);
     } catch (error) {
       console.warn(`Failed to load wine log for vineyard ${vineyard.id}:`, error);
-      // Continue with other vineyards rather than failing completely
+      return [];
     }
-  }
+  }));
+  const allWineLogEntries = wineLogEntriesByVineyard.flat();
   
   // Create a wine log map for quick lookup by vineyard
   const wineLogMap = new Map<string, any[]>();
@@ -360,6 +359,10 @@ function checkYearBasedAchievement(
   };
 }
 
+function thresholdResult(value: number, threshold: number | undefined, unit: string) {
+  return { isMet: value >= (threshold || 0), progress: value, target: threshold, unit };
+}
+
 /**
  * Check if achievement condition is met
  */
@@ -374,68 +377,28 @@ function checkAchievementCondition(
       // Cash reserves minus outstanding loan debt (net cash position)
       const outstandingLoans = context.totalAssets - context.companyValue;
       const netCashPosition = context.currentMoney - outstandingLoans;
-      return {
-        isMet: netCashPosition >= (condition.threshold || 0),
-        progress: netCashPosition,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(netCashPosition, condition.threshold, 'euros');
       
     case 'prestige_threshold':
-      return {
-        isMet: context.currentPrestige >= (condition.threshold || 0),
-        progress: context.currentPrestige,
-        target: condition.threshold,
-        unit: 'prestige'
-      };
+      return thresholdResult(context.currentPrestige, condition.threshold, 'prestige');
       
     case 'time_threshold':
-      return {
-        isMet: context.companyAgeInYears >= (condition.threshold || 0),
-        progress: context.companyAgeInYears,
-        target: condition.threshold,
-        unit: 'years'
-      };
+      return thresholdResult(context.companyAgeInYears, condition.threshold, 'years');
       
     case 'sales_count':
-      return {
-        isMet: context.totalSalesCount >= (condition.threshold || 0),
-        progress: context.totalSalesCount,
-        target: condition.threshold,
-        unit: 'sales'
-      };
+      return thresholdResult(context.totalSalesCount, condition.threshold, 'sales');
       
     case 'sales_value':
-      return {
-        isMet: context.totalSalesValue >= (condition.threshold || 0),
-        progress: context.totalSalesValue,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(context.totalSalesValue, condition.threshold, 'euros');
       
     case 'production_count':
-      return {
-        isMet: context.totalWinesProduced >= (condition.threshold || 0),
-        progress: context.totalWinesProduced,
-        target: condition.threshold,
-        unit: 'wines'
-      };
+      return thresholdResult(context.totalWinesProduced, condition.threshold, 'wines');
       
     case 'bottles_produced':
-      return {
-        isMet: context.totalBottlesProduced >= (condition.threshold || 0),
-        progress: context.totalBottlesProduced,
-        target: condition.threshold,
-        unit: 'bottles'
-      };
+      return thresholdResult(context.totalBottlesProduced, condition.threshold, 'bottles');
       
     case 'vineyard_count':
-      return {
-        isMet: context.vineyardCount >= (condition.threshold || 0),
-        progress: context.vineyardCount,
-        target: condition.threshold,
-        unit: 'vineyards'
-      };
+      return thresholdResult(context.vineyardCount, condition.threshold, 'vineyards');
       
     case 'vineyard_time_same_grape':
       return { isMet: false, progress: 0, target: condition.threshold, unit: 'years' };
@@ -443,76 +406,36 @@ function checkAchievementCondition(
     case 'vineyard_wine_variety_count':
       // Check if any vineyard has produced the threshold number of different grape varieties
       const maxGrapeVarieties = Math.max(...context.vineyards.map(v => v.grapeVarietiesProduced.length), 0);
-      return {
-        isMet: maxGrapeVarieties >= (condition.threshold || 0),
-        progress: maxGrapeVarieties,
-        target: condition.threshold,
-        unit: 'varieties'
-      };
+      return thresholdResult(maxGrapeVarieties, condition.threshold, 'varieties');
       
     case 'vineyard_bottles_produced':
       // Check if any vineyard has produced the threshold number of bottles
       const maxVineyardBottles = Math.max(...context.vineyards.map(v => v.bottlesProduced), 0);
-      return {
-        isMet: maxVineyardBottles >= (condition.threshold || 0),
-        progress: maxVineyardBottles,
-        target: condition.threshold,
-        unit: 'bottles'
-      };
+      return thresholdResult(maxVineyardBottles, condition.threshold, 'bottles');
       
     case 'vineyard_sales_count':
       // Check if any vineyard has made the threshold number of sales
       const maxVineyardSales = Math.max(...context.vineyards.map(v => v.salesCount), 0);
-      return {
-        isMet: maxVineyardSales >= (condition.threshold || 0),
-        progress: maxVineyardSales,
-        target: condition.threshold,
-        unit: 'sales'
-      };
+      return thresholdResult(maxVineyardSales, condition.threshold, 'sales');
       
     case 'vineyard_prestige_threshold':
       // Check if any vineyard has achieved the threshold prestige
       const maxVineyardPrestige = Math.max(...context.vineyards.map(v => v.prestige), 0);
-      return {
-        isMet: maxVineyardPrestige >= (condition.threshold || 0),
-        progress: maxVineyardPrestige,
-        target: condition.threshold,
-        unit: 'prestige'
-      };
+      return thresholdResult(maxVineyardPrestige, condition.threshold, 'prestige');
       
     case 'single_contract_bottles':
-      return {
-        isMet: context.largestFulfilledContractQuantity >= (condition.threshold || 0),
-        progress: context.largestFulfilledContractQuantity,
-        target: condition.threshold,
-        unit: 'bottles'
-      };
+      return thresholdResult(context.largestFulfilledContractQuantity, condition.threshold, 'bottles');
       
     case 'single_contract_value':
-      return {
-        isMet: context.largestFulfilledContractValue >= (condition.threshold || 0),
-        progress: context.largestFulfilledContractValue,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(context.largestFulfilledContractValue, condition.threshold, 'euros');
       
     case 'cellar_value':
       // Check if cellar wine value meets threshold
-      return {
-        isMet: context.cellarValue >= (condition.threshold || 0),
-        progress: context.cellarValue,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(context.cellarValue, condition.threshold, 'euros');
       
     case 'total_assets':
       // Check if company value meets threshold (assets minus liabilities)
-      return {
-        isMet: context.companyValue >= (condition.threshold || 0),
-        progress: context.companyValue,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(context.companyValue, condition.threshold, 'euros');
       
     case 'vineyard_value':
       // Check if any individual vineyard value meets threshold
@@ -520,31 +443,16 @@ function checkAchievementCondition(
         ...context.vineyards.map(v => v.vineyardTotalValue),
         0
       );
-      return {
-        isMet: maxSingleVineyardValue >= (condition.threshold || 0),
-        progress: maxSingleVineyardValue,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(maxSingleVineyardValue, condition.threshold, 'euros');
       
     case 'total_vineyard_value':
       // Check if combined vineyard value meets threshold
-      return {
-        isMet: context.totalVineyardValue >= (condition.threshold || 0),
-        progress: context.totalVineyardValue,
-        target: condition.threshold,
-        unit: 'euros'
-      };
+      return thresholdResult(context.totalVineyardValue, condition.threshold, 'euros');
       
     case 'achievement_completion':
       // Check if achievement completion percentage meets threshold
       const completionPercentage = Math.round((context.completedAchievementsCount / context.totalAchievementsCount) * 100);
-      return {
-        isMet: completionPercentage >= (condition.threshold || 0),
-        progress: completionPercentage,
-        target: condition.threshold,
-        unit: '%'
-      };
+      return thresholdResult(completionPercentage, condition.threshold, '%');
       
     case 'different_grapes':
       // Check if produced wines from threshold number of different grape varieties
@@ -552,88 +460,43 @@ function checkAchievementCondition(
       context.vineyards.forEach(v => {
         v.grapeVarietiesProduced.forEach(grape => allGrapeVarieties.add(grape));
       });
-      return {
-        isMet: allGrapeVarieties.size >= (condition.threshold || 0),
-        progress: allGrapeVarieties.size,
-        target: condition.threshold,
-        unit: 'varieties'
-      };
+      return thresholdResult(allGrapeVarieties.size, condition.threshold, 'varieties');
       
     case 'wine_taste_quality_index_threshold':
       // Check if produced a wine with taste quality >= threshold
       const maxQuality = Math.max(...context.wineLogEntries.map(e => e.tasteQualityIndex), 0);
-      return {
-        isMet: maxQuality >= (condition.threshold || 0),
-        progress: maxQuality,
-        target: condition.threshold,
-        unit: 'quality'
-      };
+      return thresholdResult(maxQuality, condition.threshold, 'quality');
       
     case 'wine_structure_index_threshold':
       // Check if produced a wine with structure index >= threshold
       const maxStructureIndex = Math.max(...context.wineLogEntries.map(e => e.structureIndex), 0);
-      return {
-        isMet: maxStructureIndex >= (condition.threshold || 0),
-        progress: maxStructureIndex,
-        target: condition.threshold,
-        unit: 'structure'
-      };
+      return thresholdResult(maxStructureIndex, condition.threshold, 'structure');
       
     case 'wine_score_threshold':
       // Check if produced a wine with wine score >= threshold
       const maxWineScore = Math.max(...context.wineLogEntries.map(resolveWineLogAchievementScore), 0);
-      return {
-        isMet: maxWineScore >= (condition.threshold || 0),
-        progress: maxWineScore,
-        target: condition.threshold,
-        unit: 'score'
-      };
+      return thresholdResult(maxWineScore, condition.threshold, 'score');
       
     case 'wine_price_threshold':
       // Check if produced a wine with estimated price >= threshold
       const maxPrice = Math.max(...context.wineLogEntries.map(e => e.estimatedPrice), 0);
-      return {
-        isMet: maxPrice >= (condition.threshold || 0),
-        progress: maxPrice,
-        target: condition.threshold,
-        unit: 'euros/bottle'
-      };
+      return thresholdResult(maxPrice, condition.threshold, 'euros/bottle');
       
     case 'sales_price_percentage':
       const isUnderAskingAchievement = achievement.id.startsWith('sales_price_under_');
       const salesPricePercentage = isUnderAskingAchievement
         ? context.bestSalePriceUnderAskingPercent
         : context.bestSalePriceOverAskingPercent;
-      return {
-        isMet: salesPricePercentage >= (condition.threshold || 0),
-        progress: salesPricePercentage,
-        target: condition.threshold,
-        unit: '%'
-      };
+      return thresholdResult(salesPricePercentage, condition.threshold, '%');
 
     case 'bulk_grape_sales_count':
-      return {
-        isMet: context.bulkGrapeSalesCount >= (condition.threshold || 0),
-        progress: context.bulkGrapeSalesCount,
-        target: condition.threshold,
-        unit: 'sales'
-      };
+      return thresholdResult(context.bulkGrapeSalesCount, condition.threshold, 'sales');
 
     case 'bulk_grape_kg_sold':
-      return {
-        isMet: context.bulkGrapeKgSold >= (condition.threshold || 0),
-        progress: context.bulkGrapeKgSold,
-        target: condition.threshold,
-        unit: 'kg'
-      };
+      return thresholdResult(context.bulkGrapeKgSold, condition.threshold, 'kg');
 
     case 'bulk_grape_multiplier_threshold':
-      return {
-        isMet: context.bulkGrapeBestMultiplier >= (condition.threshold || 0),
-        progress: context.bulkGrapeBestMultiplier,
-        target: condition.threshold,
-        unit: 'x'
-      };
+      return thresholdResult(context.bulkGrapeBestMultiplier, condition.threshold, 'x');
       
     case 'prestige_by_year':
       return checkYearBasedAchievement(
@@ -642,12 +505,7 @@ function checkAchievementCondition(
       
     case 'revenue_by_year':
       // Check if generated threshold revenue in a single year
-      return {
-        isMet: context.yearlyRevenue >= (condition.threshold || 0),
-        progress: context.yearlyRevenue,
-        target: condition.threshold,
-        unit: 'euros/year'
-      };
+      return thresholdResult(context.yearlyRevenue, condition.threshold, 'euros/year');
       
     case 'assets_by_year':
       return checkYearBasedAchievement(
@@ -663,12 +521,7 @@ function checkAchievementCondition(
     case 'total_hectares':
       // Check if total hectares meets threshold
       const totalHectares = context.vineyards.reduce((sum, v) => sum + v.hectares, 0);
-      return {
-        isMet: totalHectares >= (condition.threshold || 0),
-        progress: totalHectares,
-        target: condition.threshold,
-        unit: 'hectares'
-      };
+      return thresholdResult(totalHectares, condition.threshold, 'hectares');
       
     case 'average_hectare_value':
       // Check if average hectare value meets threshold
@@ -676,12 +529,7 @@ function checkAchievementCondition(
       const averageHectareValue = totalHectaresForAvg > 0 
         ? context.totalVineyardValue / totalHectaresForAvg 
         : 0;
-      return {
-        isMet: averageHectareValue >= (condition.threshold || 0),
-        progress: averageHectareValue,
-        target: condition.threshold,
-        unit: 'euros/hectare'
-      };
+      return thresholdResult(averageHectareValue, condition.threshold, 'euros/hectare');
       
     case 'custom':
       // Custom condition checking can be implemented here
@@ -883,18 +731,18 @@ export async function checkAllAchievements(
   const { companyId: targetCompanyId, gameState } = captureAchievementEvaluationScope(companyId, state);
   
   const context = await buildAchievementContext(targetCompanyId, gameState);
+  const unlocksByAchievementId = new Map(
+    (await getAllAchievementUnlocks(targetCompanyId)).map((unlock) => [unlock.achievementId, unlock]),
+  );
   const newUnlocks: AchievementUnlock[] = [];
   
   for (const achievement of ALL_ACHIEVEMENTS) {
-    const alreadyUnlocked = await isAchievementUnlocked(achievement.id, targetCompanyId);
+    const existingUnlock = unlocksByAchievementId.get(achievement.id);
     
-    if (alreadyUnlocked) {
+    if (existingUnlock) {
       // Achievement already unlocked - check for new qualifying vineyards
-      const existingUnlock = await getAchievementUnlock(achievement.id, targetCompanyId);
-      if (existingUnlock) {
-        // Retry any missing company reward and check for new qualifying vineyards.
-        await spawnAchievementPrestigeEvents(achievement, existingUnlock, context);
-      }
+      // Retry any missing company reward and check for new qualifying vineyards.
+      await spawnAchievementPrestigeEvents(achievement, existingUnlock, context);
       continue;
     }
     
@@ -908,13 +756,6 @@ export async function checkAllAchievements(
   }
   
   return newUnlocks;
-}
-
-/**
- * Get all achievements with unlock status for UI
- */
-export async function getAllAchievementsWithStatus(): Promise<AchievementWithStatus[]> {
-  return (await getAchievementWorkspace()).achievements;
 }
 
 export async function getUnlockedAchievementIds(): Promise<Set<string>> {
@@ -988,11 +829,6 @@ export async function getAchievementWorkspace(): Promise<AchievementWorkspace> {
   return { achievements, stats: buildAchievementStats(achievements) };
 }
 
-/** Get achievement statistics for the active company. */
-export async function getAchievementStats(): Promise<AchievementStats> {
-  return (await getAchievementWorkspace()).stats;
-}
-
 // ===== ACHIEVEMENT UTILITY FUNCTIONS =====
 
 /**
@@ -1000,19 +836,5 @@ export async function getAchievementStats(): Promise<AchievementStats> {
  */
 export function getAchievementConfig(achievementId: string): AchievementConfig | undefined {
   return ALL_ACHIEVEMENTS.find(achievement => achievement.id === achievementId);
-}
-
-/**
- * Get achievements by category
- */
-export function getAchievementsByCategory(category: string): AchievementConfig[] {
-  return ALL_ACHIEVEMENTS.filter(achievement => achievement.category === category);
-}
-
-/**
- * Get achievements by achievement level
- */
-export function getAchievementsByLevel(level: number): AchievementConfig[] {
-  return ALL_ACHIEVEMENTS.filter(achievement => achievement.achievementLevel === level);
 }
 

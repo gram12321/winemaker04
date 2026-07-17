@@ -1,7 +1,6 @@
-import { WineBatch, Activity } from '@/lib/types/types';
+import { WineBatch, Activity, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
-import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';

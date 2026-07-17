@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
-import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillKey, getRelevantSkillName } from '@/lib/services/activity';
+import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext, getRelevantSkillKey, getRelevantSkillName, getStaffContributionBreakdown, type ActivityStaffWorkContext } from '@/lib/services/activity';
 import { getTeamForCategory, notificationService, updateActivity } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
-import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
+import { formatNumber, getFlagIcon, getSkillColor } from '@/lib/utils';
+import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { Button, StaffSkillBarsList } from '@/components/ui';
 import { useGameState } from '@/hooks';
 
@@ -31,11 +31,31 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   const currentAssignedIds = activity.params.assignedStaffIds || [];
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(currentAssignedIds);
   const [selectAll, setSelectAll] = useState(false);
+  const [workContext, setWorkContext] = useState<ActivityStaffWorkContext | null>(null);
 
   // Update select all state when selection changes
   useEffect(() => {
     setSelectAll(selectedStaffIds.length === allStaff.length && allStaff.length > 0);
   }, [selectedStaffIds, allStaff.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getActivityStaffWorkContext(
+      activity,
+      gameState.activities || [],
+      gameState,
+      selectedStaffIds,
+    ).then(context => {
+      if (!cancelled) setWorkContext(context);
+    }).catch(error => {
+      console.error('Failed to calculate staff assignment preview:', error);
+      if (!cancelled) setWorkContext(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activity, gameState, selectedStaffIds]);
 
   if (!isOpen) return null;
 
@@ -79,19 +99,13 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
 
   // Calculate work preview
   const selectedStaff = allStaff.filter(s => selectedStaffIds.includes(s.id));
-  const staffTaskCounts = new Map<string, number>();
-  // For now, assume each selected staff is only on this task (task count = 1)
-  selectedStaff.forEach(s => staffTaskCounts.set(s.id, 1));
-  const grapeVariety = activity.params?.grape;
+  const staffTaskCounts = workContext?.staffTaskCounts || new Map<string, number>();
 
-  const workPerWeek = selectedStaff.length > 0
-    ? calculateStaffWorkContribution(selectedStaff, activity.category, staffTaskCounts, grapeVariety)
-    : 0;
-
-  const remainingWork = activity.totalWork - activity.completedWork;
-  const weeksToComplete = selectedStaff.length > 0
-    ? calculateEstimatedWeeks(selectedStaff, activity.category, staffTaskCounts, remainingWork, grapeVariety)
-    : 0;
+  const workPreview = workContext
+    ? calculateActivityStaffWorkPreview(activity, selectedStaff, workContext)
+    : null;
+  const workPerWeek = workPreview?.workPerWeek ?? 0;
+  const weeksToComplete = workPreview?.weeksToComplete ?? 0;
 
   const relevantSkill = getRelevantSkillName(activity.category);
   const relevantSkillKey = getRelevantSkillKey(activity.category);
@@ -110,6 +124,20 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       />
     </div>
   );
+
+  const renderActivityBonuses = (staff: Staff) => {
+    const bonuses = getStaffContributionBreakdown(staff, activity.category, workContext?.grapeVariety);
+    if (bonuses.taskBonus === 0 && bonuses.grapeBonus === 0) {
+      return <span className="text-xs text-gray-500">No matching bonus</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1 text-xs">
+        {bonuses.taskBonus > 0 && <span className="bg-blue-700 text-white px-2 py-1 rounded">Task +{formatNumber(bonuses.taskBonus * 100, { decimals: 0 })}%</span>}
+        {bonuses.grapeBonus > 0 && <span className="bg-purple-700 text-white px-2 py-1 rounded">{workContext?.grapeVariety} mastery +{formatNumber(bonuses.grapeBonus * 100, { decimals: 1 })}%</span>}
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -211,6 +239,9 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           <p className="text-xs text-gray-400 mt-2">
             Primary skill: <span className="font-medium" style={{ color: getSkillColor(relevantSkillKey) }}>{relevantSkill}</span>
           </p>
+          {workContext?.grapeVariety && (
+            <p className="text-xs text-gray-400 mt-1">Grape mastery applies for {workContext.grapeVariety}.</p>
+          )}
         </div>
 
         {/* Staff List */}
@@ -276,16 +307,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                         {renderSkillBars(staff)}
                       </div>
 
-                      {staff.specializations.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {staff.specializations.map(spec => (
-                            <span key={spec} className="text-xs bg-blue-600 text-white px-2 py-1 rounded flex items-center gap-1">
-                              <span>{getSpecializationIcon(spec)}</span>
-                              <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="mt-2">{renderActivityBonuses(staff)}</div>
                     </div>
                   );
                 })}
@@ -299,7 +321,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Name</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Nationality</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Skills</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Specializations</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Task Mastery</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Activity Bonus</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300">Wage</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-300">
                         <input
@@ -328,20 +351,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-300">{staff.nationality}</td>
                           <td className="px-4 py-3">{renderSkillBars(staff)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-300">
-                            {staff.specializations.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.specializations.map(spec => (
-                                  <span key={spec} className="text-xs bg-blue-600 text-white px-2 py-1 rounded flex items-center gap-1">
-                                    <span>{getSpecializationIcon(spec)}</span>
-                                    <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-gray-500 text-xs">None</span>
-                            )}
-                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-300">{renderActivityBonuses(staff)}</td>
+                          <td className="px-4 py-3">{renderActivityBonuses(staff)}</td>
                           <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatNumber(staff.wage, { currency: true })}/wk</td>
                           <td className="px-4 py-3 text-center">
                             <input

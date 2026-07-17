@@ -1,9 +1,54 @@
 import { describe, it, expect } from 'vitest';
+import type { Lender, Loan } from '@/lib/types/types';
 import {
   calculateEffectiveInterestRate,
   calculateSeasonalPayment,
-  calculateCreditRatingModifier
-} from '@/lib/features/loanLender/services/finance/loanService';
+  calculateCreditRatingModifier,
+  calculateLoanTerms,
+  calculateOriginationFee,
+  estimatePrepaymentPenalty,
+} from '@/lib/features/loanLender/services/finance/loanCalculations';
+
+const lender: Lender = {
+  id: 'lender-1',
+  name: 'Test Bank',
+  type: 'Bank',
+  riskTolerance: 0.5,
+  flexibility: 0.5,
+  marketPresence: 0.5,
+  baseInterestRate: 0.05,
+  minLoanAmount: 1_000,
+  maxLoanAmount: 1_000_000,
+  minDurationSeasons: 4,
+  maxDurationSeasons: 120,
+  originationFee: {
+    basePercent: 0.02,
+    minFee: 500,
+    maxFee: 10_000,
+    creditRatingModifier: 0.7,
+    durationModifier: 1.2,
+  },
+};
+
+const loan: Loan = {
+  id: 'loan-1',
+  lenderId: lender.id,
+  lenderName: lender.name,
+  lenderType: lender.type,
+  principalAmount: 10_000,
+  baseInterestRate: lender.baseInterestRate,
+  economyPhaseAtCreation: 'Stable',
+  effectiveInterestRate: 0.05,
+  originationFee: 500,
+  remainingBalance: 1_000,
+  seasonalPayment: 2_750,
+  seasonsRemaining: 4,
+  totalSeasons: 4,
+  startDate: { week: 1, season: 'Spring', year: 2026 },
+  nextPaymentDue: { week: 1, season: 'Summer', year: 2026 },
+  missedPayments: 0,
+  status: 'active',
+};
 
 describe('calculateEffectiveInterestRate', () => {
   const baseRate = 0.05; // 5% base rate
@@ -107,6 +152,24 @@ describe('calculateSeasonalPayment', () => {
 
     expect(payment).toBe(0);
   });
-
 });
 
+describe('loan terms and fees', () => {
+  it('keeps the loan term totals internally consistent', () => {
+    const terms = calculateLoanTerms(lender, 20_000, 12, 0.7, 'Stable');
+
+    expect(terms.totalRepayment).toBeCloseTo(terms.seasonalPayment * 12, 10);
+    expect(terms.totalInterest).toBeCloseTo(terms.totalRepayment - 20_000, 10);
+    expect(terms.totalExpenses).toBeCloseTo(terms.originationFee + terms.totalInterest, 10);
+  });
+
+  it('keeps origination fees within the lender limits', () => {
+    expect(calculateOriginationFee(1_000, lender, 0.9, 4)).toBe(500);
+    expect(calculateOriginationFee(1_000_000, lender, 0.1, 120)).toBe(10_000);
+  });
+
+  it('bounds the prepayment penalty by the remaining scheduled interest', () => {
+    expect(estimatePrepaymentPenalty(loan)).toBe(2_500);
+    expect(estimatePrepaymentPenalty({ ...loan, remainingBalance: 11_000 })).toBe(0);
+  });
+});

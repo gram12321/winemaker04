@@ -60,6 +60,184 @@ Use this structure for every new entry:
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.336b-0.336h - User, Company, and Leaderboard Isolation
+**Date:** 2026-07-17 | **Commit(s):** db7a376, 68b3661, 2911fda, 12aa093, b9b60e0, bd4821d, 00e01a1 | **Stats:** 2,567 insertions(+), 2,235 deletions(-)
+
+### Summary
+- Isolated player identity, session, wallet, preferences, profile/settings UI, and company records behind explicit feature facades.
+- Added a company gateway and active-company lifecycle hooks so App composes cross-feature activation while company/user modules retain their own contracts.
+- Moved leaderboard recording, ranking, presentation, and maintenance behind `leaderboardsFeature`, with atomic best-score persistence for company aggregate boards.
+
+### Changes
+- `src/lib/features/user/`, `src/lib/features/company/`, and `src/lib/features/leaderboards/` - new public feature contracts, services, UI ownership, and feature-native input/read-model types.
+- `src/lib/services/core/companyLifecycle.ts`, `gameState.ts`, `notificationService.ts`, and `financeService.ts` - explicit active-company cache and notification lifecycle hooks.
+- **NEW FILE:** `src/lib/features/company/ui/CompanyGateway.tsx` (159 lines) - company selection/creation gateway for owned and unowned companies.
+- **NEW FILE:** `migrations/20260717190000_make_company_leaderboards_atomic.sql` (153 lines) - deduplicates aggregate scores and provides atomic best-score writes while preserving historical wine/vineyard entries.
+- `src/lib/database/core/highscoresDB.ts`, leaderboard consumers, and `tests/database/highscoresDB.test.ts` - atomic aggregate persistence and regression coverage.
+- `src/components/pages/Login.tsx`, `CompanyOverview.tsx`, profile/settings pages, and `src/App.tsx` - migrated host and UI wiring to the feature facades.
+
+### Notes
+- Merge commit `6d72928` integrates the `isolate-user-domain-research` branch; its merge diff is not added to the grouped stats a second time.
+- `00e01a1` completes the review cleanup by removing redundant user/company access paths and making leaderboard definitions/data loading declarative.
+- Merge commit `0a58fcd` is the final main-branch integration of the staff-task specialization branch; its already listed changes are not counted a second time.
+
+## Version 0.337 - Loan-Lender Quote and Payment Cleanup
+**Date:** 2026-07-17 | **Commit(s):** 0604846, a7d14c7, 937384c | **Stats:** 875 insertions(+), 689 deletions(-)
+
+### Summary
+- Centralized borrower quotes, adjusted loan applications, payment summaries, search economics, and loan constants behind focused services.
+- Split repayment operations from loan lifecycle orchestration while preserving persistence-failure propagation and activity completion behavior.
+
+### Changes
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanQuoteService.ts` (152 lines) - shared lender-search, loan-offer, application, and payment-summary calculations.
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanPaymentService.ts` (99 lines) - repayment operations and outstanding-balance reads.
+- `src/lib/features/loanLender/services/finance/loanService.ts`, `loanViewService.ts`, `lenderService.ts`, and activity managers - reduced duplicated lifecycle logic and routed borrower/application data through the focused seams.
+- `src/lib/constants/loanConstants.ts`, work calculators, and loan UI - centralized lender availability, search, liquidation, range, and complexity tuning used consistently by previews and execution.
+- `tests/finance/loanCalculations.test.ts` and `loanQuoteService.test.ts` - regression coverage for quotes, adjusted applications, payment summaries, and loan calculations.
+
+### Notes
+- The cleanup retains `loanLenderFeature` as the public facade; UI modules no longer own duplicated loan economics.
+
+## Version 0.337 - Achievement Feature Cleanup
+**Date:** 2026-07-17 | **Commit(s):** 67c6d08, 580fc96 | **Stats:** 123 insertions(+), 366 deletions(-)
+
+### Summary
+- Simplified achievement definitions and evaluation by removing duplicated orchestration and keeping feature-owned behavior focused.
+- Added regression coverage for bulk unlock snapshots and retry-safe existing rewards.
+
+### Changes
+- `src/lib/features/achievements/achievementDefinitions.ts` and `AchievementsPage.tsx` - consolidated tier definitions and category/filter presentation.
+- `src/lib/features/achievements/achievementService.ts` and `src/lib/database/core/achievementsDB.ts` - reduced service duplication and retained database-backed unlock evaluation.
+- `tests/features/achievements/achievementEvaluation.test.ts` - coverage for bulk unlock reads and reward retries.
+
+### Notes
+- This is a feature-boundary cleanup following the achievement isolation entry; no new achievement category is claimed.
+
+## Version 0.336c-0.337 - Staff and Activity Cleanup
+**Date:** 2026-07-16 | **Commit(s):** f15b07e, 049aad2 | **Stats:** 285 insertions(+), 1,123 deletions(-)
+
+### Summary
+- Consolidated staff-search, work-allocation, wage, and persistence paths after the specialization cutover.
+- Centralized vineyard work modifiers and clearing rules, removing duplicate activity and clearing implementations.
+
+### Changes
+- `src/lib/services/activity/workcalculators/workCalculator.ts`, `activityWorkContext.ts`, staff search services, `staffDB.ts`, and `wageService.ts` - canonical staff allocation, effective-skill, persistence, and wage paths.
+- `src/lib/services/activity/workcalculators/vineyardWorkModifiers.ts`, `src/lib/services/vineyard/clearingRules.ts`, and clearing/activity managers - shared vineyard modifiers and clearing-health calculation used by previews and completion.
+- `src/components/ui/modals/UImodals/StaffModal.tsx`, `StaffSearchOptionsModal.tsx`, and activity UI - updated staff and work previews.
+- `tests/activity/clearingRules.test.ts`, staff activity tests, and workflow tests - regression coverage for the consolidated behavior.
+
+### Notes
+- Cleanup removes obsolete agent handoff artifacts and pass-through wrappers; the runtime changes are intended to preserve the specialization behavior introduced in `691ed54`.
+
+## Version 0.336 - Staff Task and Grape Specialization Restoration
+**Date:** 2026-07-16 | **Commit(s):** 691ed54, 5cccd82 | **Stats:** 1,940 insertions(+), 1,023 deletions(-)
+
+### Summary
+- Restored persisted staff task specializations and added broad specialized roles as a separate model.
+- Applied additive, bounded role/task/grape bonuses consistently to work allocation and wages.
+- Updated recruitment, starting conditions, staff UI, schema, and regression coverage for the clean specialization cutover.
+
+### Changes
+- `src/lib/types/types.ts`, `src/lib/constants/staffConstants.ts`, and `src/lib/services/activity/workcalculators/workCalculator.ts` - specialization contracts, shared tuning, allocation, and bonus caps.
+- `src/lib/services/user/staffService.ts`, `src/lib/services/finance/wageService.ts`, and activity services - role/task validation, XP-aware wages, and lifecycle updates.
+- `src/lib/database/core/staffDB.ts` and `migrations/20260715100000_replace_staff_specializations.sql` - strict persisted role data and schema migration.
+- `src/components/pages/Staff.tsx`, staff modals, starting conditions, and recruitment UI - separate role, task, and grape-mastery presentation.
+- `tests/activity/*`, `tests/finance/*`, and staff/user tests - focused calculator, wage, recruitment, and lifecycle coverage.
+- `CONTEXT.md`, `readme.md`, `docs/AIdocs/`, `docs/PROJECT_INFO.md`, and `docs/WineSystem_VariableRelationshipMap.md` - aligned project guidance with the specialization model and removed superseded planning detail.
+
+### Notes
+- This is a breaking persistence cutover: legacy `staff.specializations` data is not read through a compatibility path.
+
+## Version 0.3253-0.326 - Atomic Market Purchases and Database Stabilization
+**Date:** 2026-07-14 to 2026-07-15 | **Commit(s):** f37bf65, 097d022, 2f5000e, 5027e4a, 09f330b | **Stats:** 367 insertions(+), 184 deletions(-)
+
+### Summary
+- Reworked market purchase persistence and database paths after the market-modal branch integration.
+- Removed the failing client-side RPC purchase path and aligned purchase, transaction, and inventory updates with the corrected schema.
+
+### Changes
+- `src/lib/database/market/buyMarketOffersDB.ts`, market services, and storage-vessel adapters - atomic purchase handling and availability/funds validation.
+- `src/lib/services/finance/financeService.ts` and inventory persistence - synchronization of persisted transactions and purchased batches.
+- Database fixes and targeted market tests - corrected RPC/schema assumptions and failure behavior.
+
+### Notes
+- Merge commits `5dc5702` and `67f6c25` document the marketmodal integration; their changes are represented in the grouped feature entries rather than counted twice.
+
+## Version 0.3253-0.3253b - Buy-Market Agent and Test-System Cleanup
+**Date:** 2026-07-14 | **Commit(s):** 2020869, b9de7c3, be2a8e3 | **Stats:** 1,337 insertions(+), 1,425 deletions(-)
+
+### Summary
+- Corrected genetic and non-genetic buy-market agent editing and selection behavior.
+- Trimmed obsolete test-system material and aligned plans/specifications with the current market architecture.
+
+### Changes
+- Buy-market agent components, services, constants, and tests - corrected editing and genetic purchase flows.
+- `tests/` and test configuration - removed obsolete coverage and simplified the active test surface.
+
+### Notes
+- Documentation-only planning commits are omitted from the commit list because they do not change runtime behavior.
+
+## Version 0.3251 - Achievement Feature Isolation
+**Date:** 2026-07-13 | **Commit(s):** 654e26f, c14d5ee, ce44194 | **Stats:** 1,834 insertions(+), 3,157 deletions(-)
+
+### Summary
+- Isolated achievement definitions and behavior behind a feature-owned module boundary.
+- Removed duplicated or obsolete achievement paths and completed the associated review cleanup.
+
+### Changes
+- Achievement feature modules, services, constants, and UI consumers - centralized achievement ownership and integration.
+- `tests/` and affected shared services - updated imports, fixtures, and regression expectations for the isolated boundary.
+
+### Notes
+- The large deletion count reflects removal of superseded architecture rather than loss of achievement behavior.
+
+## Version 0.332-0.3354 - Storage Vessels and Buy-Market Integration
+**Date:** 2026-07-13 to 2026-07-14 | **Commit(s):** 24e8fee, 25a2d9b, 38cc0a7, cb3a5b2, c2ecafc, 3cbba0e, f05a806, d34eed7 | **Stats:** 5,983 insertions(+), 3,167 deletions(-)
+
+### Summary
+- Added storage vessels as capacity-bearing inventory used by market purchases and wine batches.
+- Added vessel offers, allocation/release behavior, maintenance, and review-driven fixes across persistence and UI.
+
+### Changes
+- Storage-vessel services, database modules, types, migrations, and tests - vessel ownership, capacity, offers, and lifecycle state.
+- `src/lib/services/sales/buyGrapeMarketService.ts`, storage-vessel market adapters, and inventory services - vessel-aware purchase and allocation flow.
+- Market, winery, cellar, and related modal components - vessel selection, capacity display, and purchase feedback.
+- Maintenance and regression tests - corrected partial allocation, cleanup, and persistence edge cases.
+
+### Notes
+- The numbered review commits are grouped because they refine one storage-vessel feature train.
+
+## Version 0.331-0.331a - Genetic Buy-Market Generalization
+**Date:** 2026-07-12 to 2026-07-13 | **Commit(s):** 638a1e7, c6ae19b, a3bb379 | **Stats:** 1,360 insertions(+), 163 deletions(-)
+
+### Summary
+- Generalized buy-market handling to support geneticized grape inventory and the later storage-vessel flow.
+- Added supporting UI corrections and shared purchase/inventory seams.
+
+### Changes
+- `src/lib/services/sales/buyGrapeMarketService.ts` and market persistence - generalized offer-to-inventory conversion and purchase flow.
+- Inventory, storage allocation, and market UI modules - shared handling for genetic batches and vessel capacity.
+- Market tests - regression coverage for generalized purchase behavior.
+
+### Notes
+- This is the foundation for the subsequent storage-vessel feature train.
+
+## Version 0.3242-0.3247a - Feature and Admin Module Boundary Cleanup
+**Date:** 2026-07-12 to 2026-07-13 | **Commit(s):** 68ebf9e, 1e2640a, 75f38ea, e0faac1, 20f12f5, 4c747d2 | **Stats:** 1,331 insertions(+), 1,214 deletions(-)
+
+### Summary
+- Continued admin isolation and unified feature-module boundaries across the application.
+- Evaluated and isolated the board-share module, deactivating its integration while preserving surrounding feature seams.
+
+### Changes
+- Admin and feature modules, shared services, and imports - moved ownership toward explicit feature boundaries.
+- Board-share module and consumers - isolated and deactivated the module from the active feature path.
+- `docs/codexplans/` and project documentation - recorded boundary decisions and follow-up architecture work.
+
+### Notes
+- These commits are architectural cleanup; no new player-facing mechanic is claimed here.
+
+---
 ## Version 0.324-0.3241 - Weather Module Redesign and Site-Aware Forecast Explanations
 **Date:** 2026-07-12 | **Commit(s):** 580df2c, ce46fba | **Stats:** 2,608 insertions(+), 3,259 deletions(-)
 

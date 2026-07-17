@@ -8,20 +8,21 @@ import {
   type StaffSearchOptions
 } from '@/lib/services/activity/workcalculators/staffSearchWorkCalculator';
 import { createStaff } from '@/lib/services/user/staffService';
-import type { Staff } from '@/lib/types/types';
+import { generateStaffCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
+import { type Staff, type SpecializedRole } from '@/lib/types/types';
 
 describe('staff search calculations', () => {
   const baseSearchOptions: StaffSearchOptions = {
     numberOfCandidates: 3,
     skillLevel: 0.5,
-    specializations: []
+    specializedRoles: []
   };
 
   it('keeps search cost and work finite and responsive to every search driver', () => {
     const variants = [
       { ...baseSearchOptions, numberOfCandidates: 5 },
       { ...baseSearchOptions, skillLevel: 0.8 },
-      { ...baseSearchOptions, specializations: ['field', 'winery'] },
+      { ...baseSearchOptions, specializedRoles: ['field'] as SpecializedRole[] },
     ];
     const baseCost = calculateStaffSearchCost(baseSearchOptions);
     const baseWork = calculateSearchWork(baseSearchOptions);
@@ -35,6 +36,13 @@ describe('staff search calculations', () => {
       expect(calculateStaffSearchCost(options)).toBeGreaterThan(baseCost);
       expect(calculateSearchWork(options)).toBeGreaterThanOrEqual(baseWork);
     }
+  });
+
+  it('carries selected broad roles into generated search candidates', () => {
+    const candidates = generateStaffCandidates({ ...baseSearchOptions, numberOfCandidates: 2, specializedRoles: ['field'] as SpecializedRole[] });
+
+    expect(candidates).toHaveLength(2);
+    expect(candidates.every(candidate => candidate.specializedRoles.includes('field'))).toBe(true);
   });
 
   it('keeps hiring work ranges ordered and increases them for harder searches', () => {
@@ -60,17 +68,17 @@ describe('staff search calculations', () => {
     };
 
     const candidate = (overrides: Partial<Staff> = {}): Staff => ({
-      ...createStaff('Test', 'Staff', 0.5, [], 'United States'),
+      ...createStaff('Test', 'Staff', 0.5, 'United States'),
       skills: fixedSkills,
       ...overrides
     });
 
-    it('keeps candidate hiring work finite and sensitive to wage and specializations', () => {
+    it('keeps candidate hiring work finite and sensitive to wage and broad roles', () => {
       const base = calculateHiringWorkForCandidate(candidate({ wage: 1000 }));
       const higherWage = calculateHiringWorkForCandidate(candidate({ wage: 3000 }));
       const specialized = calculateHiringWorkForCandidate(candidate({
         wage: 3000,
-        specializations: ['field', 'winery']
+        specializedRoles: ['field', 'winery']
       }));
 
       expect(base).toBeGreaterThan(0);
@@ -85,7 +93,7 @@ describe('staff search calculations', () => {
     const higherSkill = calculateSearchPreview({ ...baseSearchOptions, skillLevel: 0.7 });
     const specialized = calculateSearchPreview({
       ...baseSearchOptions,
-      specializations: ['field', 'winery']
+      specializedRoles: ['field']
     });
 
     expect(preview.minSkill).toBeGreaterThanOrEqual(0);
@@ -101,5 +109,6 @@ describe('staff search calculations', () => {
     expect(specialized.minWeeklyWage).toBeGreaterThan(preview.minWeeklyWage);
     expect(specialized.maxWeeklyWage).toBeGreaterThan(preview.maxWeeklyWage);
     expect(specialized.specializationBonus).toBeGreaterThan(preview.specializationBonus);
+    expect(specialized.specializationBonus).toBeCloseTo(1.3);
   });
 });

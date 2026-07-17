@@ -1,7 +1,7 @@
 import { syncPersistedTransaction } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
-import { companyService } from '../user/companyService';
+import { companyFeature } from '@/lib/features/company';
 import { calculateCompanyValue } from '../finance/financeService';
 import {
   type GrapeMarketOfferRow,
@@ -462,7 +462,7 @@ function createGrapeMarketOfferPriceSnapshot(
 }
 
 async function getSupplierRemainingSeasonCapKg(companyId: string, supplierId: string): Promise<number | null> {
-  const company = await companyService.getCompany(companyId).catch(() => null);
+  const company = await companyFeature.records.get(companyId).catch(() => null);
   const startingCountry = company?.startingCountry;
   const [bulkSupplier, seasonalSuppliers] = await Promise.all([
     getBulkSupplier(startingCountry),
@@ -587,7 +587,7 @@ async function resolveSyncedDemandFactors(startingCountry?: string): Promise<Buy
 }
 
 async function getMarketContext(companyId: string): Promise<{ country: Nationality; demandFactors: BuyMarketDemandFactors }> {
-  const company = await companyService.getCompany(companyId).catch(() => null);
+  const company = await companyFeature.records.get(companyId).catch(() => null);
   const country = toNationality(company?.startingCountry);
   const demandFactors = await resolveSyncedDemandFactors(country);
   return { country, demandFactors };

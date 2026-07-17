@@ -1,13 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { clearAllAchievements, clearAllCompanies, clearAllCompaniesAndUsers, clearAllCustomers, clearAllUsers, fullDatabaseReset } from '@/lib/database/admin/adminDB';
-import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '@/lib/services';
+import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, initializeCustomers, updateGameState } from '@/lib/services';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
-import { setPlayerBalance } from '@/lib/services/user/userBalanceService';
+import { userFeature } from '@/lib/features/user';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
-import { companyService } from '@/lib/services/user/companyService';
+import { companyFeature } from '@/lib/features/company';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import { awardExperience, getAllStaff } from '@/lib/services/user/staffService';
 
@@ -90,18 +91,18 @@ export async function adminSetPlayerBalance(
     }
 
     // Get full company data to access userId
-    const company = await companyService.getCompany(currentCompany.id);
+    const company = await companyFeature.records.get(currentCompany.id);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
 
-    const targetUserId = userIdOverride || company.userId;
+    const targetUserId = userIdOverride || company.ownerId;
     if (!targetUserId) {
       return { success: false, error: 'Company is not associated with a user' };
     }
 
     // Set the player balance
-    const result = await setPlayerBalance(targetAmount, targetUserId);
+    const result = await userFeature.wallet.setBalance(targetUserId, targetAmount);
 
     if (result.success) {
       return {
@@ -165,21 +166,21 @@ export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
  * Clear all highscores
  */
 export async function adminClearAllHighscores(): Promise<{ success: boolean; message?: string }> {
-  return await highscoreService.clearHighscores();
+  return await leaderboardsFeature.maintenance.clear();
 }
 
 /**
  * Clear company value highscores
  */
 export async function adminClearCompanyValueHighscores(): Promise<{ success: boolean; message?: string }> {
-  return await highscoreService.clearHighscores('company_value');
+  return await leaderboardsFeature.maintenance.clear('company_value');
 }
 
 /**
  * Clear company value per week highscores
  */
 export async function adminClearCompanyValuePerWeekHighscores(): Promise<{ success: boolean; message?: string }> {
-  return await highscoreService.clearHighscores('company_value_per_week');
+  return await leaderboardsFeature.maintenance.clear('company_value_per_week');
 }
 
 /**

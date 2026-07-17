@@ -30,7 +30,7 @@ export interface TestLabRunnerDependencies {
   createFermentingBatch: typeof createFermentingBatch;
   createBottledWine: typeof createBottledWine;
   completeActivityNow: (activityId: string) => Promise<{ success: boolean; error?: string; activity?: { id: string; title: string } }>;
-  getCurrentUserId: () => string | null;
+  getCurrentUserId: () => Promise<string | null>;
   runAutomatedTests: (target?: string) => Promise<AutomatedTestRunResult>;
 }
 
@@ -222,7 +222,7 @@ async function runFinanceScenario(
   }
 
   if (scenarioId === 'finance.set-player-balance') {
-    const currentUserId = dependencies.getCurrentUserId();
+    const currentUserId = await dependencies.getCurrentUserId();
 
     if (!currentUserId) {
       return {

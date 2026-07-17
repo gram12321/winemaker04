@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { WorkCategory, type Staff } from '@/lib/types/types';
-import { calculateStaffWorkContribution } from '@/lib/services/activity/workcalculators/workCalculator';
+import { calculateStaffWorkAllocation } from '@/lib/services/activity/workcalculators/workCalculator';
+
+const calculateContribution = (...args: Parameters<typeof calculateStaffWorkAllocation>): number =>
+  calculateStaffWorkAllocation(...args).totalWork;
 
 function researchStaff(overrides: Partial<Staff> = {}): Staff {
   return {
@@ -8,7 +11,7 @@ function researchStaff(overrides: Partial<Staff> = {}): Staff {
     name: 'Research Specialist',
     nationality: 'France',
     skillLevel: 0.5,
-    specializations: [],
+    specializedRoles: [],
     skills: {
       field: 0.5,
       winery: 0.5,
@@ -31,19 +34,19 @@ describe('research speed staff contribution', () => {
     const staff = [researchStaff()];
     const staffTaskCounts = new Map<string, number>([['staff-1', 1]]);
 
-    const baseResearchContribution = calculateStaffWorkContribution(
+    const baseResearchContribution = calculateContribution(
       staff,
       WorkCategory.ADMINISTRATION_AND_RESEARCH,
       staffTaskCounts
     );
-    const boostedResearchContribution = calculateStaffWorkContribution(
+    const boostedResearchContribution = calculateContribution(
       staff,
       WorkCategory.ADMINISTRATION_AND_RESEARCH,
       staffTaskCounts,
       undefined,
       { researchSkillMultiplier: 1.25 }
     );
-    const fieldContribution = calculateStaffWorkContribution(
+    const fieldContribution = calculateContribution(
       staff,
       WorkCategory.PLANTING,
       staffTaskCounts,
@@ -59,25 +62,25 @@ describe('research speed staff contribution', () => {
     const staff = [researchStaff()];
     const staffTaskCounts = new Map<string, number>([['staff-1', 1]]);
 
-    const baseResearchContribution = calculateStaffWorkContribution(
+    const baseResearchContribution = calculateContribution(
       staff,
       WorkCategory.ADMINISTRATION_AND_RESEARCH,
       staffTaskCounts
     );
-    const baseFieldContribution = calculateStaffWorkContribution(
+    const baseFieldContribution = calculateContribution(
       staff,
       WorkCategory.PLANTING,
       staffTaskCounts
     );
 
-    const boostedResearchContribution = calculateStaffWorkContribution(
+    const boostedResearchContribution = calculateContribution(
       staff,
       WorkCategory.ADMINISTRATION_AND_RESEARCH,
       staffTaskCounts,
       undefined,
       { allStaffWorkMultiplier: 1.1 }
     );
-    const boostedFieldContribution = calculateStaffWorkContribution(
+    const boostedFieldContribution = calculateContribution(
       staff,
       WorkCategory.PLANTING,
       staffTaskCounts,

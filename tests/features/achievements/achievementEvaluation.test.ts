@@ -27,7 +27,6 @@ const mocks = vi.hoisted(() => {
     })),
     getAchievementUnlock: vi.fn(async () => null as AchievementUnlock | null),
     getAllAchievementUnlocks: vi.fn(async () => [] as AchievementUnlock[]),
-    isAchievementUnlocked: vi.fn(async () => false),
     unlockAchievement: vi.fn(async () => ({ unlock, created: true })),
     loadVineyards: vi.fn(async () => [{
       id: 'vineyard-1',
@@ -82,7 +81,6 @@ vi.mock('@/lib/services/core/gameState', () => ({
 vi.mock('@/lib/database/core/achievementsDB', () => ({
   getAchievementUnlock: mocks.getAchievementUnlock,
   getAllAchievementUnlocks: mocks.getAllAchievementUnlocks,
-  isAchievementUnlocked: mocks.isAchievementUnlocked,
   unlockAchievement: mocks.unlockAchievement,
 }));
 
@@ -285,5 +283,22 @@ describe('achievement evaluation behavior', () => {
     expect(result).toBeNull();
     expect(mocks.insertCompanyReward).toHaveBeenCalledWith(expect.any(Object), 'company-a');
     expect(mocks.addMessage).not.toHaveBeenCalled();
+  });
+
+  it('uses bulk unlock snapshots when checking all achievements and retries existing rewards', async () => {
+    mocks.getAllAchievementUnlocks.mockResolvedValue([mocks.unlock]);
+
+    await achievementsFeature.evaluation.checkAll();
+
+    // One snapshot is needed for achievement-completion progress and one for
+    // the check-all lookup; no per-achievement unlock queries are made.
+    expect(mocks.getAllAchievementUnlocks).toHaveBeenCalledTimes(2);
+    expect(mocks.getAllAchievementUnlocks).toHaveBeenNthCalledWith(1, 'company-a');
+    expect(mocks.getAllAchievementUnlocks).toHaveBeenNthCalledWith(2, 'company-a');
+    expect(mocks.getAchievementUnlock).not.toHaveBeenCalled();
+    expect(mocks.insertCompanyReward).toHaveBeenCalledWith(
+      expect.objectContaining({ source_id: 'achievement:vineyard_empire_tier_1' }),
+      'company-a'
+    );
   });
 });

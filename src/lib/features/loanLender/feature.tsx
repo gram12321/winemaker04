@@ -6,11 +6,11 @@ import { completeTakeLoan } from './services/activity/activitymanagers/takeLoanM
 import { getAllLenders, initializeLenders } from './services/finance/lenderService';
 import {
   applyForLoan,
-  calculateTotalOutstandingLoans,
   enforceEmergencyQuickLoanIfNeeded,
   processSeasonalLoanPayments,
   restructureForcedLoansIfNeeded
 } from './services/finance/loanService';
+import { calculateTotalOutstandingLoans } from './services/finance/loanPaymentService';
 import { DEFAULT_ACTIVE_LOAN_PORTFOLIO, loadActiveLoanPortfolio } from './services/finance/loanViewService';
 
 const LoansView = lazy(() => import('./ui/LoansView').then(module => ({ default: module.LoansView })));

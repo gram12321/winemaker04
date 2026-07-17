@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types/types';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import { formatNumber, getFlagIcon, getSpecializationIcon, getColorClass, setModalMinimized } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getColorClass, setModalMinimized } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { Button, Badge, StaffSkillBarsList, WarningModal } from '@/components/ui';
 import { startHiringProcess, clearPendingCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
@@ -163,14 +163,8 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                           <div className="flex-1">
                             <div className="font-medium text-white">{candidate.name}</div>
                             <div className="text-xs text-gray-400">{skillInfo.name}</div>
-                            {candidate.specializations.length > 0 && (
-                              <div className="flex gap-1 mt-1">
-                                {candidate.specializations.map(spec => (
-                                  <span key={spec} className="text-xs">
-                                    {getSpecializationIcon(spec)}
-                                  </span>
-                                ))}
-                              </div>
+                            {candidate.specializedRoles.length > 0 && (
+                              <div className="text-xs text-amber-300 mt-1">{candidate.specializedRoles.map(role => SPECIALIZED_ROLES[role].title).join(', ')}</div>
                             )}
                           </div>
                         </div>
@@ -204,6 +198,14 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                           <span className="text-white font-medium">{selectedCandidate.name}</span>
                         </div>
                       </div>
+                      {selectedCandidate.specializedRoles.length > 0 && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-400">Broad roles:</span>
+                          <div className="flex flex-wrap gap-1 justify-end">
+                            {selectedCandidate.specializedRoles.map(role => <Badge key={role} variant="secondary" className="text-xs bg-amber-600 text-white" title={SPECIALIZED_ROLES[role].description}>{SPECIALIZED_ROLES[role].title}</Badge>)}
+                          </div>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-gray-400">Nationality:</span>
                         <span className="text-white">{selectedCandidate.nationality}</span>
@@ -214,19 +216,6 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                           {getSkillLevelInfo(selectedCandidate.skillLevel).name} ({formatNumber(selectedCandidate.skillLevel * 100, { smartDecimals: true })}%)
                         </Badge>
                       </div>
-                      {selectedCandidate.specializations.length > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Specializations:</span>
-                    <div className="flex flex-wrap gap-1 justify-end">
-                      {selectedCandidate.specializations.map(spec => (
-                        <Badge key={spec} variant="secondary" className="text-xs bg-blue-600 text-white flex items-center gap-1">
-                          <span>{getSpecializationIcon(spec)}</span>
-                          <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
-                        </Badge>
-                      ))}
-                    </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -236,11 +225,6 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                     <StaffSkillBarsList staff={selectedCandidate} />
                     <p className="text-xs text-gray-400 mt-3">
                       Skills are randomly generated based on the skill level. Higher skill level means better overall skills.
-                      {selectedCandidate.specializations.length > 0 && (
-                        <span className="block mt-1">
-                          Specializations provide bonuses to specific skill areas (marked with higher values).
-                        </span>
-                      )}
                     </p>
                   </div>
 

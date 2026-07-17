@@ -1,9 +1,10 @@
-﻿import { Activity, WorkCategory, NotificationCategory, LoanOffer } from '@/lib/types/types';
+import { Activity, WorkCategory, NotificationCategory, LoanOffer, LoanApplicationPayload } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService } from '@/lib/services/core/notificationService';
-import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { applyForLoan } from '@/lib/features/loanLender/services/finance/loanService';
-import { formatNumber } from '@/lib/utils/utils';
+import { formatNumber } from '@/lib/utils';
+import { getGameState } from '@/lib/services/core/gameState';
+import { buildLoanApplicationPayload } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 
 /**
  * Start a take loan activity
@@ -14,7 +15,15 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
     const amount = adjustedAmount ?? offer.principalAmount;
     const duration = adjustedDurationSeasons ?? offer.durationSeasons;
 
-    const { totalWork } = calculateTakeLoanWork(offer, amount, duration);
+    const gameState = getGameState();
+    const application = buildLoanApplicationPayload(
+      offer,
+      amount,
+      duration,
+      gameState.creditRating ?? 0.5,
+      gameState.economyPhase ?? 'Stable',
+    );
+    const { totalWork } = application;
 
     // Create the take loan activity
     const title = 'Processing Loan';
@@ -23,10 +32,16 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
       category: WorkCategory.TAKE_LOAN,
       title,
       totalWork,
-      activityDetails: `Amount: ${formatNumber(offer.principalAmount, { currency: true, decimals: 2 })}, ${Math.round(offer.durationSeasons / 4)} years${isAdjusted ? ' (adjusted)' : ''}`,
+      activityDetails: `Amount: ${formatNumber(amount, { currency: true, decimals: 2 })}, ${Math.round(duration / 4)} years${isAdjusted ? ' (adjusted)' : ''}`,
       params: {
-        offer,
-        isAdjusted
+        application: {
+          offer: application.offer,
+          originalOffer: offer,
+          adjustedAmount: amount,
+          adjustedDurationSeasons: duration,
+          totalWork
+        } satisfies LoanApplicationPayload,
+        isAdjusted,
       },
       isCancellable: true
     });
@@ -44,7 +59,8 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
  */
 export async function completeTakeLoan(activity: Activity): Promise<void> {
   try {
-    const offer = activity.params.offer as LoanOffer;
+    const application = activity.params.application as LoanApplicationPayload | undefined;
+    const offer = application?.offer ?? activity.params.offer as LoanOffer;
 
     if (!offer) {
       console.error('No loan offer found in activity params');
@@ -57,7 +73,13 @@ export async function completeTakeLoan(activity: Activity): Promise<void> {
       offer.principalAmount,
       offer.durationSeasons,
       offer.lender,
-      { skipLimitCheck: true }
+      {
+        skipLimitCheck: true,
+        overrideBaseRate: offer.lender.baseInterestRate,
+        overrideEffectiveRate: offer.effectiveInterestRate,
+        overrideSeasonalPayment: offer.seasonalPayment,
+        overrideOriginationFee: offer.originationFee,
+      }
     );
 
     await notificationService.addMessage(

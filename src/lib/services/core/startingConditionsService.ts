@@ -1,19 +1,18 @@
 import { v4 as uuidv4 } from 'uuid';
 import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanConfig } from '@/lib/constants/startingConditions';
 import { createStaff, addStaff } from '../user/staffService';
-import { assignStaffToTeam, getAllTeams } from '../user/teamService';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { formatNumber, getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
-import { companyService } from '../user/companyService';
-import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
+import { companyFeature } from '@/lib/features/company';
+import { upsertPrestigeEventBySource } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
-import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
+import { userFeature } from '@/lib/features/user';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createStartingVineyard } from '@/lib/database/activities/vineyardDB';
@@ -40,14 +39,6 @@ export interface ApplyStartingConditionsResult {
   startingLoanId?: string;
   startingPrestige?: number;
 }
-
-const SPECIALIZATION_TEAM_TASKS: Record<string, string[]> = {
-  financeAndStaff: ['finance_and_staff', 'land_search'],
-  administrationAndResearch: ['administration_and_research'],
-  field: ['planting', 'harvesting', 'clearing'],
-  winery: ['crushing', 'fermentation'],
-  sales: ['sales']
-};
 
 export const FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION = 100000;
 const FIRST_COMPANY_PLAYER_BALANCE_SEED = 110000;
@@ -110,7 +101,7 @@ export async function applyStartingConditions(
     }
 
     // Get company to check if it has a user
-    const company = await companyService.getCompany(companyId);
+    const company = await companyFeature.records.get(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
@@ -118,9 +109,9 @@ export async function applyStartingConditions(
     // Check if this is the first company for the user
     let isFirstCompany = true;
     let userId: string | undefined;
-    if (company.userId) {
-      userId = company.userId;
-      const userCompanies = await companyService.getUserCompanies(userId);
+    if (company.ownerId) {
+      userId = company.ownerId;
+      const userCompanies = await companyFeature.records.listForOwner(userId);
       // Exclude the current company being created
       const otherCompanies = userCompanies.filter(c => c.id !== companyId);
       isFirstCompany = otherCompanies.length === 0;
@@ -165,10 +156,9 @@ export async function applyStartingConditions(
     }
     
     let startingLoanId: string | undefined;
-    const availableTeams = getAllTeams();
 
     // 1. Update company metadata via service
-    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
+    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyFeature.records.update(companyId, {
       startingCountry: country
     });
 
@@ -180,13 +170,13 @@ export async function applyStartingConditions(
     // 2. Handle player balance deduction
     if (userId) {
       if (isFirstCompany) {
-        await setPlayerBalance(FIRST_COMPANY_PLAYER_BALANCE_SEED, userId);
+        await userFeature.wallet.setBalance(userId, FIRST_COMPANY_PLAYER_BALANCE_SEED);
       }
       
       const playerCashRequirement = playerCashContributionAmount;
       
       // Check player balance
-      const playerBalance = await getPlayerBalance(userId);
+      const playerBalance = await userFeature.wallet.getBalance(userId);
       if (playerBalance < playerCashRequirement) {
         return { 
           success: false, 
@@ -195,7 +185,7 @@ export async function applyStartingConditions(
       }
 
       // Deduct total contribution from player balance
-      const balanceResult = await updatePlayerBalance(-playerCashRequirement, userId);
+      const balanceResult = await userFeature.wallet.applyChange(userId, -playerCashRequirement);
       if (!balanceResult.success) {
         return { success: false, error: balanceResult.error || 'Failed to deduct from player balance' };
       }
@@ -255,39 +245,16 @@ export async function applyStartingConditions(
         staffConfig.firstName,
         staffConfig.lastName,
         staffConfig.skillLevel,
-        staffConfig.specializations,
         staffConfig.nationality as any, // Nationality type
         undefined,
-        staffConfig.isFounder ?? false
+        staffConfig.isFounder ?? false,
+        staffConfig.specializedRoles,
       );
 
       const addedStaff = await addStaff(staff);
       if (addedStaff) {
         createdStaff.push(addedStaff);
 
-        if (availableTeams.length > 0 && staffConfig.specializations?.length) {
-          const teamIdsToAssign = new Set<string>();
-
-          for (const specialization of staffConfig.specializations) {
-            const taskTypes = SPECIALIZATION_TEAM_TASKS[specialization];
-            if (!taskTypes) continue;
-
-            const matchingTeam = availableTeams.find((team) =>
-              taskTypes.some((task) => team.defaultTaskTypes.includes(task))
-            );
-
-            if (matchingTeam) {
-              teamIdsToAssign.add(matchingTeam.id);
-            }
-          }
-
-          for (const teamId of teamIdsToAssign) {
-            const success = await assignStaffToTeam(addedStaff.id, teamId);
-            if (!success) {
-              console.warn(`Failed to assign starting staff ${addedStaff.name} to team ${teamId}`);
-            }
-          }
-        }
       }
     }
 
@@ -337,7 +304,7 @@ export async function applyStartingConditions(
     // Refresh company money after all financial adjustments (capital + loan)
     let resolvedStartingMoney = workingMoney;
     try {
-      const updatedCompany = await companyService.getCompany(companyId);
+      const updatedCompany = await companyFeature.records.get(companyId);
       if (updatedCompany) {
         resolvedStartingMoney = updatedCompany.money;
       }
@@ -355,14 +322,15 @@ export async function applyStartingConditions(
         );
 
         const prestigeConfig = condition.startingPrestige;
-        await insertPrestigeEvent({
+        // Starting conditions may be retried after a partial setup failure. Keep
+        // their prestige grant to one stable row instead of attempting a second
+        // insert for the same company and country.
+        await upsertPrestigeEventBySource(prestigeConfig.type ?? 'company_story', `starting_conditions:${condition.id}`, {
           id: uuidv4(),
-          type: prestigeConfig.type ?? 'company_story',
           amount_base: prestigeConfig.amount,
           created_game_week: createdWeek,
           decay_rate: prestigeConfig.decayRate ?? 0.98,
           description: prestigeConfig.description ?? 'Vineyard Legacy Prestige',
-          source_id: null,
           payload: {
             event: 'starting_conditions',
             country: condition.id,

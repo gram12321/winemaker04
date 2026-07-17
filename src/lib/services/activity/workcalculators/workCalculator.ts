@@ -1,7 +1,15 @@
 import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { Staff, StaffSkills, WorkCategory } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
-import { calculateEffectiveSkill } from '@/lib/services/user/staffService';
+import { calculateEffectiveSkill } from '@/lib/services/user/staffSkillService';
+import { getGrapeWorkContext } from '../activityWorkContext';
+import {
+  MAX_TASK_MASTERY_BONUS,
+  MAX_COMBINED_SPECIALIZATION_BONUS,
+  MAX_GRAPE_MASTERY_BONUS,
+  TEAM_DIMINISHING_RETURNS_EXPONENT,
+  SPECIALIZED_ROLES,
+} from '@/lib/constants/staffConstants';
 
 // Work factor interface for UI display
 export interface WorkFactor {
@@ -16,6 +24,43 @@ export interface WorkFactor {
 export interface StaffContributionOptions {
   researchSkillMultiplier?: number;
   allStaffWorkMultiplier?: number;
+}
+
+export interface StaffWorkAllocation {
+  totalWork: number;
+  contributions: Map<string, number>;
+}
+
+export interface StaffContributionBreakdown {
+  roleBonus: number;
+  taskBonus: number;
+  grapeBonus: number;
+  specializationBonus: number;
+}
+
+/** Returns display-safe specialization bonuses from the same policy as work calculation. */
+export function getStaffContributionBreakdown(
+  staff: Staff,
+  category: WorkCategory,
+  grapeVariety?: string,
+): StaffContributionBreakdown {
+  const relevantSkill = WORK_CATEGORY_INFO[category].skill;
+  const matchingRole = staff.specializedRoles.find(role => SPECIALIZED_ROLES[role].skillBonus === relevantSkill);
+  const roleBonus = matchingRole ? SPECIALIZED_ROLES[matchingRole].bonusAmount : 0;
+  const taskRawXP = staff.experience?.[`task:${category}`] || 0;
+  const taskBonus = normalizeXP(taskRawXP) * MAX_TASK_MASTERY_BONUS;
+  const grapeContext = getGrapeWorkContext(category, grapeVariety);
+  const grapeRawXP = grapeContext
+    ? staff.experience?.[`grape:${grapeVariety}`] || 0
+    : 0;
+  const grapeBonus = normalizeXP(grapeRawXP) * MAX_GRAPE_MASTERY_BONUS;
+
+  return {
+    roleBonus,
+    taskBonus,
+    grapeBonus,
+    specializationBonus: Math.min(MAX_COMBINED_SPECIALIZATION_BONUS, roleBonus + taskBonus + grapeBonus),
+  };
 }
 
 /**
@@ -68,7 +113,7 @@ export function calculateTotalWork(
  * 
  * Formula: For each staff member:
  *   1. Get relevant skill for the activity category
- *   2. Apply specialization bonus if applicable (20%)
+ *   2. Apply bounded task and grape-mastery specialization bonuses when applicable
  *   3. Calculate: workforce × effectiveSkill
  *   4. Divide by number of tasks staff is assigned to
  *   5. Sum all contributions
@@ -112,9 +157,8 @@ export function calculateIndividualStaffContribution(
   // Calculate effective skill with XP
   const skillWithXP = calculateEffectiveSkill(skillValue, rawXP);
 
-  // Add specialization bonus if applicable (20% boost)
-  const hasSpecialization = staff.specializations.includes(relevantSkill);
-  const effectiveSkill = hasSpecialization ? skillWithXP * 1.2 : skillWithXP;
+  const { specializationBonus } = getStaffContributionBreakdown(staff, category, grapeVariety);
+  const effectiveSkill = skillWithXP * (1 + specializationBonus);
 
   // Calculate staff contribution: workforce × effective skill level
   let staffContribution = staff.workforce * effectiveSkill;
@@ -125,19 +169,6 @@ export function calculateIndividualStaffContribution(
 
   if (category === WorkCategory.ADMINISTRATION_AND_RESEARCH && options.researchSkillMultiplier) {
     staffContribution *= Math.max(1, options.researchSkillMultiplier);
-  }
-
-  // Apply grape variety experience bonus if applicable
-  // Formula: contribution × (normalizeXP(grapeXP) + 1)
-  // This gives 1x-2x multiplier (100% to 200% speed)
-  if (grapeVariety) {
-    const grapeXPKey = `grape:${grapeVariety}`;
-    const grapeRawXP = staff.experience?.[grapeXPKey] || 0;
-
-    if (grapeRawXP > 0) {
-      const grapeXPBonus = normalizeXP(grapeRawXP) + 1; // 1.0 to 2.0 multiplier
-      staffContribution *= grapeXPBonus;
-    }
   }
 
   // Divide by number of tasks this staff is assigned to (multi-tasking penalty)
@@ -151,12 +182,11 @@ export function calculateIndividualStaffContribution(
  * 
  * Formula: For each staff member:
  *   1. Get relevant skill for the activity category
- *   2. Apply specialization bonus if applicable (20%)
+ *   2. Apply bounded task and grape-mastery specialization bonuses when applicable
  *   3. Calculate: workforce × effectiveSkill
- *   4. Apply grape variety XP bonus if applicable (1x-2x multiplier)
- *   5. Divide by number of tasks staff is assigned to
- *   6. Sum all contributions
- *   7. Apply team size efficiency factor (staffCount^0.92)
+ *   4. Divide by number of tasks staff is assigned to
+ *   5. Sum all contributions
+ *   6. Apply team size efficiency factor (staffCount^0.92)
  * 
  * Team size scaling:
  *   - 1 staff: 1.0× efficiency (baseline)
@@ -169,29 +199,60 @@ export function calculateIndividualStaffContribution(
  * @param grapeVariety - Optional grape variety for the activity (for grape XP bonus)
  * @returns Total work contribution per tick
  */
-export function calculateStaffWorkContribution(
+/**
+ * Calculate a team's weekly work through one shared allocation. Individual
+ * shares include team diminishing returns and always sum to totalWork.
+ */
+export function calculateStaffWorkAllocation(
   assignedStaff: Staff[],
   category: WorkCategory,
   staffTaskCounts: Map<string, number>,
   grapeVariety?: string,
-  options: StaffContributionOptions = {}
-): number {
-  if (assignedStaff.length === 0) return 0;
-
-  let totalIndividualWork = 0;
-
-  for (const staff of assignedStaff) {
-    totalIndividualWork += calculateIndividualStaffContribution(staff, category, staffTaskCounts, grapeVariety, options);
+  options: StaffContributionOptions = {},
+): StaffWorkAllocation {
+  if (assignedStaff.length === 0) {
+    return { totalWork: 0, contributions: new Map() };
   }
 
-  // Apply team size efficiency factor with diminishing returns
-  // Formula: staffCount^0.92
-  // This prevents linear scaling while still providing strong benefits
-  const teamSizeFactor = Math.pow(assignedStaff.length, 0.92);
-  const averageWorkPerStaff = totalIndividualWork / assignedStaff.length;
-  const scaledWork = averageWorkPerStaff * teamSizeFactor;
+  const rawContributions = assignedStaff.map(staff => [
+    staff.id,
+    calculateIndividualStaffContribution(staff, category, staffTaskCounts, grapeVariety, options),
+  ] as const);
+  const rawTotal = rawContributions.reduce((total, [, contribution]) => total + contribution, 0);
+  const teamScale = Math.pow(assignedStaff.length, TEAM_DIMINISHING_RETURNS_EXPONENT) / assignedStaff.length;
+  const contributions = new Map(
+    rawContributions.map(([staffId, contribution]) => [staffId, contribution * teamScale]),
+  );
 
-  return scaledWork;
+  return { totalWork: rawTotal * teamScale, contributions };
+}
+
+/**
+ * Clamp an allocation to work actually applied this tick. The final share is
+ * calculated as the remainder so the returned shares sum exactly to the
+ * persisted progress delta.
+ */
+export function calculateAppliedStaffWorkAllocation(
+  allocation: StaffWorkAllocation,
+  requestedWork: number,
+): StaffWorkAllocation {
+  const totalWork = Math.max(0, Math.min(requestedWork, allocation.totalWork));
+  if (totalWork === 0 || allocation.totalWork <= 0) {
+    return { totalWork: 0, contributions: new Map() };
+  }
+
+  const entries = [...allocation.contributions.entries()];
+  const contributions = new Map<string, number>();
+  let allocated = 0;
+  entries.forEach(([staffId, contribution], index) => {
+    const share = index === entries.length - 1
+      ? totalWork - allocated
+      : totalWork * (contribution / allocation.totalWork);
+    contributions.set(staffId, share);
+    allocated += share;
+  });
+
+  return { totalWork, contributions };
 }
 
 /**
@@ -204,21 +265,6 @@ export function calculateStaffWorkContribution(
  * @param grapeVariety - Optional grape variety for the activity (for grape XP bonus)
  * @returns Estimated weeks to complete
  */
-export function calculateEstimatedWeeks(
-  assignedStaff: Staff[],
-  category: WorkCategory,
-  staffTaskCounts: Map<string, number>,
-  remainingWork: number,
-  grapeVariety?: string,
-  options: StaffContributionOptions = {}
-): number {
-  const workPerWeek = calculateStaffWorkContribution(assignedStaff, category, staffTaskCounts, grapeVariety, options);
-
-  if (workPerWeek <= 0) return 0;
-
-  return Math.ceil(remainingWork / workPerWeek);
-}
-
 /**
  * Get the relevant skill name for an activity category
  * Used for UI display purposes

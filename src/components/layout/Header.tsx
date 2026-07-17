@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { getCurrentPrestige, processGameTick, clearLastCompanyIdForLogout } from '@/lib/services';
+import { getCurrentPrestige, processGameTick } from '@/lib/services';
 import { formatGameDate, formatNumber } from '@/lib/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
@@ -19,10 +19,11 @@ interface HeaderProps extends NavigationProps, CompanyProps {
   currentPage: string;
   onTimeAdvance: () => void;
   onBackToLogin?: () => void;
+  onLogout: () => void | Promise<void>;
   adminAvailable: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance, onBackToLogin, adminAvailable }) => {
+const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance, onBackToLogin, onLogout, adminAvailable }) => {
   const gameState = useGameState();
   const weather = useMemo(() => createWeatherWeekContext(gameState), [gameState]);
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
@@ -358,30 +359,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => {
-                    // Clear only app-specific keys and reset game
-                    try {
-                      const company = currentCompany;
-                      const keysToRemove = [
-                        'showNotifications'
-                      ];
-                      keysToRemove.forEach((key) => localStorage.removeItem(key));
-
-                      // Remove company-scoped settings if present
-                      if (company?.id) {
-                        localStorage.removeItem(`company_settings_${company.id}`);
-                      }
-
-                      // Remove any legacy company settings keys
-                      Object.keys(localStorage)
-                        .filter((key) => key.startsWith('company_settings_'))
-                        .forEach((key) => localStorage.removeItem(key));
-                      
-                      // Clear lastCompanyId to prevent autologin
-                      clearLastCompanyIdForLogout();
-                    } catch {}
-                    window.location.reload();
-                  }}
+                  onClick={() => { void onLogout(); }}
                   className="text-red-600 focus:text-red-500"
                 >
                   Logout
@@ -508,30 +486,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               
               <Button
                 variant="ghost"
-                onClick={() => {
-                  // Clear only app-specific keys and reset game
-                  try {
-                    const company = currentCompany;
-                    const keysToRemove = [
-                      'showNotifications'
-                    ];
-                    keysToRemove.forEach((key) => localStorage.removeItem(key));
-
-                    // Remove company-scoped settings if present
-                    if (company?.id) {
-                      localStorage.removeItem(`company_settings_${company.id}`);
-                    }
-
-                    // Remove any legacy company settings keys
-                    Object.keys(localStorage)
-                      .filter((key) => key.startsWith('company_settings_'))
-                      .forEach((key) => localStorage.removeItem(key));
-                    
-                    // Clear lastCompanyId to prevent autologin
-                    clearLastCompanyIdForLogout();
-                  } catch {}
-                  window.location.reload();
-                }}
+                onClick={() => { void onLogout(); }}
                 className="w-full justify-start text-left py-2 text-destructive hover:text-destructive mt-2"
               >
                 <LogOut className="mr-3 h-4 w-4" />

@@ -58,16 +58,22 @@ export type IconSize = keyof typeof ICON_SIZES;
 // ===== EMOJI CONSTANTS =====
 
 export const SPECIALIZATION_ICONS = {
-  field: '🌱',
-  winery: '🍷',
-  financeAndStaff: '📊',
-  sales: '💼',
-  administrationAndResearch: '🔧'
-} as const;
-
-export const getSpecializationIcon = (specialization: string): string => {
-  return SPECIALIZATION_ICONS[specialization as keyof typeof SPECIALIZATION_ICONS] || '⭐';
-};
+  [WorkCategory.PLANTING]: '🌱',
+  [WorkCategory.HARVESTING]: '🍇',
+  [WorkCategory.CLEARING]: '🍂',
+  [WorkCategory.CRUSHING]: '🍷',
+  [WorkCategory.FERMENTATION]: '🫧',
+  [WorkCategory.MAINTENANCE]: '🔧',
+  [WorkCategory.BUILDING]: '🏗️',
+  [WorkCategory.UPGRADING]: '⬆️',
+  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: '📋',
+  [WorkCategory.STAFF_SEARCH]: '🔎',
+  [WorkCategory.STAFF_HIRING]: '🤝',
+  [WorkCategory.LAND_SEARCH]: '🗺️',
+  [WorkCategory.LENDER_SEARCH]: '🏦',
+  [WorkCategory.TAKE_LOAN]: '💶',
+  [WorkCategory.FINANCE_AND_STAFF]: '📊'
+} satisfies Record<WorkCategory, string>;
 
 export const EMOJI_OPTIONS: readonly string[] = [
   '📊', '🔧', '🍇', '🍷', '💼', '👥', '🌟', '⚡', '🎯', '🚀',

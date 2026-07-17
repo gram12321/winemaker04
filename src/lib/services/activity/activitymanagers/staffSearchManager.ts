@@ -6,11 +6,12 @@ import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { addTransaction } from '../../finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
-import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
+import { getSkillLevelInfo, isSpecializedRole, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import {
-  StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats,
-  calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
-  calculateHiringWorkForCandidate, calculateSearchPreview
+  StaffSearchOptions,
+  calculateStaffSearchCost,
+  calculateSearchWork,
+  calculateHiringWorkForCandidate
 } from '../workcalculators/staffSearchWorkCalculator';
 import { formatNumber } from '@/lib/utils/utils';
 
@@ -19,7 +20,7 @@ import { formatNumber } from '@/lib/utils/utils';
  * Returns array of Staff objects (not yet in database)
  */
 export function generateStaffCandidates(options: StaffSearchOptions): Staff[] {
-  const { numberOfCandidates, skillLevel, specializations } = options;
+  const { numberOfCandidates, skillLevel, specializedRoles } = options;
   const candidates: Staff[] = [];
 
   for (let i = 0; i < numberOfCandidates; i++) {
@@ -32,8 +33,10 @@ export function generateStaffCandidates(options: StaffSearchOptions): Staff[] {
       firstName,
       lastName,
       skillLevel,
-      specializations,
-      nationality
+      nationality,
+      undefined,
+      false,
+      specializedRoles
     );
 
     candidates.push(staff);
@@ -48,6 +51,10 @@ export function generateStaffCandidates(options: StaffSearchOptions): Staff[] {
  */
 export async function startStaffSearch(options: StaffSearchOptions): Promise<string | null> {
   try {
+    if (!options.specializedRoles.every(isSpecializedRole)) {
+      throw new Error('Staff search specialized roles must be valid roles.');
+    }
+
     const gameState = getGameState();
     const searchCost = calculateStaffSearchCost(options);
     const totalWork = calculateSearchWork(options);
@@ -207,13 +214,12 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
       false
     );
 
-    // Build specialization text
-    const specText = candidateData.specializations.length > 0
-      ? ` specializing in ${candidateData.specializations.join(', ')}`
+    const roleText = candidateData.specializedRoles.length > 0
+      ? ` as ${candidateData.specializedRoles.map(role => SPECIALIZED_ROLES[role].title).join(', ')}`
       : '';
 
     await notificationService.addMessage(
-      `${candidateData.name} has joined your winery${specText}! Monthly wage: ${formatNumber(candidateData.wage, { currency: true, decimals: 2 })}`,
+      `${candidateData.name} has joined your winery${roleText}! Monthly wage: ${formatNumber(candidateData.wage, { currency: true, decimals: 2 })}`,
       'staffSearchManager.completeHiringProcess',
       'Staff Hired',
       NotificationCategory.STAFF_MANAGEMENT
@@ -231,13 +237,3 @@ export function clearPendingCandidates(): void {
     pendingStaffCandidates: undefined
   });
 }
-
-// Re-export types and functions from calculator for convenience
-export type { StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats };
-export {
-  calculateStaffSearchCost,
-  calculateSearchWork,
-  calculateHiringWorkRange,
-  calculateHiringWorkForCandidate,
-  calculateSearchPreview
-};

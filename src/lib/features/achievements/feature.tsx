@@ -30,14 +30,6 @@ export const achievementsFeature: AchievementsFeature = {
     getLevelInfo: getAchievementLevelInfo,
   },
   views: {
-    async getAllWithStatus() {
-      const { getAllAchievementsWithStatus } = await import('./achievementService');
-      return getAllAchievementsWithStatus();
-    },
-    async getStats() {
-      const { getAchievementStats } = await import('./achievementService');
-      return getAchievementStats();
-    },
     async getWorkspace() {
       const { getAchievementWorkspace } = await import('./achievementService');
       return getAchievementWorkspace();

@@ -1,6 +1,6 @@
 # Project Context
 
-Date: 2026-07-14
+Date: 2026-07-16
 Stable terminology and high-value gameplay relationships. See `docs/WineSystem_VariableRelationshipMap.md` for dependency diagrams and `docs/AIdocs/AIDescriptions_coregame.md` for implementation status.
 
 ## Wine Vocabulary
@@ -69,3 +69,13 @@ Implemented enforcement covers grape planting, fermentation methods, staff cap, 
 - Structure, Taste Quality, and land value are separate concepts; do not use one as an alias for another.
 - Weather and research modify explicit upstream inputs/access rules, not score formulas through hidden side effects.
 - Business logic should not add fallback aliases for renamed fields. Update this file and the relationship map before making descriptors or deferred systems player-visible.
+
+## Staff Competency Model
+
+- Every `WorkCategory` maps to exactly one existing primary staff skill through `WORK_CATEGORY_INFO`: Field, Winery, Maintenance, Finance & Staff, or Administration & Research. Sales remains a valid primary skill, but no Sales task mastery exists until a Sales work category is implemented.
+- `Staff.specializedRoles` is the persisted innate career-role array. The six role definitions in `SPECIALIZED_ROLES` retain their title, description, matching primary skill, and 20% work bonus. A role helps every activity that uses its matching primary skill; it is distinct from learned mastery.
+- Exact task mastery is learned through `Staff.experience["task:<WorkCategory>"]`. Every implemented `WorkCategory` has a task track. It provides up to a 20% bonus only for that exact category, is not selected during recruitment, and does not affect wages.
+- `Staff.experience` also stores broad-skill XP as `skill:<primarySkill>` and grape mastery as `grape:<GrapeVariety>`. Grape mastery provides up to a 10% bonus only for a matching variety during planting, harvesting, crushing, or fermentation; it neither applies to clearing/non-grape activities nor affects wages.
+- Role, task, and grape bonuses are additive and capped at 50%. The work calculator also applies the established effective-skill, multitasking, team, weather, and research rules.
+- The activity work calculator is the single source for work shares and previews. Broad-skill XP, task XP, and eligible grape XP are awarded only from applied work after weather, team, storage, and final-tick limits, so assignment changes affect future ticks only.
+- The breaking staff migration removes the former `specializations` and interim `task_specializations` columns, adds validated `staff.specialized_roles`, and retains the `experience` JSONB map. There is no runtime fallback for the removed columns.

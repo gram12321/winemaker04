@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, WineLogEntry } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { highscoreService } from './highscoreService';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { getGameState, getCurrentCompany } from '../core/gameState';
 import { insertWineLogEntry, loadWineLog, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
 import { calculateWineScore, getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
@@ -65,24 +65,22 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       const currentCompany = getCurrentCompany();
       
       if (currentCompany && gameState) {
-        await highscoreService.submitWineHighscores(
-          currentCompany.id,
-          currentCompany.name,
-          gameState.week || 1,
-          gameState.season || 'Spring',
-          gameState.currentYear || 2024,
-          {
-            vineyardId: wineBatch.vineyardId,
-            vineyardName: wineBatch.vineyardName,
-            vintage: wineBatch.harvestStartDate.year,
-            grape: wineBatch.grape,
-            quantity: wineBatch.quantity,
-            tasteQualityIndex,
-            structureIndex: structureIndexSnapshot,
-            wineScore: wineScore,
-            price: wineBatch.estimatedPrice
-          }
-        );
+        await leaderboardsFeature.record.wine({
+          companyId: currentCompany.id,
+          companyName: currentCompany.name,
+          gameWeek: gameState.week || 1,
+          gameSeason: gameState.season || 'Spring',
+          gameYear: gameState.currentYear || 2024,
+          vineyardId: wineBatch.vineyardId,
+          vineyardName: wineBatch.vineyardName,
+          vintage: wineBatch.harvestStartDate.year,
+          grape: wineBatch.grape,
+          quantity: wineBatch.quantity,
+          tasteQualityIndex,
+          structureIndex: structureIndexSnapshot,
+          wineScore,
+          price: wineBatch.estimatedPrice,
+        });
 
         // Also check if this vineyard should get a productivity record
         await updateVineyardProductivityHighscore(wineBatch.vineyardId, wineBatch.vineyardName);
@@ -134,18 +132,16 @@ async function updateVineyardProductivityHighscore(vineyardId: string, vineyardN
     const currentCompany = getCurrentCompany();
     
     if (currentCompany && gameState && totalBottles > 0) {
-      await highscoreService.submitVineyardProductivityHighscore(
-        currentCompany.id,
-        currentCompany.name,
-        gameState.week || 1,
-        gameState.season || 'Spring',
-        gameState.currentYear || 2024,
-        {
-          vineyardId,
-          vineyardName,
-          totalBottles
-        }
-      );
+      await leaderboardsFeature.record.vineyard({
+        companyId: currentCompany.id,
+        companyName: currentCompany.name,
+        gameWeek: gameState.week || 1,
+        gameSeason: gameState.season || 'Spring',
+        gameYear: gameState.currentYear || 2024,
+        vineyardId,
+        vineyardName,
+        totalBottles,
+      });
     }
   } catch (error) {
     console.error('Failed to update vineyard productivity highscore:', error);

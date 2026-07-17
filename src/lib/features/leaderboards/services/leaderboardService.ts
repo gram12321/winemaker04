@@ -1,11 +1,34 @@
-import { notificationService } from '@/lib/services';
-import { Season, NotificationCategory } from '../../types/types';
-import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, loadHighscoresRange, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
+import { Season } from '@/lib/types/types';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
+import { upsertCompanyAggregateHighscore, upsertHighscore, loadCompanyLeaderboardContext, loadHighscores, deleteHighscores, type HighscoreData, type HighscoreEntry } from '@/lib/database';
+import type {
+  LeaderboardCompanyRecordInput,
+  LeaderboardContext,
+  LeaderboardEntry,
+  LeaderboardKind,
+  LeaderboardRanking,
+  LeaderboardResult,
+  LeaderboardVineyardRecordInput,
+  LeaderboardWineRecordInput,
+} from '../featureTypes';
 
-export interface HighscoreSubmission {
+const LEADERBOARD_KINDS: LeaderboardKind[] = [
+  'company_value',
+  'company_value_per_week',
+  'highest_vintage_quantity',
+  'most_productive_vineyard',
+  'highest_wine_score',
+  'highest_taste_quality_index',
+  'highest_structure_index',
+  'highest_price',
+  'lowest_price',
+];
+
+interface HighscoreSubmission {
   companyId: string;
   companyName: string;
-  scoreType: ScoreType;
+  scoreType: LeaderboardKind;
   scoreValue: number;
   gameWeek?: number;
   gameSeason?: Season;
@@ -19,21 +42,28 @@ export interface HighscoreSubmission {
   grapeVariety?: string;
 }
 
-class HighscoreService {
-  public async submitHighscore(submission: HighscoreSubmission): Promise<{ success: boolean; error?: string }> {
+function mapEntry(entry: HighscoreEntry): LeaderboardEntry {
+  return {
+    id: entry.id,
+    companyId: entry.companyId,
+    companyName: entry.companyName,
+    kind: entry.scoreType,
+    value: entry.scoreValue,
+    gameWeek: entry.gameWeek,
+    gameSeason: entry.gameSeason as Season | undefined,
+    gameYear: entry.gameYear,
+    achievedAt: entry.achievedAt,
+    vineyardId: entry.vineyardId,
+    vineyardName: entry.vineyardName,
+    wineVintage: entry.wineVintage,
+    grapeVariety: entry.grapeVariety,
+  };
+}
+
+export class LeaderboardService {
+  private async submitHighscore(submission: HighscoreSubmission): Promise<LeaderboardResult> {
     try {
       const isCompanyAggregate = submission.scoreType === 'company_value' || submission.scoreType === 'company_value_per_week';
-
-      // Only enforce "best per company" for aggregate company scores
-      if (isCompanyAggregate) {
-        const existingScore = await getExistingScore(submission.companyId, submission.scoreType);
-        const isLowerBetter = submission.scoreType === 'lowest_price';
-        const shouldUpdate = !existingScore || 
-          (isLowerBetter ? submission.scoreValue < existingScore.score_value : submission.scoreValue > existingScore.score_value);
-        if (!shouldUpdate) {
-          return { success: true };
-        }
-      }
 
       const highscoreData: HighscoreData = {
         company_id: submission.companyId,
@@ -50,71 +80,42 @@ class HighscoreService {
         achieved_at: submission.achievedAt || new Date().toISOString()
       };
 
-      return await upsertHighscore(highscoreData);
+      return isCompanyAggregate
+        ? upsertCompanyAggregateHighscore(highscoreData)
+        : upsertHighscore(highscoreData);
     } catch (error) {
       console.error('Error submitting highscore:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  public async getHighscores(scoreType: ScoreType, limit: number = 20): Promise<HighscoreEntry[]> {
+  public async getHighscores(scoreType: LeaderboardKind, limit: number = 20): Promise<LeaderboardEntry[]> {
     try {
-      return await loadHighscores(scoreType, limit);
+      return (await loadHighscores(scoreType, limit)).map(mapEntry);
     } catch (error) {
       console.error('Error getting highscores:', error);
       return [];
     }
   }
 
-  public async getCompanyRanking(companyId: string, scoreType: ScoreType): Promise<{ position: number; total: number } | null> {
+  public async getCompanyRanking(companyId: string, scoreType: LeaderboardKind): Promise<LeaderboardRanking | null> {
     try {
-      // Get the company's score
-      const companyScore = await getCompanyScore(companyId, scoreType);
-
-      if (!companyScore) {
-        return null;
-      }
-
-      // Count how many companies have a higher score
-      const higherCount = await countHigherScores(scoreType, companyScore.score_value);
-      
-      // Count total companies for this score type
-      const totalCount = await countTotalScores(scoreType);
-
-      if (higherCount === null || totalCount === null) {
-        return null;
-      }
-
-      return {
-        position: higherCount + 1,
-        total: totalCount
-      };
+      const context = await loadCompanyLeaderboardContext(companyId, scoreType, 0);
+      return context ? { position: context.position, total: context.total } : null;
     } catch (error) {
       console.error('Error getting company ranking:', error);
       return null;
     }
   }
 
-  public async getCompanyRankings(companyId: string): Promise<Record<ScoreType, { position: number; total: number }>> {
-    const scoreTypes: ScoreType[] = [
-      'company_value', 
-      'company_value_per_week',
-      'highest_vintage_quantity',
-      'most_productive_vineyard',
-      'highest_wine_score',
-      'highest_taste_quality_index',
-      'highest_structure_index',
-      'highest_price',
-      'lowest_price'
-    ];
-    const rankings: Record<ScoreType, { position: number; total: number }> = {} as any;
-
-    for (const scoreType of scoreTypes) {
-      const ranking = await this.getCompanyRanking(companyId, scoreType);
-      rankings[scoreType] = ranking || { position: 0, total: 0 };
-    }
-
-    return rankings;
+  public async getCompanyRankings(companyId: string): Promise<Record<LeaderboardKind, LeaderboardRanking>> {
+    const rankings = await Promise.all(
+      LEADERBOARD_KINDS.map(async (scoreType) => [
+        scoreType,
+        (await this.getCompanyRanking(companyId, scoreType)) || { position: 0, total: 0 },
+      ] as const),
+    );
+    return Object.fromEntries(rankings) as Record<LeaderboardKind, LeaderboardRanking>;
   }
 
   /**
@@ -122,23 +123,19 @@ class HighscoreService {
    */
   public async getCompanyHighscoreContext(
     companyId: string,
-    scoreType: ScoreType,
+    scoreType: LeaderboardKind,
     window: number = 2
-  ): Promise<{ position: number; total: number; entries: HighscoreEntry[]; startIndex: number } | null> {
+  ): Promise<LeaderboardContext | null> {
     try {
-      const companyScore = await getCompanyScore(companyId, scoreType);
-      if (!companyScore) return null;
-
-      const higherCount = await countHigherScores(scoreType, companyScore.score_value);
-      const totalCount = await countTotalScores(scoreType);
-      if (higherCount === null || totalCount === null) return null;
-
-      const position = higherCount + 1; // 1-based
-      const startIndex = Math.max(0, position - 1 - window);
-      const endIndex = Math.min((totalCount || 0) - 1, position - 1 + window);
-
-      const entries = await loadHighscoresRange(scoreType, startIndex, endIndex);
-      return { position, total: totalCount, entries, startIndex };
+      const context = await loadCompanyLeaderboardContext(companyId, scoreType, window);
+      return context
+        ? {
+            position: context.position,
+            total: context.total,
+            entries: context.entries.map(mapEntry),
+            startIndex: context.startIndex,
+          }
+        : null;
     } catch (error) {
       console.error('Error getting company highscore context:', error);
       return null;
@@ -195,26 +192,9 @@ class HighscoreService {
   /**
    * Submit wine-based highscores from a wine log entry
    */
-  public async submitWineHighscores(
-    companyId: string,
-    companyName: string,
-    gameWeek: number,
-    gameSeason: Season,
-    gameYear: number,
-    wineData: {
-      vineyardId: string;
-      vineyardName: string;
-      vintage: number;
-      grape: string;
-      quantity: number;
-      tasteQualityIndex: number;
-      structureIndex: number;
-      wineScore: number;
-      price: number;
-      bottledAt?: string; // ISO date string used as achievedAt
-    }
-  ): Promise<{ success: boolean; error?: string }> {
+  public async submitWineHighscores(input: LeaderboardWineRecordInput): Promise<LeaderboardResult> {
     try {
+      const { companyId, companyName, gameWeek, gameSeason, gameYear, ...wineData } = input;
       const baseSubmission = {
         companyId,
         companyName,
@@ -281,19 +261,9 @@ class HighscoreService {
   /**
    * Submit most productive vineyard highscore
    */
-  public async submitVineyardProductivityHighscore(
-    companyId: string,
-    companyName: string,
-    gameWeek: number,
-    gameSeason: Season,
-    gameYear: number,
-    vineyardData: {
-      vineyardId: string;
-      vineyardName: string;
-      totalBottles: number;
-    }
-  ): Promise<{ success: boolean; error?: string }> {
+  public async submitVineyardProductivityHighscore(input: LeaderboardVineyardRecordInput): Promise<LeaderboardResult> {
     try {
+      const { companyId, companyName, gameWeek, gameSeason, gameYear, ...vineyardData } = input;
       const submission: HighscoreSubmission = {
         companyId,
         companyName,
@@ -313,18 +283,9 @@ class HighscoreService {
     }
   }
 
-  public async clearHighscores(scoreType?: ScoreType): Promise<{ success: boolean; error?: string }> {
+  public async clearHighscores(scoreType?: LeaderboardKind): Promise<LeaderboardResult> {
     try {
-      const result = await deleteHighscores(scoreType);
-      
-      if (result.success) {
-        const message = scoreType 
-          ? `Cleared ${scoreType} highscores`
-          : 'Cleared all highscores';
-        await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', NotificationCategory.SYSTEM);
-      }
-      
-      return result;
+      return await deleteHighscores(scoreType);
     } catch (error) {
       console.error('Error clearing highscores:', error);
       return { success: false, error: 'An unexpected error occurred' };
@@ -334,8 +295,8 @@ class HighscoreService {
   /**
    * Get human-readable name for score type
    */
-  public getScoreTypeName(scoreType: ScoreType): string {
-    const names: Record<ScoreType, string> = {
+  public getScoreTypeName(scoreType: LeaderboardKind): string {
+    const names: Record<LeaderboardKind, string> = {
       'company_value': 'Company Value',
       'company_value_per_week': 'Company Value per Week',
       'highest_vintage_quantity': 'Highest Single Vintage Quantity',
@@ -352,8 +313,8 @@ class HighscoreService {
   /**
    * Get appropriate unit for score type
    */
-  public getScoreUnit(scoreType: ScoreType): string {
-    const units: Record<ScoreType, string> = {
+  public getScoreUnit(scoreType: LeaderboardKind): string {
+    const units: Record<LeaderboardKind, string> = {
       'company_value': '€',
       'company_value_per_week': '€/week',
       'highest_vintage_quantity': 'bottles',
@@ -371,19 +332,20 @@ class HighscoreService {
    * Submit company highscores with business logic
    * This method handles the calculation of company value metrics and submits them
    */
-  public async submitCompanyHighscores(
-    companyId: string,
-    companyName: string,
-    gameWeek: number,
-    gameSeason: Season,
-    gameYear: number,
-    foundedYear: number,
-    currentCompanyValue: number,
-    startingValue: number = 100000 // Default starting value from GAME_INITIALIZATION.STARTING_MONEY
-  ): Promise<{ success: boolean; error?: string }> {
+  public async submitCompanyHighscores(input: LeaderboardCompanyRecordInput): Promise<LeaderboardResult> {
     try {
+      const {
+        companyId,
+        companyName,
+        gameWeek,
+        gameSeason,
+        gameYear,
+        foundedYear,
+        companyValue: currentCompanyValue,
+        startingValue = GAME_INITIALIZATION.STARTING_MONEY,
+      } = input;
       // Calculate per-week metrics
-      const weeksElapsed = Math.max(1, (gameYear - foundedYear) * 52 + gameWeek);
+      const weeksElapsed = Math.max(1, (gameYear - foundedYear) * WEEKS_PER_YEAR + gameWeek);
       const companyValuePerWeek = Math.max(0, currentCompanyValue - startingValue) / weeksElapsed;
       
       return await this.submitAllCompanyScores(
@@ -404,6 +366,5 @@ class HighscoreService {
   }
 }
 
-export const highscoreService = new HighscoreService();
-export default highscoreService;
+export const leaderboardService = new LeaderboardService();
 

@@ -4,7 +4,7 @@ import { formatNumber, getColorClass } from '@/lib/utils/utils';
 import { WorkCalculationTable } from '@/components/ui';
 import { calculateClearingWork } from '@/lib/services/activity';
 import { getGameState } from '@/lib/services';
-import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
+import { calculateClearingHealth } from '@/lib/services/vineyard/clearingRules';
 
 interface ClearingOptionsModalProps {
   isOpen: boolean;
@@ -73,44 +73,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
     // Calculate work using the dedicated clearing work calculator
     const workResult = calculateClearingWork(vineyard, options);
     
-    // Calculate health improvements for display
-    let healthImprovement = 0;
-    Object.entries(options.tasks).forEach(([taskId, isSelected]) => {
-      if (!isSelected) return;
-      
-      const task = Object.values(CLEARING_TASKS).find(t => t.id === taskId);
-      if (!task) return;
-      
-      // Additive health tasks use healthImprovement
-      if ('healthImprovement' in task && task.healthImprovement) {
-        healthImprovement += task.healthImprovement;
-      }
-    });
-
-    // Calculate projected health with mixed additive and setHealth logic
-    let newHealth = vineyard.vineyardHealth + healthImprovement; // Start with current health + additive improvements
-    
-    // Handle setHealth tasks (uproot and replant) - these set absolute values
-    if (options.tasks['uproot-vines']) {
-      const uprootIntensity = options.replantingIntensity / 100;
-      const uprootTask = Object.values(CLEARING_TASKS).find(t => t.id === 'uproot-vines');
-      if (uprootTask && 'setHealth' in uprootTask && uprootTask.setHealth !== undefined) {
-        // Blend current health with set health based on intensity
-        newHealth = newHealth * (1 - uprootIntensity) + uprootTask.setHealth * uprootIntensity;
-      }
-    }
-    
-    if (options.tasks['replant-vines']) {
-      const replantIntensity = options.replantingIntensity / 100;
-      const replantTask = Object.values(CLEARING_TASKS).find(t => t.id === 'replant-vines');
-      if (replantTask && 'setHealth' in replantTask && replantTask.setHealth !== undefined) {
-        // Blend current health with set health based on intensity
-        newHealth = newHealth * (1 - replantIntensity) + replantTask.setHealth * replantIntensity;
-      }
-    }
-    
-    // Ensure health stays within bounds
-    newHealth = Math.max(0.1, Math.min(1.0, newHealth));
+    const newHealth = calculateClearingHealth(vineyard.vineyardHealth, options.tasks, options.replantingIntensity);
     setProjectedHealth(newHealth);
 
     // Calculate time estimate

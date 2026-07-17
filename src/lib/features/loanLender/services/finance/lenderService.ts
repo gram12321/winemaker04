@@ -1,7 +1,7 @@
 // Lender generation service - creates lenders with type-based characteristics
 import { v4 as uuidv4 } from 'uuid';
 import type { Lender, LenderType } from '@/lib/types/types';
-import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
+import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION, LENDER_AVAILABILITY } from '@/lib/constants/loanConstants';
 import { LENDER_NAMES } from '@/lib/constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
 import { getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
@@ -82,16 +82,16 @@ function createLender(lenderType: LenderType): Lender {
  * Creates 15-25 lenders with type-based distribution and characteristics
  * Ensures at least 3 lenders of each type
  */
-export async function generateLenders(): Promise<Lender[]> {
+async function generateLenders(): Promise<Lender[]> {
   const lenderCount = randomInt(LENDER_GENERATION.MIN_LENDERS, LENDER_GENERATION.MAX_LENDERS);
 
   const lenders: Lender[] = [];
   const lenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[];
-  const MIN_PER_TYPE = 3;
+  const minPerType = LENDER_GENERATION.MIN_PER_TYPE;
 
   // 1. Ensure minimum count for each type
   for (const type of lenderTypes) {
-    for (let i = 0; i < MIN_PER_TYPE; i++) {
+    for (let i = 0; i < minPerType; i++) {
       lenders.push(createLender(type));
     }
   }
@@ -126,16 +126,11 @@ export async function generateLenders(): Promise<Lender[]> {
  * Initialize lenders for a company if they don't exist
  */
 export async function initializeLenders(companyId?: string): Promise<void> {
-  try {
-    const lendersExist = await checkLendersExist(companyId);
+  const lendersExist = await checkLendersExist(companyId);
 
-    if (!lendersExist) {
-      const lenders = await generateLenders();
-      await saveLenders(lenders, companyId);
-    }
-  } catch (error) {
-    console.error('Error initializing lenders:', error);
-    throw error;
+  if (!lendersExist) {
+    const lenders = await generateLenders();
+    await saveLenders(lenders, companyId);
   }
 }
 
@@ -143,12 +138,7 @@ export async function initializeLenders(companyId?: string): Promise<void> {
  * Load all lenders for the current company
  */
 export async function getAllLenders(): Promise<Lender[]> {
-  try {
-    return await loadLenders();
-  } catch (error) {
-    console.error('Error loading lenders:', error);
-    return [];
-  }
+  return loadLenders();
 }
 
 /**
@@ -173,7 +163,7 @@ export function calculateLenderAvailability(
 
   // Secondary influence: Prestige can help with slightly higher risk tolerance
   // Prestige provides up to 20% reduction in risk tolerance requirement
-  const prestigeBonus = normalizedPrestige * 20; // Max 20% bonus from prestige
+  const prestigeBonus = normalizedPrestige * LENDER_AVAILABILITY.MAX_PRESTIGE_REQUIREMENT_REDUCTION;
   const adjustedRequirement = baseRequirement - prestigeBonus;
 
   const isAvailable = creditRating >= adjustedRequirement && !lender.blacklisted;
@@ -185,22 +175,4 @@ export function calculateLenderAvailability(
     adjustedRequirement,
     normalizedPrestige
   };
-}
-
-/**
- * Get available lenders (not blacklisted) for loan applications
- * Includes both credit rating and prestige influence
- */
-export async function getAvailableLenders(creditRating: number, companyPrestige?: number): Promise<Lender[]> {
-  try {
-    const allLenders = await loadLenders();
-
-    return allLenders.filter(lender => {
-      const availability = calculateLenderAvailability(lender, creditRating, companyPrestige);
-      return availability.isAvailable;
-    });
-  } catch (error) {
-    console.error('Error getting available lenders:', error);
-    return [];
-  }
 }

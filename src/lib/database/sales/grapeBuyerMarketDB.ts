@@ -6,7 +6,10 @@ const BUYER_SELECT = 'buyer_id,display_name,country,description,is_germany_coop,
 export async function createBuyerRow(insertData: Record<string, any>) {
   return supabase
     .from(TABLE)
-    .insert(insertData)
+    // Buyer initialization can be requested concurrently by multiple market
+    // consumers. The table's (company_id, buyer_id) key makes this a natural
+    // idempotent create-or-refresh operation.
+    .upsert(insertData, { onConflict: 'company_id,buyer_id' })
     .select(BUYER_SELECT)
     .single();
 }

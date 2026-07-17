@@ -83,7 +83,7 @@ describe('Starting Conditions - Pure Functions', () => {
           expect(staff.nationality).toBe(country);
           expect(staff.skillLevel).toBeGreaterThan(0);
           expect(staff.skillLevel).toBeLessThanOrEqual(1);
-          expect(Array.isArray(staff.specializations)).toBe(true);
+          expect(Array.isArray(staff.specializedRoles)).toBe(true);
         });
         
         // Vineyard configuration

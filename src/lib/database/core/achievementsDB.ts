@@ -165,14 +165,6 @@ export async function getAllAchievementUnlocks(companyId?: string): Promise<Achi
 }
 
 /**
- * Check if achievement is unlocked for a company
- */
-export async function isAchievementUnlocked(achievementId: string, companyId?: string): Promise<boolean> {
-  const unlock = await getAchievementUnlock(achievementId, companyId);
-  return unlock !== null;
-}
-
-/**
  * Update achievement progress
  */
 export async function updateAchievementProgress(

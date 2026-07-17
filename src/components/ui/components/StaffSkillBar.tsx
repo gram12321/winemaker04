@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Staff } from '@/lib/types/types';
 import { getSkillColor, formatNumber, getColorClass } from '@/lib/utils';
-import { calculateEffectiveSkill } from '@/lib/services/user/staffService';
+import { calculateEffectiveSkill } from '@/lib/services/user/staffSkillService';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 interface StaffSkillBarProps {
@@ -66,14 +66,6 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
             value={`${formatNumber(effectiveContribution, { decimals: 0 })} / wk`}
             monospaced
           />
-          {staff.specializations.includes(skillKey) && (
-            <div className="mt-2 pt-2 border-t border-gray-600">
-              <TooltipRow
-                label="Specialization:"
-                value="+20%"
-              />
-            </div>
-          )}
         </TooltipSection>
       </div>
     );
