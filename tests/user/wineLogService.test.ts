@@ -93,12 +93,12 @@ describe('recordBottledWine', () => {
       })
     );
     expect(mockedSubmitWineHighscores).toHaveBeenCalledWith(
-      'company-1',
-      'Test Winery',
-      4,
-      'Fall',
-      2026,
       expect.objectContaining({
+        companyId: 'company-1',
+        companyName: 'Test Winery',
+        gameWeek: 4,
+        gameSeason: 'Fall',
+        gameYear: 2026,
         tasteQualityIndex: 0.66,
         structureIndex: 0.84,
         wineScore: 0.75

@@ -6,8 +6,7 @@ import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, format
 import { formatPercent, getColorClass, getQualityCategory, getWineStructureCategory, StoryPortrait } from '@/lib/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
 import { getAllWineBatches, getCurrentCompany } from '@/lib/services';
-import { leaderboardsFeature } from '@/lib/features/leaderboards';
-import { type ScoreType } from '@/lib/database';
+import { leaderboardsFeature, type LeaderboardKind } from '@/lib/features/leaderboards';
 import { NavigationProps } from '../../lib/types/UItypes';
 
 type MentorWelcomeData = {
@@ -20,7 +19,7 @@ interface CompanyOverviewProps extends NavigationProps {
   // Inherits onNavigate from NavigationProps
 }
 
-type CompanyRankings = Record<ScoreType, { position: number; total: number }>;
+type CompanyRankings = Record<LeaderboardKind, { position: number; total: number }>;
 
 const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   const { isLoading, withLoading } = useLoadingState();
@@ -40,7 +39,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   });
 
   const [mentorWelcome, setMentorWelcome] = useState<MentorWelcomeData | null>(null);
-  const [selectedScoreType, setSelectedScoreType] = useState<ScoreType>('company_value');
+  const [selectedScoreType, setSelectedScoreType] = useState<LeaderboardKind>('company_value');
   const [contextLoading, setContextLoading] = useState(false);
   const [contextEntries, setContextEntries] = useState<{ entries: any[]; startIndex: number } | null>(null);
   
@@ -107,7 +106,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     setRankings(companyRankings);
   });
 
-  const loadContext = useCallback(async (scoreType: ScoreType) => {
+  const loadContext = useCallback(async (scoreType: LeaderboardKind) => {
     if (!company) return;
     setContextLoading(true);
     const ctx = await leaderboardsFeature.views.context(company.id, scoreType, 2);
@@ -161,7 +160,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     return getColorClass(0.3); // Bottom 30%
   }, []);
 
-  const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number): string => {
+  const getScoreColorClass = useCallback((scoreType: LeaderboardKind, scoreValue: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_quality_index' || scoreType === 'highest_structure_index') {
       return getColorClass(scoreValue);
@@ -170,7 +169,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     return 'text-foreground';
   }, []);
 
-  const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
+  const getScoreCategory = useCallback((scoreType: LeaderboardKind, scoreValue: number): string | null => {
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_quality_index') {
       return getQualityCategory(scoreValue);
     }
@@ -180,8 +179,8 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     return null;
   }, []);
 
-  const getTabTitle = useCallback((scoreType: ScoreType): string => {
-    const fullName = leaderboardsFeature.views.scoreTypeName(scoreType);
+  const getTabTitle = useCallback((scoreType: LeaderboardKind): string => {
+    const fullName = leaderboardsFeature.views.kindName(scoreType);
     switch (scoreType) {
       case 'company_value':
         return 'Company Value';
@@ -206,7 +205,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     }
   }, []);
 
-  const getTabIcon = useCallback((scoreType: ScoreType) => {
+  const getTabIcon = useCallback((scoreType: LeaderboardKind) => {
     switch (scoreType) {
       case 'company_value':
         return '🏢';
@@ -232,11 +231,11 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   }, []);
 
   const firstTabGroup = useMemo(() => (
-    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as ScoreType[]
+    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as LeaderboardKind[]
   ), []);
 
   const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_taste_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as ScoreType[]
+    ['highest_wine_score', 'highest_taste_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as LeaderboardKind[]
   ), []);
 
   const allGroups = useMemo(() => ([...firstTabGroup, ...secondTabGroup]), [firstTabGroup, secondTabGroup]);
@@ -489,19 +488,19 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                           const rank = contextEntries.startIndex + i + 1;
                           const isYou = e.companyId === company?.id;
                           const scoreText = selectedScoreType.includes('price')
-                            ? formatNumber(e.scoreValue, { currency: true, decimals: 2 })
+                            ? formatNumber(e.value, { currency: true, decimals: 2 })
                             : selectedScoreType === 'highest_wine_score'
-                              ? formatNumber(e.scoreValue, { decimals: 1, forceDecimals: true })
+                              ? formatNumber(e.value, { decimals: 1, forceDecimals: true })
                               : (selectedScoreType.includes('quality') || selectedScoreType.includes('structure'))
-                                ? formatPercent(e.scoreValue, 1, true)
-                                : formatNumber(e.scoreValue, { decimals: 0, forceDecimals: true });
-                          const category = getScoreCategory(selectedScoreType, e.scoreValue);
+                                ? formatPercent(e.value, 1, true)
+                                : formatNumber(e.value, { decimals: 0, forceDecimals: true });
+                          const category = getScoreCategory(selectedScoreType, e.value);
                           return (
                             <div key={`${e.id}-${i}`} className={`flex items-center justify-between rounded px-2 py-1 ${isYou ? 'bg-primary/10' : ''}`}>
                               <span className="text-[11px] w-6">{rank}</span>
                               <span className="text-[12px] font-medium truncate flex-1 ml-1">{e.companyName}</span>
                               <div className="flex flex-col items-end ml-2">
-                                <span className={`text-[12px] font-mono font-semibold ${getScoreColorClass(selectedScoreType, e.scoreValue)}`}>
+                                <span className={`text-[12px] font-mono font-semibold ${getScoreColorClass(selectedScoreType, e.value)}`}>
                                   {scoreText}
                                 </span>
                                 {category && (

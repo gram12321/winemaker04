@@ -341,7 +341,7 @@ Phase 1 is implemented as `features/user`, not `features/playerAccount`. Its pub
 
 ### Task 8: Isolate recording and presentation
 
-**Implemented shape:** `leaderboardsFeature` exposes `record`, `views`, `maintenance`, and `ui`. Production score writers use `record`; Login, Company Overview, and App use `views`/`ui`; database ordering treats `lowest_price` as ascending for both display and ranking.
+**Implemented shape:** `leaderboardsFeature` exposes `record`, `views`, `maintenance`, and `ui` with feature-owned input/read-model types. Production score writers use explicit one-object `record` inputs; Login, Company Overview, and App use `views`/`ui`; database ordering treats `lowest_price` as ascending for both display and ranking. Migration `20260717190000_make_company_leaderboards_atomic.sql` deduplicates legacy aggregate rows, enforces one aggregate row per company/type, and provides an RPC so aggregate best-score writes are atomic. Wine and vineyard scores remain append-only historical entries; a company’s rank uses its deterministically selected best entry for that board.
 
 **Files:**
 

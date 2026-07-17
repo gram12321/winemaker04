@@ -7,16 +7,16 @@ const LeaderboardsPage = lazy(() => import('./ui/LeaderboardsPage').then((module
 
 export const leaderboardsFeature: LeaderboardFeature = {
   record: {
-    company: (input) => leaderboardService.submitCompanyHighscores(input.companyId, input.companyName, input.gameWeek, input.gameSeason, input.gameYear, input.foundedYear, input.companyValue, input.startingValue),
-    wine: (companyId, companyName, week, season, year, wine) => leaderboardService.submitWineHighscores(companyId, companyName, week, season, year, wine),
-    vineyard: (companyId, companyName, week, season, year, vineyard) => leaderboardService.submitVineyardProductivityHighscore(companyId, companyName, week, season, year, vineyard),
+    company: (input) => leaderboardService.submitCompanyHighscores(input),
+    wine: (input) => leaderboardService.submitWineHighscores(input),
+    vineyard: (input) => leaderboardService.submitVineyardProductivityHighscore(input),
   },
   views: {
     list: (scoreType, limit) => leaderboardService.getHighscores(scoreType, limit),
     rankings: (companyId) => leaderboardService.getCompanyRankings(companyId),
     context: (companyId, scoreType, window) => leaderboardService.getCompanyHighscoreContext(companyId, scoreType, window),
-    scoreTypeName: (scoreType) => leaderboardService.getScoreTypeName(scoreType),
-    scoreUnit: (scoreType) => leaderboardService.getScoreUnit(scoreType),
+    kindName: (kind) => leaderboardService.getScoreTypeName(kind),
+    kindUnit: (kind) => leaderboardService.getScoreUnit(kind),
   },
   maintenance: { clear: (scoreType) => leaderboardService.clearHighscores(scoreType) },
   ui: {

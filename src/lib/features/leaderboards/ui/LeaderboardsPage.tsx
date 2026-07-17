@@ -3,13 +3,12 @@ import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '@/components/ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { leaderboardsFeature } from '../feature';
-import { type HighscoreEntry, type ScoreType } from '@/lib/database';
 import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineStructureCategory } from '@/lib/utils';
-import type { LeaderboardPageInput } from '../featureTypes';
+import type { LeaderboardEntry, LeaderboardKind, LeaderboardPageInput } from '../featureTypes';
 
 export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageInput) {
   const { isLoading, withLoading } = useLoadingState();
-  const [highscores, setHighscores] = useState<Record<ScoreType, HighscoreEntry[]>>({
+  const [highscores, setHighscores] = useState<Record<LeaderboardKind, LeaderboardEntry[]>>({
     company_value: [],
     company_value_per_week: [],
     highest_vintage_quantity: [],
@@ -64,7 +63,7 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
     });
   });
 
-  const formatGameDate = (entry: HighscoreEntry): string => {
+  const formatGameDate = (entry: LeaderboardEntry): string => {
     if (!entry.gameWeek || !entry.gameSeason || !entry.gameYear) {
       return 'N/A';
     }
@@ -84,12 +83,12 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
     }
   }, []);
 
-  const getColumnTitle = useCallback((scoreType: ScoreType): string => {
-    return leaderboardsFeature.views.scoreTypeName(scoreType);
+  const getColumnTitle = useCallback((scoreType: LeaderboardKind): string => {
+    return leaderboardsFeature.views.kindName(scoreType);
   }, []);
 
-  const getTabTitle = useCallback((scoreType: ScoreType): string => {
-    const fullName = leaderboardsFeature.views.scoreTypeName(scoreType);
+  const getTabTitle = useCallback((scoreType: LeaderboardKind): string => {
+    const fullName = leaderboardsFeature.views.kindName(scoreType);
     switch (scoreType) {
       case 'company_value':
         return 'Company Value';
@@ -114,7 +113,7 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
     }
   }, []);
 
-  const getTabIcon = useCallback((scoreType: ScoreType) => {
+  const getTabIcon = useCallback((scoreType: LeaderboardKind) => {
     switch (scoreType) {
       case 'company_value':
         return '🏢';
@@ -140,14 +139,14 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
   }, []);
 
   const firstTabGroup = useMemo(() => (
-    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as ScoreType[]
+    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as LeaderboardKind[]
   ), []);
 
   const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_taste_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as ScoreType[]
+    ['highest_wine_score', 'highest_taste_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as LeaderboardKind[]
   ), []);
 
-  const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number, index: number, totalScores: number): string => {
+  const getScoreColorClass = useCallback((scoreType: LeaderboardKind, scoreValue: number, index: number, totalScores: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_quality_index' || scoreType === 'highest_structure_index') {
       return getColorClass(scoreValue);
@@ -165,7 +164,7 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
     return getColorClass(0.3); // Bottom 30%
   }, []);
 
-  const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
+  const getScoreCategory = useCallback((scoreType: LeaderboardKind, scoreValue: number): string | null => {
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_quality_index') {
       return getQualityCategory(scoreValue);
     }
@@ -175,7 +174,7 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
     return null;
   }, []);
 
-  const renderHighscoreTable = useCallback((scoreType: ScoreType) => {
+  const renderHighscoreTable = useCallback((scoreType: LeaderboardKind) => {
     const scores = highscores[scoreType];
     
     if (isLoading) {
@@ -267,19 +266,19 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
                   ) : null}
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`font-mono font-semibold ${getScoreColorClass(scoreType, score.scoreValue, index, scores.length)}`}>
+                      <span className={`font-mono font-semibold ${getScoreColorClass(scoreType, score.value, index, scores.length)}`}>
                         {scoreType === 'highest_wine_score' ?
-                          formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                          formatNumber(score.value, { decimals: 1, forceDecimals: true }) :
                           scoreType.includes('price') ? 
-                            formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                            formatNumber(score.value, { currency: true, decimals: 2 }) :
                             scoreType.includes('quality') || scoreType.includes('structure') ?
-                              formatPercent(score.scoreValue, 1, true) :
-                              formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                              formatPercent(score.value, 1, true) :
+                              formatNumber(score.value, { decimals: 0, forceDecimals: true })
                         }
                       </span>
-                      {getScoreCategory(scoreType, score.scoreValue) && (
+                      {getScoreCategory(scoreType, score.value) && (
                         <span className="text-xs text-muted-foreground">
-                          {getScoreCategory(scoreType, score.scoreValue)}
+                          {getScoreCategory(scoreType, score.value)}
                         </span>
                       )}
                     </div>
@@ -339,19 +338,19 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`text-lg font-bold ${getScoreColorClass(scoreType, score.scoreValue, index, scores.length)}`}>
+                      <span className={`text-lg font-bold ${getScoreColorClass(scoreType, score.value, index, scores.length)}`}>
                         {scoreType === 'highest_wine_score' ?
-                          formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                          formatNumber(score.value, { decimals: 1, forceDecimals: true }) :
                           scoreType.includes('price') ?
-                            formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                            formatNumber(score.value, { currency: true, decimals: 2 }) :
                             scoreType.includes('quality') || scoreType.includes('structure') ?
-                              formatPercent(score.scoreValue, 1, true) :
-                              formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                              formatPercent(score.value, 1, true) :
+                              formatNumber(score.value, { decimals: 0, forceDecimals: true })
                         }
                       </span>
-                      {getScoreCategory(scoreType, score.scoreValue) && (
+                      {getScoreCategory(scoreType, score.value) && (
                         <span className="text-xs text-muted-foreground">
-                          {getScoreCategory(scoreType, score.scoreValue)}
+                          {getScoreCategory(scoreType, score.value)}
                         </span>
                       )}
                     </div>
@@ -542,8 +541,8 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
           <CardContent className="p-4">
             <div className="text-center text-sm text-muted-foreground">
               <p>
-                Leaderboards are updated in real-time as companies achieve new milestones.
-                Rankings are based on the highest scores achieved by each company.
+                Leaderboards are updated as companies achieve new milestones.
+                Company-value boards retain each company’s best score; wine and vineyard boards preserve historical achievements.
               </p>
             </div>
           </CardContent>

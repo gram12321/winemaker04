@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
 import { Building2, User, UserPlus } from 'lucide-react';
-import { leaderboardsFeature } from '@/lib/features/leaderboards';
+import { leaderboardsFeature, type LeaderboardEntry } from '@/lib/features/leaderboards';
 import { companyFeature, type CompanyCreateResult, type CompanyRecord } from '@/lib/features/company';
 import { userFeature } from '@/lib/features/user';
 import type { PlayerProfile } from '@/lib/features/user';
-import { type HighscoreEntry } from '@/lib/database';
 import { formatDate } from '@/lib/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import ReactMarkdown from 'react-markdown';
@@ -38,8 +37,8 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [highscores, setHighscores] = useState<{
-    company_value: HighscoreEntry[];
-    company_value_per_week: HighscoreEntry[];
+    company_value: LeaderboardEntry[];
+    company_value_per_week: LeaderboardEntry[];
   }>({
     company_value: [],
     company_value_per_week: []

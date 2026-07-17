@@ -38,7 +38,7 @@ flowchart LR
 | Weather | Weekly state, forecast, site response | Health/ripeness deltas, market pressure, planting/harvesting availability and work pace, forecast explanations |
 | Markets | Wine/grape state, economy, weather, loyalty, research | Orders, contracts, grape prices, Buy Market offers, purchases, revenue |
 | Storage vessels | Buy Market cask suppliers, allocation plans, Empty Vessel Maintenance activities | Individually owned cellar assets from rotating supplier offers, with capacity and normalized quality; Empty Vessel uses the dedicated Maintenance staff skill/team, removes the selected allocation's filled volume, and releases only that vessel; future explicit winery/vineyard effect inputs |
-| Progression | Sales, scores, assets, research | Prestige, achievements, highscores, gates |
+| Progression | Sales, scores, assets, research | Prestige, achievements, highscores, gates; aggregate company boards retain one atomic best entry while wine/vineyard boards preserve historical bottling records |
 | Staff competency | Primary skill from work category, broad specialized role, learned exact task mastery, applied grape-aware XP | Activity work allocation, role wage premium, staff previews |
 
 ## Invariants
