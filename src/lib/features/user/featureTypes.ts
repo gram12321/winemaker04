@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import type { Company } from '@/lib/database';
+import type { CompanyRecord } from '@/lib/features/company';
 
 /** Public player representation. Database row naming stays inside the feature. */
 export interface PlayerProfile {
@@ -23,9 +23,9 @@ export interface PlayerCompanyStats {
 }
 
 export interface PlayerPortfolio {
-  getCompaniesForPlayer(playerId: string): Promise<Company[]>;
+  getCompaniesForPlayer(playerId: string): Promise<CompanyRecord[]>;
   getStatsForPlayer(playerId: string): Promise<PlayerCompanyStats>;
-  getStatsForCompany(company: Company): Promise<PlayerCompanyStats>;
+  getStatsForCompany(company: CompanyRecord): Promise<PlayerCompanyStats>;
 }
 
 export interface PlayerNotificationFilter {
@@ -49,6 +49,8 @@ export interface UserFeature {
     getCurrentPlayer(): Promise<PlayerProfile | null>;
     observeCurrentPlayer(listener: (player: PlayerProfile | null) => void): Promise<() => void>;
     selectPlayer(player: PlayerProfile | null): Promise<void>;
+    /** Ends both an authenticated session and the local player selection. */
+    endSession(): Promise<UserOperationResult>;
     getPlayer(playerId: string): Promise<PlayerProfile | null>;
     createLocalPlayer(name: string): Promise<{ success: boolean; user?: PlayerProfile; error?: string }>;
     updateProfile(playerId: string, updates: Partial<Pick<PlayerProfile, 'name' | 'avatar' | 'avatarColor'>>): Promise<UserOperationResult>;
@@ -70,14 +72,14 @@ export interface UserFeature {
 }
 
 export interface PlayerProfilePageInput {
-  currentCompany: Company | null;
+  currentCompany: CompanyRecord | null;
   portfolio: PlayerPortfolio;
-  onCompanySelected(company: Company): void;
+  onCompanySelected(company: CompanyRecord): void;
   onBackToLogin(): void;
 }
 
 export interface PlayerSettingsPageInput {
-  currentCompany: Company | null;
+  currentCompany: CompanyRecord | null;
   notificationFilters: PlayerNotificationFilters;
   onBack?: () => void;
   onSignOut?: () => void;

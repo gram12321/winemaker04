@@ -10,10 +10,35 @@ import {
   getUserCompanies,
   insertCompany,
   updateCompany,
-  type Company,
+  type Company as DatabaseCompany,
   type CompanyData,
 } from '@/lib/database';
-import type { CompanyCreateInput, CompanyCreateResult, CompanyOperationResult, CompanyStats, CompanyUpdateInput } from '../featureTypes';
+import type {
+  CompanyCreateInput,
+  CompanyCreateResult,
+  CompanyOperationResult,
+  CompanyRecord,
+  CompanyStats,
+  CompanyUpdateInput,
+} from '../featureTypes';
+
+function toCompanyRecord(company: DatabaseCompany): CompanyRecord {
+  return {
+    id: company.id,
+    name: company.name,
+    ownerId: company.userId,
+    foundedYear: company.foundedYear,
+    currentWeek: company.currentWeek,
+    currentSeason: company.currentSeason,
+    currentYear: company.currentYear,
+    money: company.money,
+    prestige: company.prestige,
+    startingCountry: company.startingCountry,
+    lastPlayed: company.lastPlayed,
+    createdAt: company.createdAt,
+    updatedAt: company.updatedAt,
+  };
+}
 
 export async function createCompanyRecord(input: CompanyCreateInput): Promise<CompanyCreateResult> {
   try {
@@ -35,17 +60,30 @@ export async function createCompanyRecord(input: CompanyCreateInput): Promise<Co
     if (!result.success) return { success: false, error: result.error };
 
     const company = await getCompanyById(result.data.id);
-    return { success: true, company: company ?? undefined };
+    return { success: true, company: company ? toCompanyRecord(company) : undefined };
   } catch (error) {
     console.error('Error creating company:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
-export const getCompanyRecord = (companyId: string) => getCompanyById(companyId);
-export const getCompanyRecordByName = (name: string) => getCompanyByName(name);
-export const listCompanyRecordsForOwner = (ownerId: string) => getUserCompanies(ownerId);
-export const listCompanyRecords = (limit = 50) => getAllCompanies(limit);
+export async function getCompanyRecord(companyId: string): Promise<CompanyRecord | null> {
+  const company = await getCompanyById(companyId);
+  return company ? toCompanyRecord(company) : null;
+}
+
+export async function getCompanyRecordByName(name: string): Promise<CompanyRecord | null> {
+  const company = await getCompanyByName(name);
+  return company ? toCompanyRecord(company) : null;
+}
+
+export async function listCompanyRecordsForOwner(ownerId: string): Promise<CompanyRecord[]> {
+  return (await getUserCompanies(ownerId)).map(toCompanyRecord);
+}
+
+export async function listCompanyRecords(limit = 50): Promise<CompanyRecord[]> {
+  return (await getAllCompanies(limit)).map(toCompanyRecord);
+}
 
 export async function updateCompanyRecord(companyId: string, updates: CompanyUpdateInput): Promise<CompanyOperationResult> {
   const data: Record<string, unknown> = {};
@@ -60,7 +98,7 @@ export async function updateCompanyRecord(companyId: string, updates: CompanyUpd
 
 export const removeCompanyRecord = (companyId: string) => deleteCompany(companyId);
 
-export async function getCompanyRecordStats(ownerId?: string): Promise<CompanyStats> {
+export async function getCompanyRecordStats(ownerId: string): Promise<CompanyStats> {
   try {
     const companies = await getCompanyStats(ownerId);
     if (!companies.length) return { totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 };
@@ -81,7 +119,7 @@ export async function getCompanyRecordStats(ownerId?: string): Promise<CompanySt
   }
 }
 
-export function getSingleCompanyStats(company: Company): CompanyStats {
+export function getSingleCompanyStats(company: CompanyRecord): CompanyStats {
   return {
     totalCompanies: 1,
     totalGold: company.money,

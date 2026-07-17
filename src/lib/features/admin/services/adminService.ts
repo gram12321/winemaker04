@@ -95,7 +95,7 @@ export async function adminSetPlayerBalance(
       return { success: false, error: 'Company not found' };
     }
 
-    const targetUserId = userIdOverride || company.userId;
+    const targetUserId = userIdOverride || company.ownerId;
     if (!targetUserId) {
       return { success: false, error: 'Company is not associated with a user' };
     }

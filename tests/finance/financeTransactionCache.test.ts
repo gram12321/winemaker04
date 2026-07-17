@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Transaction } from '@/lib/types/types';
-import { addTransaction, clearTransactionsCache, loadTransactions } from '@/lib/services/finance/financeService';
+import { addTransaction, clearTransactionsCache, loadTransactions, onCompanyActivated } from '@/lib/services/finance/financeService';
 
 const mocks = vi.hoisted(() => {
   const persistedTransaction = { id: 'new-transaction', company_id: 'company-a', week: 2, season: 'Spring', year: 2026, amount: 100, description: 'New sale', category: 'Sales', recurring: false, money: 1_100 };
@@ -33,5 +33,15 @@ describe('finance transaction cache', () => {
     const transactions = await loadTransactions('company-a');
     expect(mocks.loadTransactions).toHaveBeenCalledWith('company-a');
     expect(transactions.map((transaction) => transaction.id)).toEqual(['new-transaction', 'historical-transaction']);
+  });
+
+  it('drops the newly activated company cache before it is used again', async () => {
+    await loadTransactions('company-a');
+    expect(mocks.loadTransactions).toHaveBeenCalledTimes(1);
+
+    onCompanyActivated('company-a');
+    await loadTransactions('company-a');
+
+    expect(mocks.loadTransactions).toHaveBeenCalledTimes(2);
   });
 });

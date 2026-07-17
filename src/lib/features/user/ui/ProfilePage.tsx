@@ -4,7 +4,7 @@ import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, C
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
 import { userFeature } from '@/lib/features/user';
 import type { PlayerCompanyStats, PlayerProfile, PlayerProfilePageInput } from '@/lib/features/user';
-import { type Company } from '@/lib/database';
+import type { CompanyRecord } from '@/lib/features/company';
 import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 
@@ -24,7 +24,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
   // State
   const { isLoading, withLoading } = useLoadingState();
   const [currentUser, setCurrentUser] = useState<PlayerProfile | null>(null);
-  const [userCompanies, setUserCompanies] = useState<Company[]>([]);
+  const [userCompanies, setUserCompanies] = useState<CompanyRecord[]>([]);
   const [companyStats, setCompanyStats] = useState<PlayerCompanyStats>({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
   const [playerBalance, setPlayerBalance] = useState<number>(0);
   const [error, setError] = useState('');
@@ -59,8 +59,8 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
           });
           
           // If the company has a user_id, try to load that user's information
-          if (currentCompany.userId) {
-            loadCompanyUserData(currentCompany.userId);
+          if (currentCompany.ownerId) {
+            loadCompanyUserData(currentCompany.ownerId);
           }
         } else {
           setUserCompanies([]);
@@ -143,7 +143,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
     }
   });
 
-  const handleSelectCompany = (company: Company) => withLoading(async () => {
+  const handleSelectCompany = (company: CompanyRecord) => withLoading(async () => {
     onCompanySelected(company);
   });
 
@@ -501,7 +501,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {getSortedCompanies.map((company: Company) => (
+                   {getSortedCompanies.map((company: CompanyRecord) => (
                     <Card 
                       key={company.id}
                       className={`hover:bg-accent/50 cursor-pointer transition-colors ${

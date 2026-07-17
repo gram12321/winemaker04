@@ -20,6 +20,21 @@ const company = {
   lastPlayed: new Date('2024-01-01'), createdAt: new Date('2024-01-01'), updatedAt: new Date('2024-01-01'),
 };
 
+const companyRecord = {
+  id: company.id,
+  name: company.name,
+  ownerId: 'user-1',
+  foundedYear: company.foundedYear,
+  currentWeek: company.currentWeek,
+  currentSeason: company.currentSeason,
+  currentYear: company.currentYear,
+  money: company.money,
+  prestige: company.prestige,
+  lastPlayed: company.lastPlayed,
+  createdAt: company.createdAt,
+  updatedAt: company.updatedAt,
+};
+
 describe('companyFeature.records', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +44,7 @@ describe('companyFeature.records', () => {
   });
 
   it('creates an explicitly owned company without inferring or creating a player', async () => {
-    await expect(companyFeature.records.create({ name: company.name, ownerId: 'user-1' })).resolves.toEqual({ success: true, company });
+    await expect(companyFeature.records.create({ name: company.name, ownerId: 'user-1' })).resolves.toEqual({ success: true, company: companyRecord });
     expect(mocks.insertCompany).toHaveBeenCalledWith(expect.objectContaining({ name: company.name, user_id: 'user-1' }));
     expect(mocks.getUserCompanies).not.toHaveBeenCalled();
   });
@@ -39,7 +54,7 @@ describe('companyFeature.records', () => {
     expect(mocks.insertCompany).toHaveBeenCalledWith(expect.objectContaining({ user_id: null }));
 
     mocks.getUserCompanies.mockResolvedValue([company]);
-    await expect(companyFeature.records.listForOwner('user-1')).resolves.toEqual([company]);
+    await expect(companyFeature.records.listForOwner('user-1')).resolves.toEqual([companyRecord]);
   });
 
   it('rejects a duplicate name before persistence', async () => {

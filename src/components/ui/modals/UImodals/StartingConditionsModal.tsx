@@ -56,13 +56,13 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     const loadPlayerData = async () => {
       try {
         const company = await companyFeature.records.get(companyId);
-        if (company?.userId) {
-          const balance = await userFeature.wallet.getBalance(company.userId);
+        if (company?.ownerId) {
+          const balance = await userFeature.wallet.getBalance(company.ownerId);
           setPlayerBalance(balance);
           
           // Check if this is the first company
           // Get all companies for this user, excluding the current one
-          const userCompanies = await companyFeature.records.listForOwner(company.userId);
+          const userCompanies = await companyFeature.records.listForOwner(company.ownerId);
           const otherCompanies = userCompanies.filter(c => c.id !== companyId);
           const isFirst = otherCompanies.length === 0;
           setIsFirstCompany(isFirst);

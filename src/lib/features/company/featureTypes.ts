@@ -1,5 +1,26 @@
+import type { ReactElement } from 'react';
 import type { Season } from '@/lib/types/types';
-import type { Company } from '@/lib/database';
+
+/**
+ * Stable company representation exposed to other features and the app host.
+ * Database row names deliberately do not cross this boundary.
+ */
+export interface CompanyRecord {
+  id: string;
+  name: string;
+  /** Undefined is a supported anonymous-company mode. */
+  ownerId?: string;
+  foundedYear: number;
+  currentWeek: number;
+  currentSeason: Season;
+  currentYear: number;
+  money: number;
+  prestige: number;
+  startingCountry?: string;
+  lastPlayed: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface CompanyCreateInput {
   name: string;
@@ -24,18 +45,33 @@ export interface CompanyStats {
 }
 
 export type CompanyOperationResult = { success: boolean; error?: string };
-export type CompanyCreateResult = CompanyOperationResult & { company?: Company };
+export type CompanyCreateResult = CompanyOperationResult & { company?: CompanyRecord };
+
+/** Host callbacks keep account creation and game-session activation outside this feature. */
+export interface CompanyGatewayInput {
+  companies: CompanyRecord[];
+  unownedCompanies: CompanyRecord[];
+  showUnownedCompanies: boolean;
+  currentOwnerId?: string;
+  isLoading?: boolean;
+  onCompanySelected(company: CompanyRecord): void;
+  onCompanyCreated(input: { name: string; createPlayerName?: string }): Promise<CompanyCreateResult>;
+  onCompanyDeleted(companyId: string): Promise<CompanyOperationResult>;
+}
 
 export interface CompanyFeature {
   records: {
     create(input: CompanyCreateInput): Promise<CompanyCreateResult>;
-    get(companyId: string): Promise<Company | null>;
-    getByName(name: string): Promise<Company | null>;
-    listForOwner(ownerId: string): Promise<Company[]>;
-    listAll(limit?: number): Promise<Company[]>;
+    get(companyId: string): Promise<CompanyRecord | null>;
+    getByName(name: string): Promise<CompanyRecord | null>;
+    listForOwner(ownerId: string): Promise<CompanyRecord[]>;
+    listAll(limit?: number): Promise<CompanyRecord[]>;
     update(companyId: string, updates: CompanyUpdateInput): Promise<CompanyOperationResult>;
     remove(companyId: string): Promise<CompanyOperationResult>;
-    getStatsForOwner(ownerId?: string): Promise<CompanyStats>;
-    getStatsForCompany(company: Company): Promise<CompanyStats>;
+    getStatsForOwner(ownerId: string): Promise<CompanyStats>;
+    getStatsForCompany(company: CompanyRecord): Promise<CompanyStats>;
+  };
+  ui: {
+    renderGateway(input: CompanyGatewayInput): ReactElement;
   };
 }

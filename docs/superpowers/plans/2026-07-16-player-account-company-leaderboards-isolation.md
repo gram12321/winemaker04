@@ -278,7 +278,7 @@ Phase 1 is implemented as `features/user`, not `features/playerAccount`. Its pub
 
 ## Phase 2: Company feature
 
-**Implemented shape:** `companyFeature.records` is the only company-record API for callers. It accepts `ownerId?: string` explicitly, never reads player state, and has no lender dependency. App owns the cross-feature creation workflow (record creation, lender initialization, then activation); core game state owns only the active-company lifecycle and invokes public cache lifecycle hooks.
+**Implemented shape:** `companyFeature.records` is the only company-record API for callers. It accepts `ownerId?: string` explicitly, never reads player state, maps database rows to feature-owned `CompanyRecord` objects, and has no lender dependency. Owner portfolio statistics require an explicit owner ID. `companyFeature.ui` owns the lazy-loaded company gateway. App owns the cross-feature creation workflow (record creation, lender initialization, then activation); core game state owns only the active-company lifecycle and invokes public cache lifecycle hooks.
 
 ### Task 6: Isolate explicit company records
 

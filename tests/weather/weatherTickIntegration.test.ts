@@ -29,8 +29,6 @@ vi.mock('@/lib/services/prestige/prestigeService', () => ({
   updateCompanyValuePrestige: vi.fn(async () => undefined),
 }));
 vi.mock('@/lib/features/company', () => ({ companyFeature: { records: { update: vi.fn(async () => undefined) } } }));
-vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { onCompanyActivated: vi.fn(async () => undefined) } }));
-vi.mock('@/lib/services/finance/financeService', () => ({ onCompanyActivated: vi.fn() }));
 vi.mock('@/lib/services/user/staffService', () => ({ initializeStaffSystem: vi.fn(async () => undefined) }));
 vi.mock('@/lib/services/user/teamService', () => ({ initializeTeamsSystem: vi.fn(async () => undefined) }));
 vi.mock('@/lib/services/finance/economyService', () => ({ initializeEconomyPhase: vi.fn(() => 'Stable') }));
@@ -78,6 +76,19 @@ describe('weather tick integration seams', () => {
       weatherState: 'Heat', weatherIntensity: 'Severe',
       nextWeekForecastState: 'Clear', nextWeekForecastIntensity: 'Mild',
     }));
+  });
+
+  it('notifies registered company lifecycle hooks after activation', async () => {
+    mocks.loadGameState.mockResolvedValue({ economyPhase: 'Stable' });
+    const hook = vi.fn(async () => undefined);
+    const { registerCompanyActivationHook } = await import('@/lib/services/core/companyLifecycle');
+    const unregister = registerCompanyActivationHook(hook);
+    const { setActiveCompany } = await import('@/lib/services/core/gameState');
+
+    await setActiveCompany(company as any);
+    unregister();
+
+    expect(hook).toHaveBeenCalledWith(company.id);
   });
 
   it('persists the resolved weather fields whenever a weekly state update is applied', async () => {

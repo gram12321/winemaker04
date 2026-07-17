@@ -109,8 +109,8 @@ export async function applyStartingConditions(
     // Check if this is the first company for the user
     let isFirstCompany = true;
     let userId: string | undefined;
-    if (company.userId) {
-      userId = company.userId;
+    if (company.ownerId) {
+      userId = company.ownerId;
       const userCompanies = await companyFeature.records.listForOwner(userId);
       // Exclude the current company being created
       const otherCompanies = userCompanies.filter(c => c.id !== companyId);

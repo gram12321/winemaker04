@@ -27,6 +27,14 @@ export const userFeature: UserFeature = {
       const { authService } = await import('./services/authService');
       authService.selectLocalPlayer(player);
     },
+    async endSession() {
+      const { authService } = await import('./services/authService');
+      const result = await authService.signOut();
+      // Local players do not have a Supabase session, so this is required in
+      // addition to signOut to make logout meaningful for every player mode.
+      authService.selectLocalPlayer(null);
+      return result;
+    },
     async getPlayer(playerId) {
       const { authService } = await import('./services/authService');
       return authService.getUserProfileById(playerId);
