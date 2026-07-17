@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  authService,
   completeActivityNow,
   getAllActivities,
   getAllStaff,
   getStoredVineyards,
   recreateBuyGrapeMarketOffers
 } from '@/lib/services';
+import { userFeature } from '@/lib/features/user';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import type { AdminFeature } from './featureTypes';
 import type { AdminCheatOps, AdminDashboardDependencies, AdminDatabaseOps, AdminTestLab } from './internalTypes';
@@ -103,7 +103,7 @@ const testLab: AdminTestLab = {
     createFermentingBatch,
     createBottledWine,
     completeActivityNow,
-    getCurrentUserId: () => authService.getCurrentUser()?.id ?? null,
+    getCurrentUserId: async () => (await userFeature.account.getCurrentPlayer())?.id ?? null,
     runAutomatedTests
   })
 };

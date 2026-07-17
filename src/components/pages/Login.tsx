@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
-import { companyService, highscoreService, createNewCompany, authService } from '@/lib/services';
-import { type Company, type HighscoreEntry, type AuthUser } from '@/lib/database';
+import { companyService, highscoreService, createNewCompany } from '@/lib/services';
+import { userFeature } from '@/lib/features/user';
+import type { PlayerProfile } from '@/lib/features/user';
+import { type Company, type HighscoreEntry } from '@/lib/database';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import ReactMarkdown from 'react-markdown';
@@ -30,8 +32,8 @@ export function Login({ onCompanySelected }: LoginProps) {
   const [createUserProfile, setCreateUserProfile] = useState(false);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [companiesWithoutUsers, setCompaniesWithoutUsers] = useState<Company[]>([]);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [availableUsers, setAvailableUsers] = useState<AuthUser[]>([]);
+  const [currentUser, setCurrentUser] = useState<PlayerProfile | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<PlayerProfile[]>([]);
   const [showUserSelection, setShowUserSelection] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [newUserName, setNewUserName] = useState('');
@@ -52,8 +54,9 @@ export function Login({ onCompanySelected }: LoginProps) {
 
   useEffect(() => {
     // Set up auth state listener
-    const unsubscribe = authService.onAuthStateChange((user) => {
-      setCurrentUser(user);
+    let unsubscribe: () => void = () => undefined;
+    void userFeature.account.observeCurrentPlayer(setCurrentUser).then((listenerCleanup) => {
+      unsubscribe = listenerCleanup;
     });
     
     loadHighscores();
@@ -120,10 +123,10 @@ export function Login({ onCompanySelected }: LoginProps) {
       
       // If multiple users exist, load them and show user selection UI
       const loadedUsers = await Promise.all(
-        uniqueUserIds.map(userId => authService.getUserProfileById(userId))
+        uniqueUserIds.map(userId => userFeature.account.getPlayer(userId))
       );
       
-      const validUsers = loadedUsers.filter((user): user is AuthUser => !!user);
+      const validUsers = loadedUsers.filter((user): user is PlayerProfile => !!user);
       
       if (validUsers.length > 0) {
         setAvailableUsers(validUsers);
@@ -138,10 +141,10 @@ export function Login({ onCompanySelected }: LoginProps) {
 
   const loadCompanyLinkedUser = async (userId: string) => {
     try {
-      const user = await authService.getUserProfileById(userId);
+      const user = await userFeature.account.getPlayer(userId);
       
       if (user) {
-        // Set the user state manually
+        await userFeature.account.selectPlayer(user);
         setCurrentUser(user);
         // loadUserCompanies will be called automatically by the useEffect
       }
@@ -195,7 +198,7 @@ export function Login({ onCompanySelected }: LoginProps) {
       return;
     }
 
-    const result = await authService.createLocalUserProfile(newUserName.trim());
+    const result = await userFeature.account.createLocalPlayer(newUserName.trim());
 
     if (result.success && result.user) {
       setNewUserName('');
@@ -212,11 +215,17 @@ export function Login({ onCompanySelected }: LoginProps) {
 
     // If there's a current user, always associate the company with that user
     // Otherwise, use the createUserProfile toggle
-    const shouldAssociateWithUser = currentUser ? true : createUserProfile;
-    const userNameToUse = currentUser ? undefined : (createUserProfile ? userName : undefined);
-    const userIdToUse = currentUser ? currentUser.id : undefined;
+    let userIdToUse = currentUser?.id;
+    if (!userIdToUse && createUserProfile) {
+      const playerResult = await userFeature.account.createLocalPlayer(userName.trim());
+      if (!playerResult.success || !playerResult.user) {
+        setError(playerResult.error || 'Failed to create user profile');
+        return;
+      }
+      userIdToUse = playerResult.user.id;
+    }
 
-    const company = await createNewCompany(companyName, shouldAssociateWithUser, userNameToUse, userIdToUse);
+    const company = await createNewCompany(companyName, userIdToUse);
 
     if (company) {
       setCompanyName('');
@@ -382,7 +391,8 @@ export function Login({ onCompanySelected }: LoginProps) {
                   {currentUser && !showUserSelection && availableUsers.length > 0 && (
                     <Button
                       onClick={() => {
-                        setCurrentUser(null);
+                            void userFeature.account.selectPlayer(null);
+                            setCurrentUser(null);
                         setShowUserSelection(true);
                       }}
                       variant="ghost"
@@ -404,6 +414,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                           key={user.id}
                           className="hover:bg-accent/50 transition-colors cursor-pointer"
                           onClick={() => {
+                            void userFeature.account.selectPlayer(user);
                             setCurrentUser(user);
                             setShowUserSelection(false);
                           }}

@@ -5,10 +5,8 @@ export * from './core/gameTick';
 export * from './core/startingConditionsService';
 
 // User services
-export * from './user/authService';
 export * from './user/companyService';
 export * from './user/highscoreService';
-export * from './user/userSettingsService';
 export * from './user/staffService';
 export * from './user/staffPresentationService';
 export * from './user/teamService';

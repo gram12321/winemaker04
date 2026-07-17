@@ -29,12 +29,6 @@ interface NotificationCenterProps {
   isOpen?: boolean;
 }
 
-try {
-  if (localStorage.getItem('showNotifications') === null) {
-    localStorage.setItem('showNotifications', 'true');
-  }
-} catch {}
-
 export function NotificationCenter({ onClose, isOpen = false }: NotificationCenterProps) {
   const [messages, setMessages] = useState<PlayerNotification[]>(notificationService.getMessages());
   const [isHistoryOpen, setIsHistoryOpen] = useState(isOpen);

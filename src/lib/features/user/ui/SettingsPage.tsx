@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label, Badge } from '../ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label, Badge } from '@/components/ui';
 import { Settings as SettingsIcon, Bell, Shield, Filter, Trash2, RotateCcw } from 'lucide-react';
-import { PageProps, CompanyProps } from '../../lib/types/UItypes';
+import { PageProps, CompanyProps } from '@/lib/types/UItypes';
 import { notificationService } from '@/lib/services';
 import { toast } from '@/lib/utils/toast';
+import { userFeature } from '@/lib/features/user';
 
 interface SettingsProps extends PageProps, CompanyProps {
   onSignOut?: () => void;
@@ -31,7 +32,6 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
   const [notificationFilters, setNotificationFilters] = useState<NotificationFilter[]>([]);
 
   useEffect(() => {
-    // Load settings from localStorage
     if (currentCompany) {
       loadLocalSettings();
       loadNotificationFilters();
@@ -40,13 +40,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
   const loadLocalSettings = () => {
     try {
-      const key = `settings_${currentCompany?.id}`;
-      const stored = localStorage.getItem(key);
-      
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setSettings(prev => ({ ...prev, ...parsed }));
-      }
+      setSettings({ showNotifications: userFeature.preferences.getForCompany(currentCompany!.id).toastNotifications });
     } catch (error) {
       console.error('Error loading settings:', error);
     }
@@ -66,9 +60,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
     const updatedSettings = { ...settings, ...updates };
     
-    // Save to localStorage
-    const key = `settings_${currentCompany.id}`;
-    localStorage.setItem(key, JSON.stringify(updatedSettings));
+    userFeature.preferences.setToastEnabled(currentCompany.id, updatedSettings.showNotifications);
     
     setSettings(updatedSettings);
   });

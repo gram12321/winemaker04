@@ -1,9 +1,7 @@
-import { authService } from './authService';
 import { Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import {
   insertCompany,
-  insertUser,
   getCompanyById,
   getCompanyByName,
   getUserCompanies,
@@ -19,9 +17,8 @@ import { loanLenderFeature } from '@/lib/features/loanLender';
 
 export interface CompanyCreateData {
   name: string;
-  associateWithUser?: boolean;
-  userName?: string;
-  userId?: string; // Optional: directly specify userId to associate with (takes precedence over associateWithUser)
+  /** Omit this to create an anonymous/unowned company. */
+  userId?: string;
 }
 
 export interface CompanyUpdateData {
@@ -50,23 +47,7 @@ class CompanyService {
 
       let userId: string | null = null;
 
-      if (data.userId) {
-        userId = data.userId;
-      } else if (data.associateWithUser && data.userName) {
-        const userResult = await insertUser({
-          name: data.userName,
-          created_at: new Date().toISOString()
-        });
-
-        if (!userResult.success) {
-          return { success: false, error: `Failed to create user: ${userResult.error}` };
-        }
-
-        userId = userResult.data.id;
-      } else if (data.associateWithUser) {
-        const currentUser = authService.getCurrentUser();
-        userId = currentUser ? currentUser.id : null;
-      }
+      if (data.userId) userId = data.userId;
 
       const companyData: CompanyData = {
         name: data.name,

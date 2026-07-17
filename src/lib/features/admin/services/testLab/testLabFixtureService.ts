@@ -322,8 +322,7 @@ export async function createTestLabCompany(
 ): Promise<NonNullable<TestLabCompanyResult['company']>> {
   const companyName = withTestLabPrefix(runId, stringParam(params, 'companyName', 'Admin Test Lab Company'));
   const result = await companyService.createCompany({
-    name: companyName,
-    associateWithUser: false
+    name: companyName
   });
 
   if (!result.success || !result.company) {

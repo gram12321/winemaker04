@@ -5,7 +5,7 @@ import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
-import { setPlayerBalance } from '@/lib/services/user/userBalanceService';
+import { userFeature } from '@/lib/features/user';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 import { companyService } from '@/lib/services/user/companyService';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
@@ -101,7 +101,7 @@ export async function adminSetPlayerBalance(
     }
 
     // Set the player balance
-    const result = await setPlayerBalance(targetAmount, targetUserId);
+    const result = await userFeature.wallet.setBalance(targetUserId, targetAmount);
 
     if (result.success) {
       return {

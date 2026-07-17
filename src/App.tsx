@@ -7,8 +7,6 @@ import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
 import { ResearchPage } from './components/pages/Research';
 import { StaffPage } from './components/pages/Staff';
-import { Profile } from './components/pages/Profile';
-import { Settings } from './components/pages/Settings';
 import type { AdminFeature } from '@/lib/features/admin';
 import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
@@ -26,6 +24,7 @@ import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige
 import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { achievementsFeature } from '@/lib/features/achievements';
+import { userFeature } from '@/lib/features/user';
 import { Analytics } from '@vercel/analytics/react';
 
 interface AppProps {
@@ -144,21 +143,17 @@ function App({ adminFeature }: AppProps) {
       case 'staff':
         return <StaffPage title="Staff Management" />;
       case 'profile':
-        return (
-          <Profile 
-            currentCompany={currentCompany}
-            onCompanySelected={handleCompanySelected}
-            onBackToLogin={handleBackToLogin}
-          />
-        );
+        return userFeature.ui.renderProfilePage({
+          currentCompany,
+          onCompanySelected: handleCompanySelected,
+          onBackToLogin: handleBackToLogin,
+        });
       case 'settings':
-        return (
-          <Settings 
-            currentCompany={currentCompany}
-            onBack={() => setCurrentPage('company-overview')}
-            onSignOut={handleBackToLogin}
-          />
-        );
+        return userFeature.ui.renderSettingsPage({
+          currentCompany,
+          onBack: () => setCurrentPage('company-overview'),
+          onSignOut: handleBackToLogin,
+        });
       case 'admin': {
         const adminPage = adminFeature?.renderPage({
           onBack: () => setCurrentPage('company-overview'),

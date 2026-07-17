@@ -1,5 +1,5 @@
-import { supabase } from '../../database/core/supabase';
-import { notificationService } from '@/lib/services';
+import { supabase } from '../../../database/core/supabase';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { getUserById, insertUser, updateUser, deleteUser, type AuthUser } from '@/lib/database';
 
@@ -95,6 +95,11 @@ class AuthService {
 
   public getCurrentUser(): AuthUser | null {
     return this.currentUser;
+  }
+
+  /** Selects the local player used by the offline/gameplay flow. */
+  public selectLocalPlayer(user: AuthUser | null): void {
+    this.setCurrentUser(user);
   }
 
   public async getUserProfileById(userId: string): Promise<AuthUser | null> {
@@ -220,9 +225,12 @@ class AuthService {
         return { success: false, error: result.error || 'Failed to create user' };
       }
 
+      const user = this.mapAuthUserRow(result.data);
+      this.setCurrentUser(user);
+
       return {
         success: true,
-        user: this.mapAuthUserRow(result.data)
+        user
       };
     } catch (error) {
       console.error('Create local user profile error:', error);

@@ -3,7 +3,6 @@ import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 
 const mocks = vi.hoisted(() => ({
   insertCompany: vi.fn(),
-  insertUser: vi.fn(),
   getCompanyById: vi.fn(),
   getCompanyByName: vi.fn(),
   getUserCompanies: vi.fn(),
@@ -13,12 +12,10 @@ const mocks = vi.hoisted(() => ({
   getCompanyStats: vi.fn(),
   checkCompanyNameExists: vi.fn(),
   initializeLenders: vi.fn(),
-  getCurrentUser: vi.fn(),
 }));
 
 vi.mock('@/lib/database', () => ({
   insertCompany: mocks.insertCompany,
-  insertUser: mocks.insertUser,
   getCompanyById: mocks.getCompanyById,
   getCompanyByName: mocks.getCompanyByName,
   getUserCompanies: mocks.getUserCompanies,
@@ -34,12 +31,6 @@ vi.mock('@/lib/features/loanLender', () => ({
     setup: {
       initializeLenders: mocks.initializeLenders,
     },
-  },
-}));
-
-vi.mock('@/lib/services/user/authService', () => ({
-  authService: {
-    getCurrentUser: mocks.getCurrentUser,
   },
 }));
 
@@ -64,26 +55,19 @@ describe('companyService.createCompany', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.checkCompanyNameExists.mockResolvedValue(false);
-    mocks.insertUser.mockResolvedValue({ success: true, data: { id: 'user-1' } });
     mocks.insertCompany.mockResolvedValue({ success: true, data: { id: 'company-1' } });
     mocks.getCompanyById.mockResolvedValue(persistedCompany);
     mocks.initializeLenders.mockResolvedValue(undefined);
-    mocks.getCurrentUser.mockReturnValue(null);
   });
 
-  it('creates a user, persists the company, and initializes lenders', async () => {
+  it('creates an explicitly owned company and initializes lenders', async () => {
     const result = await companyService.createCompany({
       name: 'Test Estate',
-      associateWithUser: true,
-      userName: 'Test User',
+      userId: 'user-1',
     });
 
     expect(result).toEqual({ success: true, company: persistedCompany });
     expect(mocks.checkCompanyNameExists).toHaveBeenCalledWith('Test Estate');
-    expect(mocks.insertUser).toHaveBeenCalledWith({
-      name: 'Test User',
-      created_at: expect.any(String),
-    });
     expect(mocks.insertCompany).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Test Estate',
       user_id: 'user-1',
@@ -100,29 +84,24 @@ describe('companyService.createCompany', () => {
   it('creates an unassociated company without inserting a user', async () => {
     const result = await companyService.createCompany({
       name: 'Solo Estate',
-      associateWithUser: false,
     });
 
     expect(result.success).toBe(true);
-    expect(mocks.insertUser).not.toHaveBeenCalled();
     expect(mocks.insertCompany).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Solo Estate',
       user_id: null,
     }));
   });
 
-  it('rejects duplicate names before creating a user or company', async () => {
+  it('rejects duplicate names before creating a company', async () => {
     mocks.checkCompanyNameExists.mockResolvedValue(true);
     await expect(companyService.createCompany({
       name: 'Existing Estate',
-      associateWithUser: true,
-      userName: 'Should Not Be Created',
     })).resolves.toEqual({
       success: false,
       error: 'Company name already exists',
     });
 
-    expect(mocks.insertUser).not.toHaveBeenCalled();
     expect(mocks.insertCompany).not.toHaveBeenCalled();
   });
 

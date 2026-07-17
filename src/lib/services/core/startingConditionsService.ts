@@ -12,7 +12,7 @@ import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
-import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
+import { userFeature } from '@/lib/features/user';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createStartingVineyard } from '@/lib/database/activities/vineyardDB';
@@ -170,13 +170,13 @@ export async function applyStartingConditions(
     // 2. Handle player balance deduction
     if (userId) {
       if (isFirstCompany) {
-        await setPlayerBalance(FIRST_COMPANY_PLAYER_BALANCE_SEED, userId);
+        await userFeature.wallet.setBalance(userId, FIRST_COMPANY_PLAYER_BALANCE_SEED);
       }
       
       const playerCashRequirement = playerCashContributionAmount;
       
       // Check player balance
-      const playerBalance = await getPlayerBalance(userId);
+      const playerBalance = await userFeature.wallet.getBalance(userId);
       if (playerBalance < playerCashRequirement) {
         return { 
           success: false, 
@@ -185,7 +185,7 @@ export async function applyStartingConditions(
       }
 
       // Deduct total contribution from player balance
-      const balanceResult = await updatePlayerBalance(-playerCashRequirement, userId);
+      const balanceResult = await userFeature.wallet.applyChange(userId, -playerCashRequirement);
       if (!balanceResult.success) {
         return { success: false, error: balanceResult.error || 'Failed to deduct from player balance' };
       }

@@ -18,7 +18,7 @@ import { formatNumber, getFlagIcon, StoryPortrait } from '@/lib/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
 import type { Aspect } from '@/lib/types/types';
 import { companyService } from '@/lib/services/user/companyService';
-import { getPlayerBalance } from '@/lib/services/user/userBalanceService';
+import { userFeature } from '@/lib/features/user';
 
 type MentorWelcomeData = {
   mentorName: string | null;
@@ -57,7 +57,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
       try {
         const company = await companyService.getCompany(companyId);
         if (company?.userId) {
-          const balance = await getPlayerBalance(company.userId);
+          const balance = await userFeature.wallet.getBalance(company.userId);
           setPlayerBalance(balance);
           
           // Check if this is the first company

@@ -45,6 +45,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | `boardShare` | Installed but intentionally inactive facade; `boardShareFeature` retains the isolated contract while public-company/share gameplay is deferred and is not wired into host behavior. |
 | `weather` | Always-on functional module; its barrel exports weather resolution, operation, market, vineyard, and presentation capabilities. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
+| `user` | Installed feature facade; `userFeature` owns optional player identity, profile, wallet, company-scoped preferences, and the Profile/Settings surfaces. Companies may remain unowned and playable. |
 
 ## Boundary Rules
 

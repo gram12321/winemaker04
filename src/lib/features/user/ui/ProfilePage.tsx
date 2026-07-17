@@ -1,14 +1,15 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedTooltip } from '../ui';
+import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedTooltip } from '@/components/ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
-import { authService, companyService } from '@/lib/services';
-import { type AuthUser, type Company } from '@/lib/database';
+import { userFeature } from '@/lib/features/user';
+import { companyService } from '@/lib/services';
+import type { PlayerProfile } from '@/lib/features/user';
+import { type Company } from '@/lib/database';
 import type { CompanyStats } from '@/lib/services';
 import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
-import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-import { getPlayerBalance } from '@/lib/services/user/userBalanceService';
+import { PageProps, CompanyProps } from '@/lib/types/UItypes';
 
 // Color options
 const COLOR_OPTIONS = [
@@ -30,7 +31,7 @@ interface ProfileProps extends PageProps, CompanyProps {
 export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: ProfileProps) {
   // State
   const { isLoading, withLoading } = useLoadingState();
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<PlayerProfile | null>(null);
   const [userCompanies, setUserCompanies] = useState<Company[]>([]);
   const [companyStats, setCompanyStats] = useState<CompanyStats>({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
   const [playerBalance, setPlayerBalance] = useState<number>(0);
@@ -47,7 +48,8 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
 
   useEffect(() => {
     // Listen for auth changes
-    const unsubscribe = authService.onAuthStateChange((user) => {
+    let unsubscribe: () => void = () => undefined;
+    void userFeature.account.observeCurrentPlayer((user) => {
       setCurrentUser(user);
       if (user) {
         loadUserData(user.id);
@@ -74,7 +76,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
           setCompanyStats({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
         }
       }
-    });
+    }).then((listenerCleanup) => { unsubscribe = listenerCleanup; });
 
     return unsubscribe;
   }, [currentCompany]);
@@ -83,7 +85,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     const [companies, stats, balance] = await Promise.all([
       companyService.getUserCompanies(userId),
       companyService.getCompanyStats(userId),
-      getPlayerBalance(userId)
+      userFeature.wallet.getBalance(userId)
     ]);
     
     setUserCompanies(companies);
@@ -93,7 +95,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
 
   const loadCompanyUserData = async (userId: string) => {
     try {
-      const user = await authService.getUserProfileById(userId);
+      const user = await userFeature.account.getPlayer(userId);
 
       if (!user) {
         console.error('Error loading company user data:', userId);
@@ -105,7 +107,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
       setSelectedAvatar(user.avatar || 'default');
       setSelectedColor(user.avatarColor || 'blue');
 
-      const balance = await getPlayerBalance(userId);
+      const balance = await userFeature.wallet.getBalance(userId);
       setPlayerBalance(balance);
       await loadUserData(userId);
     } catch (error) {
@@ -125,27 +127,13 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     setError('');
 
     // Check if this is a company-linked user (not authenticated via Supabase)
-    const isAuthenticatedUser = authService.isAuthenticated();
-    
-    let result;
-    if (isAuthenticatedUser) {
-      // Use authService for authenticated users
-      result = await authService.updateProfile({
-        name: editName.trim(),
-        avatar: selectedAvatar,
-        avatarColor: selectedColor
-      });
-    } else {
-      result = await authService.updateUserProfileById(currentUser.id, {
-        name: editName.trim(),
-        avatar: selectedAvatar,
-        avatarColor: selectedColor
-      });
-      
-      // Reload the user data after update
-      if (result.success) {
-        await loadCompanyUserData(currentUser.id);
-      }
+    const result = await userFeature.account.updateProfile(currentUser.id, {
+      name: editName.trim(),
+      avatar: selectedAvatar,
+      avatarColor: selectedColor
+    });
+    if (result.success) {
+      await loadCompanyUserData(currentUser.id);
     }
 
     if (result.success) {
@@ -167,15 +155,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     
     if (confirm('Are you sure you want to permanently delete your account? This will delete all your companies and cannot be undone.')) {
       // Check if this is a company-linked user (not authenticated via Supabase)
-      const isAuthenticatedUser = authService.isAuthenticated();
-      
-      let result;
-      if (isAuthenticatedUser) {
-        // Use authService for authenticated users
-        result = await authService.deleteAccount();
-      } else {
-        result = await authService.deleteUserProfileById(currentUser.id);
-      }
+      const result = await userFeature.account.deleteProfile(currentUser.id);
       
       if (result.success) {
         onBackToLogin();

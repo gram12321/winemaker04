@@ -13,6 +13,7 @@ import {
 import { NotificationCategory } from "@/lib/types/types";
 import type { GameDate } from "@/lib/types/types";
 import { getCurrentCompanyId } from "@/lib/utils";
+import { userFeature } from '@/lib/features/user';
 
 export interface PlayerNotification {
   id: string;
@@ -172,7 +173,8 @@ export const notificationService = {
     notifications = [message, ...notifications];
     notifyListeners();
 
-    const showToasts = localStorage.getItem('showNotifications') !== 'false';
+    const activeCompanyId = isForActiveCompany ? getCurrentCompanyId() : options.companyId;
+    const showToasts = activeCompanyId ? userFeature.preferences.getForCompany(activeCompanyId).toastNotifications : true;
     const shouldShowToast = showToasts && blockStatus === false;
     if (shouldShowToast) {
       toast({
