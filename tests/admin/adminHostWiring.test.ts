@@ -40,7 +40,7 @@ vi.mock('@/components/pages/Settings', () => ({ Settings: () => createElement('d
 vi.mock('@/components/pages/WineLog', () => ({ WineLog: () => createElement('div', null, 'Wine Log') }));
 vi.mock('@/components/pages/Winepedia.tsx', () => ({ default: () => createElement('div', null, 'Winepedia') }));
 vi.mock('@/components/pages/WeatherCenter', () => ({ WeatherCenterPage: () => createElement('div', null, 'Weather') }));
-vi.mock('@/components/pages/Highscores', () => ({ Highscores: () => createElement('div', null, 'Highscores') }));
+vi.mock('@/lib/features/leaderboards', () => ({ leaderboardsFeature: { ui: { renderPage: () => createElement('div', null, 'Highscores') } } }));
 vi.mock('@/components/ui/shadCN/toaster', () => ({ Toaster: () => null }));
 vi.mock('@/components/layout/ActivityPanel', () => ({ ActivityPanel: () => null }));
 vi.mock('@/components/layout/GlobalSearchResultsDisplay', () => ({ GlobalSearchResultsDisplay: () => null }));

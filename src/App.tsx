@@ -12,7 +12,7 @@ import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
 import { WeatherCenterPage } from './components/pages/WeatherCenter';
 import { Login } from './components/pages/Login';
-import { Highscores } from './components/pages/Highscores';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import Equipment from './components/pages/Equipment';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
@@ -220,12 +220,10 @@ function App({ adminFeature }: AppProps) {
           />
         );
       case 'highscores':
-        return (
-          <Highscores 
-            currentCompanyId={currentCompany?.id}
-            onBack={() => setCurrentPage(currentCompany ? 'company-overview' : 'login')}
-          />
-        );
+        return leaderboardsFeature.ui.renderPage({
+          currentCompanyId: currentCompany?.id,
+          onBack: () => setCurrentPage(currentCompany ? 'company-overview' : 'login'),
+        });
       case 'winepedia':
         return <Winepedia />;
       case 'winepedia-customers':

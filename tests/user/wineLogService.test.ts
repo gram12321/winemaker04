@@ -6,11 +6,9 @@ vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: vi.fn(() => 'company-1')
 }));
 
-vi.mock('@/lib/services/user/highscoreService', () => ({
-  highscoreService: {
-    submitWineHighscores: vi.fn(),
-    submitVineyardProductivityHighscore: vi.fn()
-  }
+const leaderboardMocks = vi.hoisted(() => ({ submitWineHighscores: vi.fn(), submitVineyardProductivityHighscore: vi.fn() }));
+vi.mock('@/lib/features/leaderboards', () => ({
+  leaderboardsFeature: { record: { wine: leaderboardMocks.submitWineHighscores, vineyard: leaderboardMocks.submitVineyardProductivityHighscore } }
 }));
 
 vi.mock('@/lib/services/core/gameState', () => ({
@@ -31,11 +29,10 @@ vi.mock('@/lib/database', () => ({
 }));
 
 const { insertWineLogEntry } = await import('@/lib/database');
-const { highscoreService } = await import('@/lib/services/user/highscoreService');
 const { recordBottledWine } = await import('@/lib/services/user/wineLogService');
 
 const mockedInsertWineLogEntry = vi.mocked(insertWineLogEntry);
-const mockedSubmitWineHighscores = vi.mocked(highscoreService.submitWineHighscores);
+const mockedSubmitWineHighscores = leaderboardMocks.submitWineHighscores;
 
 function bottledWine(overrides: Partial<WineBatch> = {}): WineBatch {
   return {

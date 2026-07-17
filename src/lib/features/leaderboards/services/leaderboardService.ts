@@ -1,6 +1,6 @@
-import { notificationService } from '@/lib/services';
-import { Season, NotificationCategory } from '../../types/types';
-import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, loadHighscoresRange, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
+import { notificationService } from '@/lib/services/core/notificationService';
+import { Season, NotificationCategory } from '@/lib/types/types';
+import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countBetterScores, countTotalScores, deleteHighscores, loadHighscoresRange, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
 
 export interface HighscoreSubmission {
   companyId: string;
@@ -19,7 +19,7 @@ export interface HighscoreSubmission {
   grapeVariety?: string;
 }
 
-class HighscoreService {
+export class LeaderboardService {
   public async submitHighscore(submission: HighscoreSubmission): Promise<{ success: boolean; error?: string }> {
     try {
       const isCompanyAggregate = submission.scoreType === 'company_value' || submission.scoreType === 'company_value_per_week';
@@ -75,8 +75,7 @@ class HighscoreService {
         return null;
       }
 
-      // Count how many companies have a higher score
-      const higherCount = await countHigherScores(scoreType, companyScore.score_value);
+      const higherCount = await countBetterScores(scoreType, companyScore.score_value);
       
       // Count total companies for this score type
       const totalCount = await countTotalScores(scoreType);
@@ -129,7 +128,7 @@ class HighscoreService {
       const companyScore = await getCompanyScore(companyId, scoreType);
       if (!companyScore) return null;
 
-      const higherCount = await countHigherScores(scoreType, companyScore.score_value);
+      const higherCount = await countBetterScores(scoreType, companyScore.score_value);
       const totalCount = await countTotalScores(scoreType);
       if (higherCount === null || totalCount === null) return null;
 
@@ -321,7 +320,7 @@ class HighscoreService {
         const message = scoreType 
           ? `Cleared ${scoreType} highscores`
           : 'Cleared all highscores';
-        await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', NotificationCategory.SYSTEM);
+        await notificationService.addMessage(message, 'leaderboards.clear', 'Leaderboards Cleared', NotificationCategory.SYSTEM);
       }
       
       return result;
@@ -404,6 +403,5 @@ class HighscoreService {
   }
 }
 
-export const highscoreService = new HighscoreService();
-export default highscoreService;
+export const leaderboardService = new LeaderboardService();
 

@@ -1,5 +1,6 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
@@ -477,17 +478,8 @@ async function submitWeeklyHighscores(): Promise<void> {
     // Calculate company value (total assets - total liabilities)
     const companyValue = await calculateCompanyValue();
 
-    // Use the highscoreService method that handles business logic
-    await highscoreService.submitCompanyHighscores(
-      currentCompany.id,
-      currentCompany.name,
-      currentCompany.currentWeek || 1,
-      currentCompany.currentSeason || 'Spring',
-      currentCompany.currentYear || 2024,
-      currentCompany.foundedYear,
-      companyValue,
-      GAME_INITIALIZATION.STARTING_MONEY
-    );
+    // The installed leaderboard feature owns score recording policy.
+    await leaderboardsFeature.record.company({ companyId: currentCompany.id, companyName: currentCompany.name, gameWeek: currentCompany.currentWeek || 1, gameSeason: currentCompany.currentSeason || 'Spring', gameYear: currentCompany.currentYear || 2024, foundedYear: currentCompany.foundedYear, companyValue, startingValue: GAME_INITIALIZATION.STARTING_MONEY });
   } catch (error) {
     console.error('Failed to submit weekly highscores:', error);
   }

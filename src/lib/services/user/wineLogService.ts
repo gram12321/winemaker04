@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, WineLogEntry } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { highscoreService } from './highscoreService';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { getGameState, getCurrentCompany } from '../core/gameState';
 import { insertWineLogEntry, loadWineLog, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
 import { calculateWineScore, getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
@@ -65,7 +65,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       const currentCompany = getCurrentCompany();
       
       if (currentCompany && gameState) {
-        await highscoreService.submitWineHighscores(
+        await leaderboardsFeature.record.wine(
           currentCompany.id,
           currentCompany.name,
           gameState.week || 1,
@@ -134,7 +134,7 @@ async function updateVineyardProductivityHighscore(vineyardId: string, vineyardN
     const currentCompany = getCurrentCompany();
     
     if (currentCompany && gameState && totalBottles > 0) {
-      await highscoreService.submitVineyardProductivityHighscore(
+      await leaderboardsFeature.record.vineyard(
         currentCompany.id,
         currentCompany.name,
         gameState.week || 1,

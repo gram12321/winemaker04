@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
-import { Building2, Trophy, User, UserPlus } from 'lucide-react';
-import { highscoreService } from '@/lib/services';
+import { Building2, User, UserPlus } from 'lucide-react';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { companyFeature, type CompanyCreateResult, type CompanyRecord } from '@/lib/features/company';
 import { userFeature } from '@/lib/features/user';
 import type { PlayerProfile } from '@/lib/features/user';
 import { type HighscoreEntry } from '@/lib/database';
-import { formatNumber, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
@@ -191,8 +191,8 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
 
   const loadHighscores = () => withLoading(async () => {
     const [companyValue, companyValuePerWeek] = await Promise.all([
-      highscoreService.getHighscores('company_value', 5),
-      highscoreService.getHighscores('company_value_per_week', 5)
+      leaderboardsFeature.views.list('company_value', 5),
+      leaderboardsFeature.views.list('company_value_per_week', 5)
     ]);
 
     setHighscores({
@@ -277,35 +277,6 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
     if (result.success) window.location.reload();
     return result;
   };
-
-  const renderHighscoreTable = (scores: HighscoreEntry[], title: string) => (
-    <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-      <CardContent className="p-3">
-        <div className="font-semibold text-sm mb-2 flex items-center gap-1 text-wine">
-          <Trophy className="h-4 w-4" />
-          {title}
-        </div>
-        {isLoading ? (
-          <div className="text-xs text-muted-foreground">Loading...</div>
-        ) : scores.length === 0 ? (
-          <div className="text-xs text-muted-foreground">No data</div>
-        ) : (
-          <div className="space-y-1">
-            {scores.map((score, idx) => (
-              <div key={score.id} className="flex justify-between text-xs">
-                <span className="truncate max-w-[100px]">
-                  {idx + 1}. {score.companyName}
-                </span>
-                <span className="font-medium">
-                  {formatNumber(score.scoreValue, { currency: true, decimals: 0 })}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div 
@@ -473,8 +444,8 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
           <div className="space-y-3">
             {/* Highscores */}
             <div className="grid grid-cols-1 gap-2.5">
-              {renderHighscoreTable(highscores.company_value, 'Top Companies')}
-              {renderHighscoreTable(highscores.company_value_per_week, 'Fastest Growing')}
+              {leaderboardsFeature.ui.renderSummary({ entries: highscores.company_value, title: 'Top Companies', isLoading })}
+              {leaderboardsFeature.ui.renderSummary({ entries: highscores.company_value_per_week, title: 'Fastest Growing', isLoading })}
             </div>
 
             {/* Info */}

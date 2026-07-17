@@ -229,6 +229,25 @@ export const countHigherScores = async (scoreType: ScoreType, scoreValue: number
   }
 };
 
+/** Counts entries that rank ahead of a value for the score type's ordering. */
+export const countBetterScores = async (scoreType: ScoreType, scoreValue: number): Promise<number | null> => {
+  try {
+    let query = supabase
+      .from(HIGHSCORES_TABLE)
+      .select('*', { count: 'exact', head: true })
+      .eq('score_type', scoreType);
+    query = scoreType === 'lowest_price'
+      ? query.lt('score_value', scoreValue)
+      : query.gt('score_value', scoreValue);
+    const { count, error } = await query;
+    if (error) throw error;
+    return count;
+  } catch (error) {
+    console.error('Error counting better scores:', error);
+    return null;
+  }
+};
+
 export const countTotalScores = async (scoreType: ScoreType): Promise<number | null> => {
   try {
     const { count, error } = await supabase

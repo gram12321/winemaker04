@@ -47,6 +47,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
 | `user` | Installed feature facade; `userFeature` owns optional player identity/session, profile, wallet, company-scoped preferences, and the Profile/Settings surfaces. Its explicit session-ending operation clears both authenticated and local-player selection. Companies may remain unowned and playable. |
 | `company` | Installed feature facade; `companyFeature.records` owns explicit company CRUD, feature-owned company records, portfolio read models, and owner-scoped aggregate statistics. `companyFeature.ui` owns the company gateway; App composes lender setup and active-company activation. Creation accepts an optional owner ID only. |
+| `leaderboards` | Installed feature facade; `leaderboardsFeature` owns score recording, rankings/read models, maintenance actions, the leaderboard page, and Login’s leaderboard summary. |
 
 ## Boundary Rules
 

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { clearAllAchievements, clearAllCompanies, clearAllCompaniesAndUsers, clearAllCustomers, clearAllUsers, fullDatabaseReset } from '@/lib/database/admin/adminDB';
-import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '@/lib/services';
+import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, initializeCustomers, updateGameState } from '@/lib/services';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
@@ -165,21 +166,21 @@ export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
  * Clear all highscores
  */
 export async function adminClearAllHighscores(): Promise<{ success: boolean; message?: string }> {
-  return await highscoreService.clearHighscores();
+  return await leaderboardsFeature.maintenance.clear();
 }
 
 /**
  * Clear company value highscores
  */
 export async function adminClearCompanyValueHighscores(): Promise<{ success: boolean; message?: string }> {
-  return await highscoreService.clearHighscores('company_value');
+  return await leaderboardsFeature.maintenance.clear('company_value');
 }
 
 /**
  * Clear company value per week highscores
  */
 export async function adminClearCompanyValuePerWeekHighscores(): Promise<{ success: boolean; message?: string }> {
-  return await highscoreService.clearHighscores('company_value_per_week');
+  return await leaderboardsFeature.maintenance.clear('company_value_per_week');
 }
 
 /**

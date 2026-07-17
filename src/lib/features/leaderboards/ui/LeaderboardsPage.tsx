@@ -1,17 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '@/components/ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
-import { highscoreService } from '@/lib/services';
+import { leaderboardsFeature } from '../feature';
 import { type HighscoreEntry, type ScoreType } from '@/lib/database';
 import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineStructureCategory } from '@/lib/utils';
-import { PageProps, CompanyProps } from '../../lib/types/UItypes';
+import type { LeaderboardPageInput } from '../featureTypes';
 
-interface HighscoresProps extends PageProps, CompanyProps {
-  // Inherits currentCompanyId and onBack from shared interfaces
-}
-
-export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
+export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageInput) {
   const { isLoading, withLoading } = useLoadingState();
   const [highscores, setHighscores] = useState<Record<ScoreType, HighscoreEntry[]>>({
     company_value: [],
@@ -44,15 +40,15 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       highestPriceScores,
       lowestPriceScores
     ] = await Promise.all([
-      highscoreService.getHighscores('company_value', 50),
-      highscoreService.getHighscores('company_value_per_week', 50),
-      highscoreService.getHighscores('highest_vintage_quantity', 50),
-      highscoreService.getHighscores('most_productive_vineyard', 50),
-      highscoreService.getHighscores('highest_wine_score', 50),
-      highscoreService.getHighscores('highest_taste_quality_index', 50),
-      highscoreService.getHighscores('highest_structure_index', 50),
-      highscoreService.getHighscores('highest_price', 50),
-      highscoreService.getHighscores('lowest_price', 50)
+      leaderboardsFeature.views.list('company_value', 50),
+      leaderboardsFeature.views.list('company_value_per_week', 50),
+      leaderboardsFeature.views.list('highest_vintage_quantity', 50),
+      leaderboardsFeature.views.list('most_productive_vineyard', 50),
+      leaderboardsFeature.views.list('highest_wine_score', 50),
+      leaderboardsFeature.views.list('highest_taste_quality_index', 50),
+      leaderboardsFeature.views.list('highest_structure_index', 50),
+      leaderboardsFeature.views.list('highest_price', 50),
+      leaderboardsFeature.views.list('lowest_price', 50)
     ]);
 
     setHighscores({
@@ -89,11 +85,11 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   }, []);
 
   const getColumnTitle = useCallback((scoreType: ScoreType): string => {
-    return highscoreService.getScoreTypeName(scoreType);
+    return leaderboardsFeature.views.scoreTypeName(scoreType);
   }, []);
 
   const getTabTitle = useCallback((scoreType: ScoreType): string => {
-    const fullName = highscoreService.getScoreTypeName(scoreType);
+    const fullName = leaderboardsFeature.views.scoreTypeName(scoreType);
     switch (scoreType) {
       case 'company_value':
         return 'Company Value';

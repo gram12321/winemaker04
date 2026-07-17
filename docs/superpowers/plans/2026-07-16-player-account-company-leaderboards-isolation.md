@@ -341,6 +341,8 @@ Phase 1 is implemented as `features/user`, not `features/playerAccount`. Its pub
 
 ### Task 8: Isolate recording and presentation
 
+**Implemented shape:** `leaderboardsFeature` exposes `record`, `views`, `maintenance`, and `ui`. Production score writers use `record`; Login, Company Overview, and App use `views`/`ui`; database ordering treats `lowest_price` as ascending for both display and ranking.
+
 **Files:**
 
 - Create: `src/lib/features/leaderboards/index.ts`

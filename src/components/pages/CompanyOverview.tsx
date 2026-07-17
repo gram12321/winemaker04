@@ -5,7 +5,8 @@ import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine, ChevronLeft, 
 import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { formatPercent, getColorClass, getQualityCategory, getWineStructureCategory, StoryPortrait } from '@/lib/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
-import { getAllWineBatches, getCurrentCompany, highscoreService } from '@/lib/services';
+import { getAllWineBatches, getCurrentCompany } from '@/lib/services';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { type ScoreType } from '@/lib/database';
 import { NavigationProps } from '../../lib/types/UItypes';
 
@@ -102,14 +103,14 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   const loadCompanyRankings = () => withLoading(async () => {
     if (!company) return;
     
-    const companyRankings = await highscoreService.getCompanyRankings(company.id);
+    const companyRankings = await leaderboardsFeature.views.rankings(company.id);
     setRankings(companyRankings);
   });
 
   const loadContext = useCallback(async (scoreType: ScoreType) => {
     if (!company) return;
     setContextLoading(true);
-    const ctx = await highscoreService.getCompanyHighscoreContext(company.id, scoreType, 2);
+    const ctx = await leaderboardsFeature.views.context(company.id, scoreType, 2);
     setContextEntries(ctx ? { entries: ctx.entries, startIndex: ctx.startIndex } : null);
     setContextLoading(false);
   }, [company]);
@@ -180,7 +181,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   }, []);
 
   const getTabTitle = useCallback((scoreType: ScoreType): string => {
-    const fullName = highscoreService.getScoreTypeName(scoreType);
+    const fullName = leaderboardsFeature.views.scoreTypeName(scoreType);
     switch (scoreType) {
       case 'company_value':
         return 'Company Value';
