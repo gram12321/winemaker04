@@ -13,6 +13,8 @@ import {
 import { NotificationCategory } from "@/lib/types/types";
 import type { GameDate } from "@/lib/types/types";
 import { getCurrentCompanyId } from "@/lib/utils";
+import { userFeature } from '@/lib/features/user';
+import { registerCompanyActivationHook } from './companyLifecycle';
 
 export interface PlayerNotification {
   id: string;
@@ -99,6 +101,16 @@ export const notificationService = {
     await Promise.all([loadFromDbIfNeeded(), loadFiltersFromDbIfNeeded()]);
   },
 
+  /** Reload company-scoped notification state after the active company changes. */
+  async onCompanyActivated() {
+    notifications = [];
+    notificationFilters = [];
+    hasLoadedFromDb = false;
+    hasLoadedFiltersFromDb = false;
+    notifyListeners();
+    await this.ensureInitialized();
+  },
+
   addListener(listener: (messages: PlayerNotification[]) => void) {
     listeners.push(listener);
   },
@@ -172,7 +184,8 @@ export const notificationService = {
     notifications = [message, ...notifications];
     notifyListeners();
 
-    const showToasts = localStorage.getItem('showNotifications') !== 'false';
+    const activeCompanyId = isForActiveCompany ? getCurrentCompanyId() : options.companyId;
+    const showToasts = activeCompanyId ? userFeature.preferences.getForCompany(activeCompanyId).toastNotifications : true;
     const shouldShowToast = showToasts && blockStatus === false;
     if (shouldShowToast) {
       toast({
@@ -260,5 +273,7 @@ export const notificationService = {
     return this.addFilter('category', category, `Blocked category: ${capitalizedCategory}`, blockFromHistory);
   }
 };
+
+registerCompanyActivationHook(() => notificationService.onCompanyActivated());
 
 

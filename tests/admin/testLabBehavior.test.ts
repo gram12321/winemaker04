@@ -128,7 +128,7 @@ const getTestLabRunner = async () => {
     createFermentingBatch: runnerMocks.createFermentingBatch,
     createBottledWine: runnerMocks.createBottledWine,
     completeActivityNow: runnerMocks.completeActivityNow,
-    getCurrentUserId: () => 'user_1',
+    getCurrentUserId: async () => 'user_1',
     runAutomatedTests: runnerMocks.runAutomatedTests
   });
 };

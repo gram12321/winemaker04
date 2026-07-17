@@ -6,13 +6,13 @@ import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardNam
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { formatNumber, getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
-import { companyService } from '../user/companyService';
+import { companyFeature } from '@/lib/features/company';
 import { upsertPrestigeEventBySource } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
-import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
+import { userFeature } from '@/lib/features/user';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createStartingVineyard } from '@/lib/database/activities/vineyardDB';
@@ -101,7 +101,7 @@ export async function applyStartingConditions(
     }
 
     // Get company to check if it has a user
-    const company = await companyService.getCompany(companyId);
+    const company = await companyFeature.records.get(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
@@ -109,9 +109,9 @@ export async function applyStartingConditions(
     // Check if this is the first company for the user
     let isFirstCompany = true;
     let userId: string | undefined;
-    if (company.userId) {
-      userId = company.userId;
-      const userCompanies = await companyService.getUserCompanies(userId);
+    if (company.ownerId) {
+      userId = company.ownerId;
+      const userCompanies = await companyFeature.records.listForOwner(userId);
       // Exclude the current company being created
       const otherCompanies = userCompanies.filter(c => c.id !== companyId);
       isFirstCompany = otherCompanies.length === 0;
@@ -158,7 +158,7 @@ export async function applyStartingConditions(
     let startingLoanId: string | undefined;
 
     // 1. Update company metadata via service
-    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
+    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyFeature.records.update(companyId, {
       startingCountry: country
     });
 
@@ -170,13 +170,13 @@ export async function applyStartingConditions(
     // 2. Handle player balance deduction
     if (userId) {
       if (isFirstCompany) {
-        await setPlayerBalance(FIRST_COMPANY_PLAYER_BALANCE_SEED, userId);
+        await userFeature.wallet.setBalance(userId, FIRST_COMPANY_PLAYER_BALANCE_SEED);
       }
       
       const playerCashRequirement = playerCashContributionAmount;
       
       // Check player balance
-      const playerBalance = await getPlayerBalance(userId);
+      const playerBalance = await userFeature.wallet.getBalance(userId);
       if (playerBalance < playerCashRequirement) {
         return { 
           success: false, 
@@ -185,7 +185,7 @@ export async function applyStartingConditions(
       }
 
       // Deduct total contribution from player balance
-      const balanceResult = await updatePlayerBalance(-playerCashRequirement, userId);
+      const balanceResult = await userFeature.wallet.applyChange(userId, -playerCashRequirement);
       if (!balanceResult.success) {
         return { success: false, error: balanceResult.error || 'Failed to deduct from player balance' };
       }
@@ -304,7 +304,7 @@ export async function applyStartingConditions(
     // Refresh company money after all financial adjustments (capital + loan)
     let resolvedStartingMoney = workingMoney;
     try {
-      const updatedCompany = await companyService.getCompany(companyId);
+      const updatedCompany = await companyFeature.records.get(companyId);
       if (updatedCompany) {
         resolvedStartingMoney = updatedCompany.money;
       }

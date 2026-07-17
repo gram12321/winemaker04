@@ -7,25 +7,25 @@ import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
 import { ResearchPage } from './components/pages/Research';
 import { StaffPage } from './components/pages/Staff';
-import { Profile } from './components/pages/Profile';
-import { Settings } from './components/pages/Settings';
 import type { AdminFeature } from '@/lib/features/admin';
 import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
 import { WeatherCenterPage } from './components/pages/WeatherCenter';
 import { Login } from './components/pages/Login';
-import { Highscores } from './components/pages/Highscores';
+import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import Equipment from './components/pages/Equipment';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
 import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
-import { Company } from '@/lib/database';
+import type { CompanyRecord } from '@/lib/features/company';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
-import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
+import { initializeCustomers, initializeActivitySystem, notificationService, preloadAllCustomerRelationships } from './lib/services';
+import { companyFeature, type CompanyCreateResult } from '@/lib/features/company';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { achievementsFeature } from '@/lib/features/achievements';
+import { userFeature } from '@/lib/features/user';
 import { Analytics } from '@vercel/analytics/react';
 
 interface AppProps {
@@ -34,9 +34,23 @@ interface AppProps {
 
 function App({ adminFeature }: AppProps) {
   const [currentPage, setCurrentPage] = useState('login');
-  const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
+  const [currentCompany, setCurrentCompany] = useState<CompanyRecord | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
+  const [forcePlayerSelection, setForcePlayerSelection] = useState(false);
   const loanLenderAppOverlays = useMemo(() => loanLenderFeature.ui.getAppOverlays(), []);
+  const playerPortfolio = useMemo(() => ({
+    getCompaniesForPlayer: (playerId: string) => companyFeature.records.listForOwner(playerId),
+    getStatsForPlayer: (playerId: string) => companyFeature.records.getStatsForOwner(playerId),
+    getStatsForCompany: (company: CompanyRecord) => companyFeature.records.getStatsForCompany(company),
+  }), []);
+  const playerNotificationFilters = useMemo(() => ({
+    getAll: () => notificationService.getFilters(),
+    remove: (filterId: string) => notificationService.removeFilter(filterId),
+    clear: () => notificationService.clearFilters(),
+    setHistoryBlocked: (filterId: string, blocked: boolean) => {
+      notificationService.updateFilter(filterId, { blockFromHistory: blocked });
+    },
+  }), []);
   
   const lastInitializedCompanyIdRef = useRef<string | null>(null);
   useCustomerRelationshipUpdates();
@@ -58,12 +72,13 @@ function App({ adminFeature }: AppProps) {
     setCurrentPage('login');
   }, []);
 
-  const handleCompanySelected = async (company: Company) => {
+  const handleCompanySelected = async (company: CompanyRecord) => {
     try {
       await setActiveCompany(company);
       setCurrentCompany(company);
       setCurrentPage('company-overview');
       setIsGameInitialized(true);
+      setForcePlayerSelection(false);
       
       if (lastInitializedCompanyIdRef.current !== company.id) {
         lastInitializedCompanyIdRef.current = company.id;
@@ -72,6 +87,21 @@ function App({ adminFeature }: AppProps) {
     } catch (error) {
       console.error('Error setting active company:', error);
     }
+  };
+
+  const handleCompanyCreated = async (input: { name: string; ownerId?: string }): Promise<CompanyCreateResult> => {
+    const result = await companyFeature.records.create(input);
+    if (!result.success || !result.company) return { success: false, error: result.error || 'Failed to create company' };
+
+    try {
+      await loanLenderFeature.setup.initializeLenders(result.company.id);
+    } catch (error) {
+      console.warn('Failed to initialize lenders for new company:', error);
+    }
+    // Starting conditions create company-scoped staff, loans, and vineyards.
+    // Establish that session context before Login opens the setup modal.
+    await setActiveCompany(result.company);
+    return { success: true, company: result.company };
   };
 
   const initializeGameForCompany = async () => {
@@ -104,6 +134,17 @@ function App({ adminFeature }: AppProps) {
     setIsGameInitialized(false);
   };
 
+  const handleLogout = async () => {
+    const result = await userFeature.account.endSession();
+    if (!result.success) console.error('Unable to complete authenticated sign-out:', result.error);
+
+    resetGameState();
+    setCurrentCompany(null);
+    setCurrentPage('login');
+    setIsGameInitialized(false);
+    setForcePlayerSelection(true);
+  };
+
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
@@ -113,19 +154,19 @@ function App({ adminFeature }: AppProps) {
 
   const renderCurrentPage = () => {
     if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {
-      return <Login onCompanySelected={handleCompanySelected} />;
+      return <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />;
     }
 
     switch (currentPage) {
       case 'login':
-        return <Login onCompanySelected={handleCompanySelected} />;
+        return <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />;
       case 'company-overview':
         return currentCompany ? (
           <CompanyOverview 
             onNavigate={handleNavigate}
           />
         ) : (
-          <Login onCompanySelected={handleCompanySelected} />
+          <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />
         );
       case 'dashboard':
         return <CompanyOverview onNavigate={setCurrentPage} />;
@@ -144,28 +185,26 @@ function App({ adminFeature }: AppProps) {
       case 'staff':
         return <StaffPage title="Staff Management" />;
       case 'profile':
-        return (
-          <Profile 
-            currentCompany={currentCompany}
-            onCompanySelected={handleCompanySelected}
-            onBackToLogin={handleBackToLogin}
-          />
-        );
+        return userFeature.ui.renderProfilePage({
+          currentCompany,
+          portfolio: playerPortfolio,
+          onCompanySelected: handleCompanySelected,
+          onBackToLogin: handleBackToLogin,
+        });
       case 'settings':
-        return (
-          <Settings 
-            currentCompany={currentCompany}
-            onBack={() => setCurrentPage('company-overview')}
-            onSignOut={handleBackToLogin}
-          />
-        );
+        return userFeature.ui.renderSettingsPage({
+          currentCompany,
+          notificationFilters: playerNotificationFilters,
+          onBack: () => setCurrentPage('company-overview'),
+          onSignOut: handleLogout,
+        });
       case 'admin': {
         const adminPage = adminFeature?.renderPage({
           onBack: () => setCurrentPage('company-overview'),
           onNavigateToLogin: handleBackToLogin
         });
         if (!adminPage) {
-          return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
+          return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />;
         }
         return adminPage;
       }
@@ -181,12 +220,10 @@ function App({ adminFeature }: AppProps) {
           />
         );
       case 'highscores':
-        return (
-          <Highscores 
-            currentCompanyId={currentCompany?.id}
-            onBack={() => setCurrentPage(currentCompany ? 'company-overview' : 'login')}
-          />
-        );
+        return leaderboardsFeature.ui.renderPage({
+          currentCompanyId: currentCompany?.id,
+          onBack: () => setCurrentPage(currentCompany ? 'company-overview' : 'login'),
+        });
       case 'winepedia':
         return <Winepedia />;
       case 'winepedia-customers':
@@ -194,7 +231,7 @@ function App({ adminFeature }: AppProps) {
       case 'weather-center':
         return <WeatherCenterPage />;
       default:
-        return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
+        return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />;
     }
   };
 
@@ -202,7 +239,7 @@ function App({ adminFeature }: AppProps) {
   if (!isGameInitialized && currentPage === 'login') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-        <Login onCompanySelected={handleCompanySelected} />
+        <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />
         <Toaster />
       </div>
     );
@@ -215,6 +252,7 @@ function App({ adminFeature }: AppProps) {
         onNavigate={handleNavigate}
         onTimeAdvance={handleTimeAdvance}
         onBackToLogin={handleBackToLogin}
+        onLogout={handleLogout}
         adminAvailable={Boolean(adminFeature?.isAvailable())}
       />
 

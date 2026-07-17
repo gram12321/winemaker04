@@ -17,8 +17,8 @@ import {
 import { formatNumber, getFlagIcon, StoryPortrait } from '@/lib/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
 import type { Aspect } from '@/lib/types/types';
-import { companyService } from '@/lib/services/user/companyService';
-import { getPlayerBalance } from '@/lib/services/user/userBalanceService';
+import { companyFeature } from '@/lib/features/company';
+import { userFeature } from '@/lib/features/user';
 
 type MentorWelcomeData = {
   mentorName: string | null;
@@ -55,14 +55,14 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   useEffect(() => {
     const loadPlayerData = async () => {
       try {
-        const company = await companyService.getCompany(companyId);
-        if (company?.userId) {
-          const balance = await getPlayerBalance(company.userId);
+        const company = await companyFeature.records.get(companyId);
+        if (company?.ownerId) {
+          const balance = await userFeature.wallet.getBalance(company.ownerId);
           setPlayerBalance(balance);
           
           // Check if this is the first company
           // Get all companies for this user, excluding the current one
-          const userCompanies = await companyService.getUserCompanies(company.userId);
+          const userCompanies = await companyFeature.records.listForOwner(company.ownerId);
           const otherCompanies = userCompanies.filter(c => c.id !== companyId);
           const isFirst = otherCompanies.length === 0;
           setIsFirstCompany(isFirst);

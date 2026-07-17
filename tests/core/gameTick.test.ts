@@ -106,7 +106,6 @@ vi.mock('@/lib/services', () => ({
   progressActivities: mocks.progressActivities,
   checkAndTriggerBookkeeping: mocks.checkAndTriggerBookkeeping,
   processEconomyPhaseTransition: mocks.processEconomyPhaseTransition,
-  highscoreService: { submitCompanyHighscores: mocks.submitCompanyHighscores },
   updateCellarCollectionPrestige: mocks.updateCellarCollectionPrestige,
   calculateCompanyValue: mocks.calculateCompanyValue,
   updateVineyardRipeness: mocks.updateVineyardRipeness,
@@ -122,6 +121,10 @@ vi.mock('@/lib/services', () => ({
   refreshBuyMarketForSeason: mocks.refreshBuyMarketForSeason,
   generateForwardContracts: mocks.generateForwardContracts,
   expireAndDefaultForwardContracts: mocks.expireAndDefaultForwardContracts
+}));
+
+vi.mock('@/lib/features/leaderboards', () => ({
+  leaderboardsFeature: { record: { company: mocks.submitCompanyHighscores } },
 }));
 
 vi.mock('@/lib/services/wine/features/featureService', () => ({
@@ -283,16 +286,10 @@ describe('processGameTick', () => {
       state: 'Clear',
       intensity: 'Mild',
     }));
-    expect(mocks.submitCompanyHighscores).toHaveBeenCalledWith(
-      'company-1',
-      'Tick Winery',
-      12,
-      'Winter',
-      2026,
-      2024,
-      250000,
-      expect.any(Number)
-    );
+    expect(mocks.submitCompanyHighscores).toHaveBeenCalledWith(expect.objectContaining({
+      companyId: 'company-1', companyName: 'Tick Winery', gameWeek: 12,
+      gameSeason: 'Winter', gameYear: 2026, foundedYear: 2024, companyValue: 250000,
+    }));
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('wine_batches');
     expect(mocks.triggerGameUpdate).toHaveBeenCalledTimes(2);
     expect(mocks.calls.indexOf('updateGameState')).toBeLessThan(mocks.calls.indexOf('progressActivities'));

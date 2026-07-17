@@ -1,52 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label, Badge } from '../ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label, Badge } from '@/components/ui';
 import { Settings as SettingsIcon, Bell, Shield, Filter, Trash2, RotateCcw } from 'lucide-react';
-import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-import { notificationService } from '@/lib/services';
 import { toast } from '@/lib/utils/toast';
-
-interface SettingsProps extends PageProps, CompanyProps {
-  onSignOut?: () => void;
-}
+import { userFeature } from '@/lib/features/user';
+import type { PlayerNotificationFilter, PlayerSettingsPageInput } from '@/lib/features/user';
 
 interface SimpleSettings {
   showNotifications: boolean;
 }
 
-interface NotificationFilter {
-  id: string;
-  type: 'origin' | 'category';
-  value: string;
-  description?: string;
-  blockFromHistory?: boolean;
-  createdAt: string;
-}
-
-export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
+export function Settings({ currentCompany, notificationFilters: notificationFilterActions, onBack, onSignOut }: PlayerSettingsPageInput) {
   const { isLoading, withLoading } = useLoadingState();
   const [settings, setSettings] = useState<SimpleSettings>({
     showNotifications: true
   });
-  const [notificationFilters, setNotificationFilters] = useState<NotificationFilter[]>([]);
+  const [notificationFilters, setNotificationFilters] = useState<PlayerNotificationFilter[]>([]);
 
   useEffect(() => {
-    // Load settings from localStorage
     if (currentCompany) {
       loadLocalSettings();
       loadNotificationFilters();
     }
-  }, [currentCompany]);
+  }, [currentCompany, notificationFilterActions]);
 
   const loadLocalSettings = () => {
     try {
-      const key = `settings_${currentCompany?.id}`;
-      const stored = localStorage.getItem(key);
-      
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setSettings(prev => ({ ...prev, ...parsed }));
-      }
+      setSettings({ showNotifications: userFeature.preferences.getForCompany(currentCompany!.id).toastNotifications });
     } catch (error) {
       console.error('Error loading settings:', error);
     }
@@ -54,8 +34,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
   const loadNotificationFilters = () => {
     try {
-      const filters = notificationService.getFilters();
-      setNotificationFilters(filters as NotificationFilter[]);
+      setNotificationFilters(notificationFilterActions.getAll());
     } catch (error) {
       console.error('Error loading notification filters:', error);
     }
@@ -66,9 +45,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
     const updatedSettings = { ...settings, ...updates };
     
-    // Save to localStorage
-    const key = `settings_${currentCompany.id}`;
-    localStorage.setItem(key, JSON.stringify(updatedSettings));
+    userFeature.preferences.setToastEnabled(currentCompany.id, updatedSettings.showNotifications);
     
     setSettings(updatedSettings);
   });
@@ -79,7 +56,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
   const handleRemoveFilter = (filterId: string) => {
     try {
-      notificationService.removeFilter(filterId);
+      notificationFilterActions.remove(filterId);
       loadNotificationFilters();
       toast({
         title: "Filter Removed",
@@ -98,7 +75,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
   const handleClearAllFilters = () => {
     try {
-      notificationService.clearFilters();
+      notificationFilterActions.clear();
       loadNotificationFilters();
       toast({
         title: "Filters Cleared",
@@ -117,10 +94,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
 
   const handleToggleBlockFromHistory = (filterId: string, currentValue: boolean) => {
     try {
-      // Update the filter with the new blockFromHistory value
-      notificationService.updateFilter(filterId, {
-        blockFromHistory: !currentValue
-      });
+      notificationFilterActions.setHistoryBlocked(filterId, !currentValue);
       
       // Reload filters to refresh UI
       loadNotificationFilters();

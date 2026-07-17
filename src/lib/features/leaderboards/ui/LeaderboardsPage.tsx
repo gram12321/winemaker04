@@ -1,29 +1,37 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '@/components/ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
-import { highscoreService } from '@/lib/services';
-import { type HighscoreEntry, type ScoreType } from '@/lib/database';
+import { leaderboardsFeature } from '../feature';
 import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineStructureCategory } from '@/lib/utils';
-import { PageProps, CompanyProps } from '../../lib/types/UItypes';
+import type { LeaderboardEntry, LeaderboardKind, LeaderboardPageInput } from '../featureTypes';
 
-interface HighscoresProps extends PageProps, CompanyProps {
-  // Inherits currentCompanyId and onBack from shared interfaces
+const LEADERBOARD_DEFINITIONS: Record<LeaderboardKind, {
+  tabTitle: string;
+  heading: string;
+  description: string;
+  group: 1 | 2;
+}> = {
+  company_value: { tabTitle: 'Company Value', heading: 'Top Companies by Total Value', description: 'Rankings based on overall company worth including assets and cash', group: 1 },
+  company_value_per_week: { tabTitle: 'Company Value/Week', heading: 'Fastest Growing Companies', description: 'Best company value growth rate per week', group: 1 },
+  highest_vintage_quantity: { tabTitle: 'Vintage Quantity', heading: 'Largest Single Vintage Production', description: 'Most bottles produced in a single wine batch', group: 1 },
+  most_productive_vineyard: { tabTitle: 'Vineyard Production', heading: 'Most Productive Vineyards', description: 'Total bottles produced across all vintages', group: 1 },
+  highest_wine_score: { tabTitle: 'Wine Score', heading: 'Highest Wine Score', description: 'Best overall wine score achieved', group: 2 },
+  highest_taste_quality_index: { tabTitle: 'Taste Quality', heading: 'Highest Taste Quality', description: 'Best taste quality achieved', group: 2 },
+  highest_structure_index: { tabTitle: 'Structure', heading: 'Best Structure', description: 'Highest structure index wines', group: 2 },
+  highest_price: { tabTitle: 'Highest Price', heading: 'Most Expensive Wines', description: 'Highest price per bottle achieved', group: 2 },
+  lowest_price: { tabTitle: 'Lowest Price', heading: 'Most Affordable Wines', description: 'Lowest price per bottle achieved', group: 2 },
+};
+
+const LEADERBOARD_KINDS = Object.keys(LEADERBOARD_DEFINITIONS) as LeaderboardKind[];
+
+function emptyHighscores(): Record<LeaderboardKind, LeaderboardEntry[]> {
+  return Object.fromEntries(LEADERBOARD_KINDS.map((kind) => [kind, []])) as unknown as Record<LeaderboardKind, LeaderboardEntry[]>;
 }
 
-export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
+export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageInput) {
   const { isLoading, withLoading } = useLoadingState();
-  const [highscores, setHighscores] = useState<Record<ScoreType, HighscoreEntry[]>>({
-    company_value: [],
-    company_value_per_week: [],
-    highest_vintage_quantity: [],
-    most_productive_vineyard: [],
-    highest_wine_score: [],
-    highest_taste_quality_index: [],
-    highest_structure_index: [],
-    highest_price: [],
-    lowest_price: []
-  });
+  const [highscores, setHighscores] = useState<Record<LeaderboardKind, LeaderboardEntry[]>>(emptyHighscores);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,42 +41,11 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   const loadAllHighscores = () => withLoading(async () => {
     setError(null);
 
-    const [
-      companyValueScores, 
-      companyValuePerWeekScores,
-      highestVintageQuantityScores,
-      mostProductiveVineyardScores,
-      highestWineScoreScores,
-      highestTasteQualityIndexScores,
-      highestStructureIndexScores,
-      highestPriceScores,
-      lowestPriceScores
-    ] = await Promise.all([
-      highscoreService.getHighscores('company_value', 50),
-      highscoreService.getHighscores('company_value_per_week', 50),
-      highscoreService.getHighscores('highest_vintage_quantity', 50),
-      highscoreService.getHighscores('most_productive_vineyard', 50),
-      highscoreService.getHighscores('highest_wine_score', 50),
-      highscoreService.getHighscores('highest_taste_quality_index', 50),
-      highscoreService.getHighscores('highest_structure_index', 50),
-      highscoreService.getHighscores('highest_price', 50),
-      highscoreService.getHighscores('lowest_price', 50)
-    ]);
-
-    setHighscores({
-      company_value: companyValueScores,
-      company_value_per_week: companyValuePerWeekScores,
-      highest_vintage_quantity: highestVintageQuantityScores,
-      most_productive_vineyard: mostProductiveVineyardScores,
-      highest_wine_score: highestWineScoreScores,
-      highest_taste_quality_index: highestTasteQualityIndexScores,
-      highest_structure_index: highestStructureIndexScores,
-      highest_price: highestPriceScores,
-      lowest_price: lowestPriceScores
-    });
+    const scores = await Promise.all(LEADERBOARD_KINDS.map((kind) => leaderboardsFeature.views.list(kind, 50)));
+    setHighscores(Object.fromEntries(LEADERBOARD_KINDS.map((kind, index) => [kind, scores[index]])) as unknown as Record<LeaderboardKind, LeaderboardEntry[]>);
   });
 
-  const formatGameDate = (entry: HighscoreEntry): string => {
+  const formatGameDate = (entry: LeaderboardEntry): string => {
     if (!entry.gameWeek || !entry.gameSeason || !entry.gameYear) {
       return 'N/A';
     }
@@ -88,37 +65,11 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     }
   }, []);
 
-  const getColumnTitle = useCallback((scoreType: ScoreType): string => {
-    return highscoreService.getScoreTypeName(scoreType);
+  const getColumnTitle = useCallback((scoreType: LeaderboardKind): string => {
+    return leaderboardsFeature.views.kindName(scoreType);
   }, []);
 
-  const getTabTitle = useCallback((scoreType: ScoreType): string => {
-    const fullName = highscoreService.getScoreTypeName(scoreType);
-    switch (scoreType) {
-      case 'company_value':
-        return 'Company Value';
-      case 'company_value_per_week':
-        return 'Company Value/Week';
-      case 'highest_vintage_quantity':
-        return 'Vintage Quantity';
-      case 'most_productive_vineyard':
-        return 'Vineyard Production';
-      case 'highest_wine_score':
-        return 'Wine Score';
-      case 'highest_taste_quality_index':
-        return 'Taste Quality';
-      case 'highest_structure_index':
-        return 'Structure';
-      case 'highest_price':
-        return 'Highest Price';
-      case 'lowest_price':
-        return 'Lowest Price';
-      default:
-        return fullName;
-    }
-  }, []);
-
-  const getTabIcon = useCallback((scoreType: ScoreType) => {
+  const getTabIcon = useCallback((scoreType: LeaderboardKind) => {
     switch (scoreType) {
       case 'company_value':
         return '🏢';
@@ -143,15 +94,12 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     }
   }, []);
 
-  const firstTabGroup = useMemo(() => (
-    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as ScoreType[]
-  ), []);
+  const tabGroups = useMemo(() => [
+    LEADERBOARD_KINDS.filter((kind) => LEADERBOARD_DEFINITIONS[kind].group === 1),
+    LEADERBOARD_KINDS.filter((kind) => LEADERBOARD_DEFINITIONS[kind].group === 2),
+  ], []);
 
-  const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_taste_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as ScoreType[]
-  ), []);
-
-  const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number, index: number, totalScores: number): string => {
+  const getScoreColorClass = useCallback((scoreType: LeaderboardKind, scoreValue: number, index: number, totalScores: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_quality_index' || scoreType === 'highest_structure_index') {
       return getColorClass(scoreValue);
@@ -169,7 +117,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     return getColorClass(0.3); // Bottom 30%
   }, []);
 
-  const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
+  const getScoreCategory = useCallback((scoreType: LeaderboardKind, scoreValue: number): string | null => {
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_quality_index') {
       return getQualityCategory(scoreValue);
     }
@@ -179,7 +127,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     return null;
   }, []);
 
-  const renderHighscoreTable = useCallback((scoreType: ScoreType) => {
+  const renderHighscoreTable = useCallback((scoreType: LeaderboardKind) => {
     const scores = highscores[scoreType];
     
     if (isLoading) {
@@ -271,19 +219,19 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                   ) : null}
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`font-mono font-semibold ${getScoreColorClass(scoreType, score.scoreValue, index, scores.length)}`}>
+                      <span className={`font-mono font-semibold ${getScoreColorClass(scoreType, score.value, index, scores.length)}`}>
                         {scoreType === 'highest_wine_score' ?
-                          formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                          formatNumber(score.value, { decimals: 1, forceDecimals: true }) :
                           scoreType.includes('price') ? 
-                            formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                            formatNumber(score.value, { currency: true, decimals: 2 }) :
                             scoreType.includes('quality') || scoreType.includes('structure') ?
-                              formatPercent(score.scoreValue, 1, true) :
-                              formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                              formatPercent(score.value, 1, true) :
+                              formatNumber(score.value, { decimals: 0, forceDecimals: true })
                         }
                       </span>
-                      {getScoreCategory(scoreType, score.scoreValue) && (
+                      {getScoreCategory(scoreType, score.value) && (
                         <span className="text-xs text-muted-foreground">
-                          {getScoreCategory(scoreType, score.scoreValue)}
+                          {getScoreCategory(scoreType, score.value)}
                         </span>
                       )}
                     </div>
@@ -343,19 +291,19 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`text-lg font-bold ${getScoreColorClass(scoreType, score.scoreValue, index, scores.length)}`}>
+                      <span className={`text-lg font-bold ${getScoreColorClass(scoreType, score.value, index, scores.length)}`}>
                         {scoreType === 'highest_wine_score' ?
-                          formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                          formatNumber(score.value, { decimals: 1, forceDecimals: true }) :
                           scoreType.includes('price') ?
-                            formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                            formatNumber(score.value, { currency: true, decimals: 2 }) :
                             scoreType.includes('quality') || scoreType.includes('structure') ?
-                              formatPercent(score.scoreValue, 1, true) :
-                              formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                              formatPercent(score.value, 1, true) :
+                              formatNumber(score.value, { decimals: 0, forceDecimals: true })
                         }
                       </span>
-                      {getScoreCategory(scoreType, score.scoreValue) && (
+                      {getScoreCategory(scoreType, score.value) && (
                         <span className="text-xs text-muted-foreground">
-                          {getScoreCategory(scoreType, score.scoreValue)}
+                          {getScoreCategory(scoreType, score.value)}
                         </span>
                       )}
                     </div>
@@ -421,121 +369,33 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="company_value" className="w-full">
-              <TabsList className="w-full mb-6 flex flex-wrap gap-2 h-auto">
-                {firstTabGroup.map((scoreType) => (
-                  <TabsTrigger
-                    key={scoreType}
-                    value={scoreType}
-                    className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
-                  >
-                    <span>{getTabIcon(scoreType)}</span>
-                    <span className="truncate max-w-[42vw] sm:max-w-none">{getTabTitle(scoreType)}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              <TabsList className="w-full mb-6 flex flex-wrap gap-2 h-auto">
-                {secondTabGroup.map((scoreType) => (
-                  <TabsTrigger
-                    key={scoreType}
-                    value={scoreType}
-                    className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
-                  >
-                    <span>{getTabIcon(scoreType)}</span>
-                    <span className="truncate max-w-[42vw] sm:max-w-none">{getTabTitle(scoreType)}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              {tabGroups.map((group) => (
+                <TabsList key={group[0]} className="w-full mb-6 flex flex-wrap gap-2 h-auto">
+                  {group.map((scoreType) => (
+                    <TabsTrigger
+                      key={scoreType}
+                      value={scoreType}
+                      className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
+                    >
+                      <span>{getTabIcon(scoreType)}</span>
+                      <span className="truncate max-w-[42vw] sm:max-w-none">{LEADERBOARD_DEFINITIONS[scoreType].tabTitle}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              ))}
 
-              <TabsContent value="company_value" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Top Companies by Total Value</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Rankings based on overall company worth including assets and cash
-                  </p>
-                </div>
-                {renderHighscoreTable('company_value')}
-              </TabsContent>
-
-              <TabsContent value="company_value_per_week" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Fastest Growing Companies</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Best company value growth rate per week
-                  </p>
-                </div>
-                {renderHighscoreTable('company_value_per_week')}
-              </TabsContent>
-
-              <TabsContent value="highest_vintage_quantity" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Largest Single Vintage Production</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Most bottles produced in a single wine batch
-                  </p>
-                </div>
-                {renderHighscoreTable('highest_vintage_quantity')}
-              </TabsContent>
-
-              <TabsContent value="most_productive_vineyard" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Most Productive Vineyards</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Total bottles produced across all vintages
-                  </p>
-                </div>
-                {renderHighscoreTable('most_productive_vineyard')}
-              </TabsContent>
-
-               <TabsContent value="highest_wine_score" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Highest Wine Score</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Best overall wine score achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_wine_score')}
-               </TabsContent>
-
-               <TabsContent value="highest_taste_quality_index" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Highest Taste Quality</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Best taste quality achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_taste_quality_index')}
-               </TabsContent>
-
-               <TabsContent value="highest_structure_index" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Best Structure</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Highest structure index wines
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_structure_index')}
-               </TabsContent>
-
-               <TabsContent value="highest_price" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Most Expensive Wines</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Highest price per bottle achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_price')}
-               </TabsContent>
-
-               <TabsContent value="lowest_price" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Most Affordable Wines</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Lowest price per bottle achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('lowest_price')}
-               </TabsContent>
+              {LEADERBOARD_KINDS.map((scoreType) => {
+                const definition = LEADERBOARD_DEFINITIONS[scoreType];
+                return (
+                  <TabsContent key={scoreType} value={scoreType} className="space-y-4">
+                    <div className="text-center mb-4">
+                      <h3 className="text-lg font-semibold">{definition.heading}</h3>
+                      <p className="text-sm text-muted-foreground">{definition.description}</p>
+                    </div>
+                    {renderHighscoreTable(scoreType)}
+                  </TabsContent>
+                );
+              })}
 
             </Tabs>
           </CardContent>
@@ -546,8 +406,8 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
           <CardContent className="p-4">
             <div className="text-center text-sm text-muted-foreground">
               <p>
-                Leaderboards are updated in real-time as companies achieve new milestones.
-                Rankings are based on the highest scores achieved by each company.
+                Leaderboards are updated as companies achieve new milestones.
+                Company-value boards retain each company’s best score; wine and vineyard boards preserve historical achievements.
               </p>
             </div>
           </CardContent>

@@ -27,7 +27,7 @@ import {
   getBuyerYearlyLoyaltyCap,
 } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 import { getGameState } from '@/lib/services/core/gameState';
-import { companyService } from '@/lib/services';
+import { companyFeature } from '@/lib/features/company';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber } from '@/lib/utils/utils';
@@ -223,7 +223,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     if (!isOpen) return;
     const companyId = getCurrentCompanyId();
     if (!companyId) return;
-    companyService.getCompany(companyId).then(async company => {
+    companyFeature.records.get(companyId).then(async company => {
       const country = company?.startingCountry;
       const seasonalBuyers = await getAvailableBuyers(country);
       setBuyers(seasonalBuyers);

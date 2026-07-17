@@ -45,6 +45,9 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | `boardShare` | Installed but intentionally inactive facade; `boardShareFeature` retains the isolated contract while public-company/share gameplay is deferred and is not wired into host behavior. |
 | `weather` | Always-on functional module; its barrel exports weather resolution, operation, market, vineyard, and presentation capabilities. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
+| `user` | Installed feature facade; `userFeature` owns optional player identity/session, profile, wallet, company-scoped preferences, and the Profile/Settings surfaces. Its explicit session-ending operation clears both authenticated and local-player selection. Companies may remain unowned and playable. |
+| `company` | Installed feature facade; `companyFeature.records` owns explicit company CRUD, feature-owned company records, portfolio read models, and owner-scoped aggregate statistics. `companyFeature.ui` owns the company gateway; App composes lender setup and active-company activation. Creation accepts an optional owner ID only. |
+| `leaderboards` | Installed feature facade; `leaderboardsFeature` owns feature-native record inputs/types, rankings/read models, maintenance actions, the leaderboard page, and Login’s leaderboard summary. Aggregate company scores are atomically constrained to one best value per company/type; historical wine and vineyard entries remain append-only, with `lowest_price` ordered ascending. |
 
 ## Boundary Rules
 

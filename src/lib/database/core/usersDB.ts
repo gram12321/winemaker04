@@ -6,7 +6,7 @@ const USERS_TABLE = 'users';
 /**
  * Users Database Operations
  * Pure CRUD operations for user data persistence
- * NOTE: Auth operations (signup/signin/signout) remain in authService
+ * NOTE: Auth operations (signup/signin/signout) remain in the user feature.
  */
 
 export interface UserData {
@@ -19,7 +19,7 @@ export interface UserData {
   created_at?: string;
 }
 
-export interface AuthUser {
+export interface PlayerProfile {
   id: string;
   email?: string;
   name: string;
@@ -31,9 +31,9 @@ export interface AuthUser {
 }
 
 /**
- * Map database row to AuthUser
+ * Map database row to PlayerProfile
  */
-function mapUserFromDB(dbUser: any): AuthUser {
+function mapUserFromDB(dbUser: any): PlayerProfile {
   return {
     id: dbUser.id,
     email: dbUser.email,
@@ -65,7 +65,7 @@ export const insertUser = async (userData: UserData): Promise<{ success: boolean
   }
 };
 
-export const getUserById = async (userId: string): Promise<AuthUser | null> => {
+export const getUserById = async (userId: string): Promise<PlayerProfile | null> => {
   try {
     const { data, error } = await supabase
       .from(USERS_TABLE)
