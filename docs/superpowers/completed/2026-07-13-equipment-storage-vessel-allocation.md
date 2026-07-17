@@ -1,6 +1,6 @@
 # Equipment and Cellar Vessel Allocation Plan
 
-**Status:** Design ready for implementation
+**Status:** Implemented. Rechecked on 2026-07-17; this document is retained as a historical implementation record.
 
 **Goal:** Make storage vessels a required, capacity-limited part of production. Every non-bottled `WineBatch` must have an active Cellar Vessel allocation before it can be created or processed. Bottled batches require no vessel and release their allocation. Add an Equipment page that can later aggregate machinery without flattening different equipment families into one generic persistence shape.
 

@@ -1,5 +1,7 @@
 # Generic Buy Goods Suppliers Implementation Plan
 
+**Status:** Implemented. Rechecked on 2026-07-17; this document is retained as a historical implementation record.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace fixed storage-vessel catalogue offers with supplier-generated cask offers and migrate grape procurement onto shared Buy Goods supplier, pricing, scaling, and offer-lifecycle mechanics.
