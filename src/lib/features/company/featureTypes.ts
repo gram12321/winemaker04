@@ -63,7 +63,6 @@ export interface CompanyFeature {
   records: {
     create(input: CompanyCreateInput): Promise<CompanyCreateResult>;
     get(companyId: string): Promise<CompanyRecord | null>;
-    getByName(name: string): Promise<CompanyRecord | null>;
     listForOwner(ownerId: string): Promise<CompanyRecord[]>;
     listAll(limit?: number): Promise<CompanyRecord[]>;
     update(companyId: string, updates: CompanyUpdateInput): Promise<CompanyOperationResult>;

@@ -136,18 +136,6 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
         return;
       }
       
-      // If multiple users exist, load them and show user selection UI
-      const loadedUsers = await Promise.all(
-        uniqueUserIds.map(userId => userFeature.account.getPlayer(userId))
-      );
-      
-      const validUsers = loadedUsers.filter((user): user is PlayerProfile => !!user);
-      
-      if (validUsers.length > 0) {
-        setAvailableUsers(validUsers);
-        setShowUserSelection(true);
-        return;
-      }
     }
     
     // If no autologin happened and no single user detected, show all companies

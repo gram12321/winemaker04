@@ -107,8 +107,6 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
       setSelectedAvatar(user.avatar || 'default');
       setSelectedColor(user.avatarColor || 'blue');
 
-      const balance = await userFeature.wallet.getBalance(userId);
-      setPlayerBalance(balance);
       await loadUserData(userId);
     } catch (error) {
       console.error('Error loading company user data:', error);

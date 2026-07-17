@@ -6,19 +6,32 @@ import { leaderboardsFeature } from '../feature';
 import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineStructureCategory } from '@/lib/utils';
 import type { LeaderboardEntry, LeaderboardKind, LeaderboardPageInput } from '../featureTypes';
 
+const LEADERBOARD_DEFINITIONS: Record<LeaderboardKind, {
+  tabTitle: string;
+  heading: string;
+  description: string;
+  group: 1 | 2;
+}> = {
+  company_value: { tabTitle: 'Company Value', heading: 'Top Companies by Total Value', description: 'Rankings based on overall company worth including assets and cash', group: 1 },
+  company_value_per_week: { tabTitle: 'Company Value/Week', heading: 'Fastest Growing Companies', description: 'Best company value growth rate per week', group: 1 },
+  highest_vintage_quantity: { tabTitle: 'Vintage Quantity', heading: 'Largest Single Vintage Production', description: 'Most bottles produced in a single wine batch', group: 1 },
+  most_productive_vineyard: { tabTitle: 'Vineyard Production', heading: 'Most Productive Vineyards', description: 'Total bottles produced across all vintages', group: 1 },
+  highest_wine_score: { tabTitle: 'Wine Score', heading: 'Highest Wine Score', description: 'Best overall wine score achieved', group: 2 },
+  highest_taste_quality_index: { tabTitle: 'Taste Quality', heading: 'Highest Taste Quality', description: 'Best taste quality achieved', group: 2 },
+  highest_structure_index: { tabTitle: 'Structure', heading: 'Best Structure', description: 'Highest structure index wines', group: 2 },
+  highest_price: { tabTitle: 'Highest Price', heading: 'Most Expensive Wines', description: 'Highest price per bottle achieved', group: 2 },
+  lowest_price: { tabTitle: 'Lowest Price', heading: 'Most Affordable Wines', description: 'Lowest price per bottle achieved', group: 2 },
+};
+
+const LEADERBOARD_KINDS = Object.keys(LEADERBOARD_DEFINITIONS) as LeaderboardKind[];
+
+function emptyHighscores(): Record<LeaderboardKind, LeaderboardEntry[]> {
+  return Object.fromEntries(LEADERBOARD_KINDS.map((kind) => [kind, []])) as unknown as Record<LeaderboardKind, LeaderboardEntry[]>;
+}
+
 export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageInput) {
   const { isLoading, withLoading } = useLoadingState();
-  const [highscores, setHighscores] = useState<Record<LeaderboardKind, LeaderboardEntry[]>>({
-    company_value: [],
-    company_value_per_week: [],
-    highest_vintage_quantity: [],
-    most_productive_vineyard: [],
-    highest_wine_score: [],
-    highest_taste_quality_index: [],
-    highest_structure_index: [],
-    highest_price: [],
-    lowest_price: []
-  });
+  const [highscores, setHighscores] = useState<Record<LeaderboardKind, LeaderboardEntry[]>>(emptyHighscores);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,39 +41,8 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
   const loadAllHighscores = () => withLoading(async () => {
     setError(null);
 
-    const [
-      companyValueScores, 
-      companyValuePerWeekScores,
-      highestVintageQuantityScores,
-      mostProductiveVineyardScores,
-      highestWineScoreScores,
-      highestTasteQualityIndexScores,
-      highestStructureIndexScores,
-      highestPriceScores,
-      lowestPriceScores
-    ] = await Promise.all([
-      leaderboardsFeature.views.list('company_value', 50),
-      leaderboardsFeature.views.list('company_value_per_week', 50),
-      leaderboardsFeature.views.list('highest_vintage_quantity', 50),
-      leaderboardsFeature.views.list('most_productive_vineyard', 50),
-      leaderboardsFeature.views.list('highest_wine_score', 50),
-      leaderboardsFeature.views.list('highest_taste_quality_index', 50),
-      leaderboardsFeature.views.list('highest_structure_index', 50),
-      leaderboardsFeature.views.list('highest_price', 50),
-      leaderboardsFeature.views.list('lowest_price', 50)
-    ]);
-
-    setHighscores({
-      company_value: companyValueScores,
-      company_value_per_week: companyValuePerWeekScores,
-      highest_vintage_quantity: highestVintageQuantityScores,
-      most_productive_vineyard: mostProductiveVineyardScores,
-      highest_wine_score: highestWineScoreScores,
-      highest_taste_quality_index: highestTasteQualityIndexScores,
-      highest_structure_index: highestStructureIndexScores,
-      highest_price: highestPriceScores,
-      lowest_price: lowestPriceScores
-    });
+    const scores = await Promise.all(LEADERBOARD_KINDS.map((kind) => leaderboardsFeature.views.list(kind, 50)));
+    setHighscores(Object.fromEntries(LEADERBOARD_KINDS.map((kind, index) => [kind, scores[index]])) as unknown as Record<LeaderboardKind, LeaderboardEntry[]>);
   });
 
   const formatGameDate = (entry: LeaderboardEntry): string => {
@@ -85,32 +67,6 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
 
   const getColumnTitle = useCallback((scoreType: LeaderboardKind): string => {
     return leaderboardsFeature.views.kindName(scoreType);
-  }, []);
-
-  const getTabTitle = useCallback((scoreType: LeaderboardKind): string => {
-    const fullName = leaderboardsFeature.views.kindName(scoreType);
-    switch (scoreType) {
-      case 'company_value':
-        return 'Company Value';
-      case 'company_value_per_week':
-        return 'Company Value/Week';
-      case 'highest_vintage_quantity':
-        return 'Vintage Quantity';
-      case 'most_productive_vineyard':
-        return 'Vineyard Production';
-      case 'highest_wine_score':
-        return 'Wine Score';
-      case 'highest_taste_quality_index':
-        return 'Taste Quality';
-      case 'highest_structure_index':
-        return 'Structure';
-      case 'highest_price':
-        return 'Highest Price';
-      case 'lowest_price':
-        return 'Lowest Price';
-      default:
-        return fullName;
-    }
   }, []);
 
   const getTabIcon = useCallback((scoreType: LeaderboardKind) => {
@@ -138,13 +94,10 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
     }
   }, []);
 
-  const firstTabGroup = useMemo(() => (
-    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as LeaderboardKind[]
-  ), []);
-
-  const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_taste_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as LeaderboardKind[]
-  ), []);
+  const tabGroups = useMemo(() => [
+    LEADERBOARD_KINDS.filter((kind) => LEADERBOARD_DEFINITIONS[kind].group === 1),
+    LEADERBOARD_KINDS.filter((kind) => LEADERBOARD_DEFINITIONS[kind].group === 2),
+  ], []);
 
   const getScoreColorClass = useCallback((scoreType: LeaderboardKind, scoreValue: number, index: number, totalScores: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
@@ -416,121 +369,33 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="company_value" className="w-full">
-              <TabsList className="w-full mb-6 flex flex-wrap gap-2 h-auto">
-                {firstTabGroup.map((scoreType) => (
-                  <TabsTrigger
-                    key={scoreType}
-                    value={scoreType}
-                    className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
-                  >
-                    <span>{getTabIcon(scoreType)}</span>
-                    <span className="truncate max-w-[42vw] sm:max-w-none">{getTabTitle(scoreType)}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              <TabsList className="w-full mb-6 flex flex-wrap gap-2 h-auto">
-                {secondTabGroup.map((scoreType) => (
-                  <TabsTrigger
-                    key={scoreType}
-                    value={scoreType}
-                    className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
-                  >
-                    <span>{getTabIcon(scoreType)}</span>
-                    <span className="truncate max-w-[42vw] sm:max-w-none">{getTabTitle(scoreType)}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              {tabGroups.map((group) => (
+                <TabsList key={group[0]} className="w-full mb-6 flex flex-wrap gap-2 h-auto">
+                  {group.map((scoreType) => (
+                    <TabsTrigger
+                      key={scoreType}
+                      value={scoreType}
+                      className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
+                    >
+                      <span>{getTabIcon(scoreType)}</span>
+                      <span className="truncate max-w-[42vw] sm:max-w-none">{LEADERBOARD_DEFINITIONS[scoreType].tabTitle}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              ))}
 
-              <TabsContent value="company_value" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Top Companies by Total Value</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Rankings based on overall company worth including assets and cash
-                  </p>
-                </div>
-                {renderHighscoreTable('company_value')}
-              </TabsContent>
-
-              <TabsContent value="company_value_per_week" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Fastest Growing Companies</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Best company value growth rate per week
-                  </p>
-                </div>
-                {renderHighscoreTable('company_value_per_week')}
-              </TabsContent>
-
-              <TabsContent value="highest_vintage_quantity" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Largest Single Vintage Production</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Most bottles produced in a single wine batch
-                  </p>
-                </div>
-                {renderHighscoreTable('highest_vintage_quantity')}
-              </TabsContent>
-
-              <TabsContent value="most_productive_vineyard" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Most Productive Vineyards</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Total bottles produced across all vintages
-                  </p>
-                </div>
-                {renderHighscoreTable('most_productive_vineyard')}
-              </TabsContent>
-
-               <TabsContent value="highest_wine_score" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Highest Wine Score</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Best overall wine score achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_wine_score')}
-               </TabsContent>
-
-               <TabsContent value="highest_taste_quality_index" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Highest Taste Quality</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Best taste quality achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_taste_quality_index')}
-               </TabsContent>
-
-               <TabsContent value="highest_structure_index" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Best Structure</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Highest structure index wines
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_structure_index')}
-               </TabsContent>
-
-               <TabsContent value="highest_price" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Most Expensive Wines</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Highest price per bottle achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('highest_price')}
-               </TabsContent>
-
-               <TabsContent value="lowest_price" className="space-y-4">
-                 <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Most Affordable Wines</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Lowest price per bottle achieved
-                   </p>
-                 </div>
-                 {renderHighscoreTable('lowest_price')}
-               </TabsContent>
+              {LEADERBOARD_KINDS.map((scoreType) => {
+                const definition = LEADERBOARD_DEFINITIONS[scoreType];
+                return (
+                  <TabsContent key={scoreType} value={scoreType} className="space-y-4">
+                    <div className="text-center mb-4">
+                      <h3 className="text-lg font-semibold">{definition.heading}</h3>
+                      <p className="text-sm text-muted-foreground">{definition.description}</p>
+                    </div>
+                    {renderHighscoreTable(scoreType)}
+                  </TabsContent>
+                );
+              })}
 
             </Tabs>
           </CardContent>

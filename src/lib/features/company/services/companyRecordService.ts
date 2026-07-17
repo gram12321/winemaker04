@@ -5,7 +5,6 @@ import {
   deleteCompany,
   getAllCompanies,
   getCompanyById,
-  getCompanyByName,
   getCompanyStats,
   getUserCompanies,
   insertCompany,
@@ -69,11 +68,6 @@ export async function createCompanyRecord(input: CompanyCreateInput): Promise<Co
 
 export async function getCompanyRecord(companyId: string): Promise<CompanyRecord | null> {
   const company = await getCompanyById(companyId);
-  return company ? toCompanyRecord(company) : null;
-}
-
-export async function getCompanyRecordByName(name: string): Promise<CompanyRecord | null> {
-  const company = await getCompanyByName(name);
   return company ? toCompanyRecord(company) : null;
 }
 

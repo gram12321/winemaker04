@@ -13,6 +13,18 @@ import type {
   LeaderboardWineRecordInput,
 } from '../featureTypes';
 
+const LEADERBOARD_KINDS: LeaderboardKind[] = [
+  'company_value',
+  'company_value_per_week',
+  'highest_vintage_quantity',
+  'most_productive_vineyard',
+  'highest_wine_score',
+  'highest_taste_quality_index',
+  'highest_structure_index',
+  'highest_price',
+  'lowest_price',
+];
+
 interface HighscoreSubmission {
   companyId: string;
   companyName: string;
@@ -97,25 +109,13 @@ export class LeaderboardService {
   }
 
   public async getCompanyRankings(companyId: string): Promise<Record<LeaderboardKind, LeaderboardRanking>> {
-    const scoreTypes: LeaderboardKind[] = [
-      'company_value', 
-      'company_value_per_week',
-      'highest_vintage_quantity',
-      'most_productive_vineyard',
-      'highest_wine_score',
-      'highest_taste_quality_index',
-      'highest_structure_index',
-      'highest_price',
-      'lowest_price'
-    ];
-    const rankings: Record<LeaderboardKind, LeaderboardRanking> = {} as Record<LeaderboardKind, LeaderboardRanking>;
-
-    for (const scoreType of scoreTypes) {
-      const ranking = await this.getCompanyRanking(companyId, scoreType);
-      rankings[scoreType] = ranking || { position: 0, total: 0 };
-    }
-
-    return rankings;
+    const rankings = await Promise.all(
+      LEADERBOARD_KINDS.map(async (scoreType) => [
+        scoreType,
+        (await this.getCompanyRanking(companyId, scoreType)) || { position: 0, total: 0 },
+      ] as const),
+    );
+    return Object.fromEntries(rankings) as Record<LeaderboardKind, LeaderboardRanking>;
   }
 
   /**

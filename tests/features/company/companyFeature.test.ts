@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 
 const mocks = vi.hoisted(() => ({
-  insertCompany: vi.fn(), getCompanyById: vi.fn(), getCompanyByName: vi.fn(), getUserCompanies: vi.fn(),
+  insertCompany: vi.fn(), getCompanyById: vi.fn(), getUserCompanies: vi.fn(),
   getAllCompanies: vi.fn(), updateCompany: vi.fn(), deleteCompany: vi.fn(), getCompanyStats: vi.fn(), checkCompanyNameExists: vi.fn(),
 }));
 
 vi.mock('@/lib/database', () => ({
-  insertCompany: mocks.insertCompany, getCompanyById: mocks.getCompanyById, getCompanyByName: mocks.getCompanyByName,
+  insertCompany: mocks.insertCompany, getCompanyById: mocks.getCompanyById,
   getUserCompanies: mocks.getUserCompanies, getAllCompanies: mocks.getAllCompanies, updateCompany: mocks.updateCompany,
   deleteCompany: mocks.deleteCompany, getCompanyStats: mocks.getCompanyStats, checkCompanyNameExists: mocks.checkCompanyNameExists,
 }));
