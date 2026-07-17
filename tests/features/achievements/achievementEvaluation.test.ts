@@ -27,7 +27,6 @@ const mocks = vi.hoisted(() => {
     })),
     getAchievementUnlock: vi.fn(async () => null as AchievementUnlock | null),
     getAllAchievementUnlocks: vi.fn(async () => [] as AchievementUnlock[]),
-    isAchievementUnlocked: vi.fn(async () => false),
     unlockAchievement: vi.fn(async () => ({ unlock, created: true })),
     loadVineyards: vi.fn(async () => [{
       id: 'vineyard-1',
@@ -82,7 +81,6 @@ vi.mock('@/lib/services/core/gameState', () => ({
 vi.mock('@/lib/database/core/achievementsDB', () => ({
   getAchievementUnlock: mocks.getAchievementUnlock,
   getAllAchievementUnlocks: mocks.getAllAchievementUnlocks,
-  isAchievementUnlocked: mocks.isAchievementUnlocked,
   unlockAchievement: mocks.unlockAchievement,
 }));
 

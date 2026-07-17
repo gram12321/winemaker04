@@ -12,7 +12,14 @@ interface AchievementsProps extends PageProps, CompanyProps {
   catalog: AchievementsFeature['catalog'];
 }
 
-// Achievement types are now imported from the service layer
+const CATEGORY_OPTIONS = [
+  { value: 'financial', label: 'Financial', icon: Coins },
+  { value: 'production', label: 'Production', icon: Wine },
+  { value: 'time', label: 'Time', icon: Calendar },
+  { value: 'prestige', label: 'Prestige', icon: Star },
+  { value: 'sales', label: 'Sales', icon: Trophy },
+  { value: 'vineyard', label: 'Vineyard', icon: Medal },
+] as const;
 
 export function AchievementsPage({ currentCompany, onBack, views, catalog }: AchievementsProps) {
   const { withLoading } = useLoadingState();
@@ -53,22 +60,8 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'financial':
-        return <Coins className="h-4 w-4" />;
-      case 'production':
-        return <Wine className="h-4 w-4" />;
-      case 'time':
-        return <Calendar className="h-4 w-4" />;
-      case 'prestige':
-        return <Star className="h-4 w-4" />;
-      case 'sales':
-        return <Trophy className="h-4 w-4" />;
-      case 'vineyard':
-        return <Medal className="h-4 w-4" />;
-      default:
-        return <Medal className="h-4 w-4" />;
-    }
+    const Icon = CATEGORY_OPTIONS.find(option => option.value === category)?.icon || Medal;
+    return <Icon className="h-4 w-4" />;
   };
 
   const categoryFilteredAchievements = selectedCategory === 'all'
@@ -164,60 +157,18 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
               >
                 All ({totalCount})
               </Button>
-              <Button
-                variant={selectedCategory === 'financial' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory('financial')}
-                className="flex items-center gap-2"
-              >
-                <Coins className="h-3 w-3" />
-                Financial ({achievementStats?.byCategory?.financial?.total || 0})
-              </Button>
-              <Button
-                variant={selectedCategory === 'production' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory('production')}
-                className="flex items-center gap-2"
-              >
-                <Wine className="h-3 w-3" />
-                Production ({achievementStats?.byCategory?.production?.total || 0})
-              </Button>
-              <Button
-                variant={selectedCategory === 'time' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory('time')}
-                className="flex items-center gap-2"
-              >
-                <Calendar className="h-3 w-3" />
-                Time ({achievementStats?.byCategory?.time?.total || 0})
-              </Button>
-              <Button
-                variant={selectedCategory === 'prestige' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory('prestige')}
-                className="flex items-center gap-2"
-              >
-                <Star className="h-3 w-3" />
-                Prestige ({achievementStats?.byCategory?.prestige?.total || 0})
-              </Button>
-              <Button
-                variant={selectedCategory === 'sales' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory('sales')}
-                className="flex items-center gap-2"
-              >
-                <Trophy className="h-3 w-3" />
-                Sales ({achievementStats?.byCategory?.sales?.total || 0})
-              </Button>
-              <Button
-                variant={selectedCategory === 'vineyard' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory('vineyard')}
-                className="flex items-center gap-2"
-              >
-                <Medal className="h-3 w-3" />
-                Vineyard ({achievementStats?.byCategory?.vineyard?.total || 0})
-              </Button>
+              {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => (
+                <Button
+                  key={value}
+                  variant={selectedCategory === value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory(value)}
+                  className="flex items-center gap-2"
+                >
+                  <Icon className="h-3 w-3" />
+                  {label} ({achievementStats?.byCategory?.[value]?.total || 0})
+                </Button>
+              ))}
             </div>
           </CardContent>
         </Card>

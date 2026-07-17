@@ -44,8 +44,6 @@ export interface AchievementsFeature {
     getLevelInfo(level: AchievementLevel): AchievementLevelInfo;
   };
   views: {
-    getAllWithStatus(): Promise<AchievementWithStatus[]>;
-    getStats(): Promise<AchievementStats>;
     getWorkspace(): Promise<AchievementWorkspace>;
     filterForDisplay(achievements: AchievementWithStatus[]): AchievementWithStatus[];
   };
