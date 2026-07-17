@@ -159,13 +159,6 @@ export async function getActivitiesByTarget(targetId: string): Promise<Activity[
   );
 }
 
-export async function getActivitiesByCategory(category: string): Promise<Activity[]> {
-  const activities = await loadActivitiesFromDb();
-  return activities.filter(activity => 
-    activity.category === category && (activity.status === 'active' || activity.status === 'paused')
-  );
-}
-
 export async function hasActiveActivity(targetId: string, category?: string): Promise<boolean> {
   try {
     const companyId = getCurrentCompanyId();

@@ -67,6 +67,12 @@ export const CLEARING_TASKS = {
   }
 } as const;
 
+export type ClearingTask = typeof CLEARING_TASKS[keyof typeof CLEARING_TASKS];
+
+export function getClearingTask(taskId: string): ClearingTask | undefined {
+  return Object.values(CLEARING_TASKS).find(task => task.id === taskId);
+}
+
 // Define initial work for each category
 export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.PLANTING]: 30,
@@ -213,30 +219,11 @@ export function getStaffSpecializationDisplayName(category: WorkCategory): strin
   return WORK_CATEGORY_INFO[category].displayName;
 }
 
-export function getStaffSpecializationDescription(category: WorkCategory): string {
-  return `Specialist in ${getStaffSpecializationDisplayName(category).toLowerCase()} work`;
-}
-
-export function getStaffSpecializationIcon(category: WorkCategory): string {
-  return WORK_CATEGORY_INFO[category].icon;
-}
-
-export function getStaffSpecializationPrimarySkill(category: WorkCategory): keyof StaffSkills {
-  return WORK_CATEGORY_INFO[category].skill;
-}
-
 /**
  * Check whether a category uses density adjustments
  */
 export function isDensityBased(category: WorkCategory): boolean {
   return WORK_CATEGORY_INFO[category].isDensityBased;
-}
-
-/**
- * Get display name for a work category
- */
-export function getWorkCategoryDisplayName(category: WorkCategory): string {
-  return WORK_CATEGORY_INFO[category].displayName;
 }
 
 /**

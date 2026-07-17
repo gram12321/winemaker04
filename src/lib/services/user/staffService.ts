@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Staff, StaffSkills, Nationality, SpecializedRole } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
-import { saveStaffToDb, loadStaffFromDb, deleteStaffFromDb } from '@/lib/database/core/staffDB';
+import { saveStaffToDb, loadStaffFromDb, deleteStaffFromDb, getStaffByIdFromDb } from '@/lib/database/core/staffDB';
 import {
   getMaleNamesForNationality,
   getFemaleNamesForNationality,
@@ -17,18 +17,6 @@ import { calculateCompanyValue } from '../finance/financeService';
 import { FOUNDER_BUYOUT_PERCENT_OF_ASSETS } from '@/lib/constants/staffConstants';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { addTransaction } from '../finance/financeService';
-
-/**
- * Calculate effective skill level combining base skill and experience.
- * Formula: Effective = Base + (XP_Normalized * (1 - Base))
- * This ensures that as XP approaches max (1.0), the effective skill approaches 1.0,
- * filling the gap in the base skill.
- * 
- * @param baseSkill The base skill level (0-1)
- * @param rawXP The raw experience points
- * @returns Effective skill level (0-1)
- */
-export { calculateEffectiveSkill } from './staffSkillService';
 
 /**
  * Generate random skills based on skill level and broad specialized roles.
@@ -204,8 +192,7 @@ export async function getAllStaff(): Promise<Staff[]> {
  * Follows vineyard pattern: reads from DB, not game state
  */
 export async function getStaffById(staffId: string): Promise<Staff | undefined> {
-  const staff = await loadStaffFromDb();
-  return staff.find(s => s.id === staffId);
+  return (await getStaffByIdFromDb(staffId)) ?? undefined;
 }
 
 /**

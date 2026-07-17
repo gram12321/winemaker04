@@ -1,6 +1,6 @@
 # Wine System Variable Relationship Map
 
-Date: 2026-07-13
+Date: 2026-07-16
 Status: Current mainline relationship map
 
 Stable terms and constants live in [CONTEXT.md](../CONTEXT.md). Implementation ownership/status lives in [AIDescriptions_coregame.md](AIdocs/AIDescriptions_coregame.md) and [PROJECT_INFO.md](PROJECT_INFO.md).
@@ -39,7 +39,7 @@ flowchart LR
 | Markets | Wine/grape state, economy, weather, loyalty, research | Orders, contracts, grape prices, Buy Market offers, purchases, revenue |
 | Storage vessels | Buy Market cask suppliers, allocation plans, Empty Vessel Maintenance activities | Individually owned cellar assets from rotating supplier offers, with capacity and normalized quality; Empty Vessel uses the dedicated Maintenance staff skill/team, removes the selected allocation's filled volume, and releases only that vessel; future explicit winery/vineyard effect inputs |
 | Progression | Sales, scores, assets, research | Prestige, achievements, highscores, gates; aggregate company boards retain one atomic best entry while wine/vineyard boards preserve historical bottling records |
-| Staff competency | Primary skill from work category, broad specialized role, learned exact task mastery, applied grape-aware XP | Activity work allocation, role wage premium, staff previews |
+| Staff competency | Category-derived primary skill and broad-skill XP; persisted career role; learned exact task mastery; learned grape mastery | Activity work allocation, staff previews, role wage premium |
 
 ## Invariants
 
@@ -51,7 +51,8 @@ flowchart LR
 - Static market tuning belongs in `src/lib/constants/`; UI consumes service-prepared models rather than database rows or service-local tuning.
 - Research modifies access/scaling or explicit upstream inputs; it does not bypass structure/taste computation.
 - Prestige writes use `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source and decay metadata.
-- Staff work has one category-derived primary skill. Learned `task:<WorkCategory>` mastery provides a bounded matching-task bonus; learned `grape:<variety>` mastery is a separate bounded overlay only for planting, harvesting, crushing, and fermentation setup. The applied allocation, after weather/team/storage/final-tick limits, is the sole source of staff XP. Sales has a primary skill but no task mastery until a Sales category exists.
+- Staff work has one category-derived primary skill. A persisted broad career role adds 20% to every activity using its matching primary skill. Learned `task:<WorkCategory>` mastery adds up to 20% only to its exact implemented activity; learned `grape:<variety>` mastery adds up to 10% only to matching grape-aware planting, harvesting, crushing, and fermentation. These bonuses are additive and capped at 50%.
+- The shared work calculator combines those bonuses with effective broad-skill XP, multitasking, team, weather, research, storage, and final-tick limits. Its applied allocation is the sole source of broad-skill, task, and eligible grape XP. Sales has a primary skill but no task mastery until a Sales category exists.
 
 ## Core Subsystems
 

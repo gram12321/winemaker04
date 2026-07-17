@@ -4,9 +4,7 @@ import {
   calculateTotalWork,
   calculateAppliedStaffWorkAllocation,
   calculateIndividualStaffContribution,
-  calculateStaffWorkAllocation,
-  calculateStaffWorkContribution,
-  calculateEstimatedWeeks
+  calculateStaffWorkAllocation
 } from '@/lib/services/activity/workcalculators/workCalculator';
 import { WorkCategory, type Staff } from '@/lib/types/types';
 import {
@@ -48,6 +46,9 @@ const createStaff = (overrides: Partial<Staff> = {}): Staff => {
   };
 };
 
+const calculateContribution = (...args: Parameters<typeof calculateStaffWorkAllocation>): number =>
+  calculateStaffWorkAllocation(...args).totalWork;
+
 describe('calculateTotalWork', () => {
   it('applies density adjustments and modifiers before rounding up', () => {
     const workUnits = calculateTotalWork(10, {
@@ -85,9 +86,9 @@ describe('task-specialization contract', () => {
   });
 });
 
-describe('calculateStaffWorkContribution', () => {
+describe('calculateStaffWorkAllocation', () => {
   it('returns zero when no staff are assigned', () => {
-    const contribution = calculateStaffWorkContribution(
+    const contribution = calculateContribution(
       [],
       WorkCategory.PLANTING,
       new Map()
@@ -124,7 +125,7 @@ describe('calculateStaffWorkContribution', () => {
       }
     });
 
-    const contribution = calculateStaffWorkContribution(
+    const contribution = calculateContribution(
       [staffA, staffB],
       WorkCategory.PLANTING,
       new Map([
@@ -149,7 +150,7 @@ describe('calculateStaffWorkContribution', () => {
       },
     });
 
-    expect(calculateStaffWorkContribution([staff], WorkCategory.MAINTENANCE, new Map())).toBe(20);
+    expect(calculateContribution([staff], WorkCategory.MAINTENANCE, new Map())).toBe(20);
   });
 
   it('applies learned task mastery only to its exact activity category', () => {
@@ -238,7 +239,7 @@ describe('calculateStaffWorkContribution', () => {
   });
 });
 
-describe('calculateEstimatedWeeks', () => {
+describe('activity timeline estimate', () => {
   it('derives timeline from staff contribution output', () => {
     const staff = [
       createStaff({
@@ -273,12 +274,11 @@ describe('calculateEstimatedWeeks', () => {
       ['b', 2]
     ]);
 
-    const weeks = calculateEstimatedWeeks(
+    const weeks = Math.ceil(calculateContribution(
       staff,
       WorkCategory.PLANTING,
       staffTaskCounts,
-      200
-    );
+    ) > 0 ? 200 / calculateContribution(staff, WorkCategory.PLANTING, staffTaskCounts) : 0);
 
     expect(weeks).toBe(4);
   });

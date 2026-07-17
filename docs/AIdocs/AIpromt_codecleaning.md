@@ -28,6 +28,14 @@ We have implemented comprehensive systems across multiple files and may need cle
 - **Reduce Complexity**: Simplify overly complex implementations
 - **Better Organization**: Logical file structure and import patterns
 
+### **Expected Cleanup Task**
+A cleanup task is a behavior-preserving, deletion-first pass:
+- Remove dead code, pass-through wrappers, duplicate implementations, unused exports, generated artifacts, and redundant state/effects.
+- Keep one canonical module or policy; move logic only when ownership becomes clearer.
+- Do not add features, compatibility paths, abstractions, caches, or types unless total code and complexity decrease.
+- Keep shared constants centralized and UI components presentation-only.
+- Verify with tests, TypeScript/build checks, and `git diff --check`; report deferred work separately.
+
 ### **Cleanup Process**
 1. **Identify Issues**: Scan for duplicate, unused, or inefficient code
 2. **Plan Refactoring**: Design better structure without breaking functionality
@@ -41,4 +49,4 @@ We have implemented comprehensive systems across multiple files and may need cle
 ### **basic cleanups (Lowest priority)**
 1. Fix import/export to use barrel export
 2. Fix import one line per file
-3, Fix export use index.ts barrel export (use * wildcards) for all exports. 
+3, Fix export use index.ts barrel export (use * wildcards) for all exports.

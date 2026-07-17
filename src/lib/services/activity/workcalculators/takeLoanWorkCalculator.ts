@@ -1,7 +1,7 @@
 import { WorkCategory, LoanOffer } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { TAKE_LOAN_BASE_COST, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_COMPLEXITY } from '@/lib/constants/loanConstants';
+import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_COMPLEXITY } from '@/lib/constants/loanConstants';
 import { clamp01 } from '@/lib/utils';
 
 /**
@@ -117,53 +117,4 @@ export function calculateTakeLoanWork(
   }
 
   return { totalWork, factors };
-}
-
-/**
- * Calculate cost for taking a loan with adjustments
- * Base cost + adjustment multipliers
- */
-export function calculateTakeLoanCost(
-  originalOffer: LoanOffer,
-  adjustedAmount: number,
-  adjustedDurationSeasons: number
-): number {
-  const baseCost = TAKE_LOAN_BASE_COST;
-  
-  // Calculate deltas (same as work calculation)
-  const amountDelta = Math.abs(adjustedAmount - originalOffer.principalAmount) / originalOffer.principalAmount;
-  const durationDelta = Math.abs(adjustedDurationSeasons - originalOffer.durationSeasons) / originalOffer.durationSeasons;
-  
-  // Cost multipliers (similar to work but slightly different scaling)
-  let amountCostMultiplier = 1;
-  let durationCostMultiplier = 1;
-  
-  if (amountDelta > 0) {
-    if (amountDelta <= 0.1) {
-      amountCostMultiplier = 1 + (amountDelta * 2.5); // 1.0-1.25 for 0-10%
-    } else if (amountDelta <= 0.5) {
-      const baseMultiplier = 1 + (0.1 * 2.5); // 1.25 for 10%
-      amountCostMultiplier = baseMultiplier + ((amountDelta - 0.1) * 1.5); // 1.25-1.85 for 10-50%
-    } else {
-      const baseMultiplier = 1 + (0.1 * 2.5) + (0.4 * 1.5); // 1.85 for 50%
-      const exponentialFactor = Math.pow(1.15, (amountDelta - 0.5) * 2); // 15% increase per 10% above 50%
-      amountCostMultiplier = baseMultiplier * exponentialFactor;
-    }
-  }
-  
-  if (durationDelta > 0) {
-    if (durationDelta <= 0.1) {
-      durationCostMultiplier = 1 + (durationDelta * 2.5); // 1.0-1.25 for 0-10%
-    } else if (durationDelta <= 0.5) {
-      const baseMultiplier = 1 + (0.1 * 2.5); // 1.25 for 10%
-      durationCostMultiplier = baseMultiplier + ((durationDelta - 0.1) * 1.5); // 1.25-1.85 for 10-50%
-    } else {
-      const baseMultiplier = 1 + (0.1 * 2.5) + (0.4 * 1.5); // 1.85 for 50%
-      const exponentialFactor = Math.pow(1.15, (durationDelta - 0.5) * 2); // 15% increase per 10% above 50%
-      durationCostMultiplier = baseMultiplier * exponentialFactor;
-    }
-  }
-  
-  // Multiply the constraints together
-  return Math.round(baseCost * amountCostMultiplier * durationCostMultiplier);
 }

@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => {
       return true;
     }),
     loadStaffFromDb: vi.fn(async () => dbStaff),
+    getStaffByIdFromDb: vi.fn(async (staffId: string) => dbStaff.find(candidate => candidate.id === staffId) ?? null),
     deleteStaffFromDb: vi.fn(async () => true),
     notificationAddMessage: vi.fn(async () => undefined)
   };
@@ -49,6 +50,7 @@ vi.mock('@/lib/database/core/teamDB', () => ({
 vi.mock('@/lib/database/core/staffDB', () => ({
   saveStaffToDb: mocks.saveStaffToDb,
   loadStaffFromDb: mocks.loadStaffFromDb,
+  getStaffByIdFromDb: mocks.getStaffByIdFromDb,
   deleteStaffFromDb: mocks.deleteStaffFromDb
 }));
 
@@ -148,7 +150,8 @@ describe('staff and team workflow', () => {
   });
 
   it('awards experience by category, increases effective skill, and recalculates only primary-skill wage growth', async () => {
-    const { awardExperience, calculateEffectiveSkill } = await import('@/lib/services/user/staffService');
+    const { awardExperience } = await import('@/lib/services/user/staffService');
+    const { calculateEffectiveSkill } = await import('@/lib/services/user/staffSkillService');
 
     expect(calculateEffectiveSkill(0.5, 0)).toBe(0.5);
     expect(calculateEffectiveSkill(0.5, 100000)).toBeGreaterThan(0.5);

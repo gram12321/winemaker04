@@ -9,6 +9,39 @@ const numberOrDefault = (value: unknown, fallback: number): number => {
   return Number.isFinite(numeric) ? numeric : fallback;
 };
 
+const toVineyardRow = (
+  vineyard: Vineyard,
+  companyId: string | null,
+  options: { roundHectares?: boolean; updatedAt?: string } = {},
+) => ({
+  id: vineyard.id,
+  company_id: companyId,
+  name: vineyard.name,
+  country: vineyard.country,
+  region: vineyard.region,
+  hectares: options.roundHectares
+    ? vineyard.hectares ? Number(Number(vineyard.hectares).toFixed(2)) : 0
+    : vineyard.hectares,
+  grape_variety: vineyard.grape,
+  vine_age: vineyard.vineAge,
+  soil: vineyard.soil,
+  altitude: vineyard.altitude,
+  aspect: vineyard.aspect,
+  density: vineyard.density,
+  vineyard_health: numberOrDefault(vineyard.vineyardHealth, 1.0),
+  land_value: vineyard.landValue,
+  vineyard_total_value: vineyard.vineyardTotalValue,
+  status: vineyard.status,
+  ripeness: numberOrDefault(vineyard.ripeness, 0),
+  vineyard_prestige: vineyard.vineyardPrestige,
+  vine_yield: numberOrDefault(vineyard.vineYield, 0.02),
+  overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
+  planting_health_bonus: numberOrDefault(vineyard.plantingHealthBonus, 0),
+  health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null,
+  pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null,
+  ...(options.updatedAt === undefined ? {} : { updated_at: options.updatedAt }),
+});
+
 /**
  * Vineyard Database Operations
  * Pure CRUD operations for vineyard data persistence
@@ -18,31 +51,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
   try {
     const { error } = await supabase
       .from(VINEYARDS_TABLE)
-      .upsert({
-        id: vineyard.id,
-        company_id: getCurrentCompanyId(),
-        name: vineyard.name,
-        country: vineyard.country,
-        region: vineyard.region,
-        hectares: vineyard.hectares ? Number(Number(vineyard.hectares).toFixed(2)) : 0,
-        grape_variety: vineyard.grape,
-        vine_age: vineyard.vineAge,
-        soil: vineyard.soil, // Store as JSON array
-        altitude: vineyard.altitude,
-        aspect: vineyard.aspect,
-        density: vineyard.density,
-        vineyard_health: numberOrDefault(vineyard.vineyardHealth, 1.0),
-        land_value: vineyard.landValue,
-        vineyard_total_value: vineyard.vineyardTotalValue,
-        status: vineyard.status,
-        ripeness: numberOrDefault(vineyard.ripeness, 0),
-        vineyard_prestige: vineyard.vineyardPrestige,
-        vine_yield: numberOrDefault(vineyard.vineYield, 0.02), // Default to 0.02 if not set
-        overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
-        planting_health_bonus: numberOrDefault(vineyard.plantingHealthBonus, 0), // Default to 0 (no gradual improvement)
-        health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null, // Store health trend as JSON
-        pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null // Store pending features as JSON
-      });
+      .upsert(toVineyardRow(vineyard, getCurrentCompanyId(), { roundHectares: true }));
 
     if (error) throw error;
   } catch (error) {
@@ -151,31 +160,8 @@ export const bulkUpdateVineyards = async (vineyards: Vineyard[]): Promise<void> 
   try {
     const companyId = getCurrentCompanyId();
     
-    const upsertData = vineyards.map(vineyard => ({
-      id: vineyard.id,
-      company_id: companyId,
-      name: vineyard.name,
-      country: vineyard.country,
-      region: vineyard.region,
-      hectares: vineyard.hectares,
-      grape_variety: vineyard.grape,
-      vine_age: vineyard.vineAge,
-      soil: vineyard.soil,
-      altitude: vineyard.altitude,
-      aspect: vineyard.aspect,
-      density: vineyard.density,
-      vineyard_health: numberOrDefault(vineyard.vineyardHealth, 1.0),
-      land_value: vineyard.landValue,
-      vineyard_total_value: vineyard.vineyardTotalValue,
-      status: vineyard.status,
-      ripeness: numberOrDefault(vineyard.ripeness, 0),
-      vineyard_prestige: vineyard.vineyardPrestige,
-      vine_yield: numberOrDefault(vineyard.vineYield, 0.02),
-      overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
-      planting_health_bonus: numberOrDefault(vineyard.plantingHealthBonus, 0),
-      health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null,
-      pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null,
-      updated_at: new Date().toISOString()
+    const upsertData = vineyards.map(vineyard => toVineyardRow(vineyard, companyId, {
+      updatedAt: new Date().toISOString(),
     }));
     
     const { error } = await supabase

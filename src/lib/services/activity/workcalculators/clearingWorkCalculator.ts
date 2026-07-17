@@ -2,12 +2,11 @@
 // Calculates work required for clearing activities on vineyards
 
 import { Vineyard } from '@/lib/types/types';
-import { CLEARING_TASKS, DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
+import { DEFAULT_VINE_DENSITY, getClearingTask } from '@/lib/constants/activityConstants';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
-import { getAltitudeRating } from '../../vineyard/vineyardValueCalc';
-import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
 import { getGameState } from '../../core/gameState';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
+import { getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 
 export interface ClearingWorkCalculationOptions {
   tasks: { [key: string]: boolean };
@@ -18,25 +17,6 @@ export interface ClearingWorkResult {
   totalWork: number;
   selectedTasks: string[];
   workFactors: WorkFactor[];
-}
-
-/**
- * Get soil type modifier for clearing work
- */
-function getSoilTypeModifier(soil: string[]): number {
-  let totalModifier = 0;
-  let validSoils = 0;
-  
-  soil.forEach(soilType => {
-    const modifier = SOIL_DIFFICULTY_MODIFIERS[soilType as keyof typeof SOIL_DIFFICULTY_MODIFIERS];
-    if (modifier !== undefined) {
-      totalModifier += modifier;
-      validSoils++;
-    }
-  });
-  
-  // Average the modifiers if multiple soil types
-  return validSoils > 0 ? totalModifier / validSoils : 0;
 }
 
 /**
@@ -93,8 +73,8 @@ export function calculateClearingWork(
   options: ClearingWorkCalculationOptions
 ): ClearingWorkResult {
   // Calculate work modifiers for this vineyard
-  const soilModifier = getSoilTypeModifier(vineyard.soil);
-  const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
+  const soilModifier = getVineyardSoilModifier(vineyard.soil);
+  const altitudeRating = getVineyardAltitudeModifier(vineyard);
   const terrainModifier = altitudeRating * 1.5; // Up to +150% work for very high altitude
   
   // Use the shared overgrowth util; clearing should consider all relevant types (weighted average)
@@ -118,14 +98,12 @@ export function calculateClearingWork(
   });
   
   // Add environmental factors
-  if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
-    workFactors.push({
-      label: 'Soil Type',
-      value: vineyard.soil.join(', '),
-      modifier: soilModifier,
-      modifierLabel: 'soil difficulty'
-    });
-  }
+  workFactors.push({
+    label: 'Soil Type',
+    value: vineyard.soil.join(', '),
+    modifier: soilModifier,
+    modifierLabel: 'soil difficulty'
+  });
   
   if (Math.abs(terrainModifier) > 0.01) {
     workFactors.push({
@@ -152,7 +130,7 @@ export function calculateClearingWork(
   Object.entries(options.tasks).forEach(([taskId, isSelected]) => {
     if (!isSelected) return;
     
-    const task = Object.values(CLEARING_TASKS).find(t => t.id === taskId);
+    const task = getClearingTask(taskId);
     if (!task) return;
     
     selectedTasks.push(task.name);

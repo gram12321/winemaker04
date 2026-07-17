@@ -1,15 +1,13 @@
 // Planting Work Calculator
 // Calculates work required for planting vineyards
 
-import { Vineyard, GrapeVariety } from '@/lib/types/types';
+import { Vineyard, GrapeVariety, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, isDensityBased } from '@/lib/constants/activityConstants';
-import { WorkCategory } from '@/lib/services/activity';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
-import { getAltitudeRating } from '@/lib/services';
-import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
 import { getGameState } from '../../core/gameState';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
+import { getGrapeFragilityModifier, getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 
 /**
  * Calculate work required for planting vineyards
@@ -18,9 +16,9 @@ export function calculatePlantingWork(
   vineyard: Vineyard,
   params: { grape: GrapeVariety; density: number }
 ): { totalWork: number; factors: WorkFactor[] } {
-  const fragilityModifier = getFragilityModifier(params.grape);
-  const altitudeModifier = getAltitudeModifier(vineyard);
-  const soilModifier = getSoilTypeModifier(vineyard.soil);
+  const fragilityModifier = getGrapeFragilityModifier(params.grape);
+  const altitudeModifier = getVineyardAltitudeModifier(vineyard);
+  const soilModifier = getVineyardSoilModifier(vineyard.soil);
   
   // Get current season
   const gameState = getGameState();
@@ -65,9 +63,7 @@ export function calculatePlantingWork(
   if (altitudeModifier > 0) {
     factors.push({ label: 'Altitude Impact', value: 'Difficult conditions', modifier: altitudeModifier, modifierLabel: 'planting difficulty' });
   }
-  if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
-    factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
-  }
+  factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
   
   if (seasonalModifier > 0) {
     factors.push({ 
@@ -97,42 +93,6 @@ export function calculatePlantingWork(
   }
 
   return { totalWork, factors };
-}
-
-/**
- * Get fragility modifier for grape variety
- */
-function getFragilityModifier(grape: GrapeVariety): number {
-  const meta = GRAPE_CONST[grape];
-  return meta?.fragile ?? 0; // 0..1, higher means more work
-}
-
-/**
- * Get altitude modifier for vineyard
- */
-function getAltitudeModifier(vineyard: Vineyard): number {
-  // Higher altitude rating should increase work (penalty up to +100%)
-  const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
-  return rating; // 0..1
-}
-
-/**
- * Get soil type modifier for vineyard
- */
-function getSoilTypeModifier(soil: string[]): number {
-  let totalModifier = 0;
-  let validSoils = 0;
-  
-  soil.forEach(soilType => {
-    const modifier = SOIL_DIFFICULTY_MODIFIERS[soilType as keyof typeof SOIL_DIFFICULTY_MODIFIERS];
-    if (modifier !== undefined) {
-      totalModifier += modifier;
-      validSoils++;
-    }
-  });
-  
-  // Average the modifiers if multiple soil types
-  return validSoils > 0 ? totalModifier / validSoils : 0;
 }
 
 /**
