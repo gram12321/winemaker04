@@ -5,7 +5,8 @@ import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/util
 import { Button, Label, Slider, Card, CardContent, CardHeader, CardTitle, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services/core/gameState';
-import { calculateLoanTerms, getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/features/loanLender/services/finance/loanService';
+import { getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/features/loanLender/services/finance/loanService';
+import { calculateLoanTerms } from '@/lib/features/loanLender/services/finance/loanCalculations';
 import { getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
 import { startLenderSearch } from '@/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager';
 import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';

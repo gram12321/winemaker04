@@ -2,7 +2,7 @@ import { acknowledgeLoanWarning, getFirstUnacknowledgedLoanWarning, loadActiveLo
 import { getGameState } from '@/lib/services/core/gameState';
 import type { Lender, Loan, PendingLoanWarning } from '@/lib/types/types';
 import { calculateCreditRating, type CreditRatingBreakdown } from './creditRatingService';
-import { calculateLenderAvailability, getAllLenders, getAvailableLenders } from './lenderService';
+import { calculateLenderAvailability, getAllLenders } from './lenderService';
 
 export interface LoanAvailabilityBreakdownRow extends Lender {
   availability: ReturnType<typeof calculateLenderAvailability>;
@@ -46,70 +46,41 @@ function buildLenderAvailabilityBreakdown(
 }
 
 export async function loadActiveLoanPortfolio(): Promise<ActiveLoanPortfolio> {
-  try {
-    const loans = await loadActiveLoans();
-    return {
-      loans,
-      totalOutstandingLoans: loans.reduce((sum, loan) => sum + loan.remainingBalance, 0),
-    };
-  } catch (error) {
-    console.error('Error loading active loan portfolio:', error);
-    return DEFAULT_ACTIVE_LOAN_PORTFOLIO;
-  }
+  const loans = await loadActiveLoans();
+  return {
+    loans,
+    totalOutstandingLoans: loans.reduce((sum, loan) => sum + loan.remainingBalance, 0),
+  };
 }
 
 export async function loadLoansDashboardData(): Promise<LoansDashboardData> {
   const gameState = getGameState();
+  const [creditRatingBreakdown, loans, allLenders] = await Promise.all([
+    calculateCreditRating(),
+    loadActiveLoans(),
+    getAllLenders(),
+  ]);
+  const comprehensiveCreditRating = creditRatingBreakdown.finalRating;
+  const companyPrestige = gameState.prestige || 0;
+  const lenderAvailabilityBreakdown = buildLenderAvailabilityBreakdown(
+    allLenders,
+    comprehensiveCreditRating * 100,
+    companyPrestige
+  );
 
-  try {
-    const creditRatingBreakdown = await calculateCreditRating();
-    const loans = await loadActiveLoans();
-    const comprehensiveCreditRating = creditRatingBreakdown.finalRating;
-    const companyPrestige = gameState.prestige || 0;
-    const allLenders = await getAllLenders();
-    const availableLenders = await getAvailableLenders(comprehensiveCreditRating * 100, companyPrestige);
-
-    return {
-      loans,
-      creditRatingBreakdown,
-      comprehensiveCreditRating,
-      availableLenders,
-      lenderAvailabilityBreakdown: buildLenderAvailabilityBreakdown(
-        allLenders,
-        comprehensiveCreditRating * 100,
-        companyPrestige
-      ),
-    };
-  } catch (error) {
-    console.error('Error loading loans dashboard data:', error);
-
-    const loans = await loadActiveLoans().catch(() => []);
-    const comprehensiveCreditRating = gameState.creditRating || 0.5;
-    const companyPrestige = gameState.prestige || 0;
-    const allLenders = await getAllLenders();
-    const availableLenders = await getAvailableLenders(comprehensiveCreditRating * 100, companyPrestige);
-
-    return {
-      loans,
-      creditRatingBreakdown: null,
-      comprehensiveCreditRating,
-      availableLenders,
-      lenderAvailabilityBreakdown: buildLenderAvailabilityBreakdown(
-        allLenders,
-        comprehensiveCreditRating * 100,
-        companyPrestige
-      ),
-    };
-  }
+  return {
+    loans,
+    creditRatingBreakdown,
+    comprehensiveCreditRating,
+    availableLenders: lenderAvailabilityBreakdown
+      .filter(({ availability }) => availability.isAvailable)
+      .map(({ availability: _availability, ...lender }) => lender),
+    lenderAvailabilityBreakdown,
+  };
 }
 
 export async function loadNextLoanWarning(): Promise<PendingLoanWarning | null> {
-  try {
-    return await getFirstUnacknowledgedLoanWarning();
-  } catch (error) {
-    console.error('Error loading pending loan warning:', error);
-    return null;
-  }
+  return getFirstUnacknowledgedLoanWarning();
 }
 
 export async function acknowledgePendingLoanWarning(loanId: string): Promise<void> {

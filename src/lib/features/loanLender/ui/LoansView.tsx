@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBo
 import { LenderType, NotificationCategory } from '@/lib/types/types';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
-import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty, repayLoanInFull, makeExtraLoanPayment } from '@/lib/features/loanLender/services/finance/loanService';
+import { repayLoanInFull, makeExtraLoanPayment } from '@/lib/features/loanLender/services/finance/loanService';
+import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty } from '@/lib/features/loanLender/services/finance/loanCalculations';
 import {
   DEFAULT_LOANS_DASHBOARD_DATA,
   loadLoansDashboardData,

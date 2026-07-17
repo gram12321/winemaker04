@@ -3,7 +3,7 @@ import {
   calculateEffectiveInterestRate,
   calculateSeasonalPayment,
   calculateCreditRatingModifier
-} from '@/lib/features/loanLender/services/finance/loanService';
+} from '@/lib/features/loanLender/services/finance/loanCalculations';
 
 describe('calculateEffectiveInterestRate', () => {
   const baseRate = 0.05; // 5% base rate

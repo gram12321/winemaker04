@@ -82,7 +82,7 @@ function createLender(lenderType: LenderType): Lender {
  * Creates 15-25 lenders with type-based distribution and characteristics
  * Ensures at least 3 lenders of each type
  */
-export async function generateLenders(): Promise<Lender[]> {
+async function generateLenders(): Promise<Lender[]> {
   const lenderCount = randomInt(LENDER_GENERATION.MIN_LENDERS, LENDER_GENERATION.MAX_LENDERS);
 
   const lenders: Lender[] = [];
@@ -126,16 +126,11 @@ export async function generateLenders(): Promise<Lender[]> {
  * Initialize lenders for a company if they don't exist
  */
 export async function initializeLenders(companyId?: string): Promise<void> {
-  try {
-    const lendersExist = await checkLendersExist(companyId);
+  const lendersExist = await checkLendersExist(companyId);
 
-    if (!lendersExist) {
-      const lenders = await generateLenders();
-      await saveLenders(lenders, companyId);
-    }
-  } catch (error) {
-    console.error('Error initializing lenders:', error);
-    throw error;
+  if (!lendersExist) {
+    const lenders = await generateLenders();
+    await saveLenders(lenders, companyId);
   }
 }
 
@@ -143,12 +138,7 @@ export async function initializeLenders(companyId?: string): Promise<void> {
  * Load all lenders for the current company
  */
 export async function getAllLenders(): Promise<Lender[]> {
-  try {
-    return await loadLenders();
-  } catch (error) {
-    console.error('Error loading lenders:', error);
-    return [];
-  }
+  return loadLenders();
 }
 
 /**
@@ -185,22 +175,4 @@ export function calculateLenderAvailability(
     adjustedRequirement,
     normalizedPrestige
   };
-}
-
-/**
- * Get available lenders (not blacklisted) for loan applications
- * Includes both credit rating and prestige influence
- */
-export async function getAvailableLenders(creditRating: number, companyPrestige?: number): Promise<Lender[]> {
-  try {
-    const allLenders = await loadLenders();
-
-    return allLenders.filter(lender => {
-      const availability = calculateLenderAvailability(lender, creditRating, companyPrestige);
-      return availability.isAvailable;
-    });
-  } catch (error) {
-    console.error('Error getting available lenders:', error);
-    return [];
-  }
 }

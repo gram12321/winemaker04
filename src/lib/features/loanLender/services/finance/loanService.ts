@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '@/lib/types/types';
 import { NotificationCategory } from '@/lib/types/types';
-import { LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES, LOAN_PREPAYMENT } from '@/lib/constants/loanConstants';
+import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getCurrentPrestige, getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
@@ -10,24 +10,17 @@ import { loadLenders, updateLenderBlacklist } from '@/lib/database/core/lendersD
 import { notificationService } from '@/lib/services/core/notificationService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { calculateCreditRating } from '@/lib/features/loanLender/services/finance/creditRatingService';
+import { calculateEffectiveInterestRate, calculateOriginationFee, calculateSeasonalPayment, estimatePrepaymentPenalty } from './loanCalculations';
 import { calculateLenderAvailability } from '@/lib/features/loanLender/services/finance/lenderService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { calculateAbsoluteWeeks, formatNumber, formatPercent, getRandomFromArray } from '@/lib/utils';
 import { loadVineyards, deleteVineyards } from '@/lib/database/activities/vineyardDB';
 import { loadWineBatches, bulkUpdateWineBatches } from '@/lib/database/activities/inventoryDB';
-import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/economyConstants';
 
 type PrestigeFameScaling = {
   rate: number;
   cap: number;
 };
-
-const LOAN_PRESTIGE_FAME_SCALING = {
-  EMERGENCY_QUICK: { rate: 0.01, cap: 10 },
-  WARNING_2: { rate: 0.02, cap: 25 },
-  RESTRUCTURE: { rate: 0.04, cap: 75 },
-  DEFAULT: { rate: 0.08, cap: 175 }
-} as const;
 
 export function calculatePrestigePenaltyWithFame(
   basePenalty: number,
@@ -59,74 +52,15 @@ async function calculatePrestigePenaltyBreakdown(basePenalty: number, scaling: P
 }
 
 /**
- * Calculate effective interest rate with all modifiers
- */
-export function calculateEffectiveInterestRate(
-  baseRate: number,
-  economyPhase: EconomyPhase,
-  lenderType: LenderType,
-  creditRating: number, // 0-1 scale
-  durationSeasons?: number
-): number {
-  const economyMultiplier = ECONOMY_INTEREST_MULTIPLIERS[economyPhase];
-  const lenderMultiplier = LENDER_TYPE_MULTIPLIERS[lenderType];
-
-  // Credit rating modifier: 0.8 + (0.7 * (1 - creditRating)) - now uses 0-1 scale
-  const creditMultiplier = 0.8 + (0.7 * (1 - creditRating));
-
-  // Duration modifier (longer loans get slightly lower rates)
-  let durationMultiplier = 1.0;
-  if (durationSeasons) {
-    if (durationSeasons <= DURATION_INTEREST_MODIFIERS.SHORT_TERM.maxSeasons) {
-      durationMultiplier = DURATION_INTEREST_MODIFIERS.SHORT_TERM.modifier;
-    } else if (durationSeasons <= DURATION_INTEREST_MODIFIERS.MEDIUM_TERM.maxSeasons) {
-      durationMultiplier = DURATION_INTEREST_MODIFIERS.MEDIUM_TERM.modifier;
-    } else if (durationSeasons <= DURATION_INTEREST_MODIFIERS.LONG_TERM.maxSeasons) {
-      durationMultiplier = DURATION_INTEREST_MODIFIERS.LONG_TERM.modifier;
-    } else {
-      durationMultiplier = DURATION_INTEREST_MODIFIERS.VERY_LONG_TERM.modifier;
-    }
-  }
-
-  return baseRate * economyMultiplier * lenderMultiplier * creditMultiplier * durationMultiplier;
-}
-
-/**
- * Calculate credit rating modifier for interest rates
- * Updated to use comprehensive credit rating system (0-1 scale)
- */
-export function calculateCreditRatingModifier(creditRating: number): number {
-  // Credit rating is now in 0-1 scale (0.5 = 50% = BBB- rating)
-  return 0.8 + (0.7 * (1 - creditRating));
-}
-
-/**
  * Get current comprehensive credit rating
  * Also updates gameState.creditRating with the calculated value
  */
 export async function getCurrentCreditRating(): Promise<number> {
-  try {
-    const creditBreakdown = await calculateCreditRating();
-    const finalRating = creditBreakdown.finalRating;
-    
-    // Update gameState with the calculated credit rating
-    await updateGameState({ creditRating: finalRating });
-    
-    return finalRating;
-  } catch (error) {
-    // Fallback to game state credit rating
-    const gameState = getGameState();
-    return gameState.creditRating || CREDIT_RATING.DEFAULT_RATING;
-  }
+  const creditBreakdown = await calculateCreditRating();
+  const finalRating = creditBreakdown.finalRating;
+  await updateGameState({ creditRating: finalRating });
+  return finalRating;
 }
-
-const LOAN_LIMIT_SCALING = {
-  MIN_ASSET_FACTOR: 0.2,
-  MAX_ASSET_FACTOR: 0.65,
-  MIN_RATING_MULTIPLIER: 0.8,
-  MAX_RATING_MULTIPLIER: 1.5,
-  ROUNDING_STEP: 1000
-} as const;
 
 export interface LoanAmountLimit {
   maxAllowed: number;
@@ -313,116 +247,6 @@ export async function applyForLoan(
   } catch (error) {
     throw error;
   }
-}
-
-/**
- * Calculate seasonal payment using loan amortization
- */
-export function calculateSeasonalPayment(principal: number, rate: number, seasons: number): number {
-  if (rate === 0) {
-    return principal / seasons;
-  }
-
-  const payment = principal * (rate * Math.pow(1 + rate, seasons)) / (Math.pow(1 + rate, seasons) - 1);
-  return payment;
-}
-
-/**
- * Calculate comprehensive loan terms for a given lender and parameters
- */
-export function calculateLoanTerms(
-  lender: Lender,
-  principalAmount: number,
-  durationSeasons: number,
-  creditRating: number,
-  economyPhase: string
-): {
-  effectiveInterestRate: number;
-  seasonalPayment: number;
-  totalRepayment: number;
-  totalInterest: number;
-  originationFee: number;
-  totalExpenses: number;
-} {
-  // Calculate effective interest rate
-  const effectiveInterestRate = calculateEffectiveInterestRate(
-    lender.baseInterestRate,
-    economyPhase as any,
-    lender.type,
-    creditRating,
-    durationSeasons
-  );
-
-  // Calculate seasonal payment
-  const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveInterestRate, durationSeasons);
-
-  // Calculate total repayment and interest
-  const totalRepayment = seasonalPayment * durationSeasons;
-  const totalInterest = totalRepayment - principalAmount;
-
-  // Calculate origination fee
-  const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
-
-  // Calculate total expenses
-  const totalExpenses = originationFee + totalInterest;
-
-  return {
-    effectiveInterestRate,
-    seasonalPayment,
-    totalRepayment,
-    totalInterest,
-    originationFee,
-    totalExpenses
-  };
-}
-
-/**
- * Calculate loan origination fee based on lender's specific parameters, credit rating, and duration
- */
-export function calculateOriginationFee(
-  principalAmount: number,
-  lender: Lender,
-  creditRating: number, // 0-1 scale
-  durationSeasons: number
-): number {
-  const feeConfig = lender.originationFee;
-
-  // Calculate base fee as percentage of loan amount
-  let baseFee = principalAmount * feeConfig.basePercent;
-
-  // Apply credit rating modifier based on lender's specific modifier
-  let creditModifier = 1.0;
-  if (creditRating >= 0.8) { // 80-100% credit rating
-    creditModifier = feeConfig.creditRatingModifier; // Use lender's specific modifier for excellent credit
-  } else if (creditRating >= 0.6) { // 60-80% credit rating
-    creditModifier = 0.9 + (feeConfig.creditRatingModifier - 0.9) * 0.5; // Interpolate for good credit
-  } else if (creditRating >= 0.4) { // 40-60% credit rating
-    creditModifier = 1.0; // No modifier for average credit
-  } else if (creditRating >= 0.2) { // 20-40% credit rating
-    creditModifier = 1.0 + (1.5 - feeConfig.creditRatingModifier) * 0.3; // Poor credit penalty
-  } else { // 0-20% credit rating
-    creditModifier = 1.0 + (1.5 - feeConfig.creditRatingModifier) * 0.6; // Very poor credit penalty
-  }
-
-  // Apply duration modifier based on lender's specific modifier
-  let durationModifier = 1.0;
-  if (durationSeasons <= 16) { // 0-4 years
-    durationModifier = 0.9 + (feeConfig.durationModifier - 1.0) * 0.1; // Slight discount for short-term
-  } else if (durationSeasons <= 40) { // 4-10 years
-    durationModifier = 1.0; // No modifier for medium-term
-  } else if (durationSeasons <= 80) { // 10-20 years
-    durationModifier = 1.0 + (feeConfig.durationModifier - 1.0) * 0.5; // Partial premium for long-term
-  } else { // 20-30 years
-    durationModifier = feeConfig.durationModifier; // Full premium for very long-term
-  }
-
-  // Apply modifiers
-  let finalFee = baseFee * creditModifier * durationModifier;
-
-  // Apply min/max constraints
-  finalFee = Math.max(feeConfig.minFee, Math.min(feeConfig.maxFee, finalFee));
-
-  return Math.round(finalFee);
 }
 
 async function addLoanAdministrationBurden(units: number): Promise<void> {
@@ -1348,7 +1172,7 @@ async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): 
         missedPayments: 0,
         isForced: false
       });
-      await clearLoanWarning(loan.id).catch(() => undefined);
+      await clearLoanWarning(loan.id);
     })
   );
 
@@ -1717,7 +1541,7 @@ export async function makeExtraLoanPayment(loanId: string): Promise<void> {
   }
 
   await updateLoan(loan.id, updateData);
-  await clearLoanWarning(loan.id).catch(() => undefined);
+  await clearLoanWarning(loan.id);
 
   // Recalculate credit rating after extra payment
   await getCurrentCreditRating();
@@ -1794,6 +1618,7 @@ export async function processSeasonalLoanPayments(): Promise<void> {
     // Ensure UI sees final state after all loan updates
     triggerGameUpdate();
   } catch (error) {
+    throw error;
   }
 }
 
@@ -1952,8 +1777,7 @@ async function processLoanPayment(
       return seizureResult;
     }
   } catch (error) {
-    // Silent error handling
-    return null;
+    throw error;
   }
 }
 
@@ -1974,60 +1798,11 @@ function calculateNextPaymentDate(currentDate: GameDate): GameDate {
 }
 
 /**
- * Calculate total interest that will be paid over the life of the loan
- */
-export function calculateTotalInterest(loan: Loan): number {
-  // Total interest = (seasonal payment * total seasons) - principal amount
-  const totalPayments = loan.seasonalPayment * loan.totalSeasons;
-  return totalPayments - loan.principalAmount;
-}
-
-/**
- * Calculate total expenses (origination fee + total interest)
- */
-export function calculateTotalExpenses(loan: Loan): number {
-  const totalInterest = calculateTotalInterest(loan);
-  return loan.originationFee + totalInterest;
-}
-
-/**
- * Calculate remaining interest if loan is paid off early
- */
-export function calculateRemainingInterest(loan: Loan): number {
-  // Remaining interest = (seasonal payment * remaining seasons) - remaining balance
-  const remainingPayments = loan.seasonalPayment * loan.seasonsRemaining;
-  return remainingPayments - loan.remainingBalance;
-}
-
-export function estimatePrepaymentPenalty(loan: Loan): number {
-  const remainingInterest = Math.max(0, calculateRemainingInterest(loan));
-  return calculatePrepaymentPenalty(remainingInterest);
-}
-
-function calculatePrepaymentPenalty(remainingInterest: number): number {
-  if (remainingInterest <= 0) {
-    return 0;
-  }
-
-  const rawPenalty = remainingInterest * LOAN_PREPAYMENT.REMAINING_INTEREST_FACTOR;
-  const boundedPenalty = Math.min(
-    remainingInterest,
-    Math.max(LOAN_PREPAYMENT.MIN_PENALTY, rawPenalty)
-  );
-
-  return Math.round(boundedPenalty);
-}
-
-/**
  * Calculate total outstanding loan balance across all active loans
  */
 export async function calculateTotalOutstandingLoans(companyId?: string): Promise<number> {
-  try {
-    const activeLoans = await loadActiveLoans(companyId);
-    return activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
-  } catch (error) {
-    return 0;
-  }
+  const activeLoans = await loadActiveLoans(companyId);
+  return activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
 }
 
 /**
@@ -2044,8 +1819,7 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
 
     const gameState = getGameState();
     const availableMoney = gameState.money || 0;
-    const remainingInterest = Math.max(0, calculateRemainingInterest(loan));
-    const prepaymentPenalty = calculatePrepaymentPenalty(remainingInterest);
+    const prepaymentPenalty = estimatePrepaymentPenalty(loan);
     const totalPayoffCost = loan.remainingBalance + prepaymentPenalty;
 
     if (availableMoney < totalPayoffCost) {

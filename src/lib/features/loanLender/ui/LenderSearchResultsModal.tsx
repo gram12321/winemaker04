@@ -4,7 +4,8 @@ import { formatNumber, formatPercent, getLenderTypeColorClass, setModalMinimized
 import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X, Minimize2 } from 'lucide-react';
 import { getGameState } from '@/lib/services/core/gameState';
-import { calculateLoanTerms, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
+import { getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
+import { calculateLoanTerms } from '@/lib/features/loanLender/services/finance/loanCalculations';
 import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { WarningModal } from '@/components/ui';

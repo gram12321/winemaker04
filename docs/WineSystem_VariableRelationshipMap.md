@@ -107,6 +107,10 @@ flowchart LR
   STAFF["Founder staff"] --> ZERO["Zero wages"] --> CASH
   PROFIT["Positive yearly profit"] --> RETURN["Founder Return"] --> CASH
   VALUE["Company value"] --> BUYOUT["Founder buyout"] --> CASH
+  CREDIT["Credit rating + assets + economy"] --> TERMS["Loan limits / rates / fees / payments"]
+  LENDERS["Persisted lenders"] --> OFFERS["Lender-search offers"]
+  TERMS --> OFFERS --> ACTIVITY["Take-loan activity"] --> LOANS["Active loans"]
+  LOANS --> PAYMENTS["Seasonal payments / warnings / restructure / default"] --> CASH
 ```
 
 ## Contract and Snapshot Relationships
@@ -148,6 +152,7 @@ flowchart LR
 | Markets | Sell-side grape trading remains separate; one Buy Market modal hosts registered Grape Procurement and Storage Vessels adapters |
 | Research | Gates cover grapes, fermentation, staff/vineyard caps, contracts, and buyer progression; health-decay effect is active |
 | Ownership | Founder economy active; board/share runtime remains intentionally inactive and not wired into host behavior |
+| Loans | Pure loan calculations feed offer previews and loan creation; persisted lenders and loans are authoritative, and failed finance reads are not replaced with synthetic dashboard data |
 
 ## Alignment Rules
 

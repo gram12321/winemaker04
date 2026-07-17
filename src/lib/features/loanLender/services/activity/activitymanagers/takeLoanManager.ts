@@ -1,9 +1,9 @@
-﻿import { Activity, WorkCategory, NotificationCategory, LoanOffer } from '@/lib/types/types';
+import { Activity, WorkCategory, NotificationCategory, LoanOffer } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { applyForLoan } from '@/lib/features/loanLender/services/finance/loanService';
-import { formatNumber } from '@/lib/utils/utils';
+import { formatNumber } from '@/lib/utils';
 
 /**
  * Start a take loan activity
