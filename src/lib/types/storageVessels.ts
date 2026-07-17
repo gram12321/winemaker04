@@ -3,6 +3,7 @@ import type { BuyGoodsPriceQuoteInput } from '@/lib/types/market';
 export type StorageVesselType = 'cask' | 'steel_tank' | 'concrete_tank' | 'container';
 export type StorageVesselMaterial = 'oak' | 'stainless_steel' | 'concrete' | 'neutral';
 export type StorageVesselOperationalStatus = 'operational' | 'maintenance' | 'retired';
+export type StorageVesselCleanliness = 'clean' | 'dirty';
 export type StorageVesselOccupancy = 'available' | 'reserved' | 'in_use' | 'maintenance' | 'retired';
 export type StorageAllocationPlanStatus = 'reserved' | 'active' | 'released';
 
@@ -45,6 +46,7 @@ export interface StorageVessel {
   acquisitionPrice: number;
   sourceOfferId: string;
   operationalStatus: StorageVesselOperationalStatus;
+  cleanliness: StorageVesselCleanliness;
   occupancy: StorageVesselOccupancy;
   activePlanId?: string;
   activeWineBatchId?: string;

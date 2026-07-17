@@ -14,6 +14,7 @@ interface StorageVesselRow {
   acquisition_price: number;
   source_offer_id: string;
   operational_status: StorageVessel['operationalStatus'];
+  cleanliness: StorageVessel['cleanliness'];
   purchased_year: number;
   purchased_season: string;
   purchased_week: number;
@@ -31,6 +32,7 @@ function fromRow(row: StorageVesselRow): StorageVessel {
     acquisitionPrice: row.acquisition_price,
     sourceOfferId: row.source_offer_id,
     operationalStatus: row.operational_status,
+    cleanliness: row.cleanliness,
     occupancy: 'available',
     purchasedYear: row.purchased_year,
     purchasedSeason: row.purchased_season,
@@ -50,6 +52,7 @@ function toRow(vessel: StorageVessel): StorageVesselRow {
     acquisition_price: vessel.acquisitionPrice,
     source_offer_id: vessel.sourceOfferId,
     operational_status: vessel.operationalStatus,
+    cleanliness: vessel.cleanliness,
     purchased_year: vessel.purchasedYear,
     purchased_season: vessel.purchasedSeason,
     purchased_week: vessel.purchasedWeek,
@@ -238,9 +241,11 @@ export async function updateStorageVesselAllocationFill(companyId: string, planI
     .order('created_at');
   if (error) return { data: null, error };
   let remaining = Math.max(0, filledLitres);
+  const filledVesselIds: string[] = [];
   const rows = (data ?? []) as unknown as AllocationRow[];
   for (const row of rows) {
     const fill = Math.min(row.assigned_capacity_litres, remaining);
+    if (fill > 0) filledVesselIds.push(row.vessel_id);
     const result = await supabase
       .from('storage_vessel_allocations')
       .update({ filled_litres: fill })
@@ -248,6 +253,16 @@ export async function updateStorageVesselAllocationFill(companyId: string, planI
       .eq('id', row.id);
     if (result.error) return { data: null, error: result.error };
     remaining -= fill;
+  }
+  if (filledLitres > 0) {
+    if (filledVesselIds.length > 0) {
+      const dirtyResult = await supabase
+        .from(TABLE)
+        .update({ cleanliness: 'dirty' })
+        .eq('company_id', companyId)
+        .in('id', filledVesselIds);
+      if (dirtyResult.error) return { data: null, error: dirtyResult.error };
+    }
   }
   return { data: rows.length, error: null };
 }
@@ -304,6 +319,14 @@ export async function completeEmptyStorageVessel(input: {
     p_released_year: input.releasedYear,
     p_released_season: input.releasedSeason,
     p_released_week: input.releasedWeek,
+  });
+  return { completed: Boolean(data), error };
+}
+
+export async function completeCleanStorageVessel(input: { companyId: string; vesselId: string }) {
+  const { data, error } = await supabase.rpc('complete_clean_storage_vessel', {
+    p_company_id: input.companyId,
+    p_vessel_id: input.vesselId,
   });
   return { completed: Boolean(data), error };
 }

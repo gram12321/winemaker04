@@ -415,6 +415,7 @@ export async function createGrapeBatch(
     acquisitionPrice: 0,
     sourceOfferId: `test_lab_${runId}`,
     operationalStatus: 'operational',
+    cleanliness: 'clean',
     occupancy: 'available',
     purchasedYear: harvestDate.year,
     purchasedSeason: harvestDate.season,

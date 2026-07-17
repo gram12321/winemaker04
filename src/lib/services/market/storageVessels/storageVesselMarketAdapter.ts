@@ -265,6 +265,7 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     acquisitionPrice: offer.effectivePricePerUnit,
     sourceOfferId: offer.offerId,
     operationalStatus: 'operational',
+    cleanliness: 'clean',
     occupancy: 'available',
     purchasedYear: date.year,
     purchasedSeason: date.season,

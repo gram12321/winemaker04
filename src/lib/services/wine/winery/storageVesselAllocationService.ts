@@ -26,7 +26,7 @@ export interface StorageCapacitySummary {
 export function calculateStorageCapacitySummary(vessels: StorageVessel[]): StorageCapacitySummary {
   return vessels.reduce<StorageCapacitySummary>((summary, vessel) => {
     summary.totalLitres += vessel.capacityLitres;
-    if (vessel.operationalStatus === 'operational' && vessel.occupancy === 'available') {
+    if (vessel.operationalStatus === 'operational' && vessel.cleanliness === 'clean' && vessel.occupancy === 'available') {
       summary.availableLitres += vessel.capacityLitres;
       summary.availableVesselCount += 1;
     } else if (vessel.occupancy === 'reserved') {
@@ -60,7 +60,7 @@ export async function getAvailableStorageVessels(): Promise<StorageVessel[]> {
   if (!companyId) return [];
   const { data, error } = await getCompanyStorageVessels(companyId);
   if (error) throw error;
-  return data.filter((vessel) => vessel.occupancy === 'available' && vessel.operationalStatus === 'operational');
+  return data.filter((vessel) => vessel.occupancy === 'available' && vessel.operationalStatus === 'operational' && vessel.cleanliness === 'clean');
 }
 
 export async function getStorageCapacitySummary(): Promise<StorageCapacitySummary> {
@@ -196,6 +196,7 @@ export async function releaseReservedStorageAllocationPlan(planId: string): Prom
 
 export function getStorageVesselAllocationAvailability(vessel: StorageVessel): { available: boolean; reason?: string } {
   if (vessel.operationalStatus !== 'operational') return { available: false, reason: `Vessel is ${vessel.operationalStatus}.` };
+  if (vessel.cleanliness !== 'clean') return { available: false, reason: 'Vessel needs cleaning.' };
   if (vessel.occupancy !== 'available') return { available: false, reason: `Vessel is currently ${vessel.occupancy.replace('_', ' ')}.` };
   return { available: true };
 }

@@ -10,6 +10,8 @@ import {
   getWineBatchDisplayName,
   isStorageVesselEmptyingInProgress,
   startEmptyStorageVesselActivity,
+  isStorageVesselCleaningInProgress,
+  startCleanStorageVesselActivity,
 } from '@/lib/services';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import type { WineBatch } from '@/lib/types/types';
@@ -27,6 +29,8 @@ export const Equipment: React.FC<EquipmentProps> = () => {
   const [isBuyMarketOpen, setIsBuyMarketOpen] = useState(false);
   const [emptyingRequest, setEmptyingRequest] = useState<{ vessel: StorageVessel; batch: WineBatch } | null>(null);
   const [emptyingError, setEmptyingError] = useState<string | null>(null);
+  const [cleaningRequest, setCleaningRequest] = useState<StorageVessel | null>(null);
+  const [cleaningError, setCleaningError] = useState<string | null>(null);
   const summary = useMemo(() => calculateStorageCapacitySummary(vessels), [vessels]);
 
   const handleEmptyVessel = useCallback(async () => {
@@ -38,6 +42,16 @@ export const Equipment: React.FC<EquipmentProps> = () => {
       if (!result.success) setEmptyingError(result.error ?? 'Could not start the Empty Vessel activity.');
     });
   }, [emptyingRequest, withLoading]);
+
+  const handleCleanVessel = useCallback(async () => {
+    if (!cleaningRequest) return;
+    const vessel = cleaningRequest;
+    setCleaningRequest(null);
+    await withLoading(async () => {
+      const result = await startCleanStorageVesselActivity(vessel.id);
+      if (!result.success) setCleaningError(result.error ?? 'Could not start the Clean Vessel activity.');
+    });
+  }, [cleaningRequest, withLoading]);
 
   return (
     <div className="space-y-4">
@@ -67,12 +81,13 @@ export const Equipment: React.FC<EquipmentProps> = () => {
             const batch = batches.find((candidate) => candidate.id === vessel.activeWineBatchId || candidate.storagePlanId === vessel.activePlanId);
             const activity = activities.find((candidate) => candidate.params.storagePlanId === vessel.activePlanId);
             const emptyingActivity = isStorageVesselEmptyingInProgress(vessel.id);
+            const cleaningActivity = isStorageVesselCleaningInProgress(vessel.id);
 
             return (
               <div key={vessel.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1.5fr_1fr_1fr_1fr_1.2fr_auto]">
                 <div className="font-medium">{getStorageVesselDisplayName(vessel)}</div>
                 <div className={`text-xs ${getColorClass(vessel.qualityScore)}`}>{getQualityInfo(vessel.qualityScore).category} ({vessel.qualityScore.toFixed(2)})</div>
-                <div className="text-xs text-gray-600">{vessel.occupancy.replace('_', ' ')} · {vessel.operationalStatus}</div>
+                <div className="text-xs text-gray-600">{vessel.occupancy.replace('_', ' ')} · {vessel.operationalStatus} · {vessel.cleanliness}</div>
                 <div className="text-xs text-gray-600">{formatNumber(vessel.acquisitionPrice, { currency: true, decimals: 0 })}</div>
                 <div className="text-xs text-gray-600">
                   {batch ? <><span className="font-medium">Contains: {batch.grape} {batch.harvestStartDate.year}, {batch.vineyardName}</span>{emptyingActivity && <div className="mt-1 text-amber-700">Emptying in progress</div>}</>
@@ -89,6 +104,17 @@ export const Equipment: React.FC<EquipmentProps> = () => {
                       onClick={() => setEmptyingRequest({ vessel, batch })}
                     >
                       {emptyingActivity ? 'Emptying…' : 'Empty Vessel'}
+                    </Button>
+                  )}
+                  {!batch && vessel.occupancy === 'available' && vessel.operationalStatus === 'operational' && vessel.cleanliness === 'dirty' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={cleaningActivity}
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                      onClick={() => setCleaningRequest(vessel)}
+                    >
+                      {cleaningActivity ? 'Cleaning…' : 'Clean Vessel'}
                     </Button>
                   )}
                 </div>
@@ -109,6 +135,24 @@ export const Equipment: React.FC<EquipmentProps> = () => {
           { label: 'Cancel', variant: 'outline', onClick: () => setEmptyingRequest(null) },
           { label: 'Start Empty Vessel', variant: 'destructive', onClick: () => void handleEmptyVessel() },
         ]}
+      />
+      <WarningModal
+        isOpen={Boolean(cleaningRequest)}
+        onClose={() => setCleaningRequest(null)}
+        severity="warning"
+        title="Clean Vessel?"
+        message={cleaningRequest ? `Start maintenance to clean ${getStorageVesselDisplayName(cleaningRequest)} for reuse.` : ''}
+        actions={[
+          { label: 'Cancel', variant: 'outline', onClick: () => setCleaningRequest(null) },
+          { label: 'Start Clean Vessel', variant: 'default', onClick: () => void handleCleanVessel() },
+        ]}
+      />
+      <WarningModal
+        isOpen={Boolean(cleaningError)}
+        onClose={() => setCleaningError(null)}
+        severity="error"
+        title="Clean Vessel Could Not Start"
+        message={cleaningError ?? ''}
       />
       <WarningModal
         isOpen={Boolean(emptyingError)}

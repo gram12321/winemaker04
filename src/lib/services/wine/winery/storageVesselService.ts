@@ -35,6 +35,7 @@ export async function createPurchasedStorageVessels(
     acquisitionPrice,
     sourceOfferId,
     operationalStatus: 'operational',
+    cleanliness: 'clean',
     occupancy: 'available',
     purchasedYear: gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
     purchasedSeason: gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON,

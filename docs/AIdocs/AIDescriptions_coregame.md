@@ -60,7 +60,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 ## Deferred or Partial Areas
 
 - Full public-company/share-market runtime.
-- Equipment gameplay beyond Storage Vessels, advanced farming methods, broad bottle-market demand simulation, customer taste matching, descriptor-level scoring, severe weather events/actions, and dedicated weather research/achievements. Empty Vessel is implemented as a cancellable Maintenance activity: completion removes the selected vessel's filled volume, reduces the batch, and releases only that vessel (deleting the batch only when no volume remains). Cancelling another production activity preserves its active vessel plan and partially produced wine; only a never-activated reservation is released.
+- Equipment gameplay beyond Storage Vessels, advanced farming methods, broad bottle-market demand simulation, customer taste matching, descriptor-level scoring, severe weather events/actions, and dedicated weather research/achievements. Storage Vessels now track cleanliness: wine contact makes them dirty, releasing wine leaves them dirty, and a cancellable Clean Vessel Maintenance activity is required before reuse. Empty Vessel remains a cancellable Maintenance activity that removes the selected vessel's filled volume, reduces the batch, and releases only that vessel (deleting the batch only when no volume remains). Cancelling another production activity preserves its active vessel plan and partially produced wine; only a never-activated reservation is released.
 - Research `benefits` copy may be aspirational; `unlocks` and `permanentEffects` define actual behavior.
 
 ## Main File Map

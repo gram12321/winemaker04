@@ -14,7 +14,7 @@ import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext } from '
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { releaseStorageAllocationPlan, releaseReservedStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
-import { completeEmptyStorageVesselActivity } from '@/lib/services/wine/winery/storageVesselMaintenanceService';
+import { completeCleanStorageVesselActivity, completeEmptyStorageVesselActivity } from '@/lib/services/wine/winery/storageVesselMaintenanceService';
 import { formatNumber } from '@/lib/utils';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
@@ -124,9 +124,22 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   },
 
   [WorkCategory.MAINTENANCE]: async (activity: Activity) => {
+    const activityType = activity.params.type;
+    if (activityType !== 'empty_storage_vessel' && activityType !== 'clean_storage_vessel') {
+      throw new Error(`Unknown maintenance activity type: ${String(activityType ?? 'missing')}`);
+    }
+    if (activityType === 'clean_storage_vessel') {
+      const result = await completeCleanStorageVesselActivity(activity);
+      if (!result.success) {
+        notificationService.addMessage(result.error ?? 'The vessel could not be cleaned.', 'winemaking.cleanStorageVessel', 'Clean Vessel', NotificationCategory.WINEMAKING_PROCESS);
+        throw new Error(result.error ?? 'The vessel could not be cleaned.');
+      }
+      notificationService.addMessage(`Cleaned ${result.vesselName ?? 'the selected vessel'} and returned it to service.`, 'winemaking.cleanStorageVessel', 'Clean Vessel', NotificationCategory.WINEMAKING_PROCESS);
+      return;
+    }
     const result = await completeEmptyStorageVesselActivity(activity);
     if (!result.success) {
-      notificationService.addMessage(result.error ?? 'The vessel could not be emptied.', 'winemaking.emptyVessel', 'Empty Vessel', NotificationCategory.WINEMAKING_PROCESS);
+      notificationService.addMessage(result.error ?? 'The vessel could not be emptied.', 'winemaking.empty_storage_vessel', 'Vessel Maintenance', NotificationCategory.WINEMAKING_PROCESS);
       throw new Error(result.error ?? 'The vessel could not be emptied.');
     }
     notificationService.addMessage(
