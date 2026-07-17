@@ -60,8 +60,77 @@ Use this structure for every new entry:
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.336b-0.336h - User, Company, and Leaderboard Isolation
+**Date:** 2026-07-17 | **Commit(s):** db7a376, 68b3661, 2911fda, 12aa093, b9b60e0, bd4821d, 00e01a1 | **Stats:** 2,567 insertions(+), 2,235 deletions(-)
+
+### Summary
+- Isolated player identity, session, wallet, preferences, profile/settings UI, and company records behind explicit feature facades.
+- Added a company gateway and active-company lifecycle hooks so App composes cross-feature activation while company/user modules retain their own contracts.
+- Moved leaderboard recording, ranking, presentation, and maintenance behind `leaderboardsFeature`, with atomic best-score persistence for company aggregate boards.
+
+### Changes
+- `src/lib/features/user/`, `src/lib/features/company/`, and `src/lib/features/leaderboards/` - new public feature contracts, services, UI ownership, and feature-native input/read-model types.
+- `src/lib/services/core/companyLifecycle.ts`, `gameState.ts`, `notificationService.ts`, and `financeService.ts` - explicit active-company cache and notification lifecycle hooks.
+- **NEW FILE:** `src/lib/features/company/ui/CompanyGateway.tsx` (159 lines) - company selection/creation gateway for owned and unowned companies.
+- **NEW FILE:** `migrations/20260717190000_make_company_leaderboards_atomic.sql` (153 lines) - deduplicates aggregate scores and provides atomic best-score writes while preserving historical wine/vineyard entries.
+- `src/lib/database/core/highscoresDB.ts`, leaderboard consumers, and `tests/database/highscoresDB.test.ts` - atomic aggregate persistence and regression coverage.
+- `src/components/pages/Login.tsx`, `CompanyOverview.tsx`, profile/settings pages, and `src/App.tsx` - migrated host and UI wiring to the feature facades.
+
+### Notes
+- Merge commit `6d72928` integrates the `isolate-user-domain-research` branch; its merge diff is not added to the grouped stats a second time.
+- `00e01a1` completes the review cleanup by removing redundant user/company access paths and making leaderboard definitions/data loading declarative.
+- Merge commit `0a58fcd` is the final main-branch integration of the staff-task specialization branch; its already listed changes are not counted a second time.
+
+## Version 0.337 - Loan-Lender Quote and Payment Cleanup
+**Date:** 2026-07-17 | **Commit(s):** 0604846, a7d14c7, 937384c | **Stats:** 875 insertions(+), 689 deletions(-)
+
+### Summary
+- Centralized borrower quotes, adjusted loan applications, payment summaries, search economics, and loan constants behind focused services.
+- Split repayment operations from loan lifecycle orchestration while preserving persistence-failure propagation and activity completion behavior.
+
+### Changes
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanQuoteService.ts` (152 lines) - shared lender-search, loan-offer, application, and payment-summary calculations.
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanPaymentService.ts` (99 lines) - repayment operations and outstanding-balance reads.
+- `src/lib/features/loanLender/services/finance/loanService.ts`, `loanViewService.ts`, `lenderService.ts`, and activity managers - reduced duplicated lifecycle logic and routed borrower/application data through the focused seams.
+- `src/lib/constants/loanConstants.ts`, work calculators, and loan UI - centralized lender availability, search, liquidation, range, and complexity tuning used consistently by previews and execution.
+- `tests/finance/loanCalculations.test.ts` and `loanQuoteService.test.ts` - regression coverage for quotes, adjusted applications, payment summaries, and loan calculations.
+
+### Notes
+- The cleanup retains `loanLenderFeature` as the public facade; UI modules no longer own duplicated loan economics.
+
+## Version 0.337 - Achievement Feature Cleanup
+**Date:** 2026-07-17 | **Commit(s):** 67c6d08, 580fc96 | **Stats:** 123 insertions(+), 366 deletions(-)
+
+### Summary
+- Simplified achievement definitions and evaluation by removing duplicated orchestration and keeping feature-owned behavior focused.
+- Added regression coverage for bulk unlock snapshots and retry-safe existing rewards.
+
+### Changes
+- `src/lib/features/achievements/achievementDefinitions.ts` and `AchievementsPage.tsx` - consolidated tier definitions and category/filter presentation.
+- `src/lib/features/achievements/achievementService.ts` and `src/lib/database/core/achievementsDB.ts` - reduced service duplication and retained database-backed unlock evaluation.
+- `tests/features/achievements/achievementEvaluation.test.ts` - coverage for bulk unlock reads and reward retries.
+
+### Notes
+- This is a feature-boundary cleanup following the achievement isolation entry; no new achievement category is claimed.
+
+## Version 0.336c-0.337 - Staff and Activity Cleanup
+**Date:** 2026-07-16 | **Commit(s):** f15b07e, 049aad2 | **Stats:** 285 insertions(+), 1,123 deletions(-)
+
+### Summary
+- Consolidated staff-search, work-allocation, wage, and persistence paths after the specialization cutover.
+- Centralized vineyard work modifiers and clearing rules, removing duplicate activity and clearing implementations.
+
+### Changes
+- `src/lib/services/activity/workcalculators/workCalculator.ts`, `activityWorkContext.ts`, staff search services, `staffDB.ts`, and `wageService.ts` - canonical staff allocation, effective-skill, persistence, and wage paths.
+- `src/lib/services/activity/workcalculators/vineyardWorkModifiers.ts`, `src/lib/services/vineyard/clearingRules.ts`, and clearing/activity managers - shared vineyard modifiers and clearing-health calculation used by previews and completion.
+- `src/components/ui/modals/UImodals/StaffModal.tsx`, `StaffSearchOptionsModal.tsx`, and activity UI - updated staff and work previews.
+- `tests/activity/clearingRules.test.ts`, staff activity tests, and workflow tests - regression coverage for the consolidated behavior.
+
+### Notes
+- Cleanup removes obsolete agent handoff artifacts and pass-through wrappers; the runtime changes are intended to preserve the specialization behavior introduced in `691ed54`.
+
 ## Version 0.336 - Staff Task and Grape Specialization Restoration
-**Date:** 2026-07-16 | **Commit(s):** 691ed54 | **Stats:** 1,863 insertions(+), 641 deletions(-)
+**Date:** 2026-07-16 | **Commit(s):** 691ed54, 5cccd82 | **Stats:** 1,940 insertions(+), 1,023 deletions(-)
 
 ### Summary
 - Restored persisted staff task specializations and added broad specialized roles as a separate model.
@@ -74,6 +143,7 @@ Use this structure for every new entry:
 - `src/lib/database/core/staffDB.ts` and `migrations/20260715100000_replace_staff_specializations.sql` - strict persisted role data and schema migration.
 - `src/components/pages/Staff.tsx`, staff modals, starting conditions, and recruitment UI - separate role, task, and grape-mastery presentation.
 - `tests/activity/*`, `tests/finance/*`, and staff/user tests - focused calculator, wage, recruitment, and lifecycle coverage.
+- `CONTEXT.md`, `readme.md`, `docs/AIdocs/`, `docs/PROJECT_INFO.md`, and `docs/WineSystem_VariableRelationshipMap.md` - aligned project guidance with the specialization model and removed superseded planning detail.
 
 ### Notes
 - This is a breaking persistence cutover: legacy `staff.specializations` data is not read through a compatibility path.
