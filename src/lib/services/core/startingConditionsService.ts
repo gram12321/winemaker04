@@ -6,7 +6,7 @@ import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardNam
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { formatNumber, getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
-import { companyService } from '../user/companyService';
+import { companyFeature } from '@/lib/features/company';
 import { upsertPrestigeEventBySource } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
@@ -101,7 +101,7 @@ export async function applyStartingConditions(
     }
 
     // Get company to check if it has a user
-    const company = await companyService.getCompany(companyId);
+    const company = await companyFeature.records.get(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
@@ -111,7 +111,7 @@ export async function applyStartingConditions(
     let userId: string | undefined;
     if (company.userId) {
       userId = company.userId;
-      const userCompanies = await companyService.getUserCompanies(userId);
+      const userCompanies = await companyFeature.records.listForOwner(userId);
       // Exclude the current company being created
       const otherCompanies = userCompanies.filter(c => c.id !== companyId);
       isFirstCompany = otherCompanies.length === 0;
@@ -158,7 +158,7 @@ export async function applyStartingConditions(
     let startingLoanId: string | undefined;
 
     // 1. Update company metadata via service
-    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
+    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyFeature.records.update(companyId, {
       startingCountry: country
     });
 
@@ -304,7 +304,7 @@ export async function applyStartingConditions(
     // Refresh company money after all financial adjustments (capital + loan)
     let resolvedStartingMoney = workingMoney;
     try {
-      const updatedCompany = await companyService.getCompany(companyId);
+      const updatedCompany = await companyFeature.records.get(companyId);
       if (updatedCompany) {
         resolvedStartingMoney = updatedCompany.money;
       }

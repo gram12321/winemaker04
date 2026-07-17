@@ -181,10 +181,8 @@ vi.mock('@/lib/services/core/gameState', () => ({
   getGameState: mocks.getGameState,
 }));
 
-vi.mock('@/lib/services/user/companyService', () => ({
-  companyService: {
-    getCompany: mocks.getCompany,
-  },
+vi.mock('@/lib/features/company', () => ({
+  companyFeature: { records: { get: mocks.getCompany } },
 }));
 
 vi.mock('@/lib/services/sales/grapeSupplierMarketService', async () => {

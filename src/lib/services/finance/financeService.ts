@@ -10,6 +10,7 @@ import { insertTransaction as insertTransactionDB, insertTransactionWithFundsChe
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
+import { registerCompanyActivationHook } from '../core/companyLifecycle';
 
 export interface FinancialData {
   income: number;
@@ -174,6 +175,13 @@ export const clearTransactionsCache = (companyId?: string): void => {
   transactionsCacheByCompany.clear();
   transactionsLoadPromiseByCompany.clear();
 };
+
+/** Lifecycle hook called after the active company changes. */
+export const onCompanyActivated = (companyId: string): void => {
+  clearTransactionsCache(companyId);
+};
+
+registerCompanyActivationHook(onCompanyActivated);
 
 // Calculate company value (total assets - total liabilities)
 export const calculateCompanyValue = async (): Promise<number> => {

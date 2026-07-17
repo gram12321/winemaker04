@@ -21,7 +21,8 @@ import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipU
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
-import { companyService, initializeCustomers, initializeActivitySystem, notificationService, preloadAllCustomerRelationships } from './lib/services';
+import { initializeCustomers, initializeActivitySystem, notificationService, preloadAllCustomerRelationships } from './lib/services';
+import { companyFeature } from '@/lib/features/company';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { achievementsFeature } from '@/lib/features/achievements';
 import { userFeature } from '@/lib/features/user';
@@ -37,9 +38,9 @@ function App({ adminFeature }: AppProps) {
   const [isGameInitialized, setIsGameInitialized] = useState(false);
   const loanLenderAppOverlays = useMemo(() => loanLenderFeature.ui.getAppOverlays(), []);
   const playerPortfolio = useMemo(() => ({
-    getCompaniesForPlayer: (playerId: string) => companyService.getUserCompanies(playerId),
-    getStatsForPlayer: (playerId: string) => companyService.getCompanyStats(playerId),
-    getStatsForCompany: (company: Company) => companyService.getCompanyStatsForCompany(company),
+    getCompaniesForPlayer: (playerId: string) => companyFeature.records.listForOwner(playerId),
+    getStatsForPlayer: (playerId: string) => companyFeature.records.getStatsForOwner(playerId),
+    getStatsForCompany: (company: Company) => companyFeature.records.getStatsForCompany(company),
   }), []);
   const playerNotificationFilters = useMemo(() => ({
     getAll: () => notificationService.getFilters(),
@@ -86,6 +87,21 @@ function App({ adminFeature }: AppProps) {
     }
   };
 
+  const handleCompanyCreated = async (input: { name: string; ownerId?: string }) => {
+    const result = await companyFeature.records.create(input);
+    if (!result.success || !result.company) return { error: result.error || 'Failed to create company' };
+
+    try {
+      await loanLenderFeature.setup.initializeLenders(result.company.id);
+    } catch (error) {
+      console.warn('Failed to initialize lenders for new company:', error);
+    }
+    // Starting conditions create company-scoped staff, loans, and vineyards.
+    // Establish that session context before Login opens the setup modal.
+    await setActiveCompany(result.company);
+    return { company: result.company };
+  };
+
   const initializeGameForCompany = async () => {
     try {
       // Ensure customers are initialized when a company becomes active
@@ -125,19 +141,19 @@ function App({ adminFeature }: AppProps) {
 
   const renderCurrentPage = () => {
     if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {
-      return <Login onCompanySelected={handleCompanySelected} />;
+      return <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} />;
     }
 
     switch (currentPage) {
       case 'login':
-        return <Login onCompanySelected={handleCompanySelected} />;
+        return <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} />;
       case 'company-overview':
         return currentCompany ? (
           <CompanyOverview 
             onNavigate={handleNavigate}
           />
         ) : (
-          <Login onCompanySelected={handleCompanySelected} />
+          <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} />
         );
       case 'dashboard':
         return <CompanyOverview onNavigate={setCurrentPage} />;
@@ -175,7 +191,7 @@ function App({ adminFeature }: AppProps) {
           onNavigateToLogin: handleBackToLogin
         });
         if (!adminPage) {
-          return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
+          return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} />;
         }
         return adminPage;
       }
@@ -204,7 +220,7 @@ function App({ adminFeature }: AppProps) {
       case 'weather-center':
         return <WeatherCenterPage />;
       default:
-        return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
+        return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} />;
     }
   };
 
@@ -212,7 +228,7 @@ function App({ adminFeature }: AppProps) {
   if (!isGameInitialized && currentPage === 'login') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-        <Login onCompanySelected={handleCompanySelected} />
+        <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} />
         <Toaster />
       </div>
     );

@@ -28,7 +28,9 @@ vi.mock('@/lib/services/prestige/prestigeService', () => ({
   initializeBasePrestigeEvents: vi.fn(async () => undefined),
   updateCompanyValuePrestige: vi.fn(async () => undefined),
 }));
-vi.mock('@/lib/services/user/companyService', () => ({ companyService: { updateCompany: vi.fn(async () => undefined) } }));
+vi.mock('@/lib/features/company', () => ({ companyFeature: { records: { update: vi.fn(async () => undefined) } } }));
+vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { onCompanyActivated: vi.fn(async () => undefined) } }));
+vi.mock('@/lib/services/finance/financeService', () => ({ onCompanyActivated: vi.fn() }));
 vi.mock('@/lib/services/user/staffService', () => ({ initializeStaffSystem: vi.fn(async () => undefined) }));
 vi.mock('@/lib/services/user/teamService', () => ({ initializeTeamsSystem: vi.fn(async () => undefined) }));
 vi.mock('@/lib/services/finance/economyService', () => ({ initializeEconomyPhase: vi.fn(() => 'Stable') }));

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Aspect, GrapeVariety, Season, Vineyard, WineBatch, WineLogEntry } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
-import { companyService } from '@/lib/services/user/companyService';
+import { companyFeature } from '@/lib/features/company';
 import { getCurrentCompany, setActiveCompany } from '@/lib/services/core/gameState';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { saveVineyard } from '@/lib/database/activities/vineyardDB';
@@ -23,7 +23,7 @@ import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { createStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
 
 export interface TestLabCompanyResult {
-  company: Awaited<ReturnType<typeof companyService.getCompany>>;
+  company: Awaited<ReturnType<typeof companyFeature.records.get>>;
 }
 
 export interface TestLabVineyardResult {
@@ -321,7 +321,7 @@ export async function createTestLabCompany(
   params: Record<string, string | number | boolean>
 ): Promise<NonNullable<TestLabCompanyResult['company']>> {
   const companyName = withTestLabPrefix(runId, stringParam(params, 'companyName', 'Admin Test Lab Company'));
-  const result = await companyService.createCompany({
+  const result = await companyFeature.records.create({
     name: companyName
   });
 

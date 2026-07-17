@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
-import { companyService, highscoreService, createNewCompany } from '@/lib/services';
+import { highscoreService } from '@/lib/services';
+import { companyFeature } from '@/lib/features/company';
 import { userFeature } from '@/lib/features/user';
 import type { PlayerProfile } from '@/lib/features/user';
 import { type Company, type HighscoreEntry } from '@/lib/database';
@@ -21,9 +22,10 @@ type MentorWelcomeData = {
 
 interface LoginProps extends CompanyProps {
   onCompanySelected: (company: Company) => void;
+  onCompanyCreated: (input: { name: string; ownerId?: string }) => Promise<{ company?: Company; error?: string }>;
 }
 
-export function Login({ onCompanySelected }: LoginProps) {
+export function Login({ onCompanySelected, onCompanyCreated }: LoginProps) {
   // State
   const { isLoading, withLoading } = useLoadingState();
   const [error, setError] = useState('');
@@ -85,7 +87,7 @@ export function Login({ onCompanySelected }: LoginProps) {
   }, [currentUser]);
 
   const loadAllCompanies = async () => {
-    const companies = await companyService.getAllCompanies(20);
+    const companies = await companyFeature.records.listAll(20);
     
     // If no companies exist, show create form
     if (companies.length === 0) {
@@ -165,7 +167,7 @@ export function Login({ onCompanySelected }: LoginProps) {
   const loadUserCompanies = async () => {
     if (!currentUser) return;
     
-    const companies = await companyService.getUserCompanies(currentUser.id);
+    const companies = await companyFeature.records.listForOwner(currentUser.id);
     setAllCompanies(companies);
     
     // If no companies exist for this user, show create form
@@ -234,7 +236,7 @@ export function Login({ onCompanySelected }: LoginProps) {
       userIdToUse = playerResult.user.id;
     }
 
-    const company = await createNewCompany(companyName, userIdToUse);
+    const { company, error: createError } = await onCompanyCreated({ name: companyName, ownerId: userIdToUse });
 
     if (company) {
       setCompanyName('');
@@ -246,7 +248,7 @@ export function Login({ onCompanySelected }: LoginProps) {
       setPendingCompany(company);
       setShowStartingConditions(true);
     } else {
-      setError('Failed to create company');
+      setError(createError || 'Failed to create company');
     }
   });
   
@@ -291,7 +293,7 @@ export function Login({ onCompanySelected }: LoginProps) {
       // Confirm delete - second click
       setError('');
 
-      const result = await companyService.deleteCompany(companyId);
+      const result = await companyFeature.records.remove(companyId);
       
       if (result.success) {
         setDeletingCompany(null);

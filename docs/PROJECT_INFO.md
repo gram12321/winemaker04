@@ -46,6 +46,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | `weather` | Always-on functional module; its barrel exports weather resolution, operation, market, vineyard, and presentation capabilities. |
 | `staff` | Partial feature folder; most staff logic remains in user services/UI. |
 | `user` | Installed feature facade; `userFeature` owns optional player identity, profile, wallet, company-scoped preferences, and the Profile/Settings surfaces. Companies may remain unowned and playable. |
+| `company` | Installed feature facade; `companyFeature.records` owns explicit company CRUD, portfolio read models, and aggregate statistics. Creation accepts an optional owner ID only; App composes lender setup and active-company activation. |
 
 ## Boundary Rules
 

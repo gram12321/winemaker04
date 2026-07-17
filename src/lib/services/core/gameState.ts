@@ -4,7 +4,8 @@ import { GAME_INITIALIZATION } from '../../constants/constants';
 import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { CREDIT_RATING } from '../../constants/loanConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
-import { companyService } from '../user/companyService';
+import { companyFeature } from '@/lib/features/company';
+import { notifyCompanyActivated } from './companyLifecycle';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
 import { initializeStaffSystem } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
@@ -110,7 +111,7 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
     
     if (Object.keys(companyUpdates).length > 0) {
       try {
-        await companyService.updateCompany(currentCompany.id, companyUpdates);
+        await companyFeature.records.update(currentCompany.id, companyUpdates);
         
         // Update our local company object
         currentCompany = { ...currentCompany, ...companyUpdates };
@@ -264,6 +265,10 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     nextWeekForecastIntensity: weatherContext.forecast.intensity,
   };
 
+  // Company-scoped presentation and finance caches are reset through their
+  // public lifecycle hooks after the active company is established.
+  await notifyCompanyActivated(company.id);
+
   if (!hasPersistedWeather || !persisted?.weatherForecastPattern || !persisted.weatherForecastConfidence) {
     await saveGameState(gameState);
   }
@@ -296,41 +301,6 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   triggerGameUpdate();
   
 
-};
-
-export const createNewCompany = async (companyName: string, userId?: string): Promise<Company | null> => {
-  try {
-    const result = await companyService.createCompany({
-      name: companyName,
-      userId
-    });
-    
-    if (result.success && result.company) {
-      await setActiveCompany(result.company);
-      
-      // Initialize teams system for new companies first
-      try {
-        await initializeTeamsSystem();
-      } catch (error) {
-        console.error('Error initializing teams system:', error);
-      }
-      
-      // Create starting staff for new companies (after teams are initialized)
-      try {
-        // Starting staff are now managed via starting conditions.
-      } catch (error) {
-        console.error('Error initializing staff system for new company:', error);
-      }
-
-      return result.company;
-    } else {
-      console.error(result.error || 'Failed to create company');
-      return null;
-    }
-  } catch (error) {
-    console.error('Error creating company:', error);
-    return null;
-  }
 };
 
 export const resetGameState = (): void => {

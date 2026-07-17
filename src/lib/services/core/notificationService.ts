@@ -14,6 +14,7 @@ import { NotificationCategory } from "@/lib/types/types";
 import type { GameDate } from "@/lib/types/types";
 import { getCurrentCompanyId } from "@/lib/utils";
 import { userFeature } from '@/lib/features/user';
+import { registerCompanyActivationHook } from './companyLifecycle';
 
 export interface PlayerNotification {
   id: string;
@@ -98,6 +99,16 @@ function isNotificationBlocked(origin: string, category: NotificationCategory): 
 export const notificationService = {
   async ensureInitialized() {
     await Promise.all([loadFromDbIfNeeded(), loadFiltersFromDbIfNeeded()]);
+  },
+
+  /** Reload company-scoped notification state after the active company changes. */
+  async onCompanyActivated() {
+    notifications = [];
+    notificationFilters = [];
+    hasLoadedFromDb = false;
+    hasLoadedFiltersFromDb = false;
+    notifyListeners();
+    await this.ensureInitialized();
   },
 
   addListener(listener: (messages: PlayerNotification[]) => void) {
@@ -262,5 +273,7 @@ export const notificationService = {
     return this.addFilter('category', category, `Blocked category: ${capitalizedCategory}`, blockFromHistory);
   }
 };
+
+registerCompanyActivationHook(() => notificationService.onCompanyActivated());
 
 

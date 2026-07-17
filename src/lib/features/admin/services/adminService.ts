@@ -7,7 +7,7 @@ import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants'
 import type { Season } from '@/lib/types/types';
 import { userFeature } from '@/lib/features/user';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
-import { companyService } from '@/lib/services/user/companyService';
+import { companyFeature } from '@/lib/features/company';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import { awardExperience, getAllStaff } from '@/lib/services/user/staffService';
 
@@ -90,7 +90,7 @@ export async function adminSetPlayerBalance(
     }
 
     // Get full company data to access userId
-    const company = await companyService.getCompany(currentCompany.id);
+    const company = await companyFeature.records.get(currentCompany.id);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
