@@ -5,14 +5,10 @@ import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/util
 import { Button, Label, Slider, Card, CardContent, CardHeader, CardTitle, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services/core/gameState';
-import { getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/features/loanLender/services/finance/loanService';
-import { calculateLoanTerms } from '@/lib/features/loanLender/services/finance/loanCalculations';
-import { getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
+import { buildLoanOffer, buildLenderSearchQuote, loadBorrowerLoanCapacity } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { startLenderSearch } from '@/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager';
 import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
-import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services/activity/workcalculators/lenderSearchWorkCalculator';
-import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
-import { calculateTotalAssets } from '@/lib/services/finance/financeService';
+import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION, LENDER_SEARCH } from '@/lib/constants/loanConstants';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 interface LenderSearchOptionsModalProps {
@@ -57,7 +53,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
   selectedLender
 }) => {
   const [options, setOptions] = useState<LenderSearchOptions>({
-    numberOfOffers: 10,
+    numberOfOffers: LENDER_SEARCH.DEFAULT_OFFERS,
     lenderTypes: LENDER_TYPES, // All types selected by default
     loanAmountRange: [LOAN_AMOUNT_RANGES.MIN, LOAN_AMOUNT_RANGES.MAX],
     durationRange: [LOAN_DURATION_RANGES.MIN, LOAN_DURATION_RANGES.MAX],
@@ -74,8 +70,8 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
   const [durationRange, setDurationRange] = useState<[number, number]>([LOAN_DURATION_RANGES.MIN, LOAN_DURATION_RANGES.MAX]);
 
   // Loan parameter state (when selectedLender is provided)
-  const [loanAmount, setLoanAmount] = useState(selectedLender?.minLoanAmount || 50000);
-  const [durationSeasons, setDurationSeasons] = useState(selectedLender?.minDurationSeasons || 8);
+  const [loanAmount, setLoanAmount] = useState(selectedLender?.minLoanAmount || LOAN_AMOUNT_RANGES.MIN);
+  const [durationSeasons, setDurationSeasons] = useState(selectedLender?.minDurationSeasons || LOAN_DURATION_RANGES.MIN);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +88,19 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
   const gameState = getGameState();
 
   // Loan calculations (when selectedLender is provided)
-  const loanTerms = selectedLender ? calculateLoanTerms(
+  const loanTerms = selectedLender ? buildLoanOffer(
+    {
+      id: 'preview',
+      lender: selectedLender,
+      principalAmount: loanAmount,
+      durationSeasons,
+      effectiveInterestRate: 0,
+      seasonalPayment: 0,
+      originationFee: 0,
+      totalInterest: 0,
+      totalExpenses: 0,
+      isAvailable: true,
+    },
     selectedLender,
     loanAmount,
     durationSeasons,
@@ -122,35 +130,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
     const calculateMaxAllowed = async () => {
       try {
         setIsCalculatingMax(true);
-        const [creditRating, totalAssets] = await Promise.all([
-          getCurrentCreditRating(),
-          calculateTotalAssets()
-        ]);
-
-        let maxAllowed: number;
-
-        if (selectedLender) {
-          // For selected lender mode, calculate max for this specific lender
-          const limitInfo = await getScaledLoanAmountLimit(selectedLender, creditRating, { totalAssets });
-          maxAllowed = Math.min(limitInfo.maxAllowed, selectedLender.maxLoanAmount);
-        } else {
-          // For lender search mode, calculate max across all lenders
-          const allLenders = await getAllLenders();
-          const maxAllowedPromises = allLenders
-            .filter(lender => !lender.blacklisted)
-            .map(lender => getScaledLoanAmountLimit(lender, creditRating, { totalAssets }));
-
-          const limits = await Promise.all(maxAllowedPromises);
-          maxAllowed = limits.length > 0
-            ? Math.max(...limits.map(limit => limit.maxAllowed))
-            : LOAN_AMOUNT_RANGES.MAX;
-        }
-
-        // Ensure it's at least the minimum, and cap at the theoretical max
-        const finalMax = Math.max(
-          LOAN_AMOUNT_RANGES.MIN,
-          Math.min(maxAllowed, LOAN_AMOUNT_RANGES.MAX)
-        );
+        const { maxAllowedLoanAmount: finalMax } = await loadBorrowerLoanCapacity(selectedLender);
 
         setMaxAllowedLoanAmount(finalMax);
 
@@ -182,29 +162,11 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
 
   // Calculate preview stats whenever options change
   useEffect(() => {
-    const totalCost = calculateLenderSearchCost(options);
-    const { totalWork } = calculateLenderSearchWork(options);
+    const { totalCost, totalWork } = buildLenderSearchQuote(options);
     
-    // Apply loan constraint multipliers - smooth scaling based on range restriction
-    const amountRange = loanAmountRange[1] - loanAmountRange[0];
-    const maxAmountRange = maxAllowedLoanAmount - LOAN_AMOUNT_RANGES.MIN;
-    const durationRangeValue = durationRange[1] - durationRange[0];
-    const maxDurationRange = LOAN_DURATION_RANGES.MAX - LOAN_DURATION_RANGES.MIN;
-    
-    // Calculate restriction ratios (0 = no restriction, 1 = maximum restriction)
-    const amountRestrictionRatio = maxAmountRange > 0 ? 1 - (amountRange / maxAmountRange) : 0;
-    const durationRestrictionRatio = 1 - (durationRangeValue / maxDurationRange);
-    
-    // Smooth scaling: 1.0x (no restriction) to 2.0x (maximum restriction)
-    const amountMultiplier = 1 + (amountRestrictionRatio * 1.0);
-    const durationMultiplier = 1 + (durationRestrictionRatio * 1.0);
-    
-    const adjustedWork = totalWork * amountMultiplier * durationMultiplier;
-    const adjustedCost = totalCost * amountMultiplier * durationMultiplier;
-
     setPreviewStats({
-      totalCost: adjustedCost,
-      totalWork: adjustedWork
+      totalCost,
+      totalWork
     });
   }, [options, loanAmountRange, durationRange, maxAllowedLoanAmount]);
 
@@ -423,7 +385,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                   <input
                     type="range"
                     min="1"
-                    max="20"
+                            max={LENDER_SEARCH.MAX_OFFERS}
                     step="1"
                     value={options.numberOfOffers}
                     onChange={(e) => setOptions(prev => ({ ...prev, numberOfOffers: Number(e.target.value) }))}
@@ -431,7 +393,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                   />
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
                     <span>1 offer</span>
-                    <span>20 offers</span>
+                          <span>{LENDER_SEARCH.MAX_OFFERS} offers</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-2">
                     Request multiple loan offers from different lenders. More offers increase search cost and time.
@@ -565,7 +527,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                         <div className="text-xs text-gray-300 mt-1 text-center">
                           {options.lenderTypes.length === 0 
                             ? 'Searching all lender types'
-                            : `Searching ${options.lenderTypes.length} of 3 types`
+                            : `Searching ${options.lenderTypes.length} of ${Object.keys(LENDER_TYPE_DISTRIBUTION).length - 1} core types`
                           }
                         </div>
                       </div>
@@ -679,4 +641,3 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
     </div>
   );
 };
-

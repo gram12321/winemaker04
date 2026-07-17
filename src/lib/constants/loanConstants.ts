@@ -103,7 +103,23 @@ export const LOAN_DURATION_RANGES = {
 // Lender generation
 export const LENDER_GENERATION = {
   MIN_LENDERS: 25,
-  MAX_LENDERS: 65
+  MAX_LENDERS: 65,
+  MIN_PER_TYPE: 3,
+} as const;
+
+export const LENDER_AVAILABILITY = {
+  MAX_PRESTIGE_REQUIREMENT_REDUCTION: 20,
+} as const;
+
+export const LENDER_SEARCH = {
+  DEFAULT_OFFERS: 10,
+  MAX_OFFERS: 20,
+  MAX_TYPE_FILTER_WORK_BONUS: 0.5,
+} as const;
+
+export const LOAN_LIQUIDATION = {
+  MAX_SINGLE_ASSET_PORTFOLIO_PERCENT: 0.5,
+  SALE_PENALTY_RATE: 0.25,
 } as const;
 
 // Lender type interest rate multipliers

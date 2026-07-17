@@ -4,12 +4,10 @@ import { formatNumber, formatPercent, getLenderTypeColorClass, setModalMinimized
 import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X, Minimize2 } from 'lucide-react';
 import { getGameState } from '@/lib/services/core/gameState';
-import { getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
-import { calculateLoanTerms } from '@/lib/features/loanLender/services/finance/loanCalculations';
+import { buildLoanOffer, buildTakeLoanQuote, loadBorrowerLoanCapacity } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
-import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { WarningModal } from '@/components/ui';
-import { calculateTotalAssets } from '@/lib/services/finance/financeService';
+import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES } from '@/lib/constants/loanConstants';
 
 interface LenderSearchResultsModalProps {
   isOpen: boolean;
@@ -34,8 +32,8 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
   const [isMinimized, setIsMinimized] = useState(false);
   
   // Loan parameter state for third column
-  const [loanAmount, setLoanAmount] = useState(50000);
-  const [durationSeasons, setDurationSeasons] = useState(8);
+  const [loanAmount, setLoanAmount] = useState(LOAN_AMOUNT_RANGES.MIN);
+  const [durationSeasons, setDurationSeasons] = useState(LOAN_DURATION_RANGES.MIN);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loanAmountCap, setLoanAmountCap] = useState<number | null>(null);
@@ -88,15 +86,8 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
       }
 
       try {
-        const totalAssets = await calculateTotalAssets();
-        const limitInfo = await getScaledLoanAmountLimit(
-          selectedOffer.lender,
-          gameState.creditRating ?? 0.5,
-          { totalAssets }
-        );
+        const { maxAllowedLoanAmount: cap } = await loadBorrowerLoanCapacity(selectedOffer.lender);
         if (!isMounted) return;
-
-        const cap = Math.min(limitInfo.maxAllowed, selectedOffer.lender.maxLoanAmount);
         setLoanAmountCap(cap);
         setLoanAmount(prev => Math.min(prev, cap));
       } catch (capError) {
@@ -115,7 +106,8 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
 
   if (!isOpen || !offers || offers.length === 0) return null;
 
-  const loanTerms = selectedOffer ? calculateLoanTerms(
+  const loanTerms = selectedOffer ? buildLoanOffer(
+    selectedOffer,
     selectedOffer.lender,
     loanAmount,
     durationSeasons,
@@ -139,7 +131,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
   } = loanTerms;
 
   // Calculate work based on adjustments from original offer
-  const workCalculation = selectedOffer ? calculateTakeLoanWork(
+  const workCalculation = selectedOffer ? buildTakeLoanQuote(
     selectedOffer,
     loanAmount,
     durationSeasons
@@ -529,4 +521,3 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
     </>
   );
 };
-

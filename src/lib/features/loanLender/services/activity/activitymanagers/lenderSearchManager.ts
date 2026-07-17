@@ -6,7 +6,7 @@ import { notificationService } from '@/lib/services/core/notificationService';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
-import { calculateLenderSearchWork, calculateLenderSearchCost } from '@/lib/services/activity/workcalculators/lenderSearchWorkCalculator';
+import { buildLenderSearchQuote } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { calculateLenderAvailability, getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
 import { getCurrentCreditRating, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
 import { calculateLoanTerms } from '@/lib/features/loanLender/services/finance/loanCalculations';
@@ -19,8 +19,9 @@ import { formatNumber } from '@/lib/utils';
 export async function startLenderSearch(options: LenderSearchOptions): Promise<string | null> {
   try {
     const gameState = getGameState();
-    const searchCost = calculateLenderSearchCost(options);
-    const { totalWork } = calculateLenderSearchWork(options);
+    const searchQuote = buildLenderSearchQuote(options);
+    const searchCost = searchQuote.totalCost;
+    const { totalWork } = searchQuote;
 
     // Check if we have enough money (skip for free searches)
     const currentMoney = gameState.money || 0;

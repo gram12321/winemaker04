@@ -1,7 +1,7 @@
 // Lender generation service - creates lenders with type-based characteristics
 import { v4 as uuidv4 } from 'uuid';
 import type { Lender, LenderType } from '@/lib/types/types';
-import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
+import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION, LENDER_AVAILABILITY } from '@/lib/constants/loanConstants';
 import { LENDER_NAMES } from '@/lib/constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
 import { getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
@@ -87,11 +87,11 @@ async function generateLenders(): Promise<Lender[]> {
 
   const lenders: Lender[] = [];
   const lenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[];
-  const MIN_PER_TYPE = 3;
+  const minPerType = LENDER_GENERATION.MIN_PER_TYPE;
 
   // 1. Ensure minimum count for each type
   for (const type of lenderTypes) {
-    for (let i = 0; i < MIN_PER_TYPE; i++) {
+    for (let i = 0; i < minPerType; i++) {
       lenders.push(createLender(type));
     }
   }
@@ -163,7 +163,7 @@ export function calculateLenderAvailability(
 
   // Secondary influence: Prestige can help with slightly higher risk tolerance
   // Prestige provides up to 20% reduction in risk tolerance requirement
-  const prestigeBonus = normalizedPrestige * 20; // Max 20% bonus from prestige
+  const prestigeBonus = normalizedPrestige * LENDER_AVAILABILITY.MAX_PRESTIGE_REQUIREMENT_REDUCTION;
   const adjustedRequirement = baseRequirement - prestigeBonus;
 
   const isAvailable = creditRating >= adjustedRequirement && !lender.blacklisted;

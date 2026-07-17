@@ -152,7 +152,7 @@ flowchart LR
 | Markets | Sell-side grape trading remains separate; one Buy Market modal hosts registered Grape Procurement and Storage Vessels adapters |
 | Research | Gates cover grapes, fermentation, staff/vineyard caps, contracts, and buyer progression; health-decay effect is active |
 | Ownership | Founder economy active; board/share runtime remains intentionally inactive and not wired into host behavior |
-| Loans | Pure loan calculations feed offer previews and loan creation; persisted lenders and loans are authoritative, and failed finance reads are not replaced with synthetic dashboard data |
+| Loans | `loanQuoteService` is the shared seam for borrower caps, terms, finalized applications, and payment summaries; `loanPaymentService` owns repayment mutations. Persisted lenders and loans remain authoritative, and failed finance reads are not replaced with synthetic dashboard data |
 
 ## Alignment Rules
 

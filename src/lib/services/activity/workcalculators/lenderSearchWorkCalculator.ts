@@ -1,7 +1,7 @@
 import { WorkCategory, LenderSearchOptions } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { LENDER_SEARCH_BASE_COST, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
+import { LENDER_SEARCH_BASE_COST, LENDER_TYPE_DISTRIBUTION, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_SEARCH } from '@/lib/constants/loanConstants';
 
 /**
  * Calculate work required for lender search activity
@@ -47,7 +47,7 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
   if (selectedNonQuickCount > 0 && selectedNonQuickCount < totalNonQuickTypes) {
     // More selective search requires more work
     const restrictionRatio = (totalNonQuickTypes - selectedNonQuickCount) / totalNonQuickTypes;
-    lenderTypeMultiplier = 1 + (restrictionRatio * 0.5); // 1.0-1.5 multiplier
+    lenderTypeMultiplier = 1 + (restrictionRatio * LENDER_SEARCH.MAX_TYPE_FILTER_WORK_BONUS);
   }
 
   // QuickLoan discount: including quick loans makes searches easier
@@ -59,8 +59,15 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
     lenderTypeMultiplier *= 1 - quickDiscount;
   }
   
-  // Multiply the constraints together
-  const totalMultiplier = offersMultiplier * lenderTypeMultiplier;
+  const amountRange = options.loanAmountRange[1] - options.loanAmountRange[0];
+  const maxAmountRange = Math.max(1, LOAN_AMOUNT_RANGES.MAX - LOAN_AMOUNT_RANGES.MIN);
+  const durationRange = options.durationRange[1] - options.durationRange[0];
+  const maxDurationRange = Math.max(1, LOAN_DURATION_RANGES.MAX - LOAN_DURATION_RANGES.MIN);
+  const amountRestrictionMultiplier = 1 + Math.max(0, 1 - amountRange / maxAmountRange);
+  const durationRestrictionMultiplier = 1 + Math.max(0, 1 - durationRange / maxDurationRange);
+
+  // Multiply the constraints together. These same factors are used by the UI preview.
+  const totalMultiplier = offersMultiplier * lenderTypeMultiplier * amountRestrictionMultiplier * durationRestrictionMultiplier;
   
   // Calculate base work (without initial work)
   const baseWork = 1 / rate * BASE_WORK_UNITS; // 1 offer / rate * BASE_WORK_UNITS
@@ -77,6 +84,13 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
     { label: 'Processing Rate', value: rate, unit: 'offers/week' },
     { label: 'Initial Setup Work', value: initialWork, unit: 'work units' }
   ];
+
+  if (amountRestrictionMultiplier > 1) {
+    factors.push({ label: 'Amount Range', value: `${Math.round(amountRange)} allowed`, modifier: amountRestrictionMultiplier - 1, modifierLabel: 'restricted amount range' });
+  }
+  if (durationRestrictionMultiplier > 1) {
+    factors.push({ label: 'Duration Range', value: `${Math.round(durationRange)} seasons`, modifier: durationRestrictionMultiplier - 1, modifierLabel: 'restricted duration range' });
+  }
 
   // Add constraint factors
   if (offersMultiplier > 1) {
@@ -157,7 +171,14 @@ export function calculateLenderSearchCost(options: LenderSearchOptions): number 
     lenderTypeMultiplier *= 1 - quickDiscount;
   }
   
+  const amountRange = options.loanAmountRange[1] - options.loanAmountRange[0];
+  const maxAmountRange = Math.max(1, LOAN_AMOUNT_RANGES.MAX - LOAN_AMOUNT_RANGES.MIN);
+  const durationRange = options.durationRange[1] - options.durationRange[0];
+  const maxDurationRange = Math.max(1, LOAN_DURATION_RANGES.MAX - LOAN_DURATION_RANGES.MIN);
+  const amountRestrictionMultiplier = 1 + Math.max(0, 1 - amountRange / maxAmountRange);
+  const durationRestrictionMultiplier = 1 + Math.max(0, 1 - durationRange / maxDurationRange);
+
   // Multiply the constraints together (same as work calculation)
-  return Math.round(baseCost * offersCostMultiplier * lenderTypeMultiplier);
+  return Math.round(baseCost * offersCostMultiplier * lenderTypeMultiplier * amountRestrictionMultiplier * durationRestrictionMultiplier);
 }
 

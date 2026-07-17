@@ -835,6 +835,15 @@ export interface LoanOffer {
   unavailableReason?: string; // Why not available (if applicable)
 }
 
+/** Finalized borrower choices persisted on a take-loan activity. */
+export interface LoanApplicationPayload {
+  offer: LoanOffer;
+  originalOffer: LoanOffer;
+  adjustedAmount: number;
+  adjustedDurationSeasons: number;
+  totalWork: number;
+}
+
 // ===== ACTIVITY TYPES =====
 
 export interface Activity {

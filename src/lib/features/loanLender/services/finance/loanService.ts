@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '@/lib/types/types';
 import { NotificationCategory } from '@/lib/types/types';
-import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/constants/loanConstants';
+import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_LIQUIDATION, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getCurrentPrestige, getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
@@ -10,7 +10,7 @@ import { loadLenders, updateLenderBlacklist } from '@/lib/database/core/lendersD
 import { notificationService } from '@/lib/services/core/notificationService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { calculateCreditRating } from '@/lib/features/loanLender/services/finance/creditRatingService';
-import { calculateEffectiveInterestRate, calculateOriginationFee, calculateSeasonalPayment, estimatePrepaymentPenalty } from './loanCalculations';
+import { calculateEffectiveInterestRate, calculateOriginationFee, calculateSeasonalPayment } from './loanCalculations';
 import { calculateLenderAvailability } from '@/lib/features/loanLender/services/finance/lenderService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { calculateAbsoluteWeeks, formatNumber, formatPercent, getRandomFromArray } from '@/lib/utils';
@@ -138,6 +138,8 @@ export async function applyForLoan(
     skipTransactions?: boolean;
     overrideBaseRate?: number;
     overrideEffectiveRate?: number;
+    overrideSeasonalPayment?: number;
+    overrideOriginationFee?: number;
     skipLimitCheck?: boolean;
   } = {}
 ): Promise<string> {
@@ -181,10 +183,10 @@ export async function applyForLoan(
     );
 
     // Calculate seasonal payment using loan amortization
-    const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveRate, durationSeasons);
+    const seasonalPayment = options.overrideSeasonalPayment ?? calculateSeasonalPayment(principalAmount, effectiveRate, durationSeasons);
 
     // Calculate origination fee
-    const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
+    const originationFee = options.overrideOriginationFee ?? calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
 
     // Create loan object
     const derivedCategory: LoanCategory = options.loanCategory
@@ -572,7 +574,7 @@ function simulateVineyardSeizureStep(
 
   // Calculate current total portfolio value to enforce 50% rule
   const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.value, 0);
-  const singleVineyardCap = totalPortfolioValue * 0.5;
+  const singleVineyardCap = totalPortfolioValue * LOAN_LIQUIDATION.MAX_SINGLE_ASSET_PORTFOLIO_PERCENT;
 
   const sorted = [...vineyards].sort((a, b) => a.value - b.value);
 
@@ -726,7 +728,7 @@ async function seizeVineyardForRestructure(
 
   // Calculate current total portfolio value to enforce 50% rule
   const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
-  const singleVineyardCap = totalPortfolioValue * 0.5;
+  const singleVineyardCap = totalPortfolioValue * LOAN_LIQUIDATION.MAX_SINGLE_ASSET_PORTFOLIO_PERCENT;
 
   const sorted = [...vineyards].sort((a, b) => a.vineyardTotalValue - b.vineyardTotalValue);
 
@@ -1482,83 +1484,6 @@ export async function declineForcedLoanRestructure(offerId: string): Promise<voi
 }
 
 /**
- * Make an extra seasonal loan payment (plus administration fee) to clear warnings
- */
-export async function makeExtraLoanPayment(loanId: string): Promise<void> {
-  const activeLoans = await loadActiveLoans();
-  const loan = activeLoans.find(l => l.id === loanId);
-
-  if (!loan) {
-    throw new Error('Loan not found');
-  }
-
-  if (loan.status !== 'active') {
-    throw new Error('Only active loans accept extra payments');
-  }
-
-  const gameState = getGameState();
-  const availableMoney = gameState.money || 0;
-
-  const administrationFee = Math.max(
-    Math.round(loan.seasonalPayment * LOAN_EXTRA_PAYMENT.ADMIN_FEE_RATE),
-    LOAN_EXTRA_PAYMENT.MIN_ADMIN_FEE
-  );
-
-  const totalPayment = Math.round(loan.seasonalPayment) + administrationFee;
-
-  if (availableMoney < totalPayment) {
-    throw new Error('Insufficient funds to apply extra payment');
-  }
-
-  // Apply payment transactions
-  await addTransaction(
-    -Math.round(loan.seasonalPayment),
-    `Extra payment to ${loan.lenderName}`,
-    TRANSACTION_CATEGORIES.LOAN_PAYMENT,
-    false
-  );
-
-  await addTransaction(
-    -administrationFee,
-    `Administration fee for extra payment to ${loan.lenderName}`,
-    TRANSACTION_CATEGORIES.LOAN_EXTRA_PAYMENT_FEE,
-    false
-  );
-
-  const newBalance = Math.max(0, loan.remainingBalance - Math.round(loan.seasonalPayment));
-  const updateData: Partial<Loan> = {
-    remainingBalance: newBalance,
-    missedPayments: 0
-  };
-
-  if (loan.seasonsRemaining > 0) {
-    updateData.seasonsRemaining = Math.max(0, loan.seasonsRemaining - 1);
-  }
-
-  if (newBalance <= 0) {
-    updateData.status = 'paid_off';
-    updateData.seasonsRemaining = 0;
-  }
-
-  await updateLoan(loan.id, updateData);
-  await clearLoanWarning(loan.id);
-
-  // Recalculate credit rating after extra payment
-  await getCurrentCreditRating();
-
-  await notificationService.addMessage(
-    `Extra payment of ${formatNumber(totalPayment, { currency: true })} applied to ${loan.lenderName}. Loan warnings cleared.`,
-    'loan.extraPayment',
-    'Loan Extra Payment',
-    NotificationCategory.FINANCE_AND_STAFF
-  );
-
-  await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_EXTRA_PAYMENT);
-
-  triggerGameUpdate();
-}
-
-/**
  * Process seasonal loan payments for all active loans
  * Called during season changes (week 1 of each season)
  */
@@ -1795,94 +1720,6 @@ function calculateNextPaymentDate(currentDate: GameDate): GameDate {
     season: nextSeason,
     year: currentDate.year + (wrapsToNextYear ? 1 : 0)
   };
-}
-
-/**
- * Calculate total outstanding loan balance across all active loans
- */
-export async function calculateTotalOutstandingLoans(companyId?: string): Promise<number> {
-  const activeLoans = await loadActiveLoans(companyId);
-  return activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
-}
-
-/**
- * Repay loan in full (early payoff)
- */
-export async function repayLoanInFull(loanId: string): Promise<void> {
-  try {
-    const activeLoans = await loadActiveLoans();
-    const loan = activeLoans.find(l => l.id === loanId);
-
-    if (!loan) {
-      throw new Error('Loan not found');
-    }
-
-    const gameState = getGameState();
-    const availableMoney = gameState.money || 0;
-    const prepaymentPenalty = estimatePrepaymentPenalty(loan);
-    const totalPayoffCost = loan.remainingBalance + prepaymentPenalty;
-
-    if (availableMoney < totalPayoffCost) {
-      const shortfall = totalPayoffCost - availableMoney;
-      await notificationService.addMessage(
-        [
-          `Unable to repay loan from ${loan.lenderName}.`,
-          `You are short by ${formatNumber(shortfall, { currency: true })}.`,
-          'Add funds or wait for additional income before attempting a full payoff.'
-        ].join(' '),
-        'loan.earlyPayoffInsufficientFunds',
-        'Insufficient Balance',
-        NotificationCategory.FINANCE_AND_STAFF
-      );
-      return;
-    }
-
-    // Deduct remaining balance from company money
-    await addTransaction(
-      -loan.remainingBalance,
-      `Early loan payoff to ${loan.lenderName}`,
-      TRANSACTION_CATEGORIES.LOAN_PAYMENT,
-      false
-    );
-
-    if (prepaymentPenalty > 0) {
-      await addTransaction(
-        -prepaymentPenalty,
-        `Early payoff indemnity for ${loan.lenderName}`,
-        TRANSACTION_CATEGORIES.LOAN_PREPAYMENT_FEE,
-        false
-      );
-    }
-
-    // Update loan status to paid off
-    await updateLoan(loanId, {
-      remainingBalance: 0,
-      seasonsRemaining: 0,
-      status: 'paid_off'
-    });
-
-    // Recalculate credit rating after early payoff
-    await getCurrentCreditRating();
-
-    await notificationService.addMessage(
-      [
-        `Loan from ${loan.lenderName} paid off early!`,
-        prepaymentPenalty > 0
-          ? `Prepayment indemnity charged: ${formatNumber(prepaymentPenalty, { currency: true })}.`
-          : '',
-        'Credit rating improved.'
-      ].filter(Boolean).join(' '),
-      'loan.earlyPayoff',
-      'Loan Update',
-      NotificationCategory.FINANCE_AND_STAFF
-    );
-
-    await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_FULL_REPAYMENT);
-
-    triggerGameUpdate();
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**
@@ -2251,7 +2088,7 @@ async function seizeVineyardsForDebt(
     }
 
     // Calculate sale proceeds with -25% penalty
-    const saleProceeds = valueRecovered * 0.75; // -25% penalty
+    const saleProceeds = valueRecovered * (1 - LOAN_LIQUIDATION.SALE_PENALTY_RATE);
 
     // Add sale proceeds to user money
     if (saleProceeds > 0) {
@@ -2357,4 +2194,3 @@ async function defaultOnLoan(loanId: string): Promise<void> {
     // Silent error handling
   }
 }
-

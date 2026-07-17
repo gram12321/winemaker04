@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBo
 import { LenderType, NotificationCategory } from '@/lib/types/types';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
-import { repayLoanInFull, makeExtraLoanPayment } from '@/lib/features/loanLender/services/finance/loanService';
-import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty } from '@/lib/features/loanLender/services/finance/loanCalculations';
+import { repayLoanInFull, makeExtraLoanPayment } from '@/lib/features/loanLender/services/finance/loanPaymentService';
+import { buildLoanPaymentSummary } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import {
   DEFAULT_LOANS_DASHBOARD_DATA,
   loadLoansDashboardData,
@@ -14,7 +14,7 @@ import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from './LenderSearchOptionsModal';
 // Search results are rendered from the loan feature's app overlays.
 import { useGameStateWithData } from '@/hooks';
-import { LENDER_TYPE_DISTRIBUTION, LOAN_EXTRA_PAYMENT, LOAN_PREPAYMENT } from '@/lib/constants';
+import { LENDER_TYPE_DISTRIBUTION, LOAN_PREPAYMENT } from '@/lib/constants';
 
 export function LoansView() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -124,22 +124,16 @@ export function LoansView() {
               </TableHeader>
               <TableBody>
                 {activeLoans.map((loan) => {
-                  const totalInterest = calculateTotalInterest(loan);
-                  const totalExpenses = calculateTotalExpenses(loan);
-                  const remainingInterest = calculateRemainingInterest(loan);
-                  const estimatedPrepaymentPenalty = estimatePrepaymentPenalty(loan);
-                  const totalRepayInFull = loan.remainingBalance + estimatedPrepaymentPenalty;
+                  const paymentSummary = buildLoanPaymentSummary(loan);
+                  const { totalInterest, totalExpenses, remainingInterest, prepaymentPenalty: estimatedPrepaymentPenalty } = paymentSummary;
+                  const totalRepayInFull = paymentSummary.fullRepaymentAmount;
                   const missedPayments = loan.missedPayments || 0;
                   const loanCategory = loan.loanCategory ?? (loan.isForced ? 'emergency' : 'standard');
                   const hasWarnings = missedPayments > 0;
                   const isEmergencyLoan = loanCategory === 'emergency';
                   const isRestructuredLoan = loanCategory === 'restructured';
-                  const seasonalPaymentBase = Math.max(0, Math.round(loan.seasonalPayment));
-                  const extraAdminFee = Math.max(
-                    Math.round(seasonalPaymentBase * LOAN_EXTRA_PAYMENT.ADMIN_FEE_RATE),
-                    LOAN_EXTRA_PAYMENT.MIN_ADMIN_FEE
-                  );
-                  const extraTotalPayment = seasonalPaymentBase + extraAdminFee;
+                  const extraAdminFee = paymentSummary.extraPaymentAdminFee;
+                  const extraTotalPayment = paymentSummary.extraPaymentTotal;
                   const seasonalPaymentDisplay = formatNumber(loan.seasonalPayment, { currency: true });
                   const extraAdminFeeDisplay = formatNumber(extraAdminFee, { currency: true });
                   const extraTotalPaymentDisplay = formatNumber(extraTotalPayment, { currency: true });
