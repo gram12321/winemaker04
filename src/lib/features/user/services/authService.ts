@@ -1,7 +1,6 @@
-import { supabase } from '../../../database/core/supabase';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
-import { getUserById, insertUser, updateUser, deleteUser, type AuthUser } from '@/lib/database';
+import { supabase, getUserById, insertUser, updateUser, deleteUser, type PlayerProfile as PlayerProfileRecord } from '@/lib/database';
 
 export interface SignUpData {
   email: string;
@@ -17,8 +16,8 @@ export interface SignInData {
 }
 
 class AuthService {
-  private currentUser: AuthUser | null = null;
-  private listeners: ((user: AuthUser | null) => void)[] = [];
+  private currentUser: PlayerProfileRecord | null = null;
+  private listeners: ((user: PlayerProfileRecord | null) => void)[] = [];
 
   constructor() {
     this.initializeAuth();
@@ -53,7 +52,7 @@ class AuthService {
     }
   }
 
-  private setCurrentUser(user: AuthUser | null) {
+  private setCurrentUser(user: PlayerProfileRecord | null) {
     this.currentUser = user;
     this.notifyListeners();
   }
@@ -62,7 +61,7 @@ class AuthService {
     this.listeners.forEach(listener => listener(this.currentUser));
   }
 
-  private mapAuthUserRow(row: {
+  private mapPlayerProfileRow(row: {
     id: string;
     email?: string;
     name: string;
@@ -70,7 +69,7 @@ class AuthService {
     avatar_color?: string;
     created_at: string;
     updated_at?: string;
-  }): AuthUser {
+  }): PlayerProfileRecord {
     return {
       id: row.id,
       email: row.email,
@@ -82,7 +81,7 @@ class AuthService {
     };
   }
 
-  public onAuthStateChange(callback: (user: AuthUser | null) => void) {
+  public onAuthStateChange(callback: (user: PlayerProfileRecord | null) => void) {
     this.listeners.push(callback);
     // Call immediately with current state
     callback(this.currentUser);
@@ -93,16 +92,16 @@ class AuthService {
     };
   }
 
-  public getCurrentUser(): AuthUser | null {
+  public getCurrentUser(): PlayerProfileRecord | null {
     return this.currentUser;
   }
 
   /** Selects the local player used by the offline/gameplay flow. */
-  public selectLocalPlayer(user: AuthUser | null): void {
+  public selectLocalPlayer(user: PlayerProfileRecord | null): void {
     this.setCurrentUser(user);
   }
 
-  public async getUserProfileById(userId: string): Promise<AuthUser | null> {
+  public async getUserProfileById(userId: string): Promise<PlayerProfileRecord | null> {
     return await getUserById(userId);
   }
 
@@ -188,7 +187,7 @@ class AuthService {
     }
   }
 
-  public async updateProfile(updates: Partial<Pick<AuthUser, 'name' | 'avatar' | 'avatarColor'>>): Promise<{ success: boolean; error?: string }> {
+  public async updateProfile(updates: Partial<Pick<PlayerProfileRecord, 'name' | 'avatar' | 'avatarColor'>>): Promise<{ success: boolean; error?: string }> {
     if (!this.currentUser) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -214,7 +213,7 @@ class AuthService {
     }
   }
 
-  public async createLocalUserProfile(name: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  public async createLocalUserProfile(name: string): Promise<{ success: boolean; user?: PlayerProfileRecord; error?: string }> {
     try {
       const result = await insertUser({
         name: name.trim(),
@@ -225,7 +224,7 @@ class AuthService {
         return { success: false, error: result.error || 'Failed to create user' };
       }
 
-      const user = this.mapAuthUserRow(result.data);
+      const user = this.mapPlayerProfileRow(result.data);
       this.setCurrentUser(user);
 
       return {
@@ -240,7 +239,7 @@ class AuthService {
 
   public async updateUserProfileById(
     userId: string,
-    updates: Partial<Pick<AuthUser, 'name' | 'avatar' | 'avatarColor'>>
+    updates: Partial<Pick<PlayerProfileRecord, 'name' | 'avatar' | 'avatarColor'>>
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const result = await updateUser(userId, {

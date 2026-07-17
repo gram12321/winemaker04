@@ -1,5 +1,6 @@
 import { Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
+import { WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
 import {
   insertCompany,
   getCompanyById,
@@ -135,7 +136,7 @@ class CompanyService {
       const totalGold = companies.reduce((sum: number, company: any) => sum + company.money, 0);
       const totalValue = totalGold;
       const totalWeeks = companies.reduce((sum: number, company: any) => {
-        const weeksElapsed = (company.current_year - 2024) * 52 + company.current_week;
+        const weeksElapsed = (company.current_year - 2024) * WEEKS_PER_YEAR + company.current_week;
         return sum + Math.max(1, weeksElapsed);
       }, 0);
       const avgWeeks = totalCompanies > 0 ? Math.round(totalWeeks / totalCompanies) : 0;
@@ -150,6 +151,15 @@ class CompanyService {
       console.error('Error getting company stats:', error);
       return { totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 };
     }
+  }
+
+  public async getCompanyStatsForCompany(company: Company): Promise<CompanyStats> {
+    return {
+      totalCompanies: 1,
+      totalGold: company.money,
+      totalValue: company.money,
+      avgWeeks: Math.max(1, (company.currentYear - company.foundedYear) * WEEKS_PER_YEAR + company.currentWeek)
+    };
   }
 }
 

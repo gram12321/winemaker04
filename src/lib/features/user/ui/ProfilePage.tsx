@@ -3,13 +3,10 @@ import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedTooltip } from '@/components/ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
 import { userFeature } from '@/lib/features/user';
-import { companyService } from '@/lib/services';
-import type { PlayerProfile } from '@/lib/features/user';
+import type { PlayerCompanyStats, PlayerProfile, PlayerProfilePageInput } from '@/lib/features/user';
 import { type Company } from '@/lib/database';
-import type { CompanyStats } from '@/lib/services';
 import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
-import { PageProps, CompanyProps } from '@/lib/types/UItypes';
 
 // Color options
 const COLOR_OPTIONS = [
@@ -23,17 +20,12 @@ const COLOR_OPTIONS = [
   { id: 'gray', value: 'bg-gray-100 text-gray-800', label: 'Gray' }
 ];
 
-interface ProfileProps extends PageProps, CompanyProps {
-  onCompanySelected: (company: Company) => void;
-  onBackToLogin: () => void;
-}
-
-export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: ProfileProps) {
+export function Profile({ currentCompany, portfolio, onCompanySelected, onBackToLogin }: PlayerProfilePageInput) {
   // State
   const { isLoading, withLoading } = useLoadingState();
   const [currentUser, setCurrentUser] = useState<PlayerProfile | null>(null);
   const [userCompanies, setUserCompanies] = useState<Company[]>([]);
-  const [companyStats, setCompanyStats] = useState<CompanyStats>({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
+  const [companyStats, setCompanyStats] = useState<PlayerCompanyStats>({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
   const [playerBalance, setPlayerBalance] = useState<number>(0);
   const [error, setError] = useState('');
 
@@ -47,9 +39,11 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
   const [sortOption, setSortOption] = useState<'name' | 'money' | 'lastPlayed' | 'age'>('name');
 
   useEffect(() => {
-    // Listen for auth changes
+    let isActive = true;
     let unsubscribe: () => void = () => undefined;
     void userFeature.account.observeCurrentPlayer((user) => {
+      if (!isActive) return;
+
       setCurrentUser(user);
       if (user) {
         loadUserData(user.id);
@@ -60,11 +54,8 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
         // If no authenticated user but there's a current company, show it
         if (currentCompany) {
           setUserCompanies([currentCompany]);
-          setCompanyStats({ 
-            totalCompanies: 1, 
-            totalGold: currentCompany.money, 
-            totalValue: currentCompany.money, // For now, simple calculation
-            avgWeeks: Math.max(1, (currentCompany.currentYear - currentCompany.foundedYear) * 52 + currentCompany.currentWeek)
+          void portfolio.getStatsForCompany(currentCompany).then((stats) => {
+            if (isActive) setCompanyStats(stats);
           });
           
           // If the company has a user_id, try to load that user's information
@@ -76,15 +67,24 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
           setCompanyStats({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
         }
       }
-    }).then((listenerCleanup) => { unsubscribe = listenerCleanup; });
+    }).then((listenerCleanup) => {
+      if (isActive) {
+        unsubscribe = listenerCleanup;
+      } else {
+        listenerCleanup();
+      }
+    });
 
-    return unsubscribe;
-  }, [currentCompany]);
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, [currentCompany, portfolio]);
 
   const loadUserData = (userId: string) => withLoading(async () => {
     const [companies, stats, balance] = await Promise.all([
-      companyService.getUserCompanies(userId),
-      companyService.getCompanyStats(userId),
+      portfolio.getCompaniesForPlayer(userId),
+      portfolio.getStatsForPlayer(userId),
       userFeature.wallet.getBalance(userId)
     ]);
     
@@ -144,9 +144,6 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
   });
 
   const handleSelectCompany = (company: Company) => withLoading(async () => {
-    // Update the company's last played time
-    await companyService.updateCompany(company.id, {});
-    
     onCompanySelected(company);
   });
 

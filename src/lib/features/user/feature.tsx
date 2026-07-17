@@ -1,9 +1,17 @@
-import { createElement, lazy } from 'react';
+import { createElement, lazy, Suspense, type ReactNode } from 'react';
 import type { UserFeature } from './featureTypes';
 import { getCompanyPreferences, setToastNotifications } from './services/companyPreferencesService';
 
 const ProfilePage = lazy(() => import('./ui/ProfilePage').then((module) => ({ default: module.Profile })));
 const SettingsPage = lazy(() => import('./ui/SettingsPage').then((module) => ({ default: module.Settings })));
+
+function renderFeaturePage(page: ReactNode, label: string) {
+  return createElement(
+    Suspense,
+    { fallback: createElement('div', { className: 'p-6 text-muted-foreground' }, `Loading ${label}...`) },
+    page
+  );
+}
 
 export const userFeature: UserFeature = {
   account: {
@@ -57,7 +65,7 @@ export const userFeature: UserFeature = {
     setToastEnabled: setToastNotifications,
   },
   ui: {
-    renderProfilePage: (input) => createElement(ProfilePage, input),
-    renderSettingsPage: (input) => createElement(SettingsPage, input),
+    renderProfilePage: (input) => renderFeaturePage(createElement(ProfilePage, input), 'profile'),
+    renderSettingsPage: (input) => renderFeaturePage(createElement(SettingsPage, input), 'settings'),
   },
 };

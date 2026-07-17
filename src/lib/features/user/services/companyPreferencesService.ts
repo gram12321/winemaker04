@@ -5,7 +5,7 @@ export interface CompanyPreferences {
 const DEFAULT_PREFERENCES: CompanyPreferences = { toastNotifications: true };
 
 function preferenceKey(companyId: string): string {
-  return `user_preferences:${companyId}`;
+  return `player_account_preferences:${companyId}`;
 }
 
 export function getCompanyPreferences(companyId: string): CompanyPreferences {

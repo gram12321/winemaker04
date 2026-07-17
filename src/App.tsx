@@ -21,7 +21,7 @@ import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipU
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
-import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
+import { companyService, initializeCustomers, initializeActivitySystem, notificationService, preloadAllCustomerRelationships } from './lib/services';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { achievementsFeature } from '@/lib/features/achievements';
 import { userFeature } from '@/lib/features/user';
@@ -36,6 +36,19 @@ function App({ adminFeature }: AppProps) {
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
   const loanLenderAppOverlays = useMemo(() => loanLenderFeature.ui.getAppOverlays(), []);
+  const playerPortfolio = useMemo(() => ({
+    getCompaniesForPlayer: (playerId: string) => companyService.getUserCompanies(playerId),
+    getStatsForPlayer: (playerId: string) => companyService.getCompanyStats(playerId),
+    getStatsForCompany: (company: Company) => companyService.getCompanyStatsForCompany(company),
+  }), []);
+  const playerNotificationFilters = useMemo(() => ({
+    getAll: () => notificationService.getFilters(),
+    remove: (filterId: string) => notificationService.removeFilter(filterId),
+    clear: () => notificationService.clearFilters(),
+    setHistoryBlocked: (filterId: string, blocked: boolean) => {
+      notificationService.updateFilter(filterId, { blockFromHistory: blocked });
+    },
+  }), []);
   
   const lastInitializedCompanyIdRef = useRef<string | null>(null);
   useCustomerRelationshipUpdates();
@@ -145,12 +158,14 @@ function App({ adminFeature }: AppProps) {
       case 'profile':
         return userFeature.ui.renderProfilePage({
           currentCompany,
+          portfolio: playerPortfolio,
           onCompanySelected: handleCompanySelected,
           onBackToLogin: handleBackToLogin,
         });
       case 'settings':
         return userFeature.ui.renderSettingsPage({
           currentCompany,
+          notificationFilters: playerNotificationFilters,
           onBack: () => setCurrentPage('company-overview'),
           onSignOut: handleBackToLogin,
         });

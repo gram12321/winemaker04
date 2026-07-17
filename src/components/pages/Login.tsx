@@ -53,15 +53,24 @@ export function Login({ onCompanySelected }: LoginProps) {
   const [pendingMentorWelcome, setPendingMentorWelcome] = useState<MentorWelcomeData | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener
+    let isActive = true;
     let unsubscribe: () => void = () => undefined;
-    void userFeature.account.observeCurrentPlayer(setCurrentUser).then((listenerCleanup) => {
-      unsubscribe = listenerCleanup;
+    void userFeature.account.observeCurrentPlayer((player) => {
+      if (isActive) setCurrentUser(player);
+    }).then((listenerCleanup) => {
+      if (isActive) {
+        unsubscribe = listenerCleanup;
+      } else {
+        listenerCleanup();
+      }
     });
     
     loadHighscores();
     
-    return unsubscribe;
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
   }, []);
 
   // Load companies when user state changes

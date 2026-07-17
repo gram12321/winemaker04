@@ -15,6 +15,35 @@ export interface PlayerProfile {
 export type UserOperationResult = { success: boolean; error?: string };
 export interface CompanyPreferences { toastNotifications: boolean; }
 
+export interface PlayerCompanyStats {
+  totalCompanies: number;
+  totalGold: number;
+  totalValue: number;
+  avgWeeks: number;
+}
+
+export interface PlayerPortfolio {
+  getCompaniesForPlayer(playerId: string): Promise<Company[]>;
+  getStatsForPlayer(playerId: string): Promise<PlayerCompanyStats>;
+  getStatsForCompany(company: Company): Promise<PlayerCompanyStats>;
+}
+
+export interface PlayerNotificationFilter {
+  id: string;
+  type: 'origin' | 'category';
+  value: string;
+  description?: string;
+  blockFromHistory?: boolean;
+  createdAt: string;
+}
+
+export interface PlayerNotificationFilters {
+  getAll(): PlayerNotificationFilter[];
+  remove(filterId: string): void;
+  clear(): void;
+  setHistoryBlocked(filterId: string, blocked: boolean): void;
+}
+
 export interface UserFeature {
   account: {
     getCurrentPlayer(): Promise<PlayerProfile | null>;
@@ -42,12 +71,14 @@ export interface UserFeature {
 
 export interface PlayerProfilePageInput {
   currentCompany: Company | null;
+  portfolio: PlayerPortfolio;
   onCompanySelected(company: Company): void;
   onBackToLogin(): void;
 }
 
 export interface PlayerSettingsPageInput {
   currentCompany: Company | null;
+  notificationFilters: PlayerNotificationFilters;
   onBack?: () => void;
   onSignOut?: () => void;
 }
