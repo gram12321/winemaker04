@@ -838,7 +838,3 @@ export function getAchievementConfig(achievementId: string): AchievementConfig |
   return ALL_ACHIEVEMENTS.find(achievement => achievement.id === achievementId);
 }
 
-/**
- * Get achievements by category
- */
-

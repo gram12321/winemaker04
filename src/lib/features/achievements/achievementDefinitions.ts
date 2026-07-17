@@ -404,19 +404,6 @@ const AVERAGE_HECTARE_VALUE_ACHIEVEMENTS = createTieredAchievements(
 
 // ===== VINEYARD-SPECIFIC ACHIEVEMENTS =====
 
-// Vineyard Time Achievements (realistic for 200 year max)
-export const VINEYARD_TIME_ACHIEVEMENTS = createTieredAchievements(
-  'vineyard_time',
-  'Vineyard Veteran',
-  'Maintain the same grape variety in a vineyard for {threshold} years',
-  '📅',
-  'vineyard',
-  'vineyard_time_same_grape',
-  [5, 25, 50, 100, 200], // Realistic progression: 5, 25, 50, 100, 200 years (max 200)
-  [],
-  { includeVineyard: true, vineyardDecayMultiplier: 0.3 } // Vineyard events decay much faster
-);
-
 // Vineyard Wine Variety Achievements (realistic for 5-6 grape varieties)
 const VINEYARD_WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_wine_variety',
