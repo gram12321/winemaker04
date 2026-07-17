@@ -155,4 +155,3 @@ export function estimatePrepaymentPenalty(loan: Loan): number {
     ),
   );
 }
-

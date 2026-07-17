@@ -36,8 +36,8 @@ export const LENDER_PARAMS: Record<LenderType, {
     flexibilityRange: [0.5, 0.8],
     originationFeeRange: {
       basePercentRange: [0.015, 0.025], // 1.5-2.5% base fee (more realistic for business loans)
-      minFeeRange: [800, 1500], // Ã¢â€šÂ¬800-1500 minimum
-      maxFeeRange: [12000, 20000], // Ã¢â€šÂ¬12k-20k maximum
+      minFeeRange: [800, 1500], // EUR 800-1500 minimum
+      maxFeeRange: [12000, 20000], // EUR 12k-20k maximum
       creditRatingModifierRange: [0.6, 0.8], // 20-40% discount for excellent credit
       durationModifierRange: [1.0, 1.2] // 0-20% premium for long-term
     }
@@ -50,8 +50,8 @@ export const LENDER_PARAMS: Record<LenderType, {
     flexibilityRange: [0.6, 0.9],
     originationFeeRange: {
       basePercentRange: [0.025, 0.035], // 2.5-3.5% base fee (higher for investment funds)
-      minFeeRange: [1500, 3000], // Ã¢â€šÂ¬1.5k-3k minimum
-      maxFeeRange: [25000, 40000], // Ã¢â€šÂ¬25k-40k maximum
+      minFeeRange: [1500, 3000], // EUR 1.5k-3k minimum
+      maxFeeRange: [25000, 40000], // EUR 25k-40k maximum
       creditRatingModifierRange: [0.7, 0.9], // 10-30% discount for excellent credit
       durationModifierRange: [1.0, 1.3] // 0-30% premium for long-term
     }
@@ -64,8 +64,8 @@ export const LENDER_PARAMS: Record<LenderType, {
     flexibilityRange: [0.3, 0.7],
     originationFeeRange: {
       basePercentRange: [0.045, 0.07], // 4.5-7% base fee (largest proportional hit among traditional lenders)
-      minFeeRange: [400, 1000], // Ã¢â€šÂ¬400-1000 minimum
-      maxFeeRange: [7000, 12000], // Ã¢â€šÂ¬7k-12k maximum
+      minFeeRange: [400, 1000], // EUR 400-1000 minimum
+      maxFeeRange: [7000, 12000], // EUR 7k-12k maximum
       creditRatingModifierRange: [0.85, 1.25], // 15% discount to 25% premium based on credit
       durationModifierRange: [0.95, 1.45] // Slightly higher premium for long-term adjustments
     }
