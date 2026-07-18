@@ -280,6 +280,8 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     vesselType: payload.vesselType,
     material: payload.material,
     qualityScore: payload.qualityScore,
+    condition: 1,
+    fillHistory: 0,
     productionYear: payload.productionYear,
     capacityLitres: payload.capacityLitres,
     acquisitionPrice: offer.effectivePricePerUnit,

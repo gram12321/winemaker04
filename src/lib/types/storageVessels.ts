@@ -1,10 +1,10 @@
 import type { BuyGoodsPriceQuoteInput } from '@/lib/types/market';
 
 export type StorageVesselType = 'cask' | 'steel_tank' | 'concrete_tank' | 'container';
-export type StorageVesselMaterial = 'oak' | 'stainless_steel' | 'concrete' | 'neutral';
-export type StorageVesselOperationalStatus = 'operational' | 'maintenance' | 'retired';
+export type StorageVesselMaterial = 'oak' | 'chestnut' | 'stainless_steel' | 'concrete' | 'ceramic' | 'plastic';
+export type StorageVesselOperationalStatus = 'operational' | 'maintenance';
 export type StorageVesselCleanliness = 'clean' | 'dirty';
-export type StorageVesselOccupancy = 'available' | 'reserved' | 'in_use' | 'maintenance' | 'retired';
+export type StorageVesselOccupancy = 'available' | 'reserved' | 'in_use' | 'maintenance';
 export type StorageAllocationPlanStatus = 'reserved' | 'active' | 'released';
 
 export interface StorageVesselAllocationPlan {
@@ -41,6 +41,8 @@ export interface StorageVessel {
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
   qualityScore: number;
+  condition: number;
+  fillHistory: number;
   productionYear: number;
   capacityLitres: number;
   acquisitionPrice: number;

@@ -9,6 +9,8 @@ interface StorageVesselRow {
   vessel_type: StorageVessel['vesselType'];
   material: StorageVessel['material'];
   quality_score: number;
+  condition: number;
+  fill_history: number;
   production_year: number;
   capacity_litres: number;
   acquisition_price: number;
@@ -27,6 +29,8 @@ function fromRow(row: StorageVesselRow): StorageVessel {
     vesselType: row.vessel_type,
     material: row.material,
     qualityScore: row.quality_score,
+    condition: row.condition,
+    fillHistory: row.fill_history,
     productionYear: row.production_year,
     capacityLitres: row.capacity_litres,
     acquisitionPrice: row.acquisition_price,
@@ -47,6 +51,8 @@ function toRow(vessel: StorageVessel): StorageVesselRow {
     vessel_type: vessel.vesselType,
     material: vessel.material,
     quality_score: vessel.qualityScore,
+    condition: vessel.condition,
+    fill_history: vessel.fillHistory,
     production_year: vessel.productionYear,
     capacity_litres: vessel.capacityLitres,
     acquisition_price: vessel.acquisitionPrice,

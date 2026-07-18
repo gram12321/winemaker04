@@ -8,6 +8,7 @@ import {
   getOwnedStorageVessels,
   getStorageVesselDisplayName,
   getWineBatchDisplayName,
+  getStorageVesselAllocationAvailability,
   isStorageVesselEmptyingInProgress,
   startEmptyStorageVesselActivity,
   isStorageVesselCleaningInProgress,
@@ -16,6 +17,7 @@ import {
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import type { WineBatch } from '@/lib/types/types';
 import { formatNumber, getColorClass, getQualityInfo } from '@/lib/utils';
+import { UnifiedTooltip, TooltipRow } from '@/components/ui/shadCN/tooltip';
 
 interface EquipmentProps {
   onNavigate?: (page: string) => void;
@@ -73,8 +75,8 @@ export const Equipment: React.FC<EquipmentProps> = () => {
 
       <section className="overflow-hidden rounded-lg border bg-white shadow-sm">
         <div className="border-b px-4 py-3"><h2 className="font-semibold">Cellar Vessels</h2></div>
-        <div className="hidden grid-cols-[1.5fr_1fr_1fr_1fr_1.2fr_auto] gap-2 border-b bg-gray-50 px-4 py-2 text-xs font-medium uppercase text-gray-500 md:grid">
-          <span>Vessel</span><span>Quality</span><span>Status</span><span>Acquisition</span><span>Contents</span><span>Actions</span>
+        <div className="hidden grid-cols-[1.5fr_repeat(6,1fr)_1.2fr_auto] gap-2 border-b bg-gray-50 px-4 py-2 text-xs font-medium uppercase text-gray-500 md:grid">
+          <span>Vessel</span><span>Quality</span><span>Condition</span><span>Cleanliness</span><span>Fills</span><span>Availability</span><span>Acquisition</span><span>Contents</span><span>Actions</span>
         </div>
         <div className="divide-y">
           {vessels.length === 0 ? <p className="p-4 text-sm text-gray-500">No Cellar Vessels owned yet.</p> : vessels.map((vessel) => {
@@ -82,12 +84,47 @@ export const Equipment: React.FC<EquipmentProps> = () => {
             const activity = activities.find((candidate) => candidate.params.storagePlanId === vessel.activePlanId);
             const emptyingActivity = isStorageVesselEmptyingInProgress(vessel.id);
             const cleaningActivity = isStorageVesselCleaningInProgress(vessel.id);
+            const baseAvailability = getStorageVesselAllocationAvailability(vessel);
+            const relatedActivities = activities.filter((candidate) =>
+              (candidate.status === 'active' || candidate.status === 'paused')
+              && (
+                candidate.params.vesselId === vessel.id
+                || (vessel.activePlanId && candidate.params.storagePlanId === vessel.activePlanId)
+                || (batch && (candidate.params.batchId === batch.id || candidate.params.outputBatchId === batch.id))
+              )
+            );
+            const availabilityReasons = [
+              ...(!baseAvailability.available && baseAvailability.reason ? [baseAvailability.reason] : []),
+              ...relatedActivities.map((candidate) => `Ongoing activity: ${candidate.title}`),
+            ].filter((reason, index, reasons) => reasons.indexOf(reason) === index);
+            const availability = { available: availabilityReasons.length === 0, reasons: availabilityReasons };
 
             return (
-              <div key={vessel.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1.5fr_1fr_1fr_1fr_1.2fr_auto]">
+              <div key={vessel.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1.5fr_repeat(6,1fr)_1.2fr_auto]">
                 <div className="font-medium">{getStorageVesselDisplayName(vessel)}</div>
                 <div className={`text-xs ${getColorClass(vessel.qualityScore)}`}>{getQualityInfo(vessel.qualityScore).category} ({vessel.qualityScore.toFixed(2)})</div>
-                <div className="text-xs text-gray-600">{vessel.occupancy.replace('_', ' ')} · {vessel.operationalStatus} · {vessel.cleanliness}</div>
+                <div className="text-xs text-gray-600">{Math.round(vessel.condition * 100)}%</div>
+                <div className={`text-xs font-medium ${vessel.cleanliness === 'clean' ? 'text-emerald-700' : 'text-amber-600'}`}>{vessel.cleanliness}</div>
+                <div className="text-xs text-gray-600">{vessel.fillHistory}</div>
+                <UnifiedTooltip
+                  title={availability.available ? 'Available' : 'Unavailable'}
+                  content={availability.available
+                    ? <TooltipRow label="Status" value="Ready for allocation" />
+                     : <div className="space-y-1">{availability.reasons.map((reason) => <TooltipRow key={reason} label="Reason" value={reason} tone="danger" />)}</div>}
+                  side="top"
+                  variant="panel"
+                  density="compact"
+                  triggerClassName="inline-block"
+                  showMobileHint={true}
+                  mobileHintVariant="underline"
+                >
+                  <div
+                    className={`cursor-help text-xs font-medium ${availability.available ? 'text-emerald-700' : 'text-red-700'}`}
+                    aria-label={availability.available ? 'Available for allocation' : `Unavailable: ${availability.reasons.join('; ')}`}
+                  >
+                    <span aria-hidden="true">●</span> {availability.available ? 'Available' : 'Unavailable'}
+                  </div>
+                </UnifiedTooltip>
                 <div className="text-xs text-gray-600">{formatNumber(vessel.acquisitionPrice, { currency: true, decimals: 0 })}</div>
                 <div className="text-xs text-gray-600">
                   {batch ? <><span className="font-medium">Contains: {batch.grape} {batch.harvestStartDate.year}, {batch.vineyardName}</span>{emptyingActivity && <div className="mt-1 text-amber-700">Emptying in progress</div>}</>

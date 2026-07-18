@@ -4,7 +4,7 @@
 
 **Goal:** Make a vessel that has held wine dirty and unavailable for further allocation until a cancellable Cleaning Vessel maintenance activity completes.
 
-**Architecture:** This is a clean cutover of the existing Storage Vessel model. Add one persisted `cleanliness` field (`clean` or `dirty`) directly to `StorageVessel` and `storage_vessels`; it is independent of allocation-derived `occupancy` and equipment `operationalStatus`. Mark a vessel dirty only after it receives wine, and enforce cleanliness in every allocation path. Cleaning is a second typed Maintenance activity alongside Empty Vessel, with an atomic completion command.
+**Architecture:** This is a clean cutover of the existing Storage Vessel model. Add one persisted `cleanliness` field (`clean` or `dirty`) directly to `StorageVessel` and `storage_vessels`; it is independent of allocation-derived `occupancy` and equipment `operationalStatus`. Mark a vessel dirty only after it receives wine. Cleanliness is currently a warning/display state; future condition penalties may make it consequential. Cleaning is a second typed Maintenance activity alongside Empty Vessel, with an atomic completion command.
 
 **Tech Stack:** React 19, TypeScript, Vitest, Supabase/Postgres.
 
@@ -19,7 +19,7 @@
 | `migrations/20260718100000_add_storage_vessel_cleanliness.sql` | Defines the clean-cutover cleanliness column, allocation/fill triggers, and cleaning RPC. |
 | `src/lib/types/storageVessels.ts` | Adds `StorageVesselCleanliness` and makes `cleanliness` required on `StorageVessel`. |
 | `src/lib/database/winery/storageVesselsDB.ts` | Maps cleanliness, exposes the one cleaning-completion database command, and removes superseded wrappers. |
-| `src/lib/services/wine/winery/storageVesselAllocationService.ts` | Counts/selects only clean, operational, available vessels. |
+| `src/lib/services/wine/winery/storageVesselAllocationService.ts` | Counts/selects operational, available vessels; cleanliness is currently warning-only. |
 | `src/lib/services/wine/winery/storageVesselMaintenanceService.ts` | Owns both Empty Vessel and Clean Vessel start/completion rules. |
 | `src/lib/services/activity/workcalculators/storageVesselMaintenanceWorkCalculator.ts` | Calculates named emptying and cleaning work estimates from existing Maintenance constants. |
 | `src/lib/services/activity/activitymanagers/activityManager.ts` | Dispatches Maintenance completion explicitly by activity type. |
@@ -44,7 +44,7 @@ Add the cleanliness column in the new migration with no backfill. Development da
 
 - [ ] **Step 3: Replace affected RPC definitions.**
 
-Require `operational_status = 'operational' AND cleanliness = 'clean'` in `reserve_storage_vessel_plan`, `add_storage_vessel_plan_allocations`, and `purchase_grape_market_offer`. Whenever an allocation receives positive `filled_litres`, mark that vessel dirty. Cover grape-market purchase, append-harvest, and the TypeScript activation path. Emptying, full consumption/sale, and bottling release allocations but leave vessels dirty.
+Require `operational_status = 'operational'` in allocation paths. Whenever an allocation receives positive `filled_litres`, mark that vessel dirty. Cover grape-market purchase, append-harvest, and the TypeScript activation path. Emptying, full consumption/sale, and bottling release allocations but leave vessels dirty.
 
 Use database triggers to enforce clean allocation and mark vessels dirty on positive fill, then add `complete_clean_storage_vessel`. Do not retain obsolete contracts or duplicate every allocation RPC in this migration.
 
@@ -72,11 +72,11 @@ Expected: PASS, with no removed RPC/wrapper imports.
 
 - [ ] **Step 1: Write failing lifecycle tests.**
 
-Cover: dirty vessels are excluded from availability; an empty dirty vessel starts one cancellable `clean_storage_vessel` activity; clean, occupied, retired, or already-cleaning vessels are rejected; completion makes it clean; cancellation leaves it dirty.
+Cover: dirty vessels remain allocatable but display a warning; an empty dirty vessel starts one cancellable `clean_storage_vessel` activity; clean, occupied, or already-cleaning vessels are rejected; completion makes it clean; cancellation leaves it dirty.
 
 - [ ] **Step 2: Modify existing availability and capacity logic.**
 
-Require `vessel.cleanliness === 'clean'` in `getAvailableStorageVessels` and `calculateStorageCapacitySummary`. Do not introduce a second availability API.
+Do not require `vessel.cleanliness === 'clean'` in availability calculations; cleanliness is currently warning-only. Keep availability based on operational state, occupancy, and active activities.
 
 - [ ] **Step 3: Add the typed activity in the existing maintenance service.**
 
