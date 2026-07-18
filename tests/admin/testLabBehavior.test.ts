@@ -118,6 +118,7 @@ const getTestLabRunner = async () => {
       generateTestBottlePresaleContract: runnerMocks.adminGenerateTestBottlePresaleContract,
       generateTestForwardPresaleContract: runnerMocks.adminGenerateTestForwardPresaleContract,
       recreateBuyGrapeMarketOffers: vi.fn(),
+      recreateStorageVesselMarketOffers: vi.fn(),
       setStaffXP: runnerMocks.adminSetStaffXP
     },
     cleanupTestLabRun: runnerMocks.cleanupTestLabRun,

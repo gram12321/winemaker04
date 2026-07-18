@@ -30,6 +30,7 @@ export interface AdminCheatOps {
   generateTestBottlePresaleContract(): Promise<{ success: boolean; message: string }>;
   generateTestForwardPresaleContract(): Promise<{ success: boolean; message: string }>;
   recreateBuyGrapeMarketOffers(): Promise<void>;
+  recreateStorageVesselMarketOffers(): Promise<void>;
 }
 
 export interface AdminStaffXpOps {

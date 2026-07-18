@@ -112,12 +112,34 @@ describe('Storage Vessel market adapter', () => {
 
   it('exposes the cask-specific multiplier breakdown used by the market UI', async () => {
     const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
-    const breakdown = getStorageVesselPriceBreakdown({ capacityLitres: 500, qualityScore: 0.8, supplierBaseMultiplier: 1.04, supplierRelationshipMultiplier: 0.93, companyPrestige: 500 });
+    const breakdown = getStorageVesselPriceBreakdown({ capacityLitres: 500, qualityScore: 0.8, cleanliness: 'clean', supplierBaseMultiplier: 1.04, supplierRelationshipMultiplier: 0.93, companyPrestige: 500 });
 
     expect(breakdown.capacityMultiplier).toBe(2);
-    expect(breakdown.qualityMultiplier).toBeCloseTo(1.21, 8);
+    expect(breakdown.qualityMultiplier).toBeCloseTo(2.224, 8);
+    expect(breakdown.cleanlinessMultiplier).toBe(1);
     expect(breakdown.supplierBaseMultiplier).toBe(1.04);
     expect(breakdown.finalPricePerVessel).toBe(breakdown.finalPrice);
+  });
+
+  it('prices a dirty vessel below an otherwise identical clean vessel', async () => {
+    const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    const input = { capacityLitres: 500, qualityScore: 0.8, supplierBaseMultiplier: 1.04, supplierRelationshipMultiplier: 1, companyPrestige: 0 };
+    const clean = getStorageVesselPriceBreakdown({ ...input, cleanliness: 'clean' });
+    const dirty = getStorageVesselPriceBreakdown({ ...input, cleanliness: 'dirty' });
+
+    expect(dirty.cleanlinessMultiplier).toBeLessThan(clean.cleanlinessMultiplier);
+    expect(dirty.finalPrice).toBeLessThan(clean.finalPrice);
+  });
+
+  it('uses an aggressively rising quality curve near the top end', async () => {
+    const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    const input = { capacityLitres: 250, cleanliness: 'clean' as const, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestige: 0 };
+    const good = getStorageVesselPriceBreakdown({ ...input, qualityScore: 0.8 });
+    const excellent = getStorageVesselPriceBreakdown({ ...input, qualityScore: 0.95 });
+    const nearPerfect = getStorageVesselPriceBreakdown({ ...input, qualityScore: 0.99 });
+
+    expect(excellent.qualityMultiplier).toBeGreaterThan(good.qualityMultiplier * 2);
+    expect(nearPerfect.qualityMultiplier).toBeGreaterThan(excellent.qualityMultiplier * 100);
   });
 
   it('adds supplier persistence to the cask offer retention chance', async () => {

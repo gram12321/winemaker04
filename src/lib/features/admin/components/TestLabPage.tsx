@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { AlertTriangle, CheckCircle2, Eraser, Play, ShieldCheck, TestTube2, XCircle } from 'lucide-react';
 import {
   Badge,
@@ -28,10 +28,6 @@ import {
   TabsTrigger
 } from '@/components/ui';
 import { useLoadingState } from '@/hooks';
-import {
-  AUTOMATED_TEST_TARGET_PRESETS,
-  getAutomatedTestTargetPreset
-} from '../services/testLab/automatedTestTargets';
 import { VINEYARD_CONFIG_PARAM_KEYS } from '../services/testLab/testLabScenarios';
 import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '../services/testLab/types';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
@@ -46,7 +42,18 @@ interface RecentRun {
 }
 
 const RECENT_RUNS_KEY = 'adminTestLabRecentRuns';
-const CUSTOM_AUTOMATED_TARGET_PRESET_ID = 'custom';
+const COMPANY_ADMINISTRATION_SCENARIO_IDS = new Set([
+  'finance.set-company-money',
+  'finance.set-player-balance',
+  'finance.add-prestige',
+  'company.set-game-date',
+  'research.grant-all',
+  'research.remove-all',
+  'staff.set-xp',
+  'market.recreate-grape-offers',
+  'market.recreate-storage-vessel-offers',
+  'research.inspect-all'
+]);
 
 const statusIcon = (status: string) => {
   if (status === 'passed') return <CheckCircle2 className="h-4 w-4 text-green-600" />;
@@ -98,15 +105,22 @@ const clampAltitudeToRegion = (altitude: number, country: string, region: string
   return Math.round((min + max) / 2 / 10) * 10;
 };
 
-export default function TestLabPage({ testLab }: { testLab: AdminTestLab }) {
+type TestLabPageMode = 'company-administration' | 'manual-test-setup';
+
+export default function TestLabPage({ testLab, mode, renderResearchInspector }: {
+  testLab: AdminTestLab;
+  mode: TestLabPageMode;
+  renderResearchInspector?: () => ReactElement;
+}) {
   const scenarios = useMemo(() => testLab.getScenarios(), [testLab]);
-  const regressionScenario = useMemo(
-    () => scenarios.find(scenario => scenario.id === 'regression.full-suite') || null,
-    [scenarios]
-  );
   const labScenarios = useMemo(
-    () => scenarios.filter(scenario => scenario.id !== 'regression.full-suite'),
-    [scenarios]
+    () => scenarios.filter(scenario => {
+      if (scenario.id === 'regression.full-suite') return false;
+      return mode === 'company-administration'
+        ? COMPANY_ADMINISTRATION_SCENARIO_IDS.has(scenario.id)
+        : !COMPANY_ADMINISTRATION_SCENARIO_IDS.has(scenario.id);
+    }),
+    [mode, scenarios]
   );
   const groupedScenarios = useMemo(() => {
     return labScenarios.reduce<Record<string, TestLabScenarioDefinition[]>>((groups, scenario) => {
@@ -118,14 +132,6 @@ export default function TestLabPage({ testLab }: { testLab: AdminTestLab }) {
   const selectedScenario = labScenarios.find(scenario => scenario.id === selectedScenarioId) || labScenarios[0];
   const [params, setParams] = useState<Record<string, string | number | boolean>>(
     selectedScenario ? buildInitialParams(selectedScenario) : {}
-  );
-  const [automatedTarget, setAutomatedTarget] = useState(
-    regressionScenario?.defaultParams.target ? String(regressionScenario.defaultParams.target) : ''
-  );
-  const [automatedPresetId, setAutomatedPresetId] = useState('all');
-  const selectedAutomatedPreset = useMemo(
-    () => getAutomatedTestTargetPreset(automatedPresetId),
-    [automatedPresetId]
   );
   const [result, setResult] = useState<TestLabScenarioResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
@@ -176,18 +182,6 @@ export default function TestLabPage({ testLab }: { testLab: AdminTestLab }) {
       mode
     });
     await refreshDynamicOptions();
-    setResult(scenarioResult);
-    rememberRun(scenarioResult);
-  });
-
-  const runAutomatedSuite = (mode: TestLabRunMode = 'run') => withLoading(async () => {
-    if (!regressionScenario) return;
-
-    const scenarioResult = await testLab.runScenario({
-      scenarioId: 'regression.full-suite',
-      mode,
-      params: { target: automatedTarget }
-    });
     setResult(scenarioResult);
     rememberRun(scenarioResult);
   });
@@ -344,104 +338,31 @@ export default function TestLabPage({ testLab }: { testLab: AdminTestLab }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-md border border-green-200 bg-green-50 p-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-2">
-          <ShieldCheck className="mt-0.5 h-4 w-4 text-green-700" />
-          <div>
-            <p className="text-sm font-semibold text-green-900">Development localhost mode</p>
-            <p className="text-xs text-green-800">Automated Tests reuse the same Vitest suite as `tests/`. Gameflow Lab scenarios run against the active company and tag fixture data where cleanup is available. Existing vineyards preserve their current pending-feature history; winery scenarios now also expose direct anchor, feature, and risk overrides.</p>
+      {mode === 'manual-test-setup' && <>
+        <div className="flex flex-col gap-3 rounded-md border border-green-200 bg-green-50 p-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 h-4 w-4 text-green-700" />
+            <div>
+              <p className="text-sm font-semibold text-green-900">Development localhost mode</p>
+              <p className="text-xs text-green-800">Create or adjust game states to manually test specific gameplay flows.</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Automated Tests</CardTitle>
-            <CardDescription>
-              Shared with the `tests/` folder. This runs the same Vitest suite through `/api/test-run`.
-            </CardDescription>
+            <CardTitle className="text-base">Manual Test Scenarios</CardTitle>
+            <CardDescription>Create the playable conditions needed to manually test a game flow.</CardDescription>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Gameflow Lab</CardTitle>
-            <CardDescription>
-              Active-company tooling for creating or mutating game states without waiting for natural ticks.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      </>}
 
       <Tabs defaultValue="scenarios" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="automated">Automated Tests</TabsTrigger>
-          <TabsTrigger value="scenarios">Gameflow Lab</TabsTrigger>
+          <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
           <TabsTrigger value="recent">Recent Runs</TabsTrigger>
           <TabsTrigger value="result">Result</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="automated">
-          <Card>
-            <CardHeader>
-              <CardTitle>Automated Test Suite</CardTitle>
-              <CardDescription>
-                Runs the same Vitest files discovered under `tests/**/*.test.ts`. Use a preset for known balance suites, or enter one or more safe test files manually.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_auto_auto] lg:items-end">
-                <div className="space-y-1.5">
-                  <Label htmlFor="test-lab-automated-preset" className="text-xs">Target preset</Label>
-                  <Select
-                    value={automatedPresetId}
-                    onValueChange={(presetId) => {
-                      setAutomatedPresetId(presetId);
-                      const preset = getAutomatedTestTargetPreset(presetId);
-                      if (preset) {
-                        setAutomatedTarget(preset.target);
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="test-lab-automated-preset">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AUTOMATED_TEST_TARGET_PRESETS.map(preset => (
-                        <SelectItem key={preset.id} value={preset.id}>
-                          {preset.label}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={CUSTOM_AUTOMATED_TARGET_PRESET_ID}>Custom target</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="test-lab-automated-target" className="text-xs">Target test file(s)</Label>
-                  <Input
-                    id="test-lab-automated-target"
-                    value={automatedTarget}
-                    onChange={(event) => {
-                      setAutomatedPresetId(CUSTOM_AUTOMATED_TARGET_PRESET_ID);
-                      setAutomatedTarget(event.target.value);
-                    }}
-                    placeholder="tests/prestige/prestigeCalculator.test.ts tests/user/achievementPrestigeBalance.test.ts"
-                  />
-                </div>
-                <Button onClick={() => runAutomatedSuite('run')} disabled={isLoading} className="gap-2">
-                  <TestTube2 className="h-4 w-4" />
-                  Run Suite
-                </Button>
-                <Button onClick={() => runAutomatedSuite('dryRun')} disabled={isLoading} variant="outline">
-                  Dry Run
-                </Button>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                {selectedAutomatedPreset?.description || 'Run a manually entered target list. Separate multiple test files with spaces or commas.'}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="scenarios" className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
           <div className="space-y-3">
@@ -506,6 +427,18 @@ export default function TestLabPage({ testLab }: { testLab: AdminTestLab }) {
                     </Button>
                   )}
                 </div>
+                {selectedScenario.id === 'research.inspect-all'
+                  && result?.scenarioId === 'research.inspect-all'
+                  && result.status === 'passed'
+                  && renderResearchInspector && (
+                    <Card className="mt-4">
+                      <CardHeader>
+                        <CardTitle>All Research Projects</CardTitle>
+                        <CardDescription>Gates bypassed for inspection.</CardDescription>
+                      </CardHeader>
+                      <CardContent>{renderResearchInspector()}</CardContent>
+                    </Card>
+                  )}
               </CardContent>
             </Card>
           )}

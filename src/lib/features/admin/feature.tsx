@@ -4,7 +4,8 @@ import {
   getAllActivities,
   getAllStaff,
   getStoredVineyards,
-  recreateBuyGrapeMarketOffers
+  recreateBuyGrapeMarketOffers,
+  recreateStorageVesselMarketOffers
 } from '@/lib/services';
 import { userFeature } from '@/lib/features/user';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
@@ -79,7 +80,8 @@ const cheats: AdminCheatOps = {
   generateTestContract: adminGenerateTestContract,
   generateTestBottlePresaleContract: adminGenerateTestBottlePresaleContract,
   generateTestForwardPresaleContract: adminGenerateTestForwardPresaleContract,
-  recreateBuyGrapeMarketOffers
+  recreateBuyGrapeMarketOffers,
+  recreateStorageVesselMarketOffers
 };
 
 const testLabOperations = { ...cheats, setStaffXP: adminSetStaffXP };

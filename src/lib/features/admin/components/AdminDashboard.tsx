@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useLoadingState } from '@/hooks';
 import {
   SimpleCard,
@@ -13,15 +12,14 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui';
-import { Settings, Users, AlertTriangle, Trash2, TestTube2, RefreshCw } from 'lucide-react';
+import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '@/lib/types/UItypes';
 import type { AdminDashboardDependencies } from '../internalTypes';
 import TestLabPage from './TestLabPage';
 interface AdminDashboardProps extends PageProps, NavigationProps, AdminDashboardDependencies {}
 
-export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, testLab, renderResearchInspector }: AdminDashboardProps) {
+export function AdminDashboard({ onBack, onNavigateToLogin, database, testLab, renderResearchInspector }: AdminDashboardProps) {
   const { isLoading, withLoading } = useLoadingState();
-  const [showAllResearch, setShowAllResearch] = useState(false);
 
   const handleClearAllHighscores = () => withLoading(async () => {
     await database.clearAllHighscores();
@@ -73,10 +71,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, te
     await database.clearAllAchievements();
   });
 
-  const handleRecreateBuyGrapeOffers = () => withLoading(async () => {
-    await cheats.recreateBuyGrapeMarketOffers();
-  });
-
   const handleFullDatabaseReset = () => withLoading(async () => {
     await database.fullDatabaseReset();
     if (onNavigateToLogin) {
@@ -109,8 +103,8 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, te
       <Tabs defaultValue="database" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="database">Database</TabsTrigger>
-          <TabsTrigger value="cheats">Cheats</TabsTrigger>
-          <TabsTrigger value="tests">Test Systems</TabsTrigger>
+          <TabsTrigger value="company-administration">Company Administration</TabsTrigger>
+          <TabsTrigger value="manual-test-setup">Manual Test Setup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="database">
@@ -184,20 +178,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, te
                 </Button>
               </SimpleCard>
 
-              <SimpleCard
-                title="Bulk Grape Market"
-                description="Regenerate all current-company supplier offers without changing inventory or supplier loyalty"
-              >
-                <Button
-                  variant="outline"
-                  onClick={handleRecreateBuyGrapeOffers}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Recreate Bulk Offers
-                </Button>
-              </SimpleCard>
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -254,67 +234,31 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, cheats, te
           </div>
         </TabsContent>
 
-        <TabsContent value="cheats">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <SimpleCard
-              title="Mutation Controls"
-              description="Use the Test Lab for active-company mutations so there is one path per action"
-            >
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                Money, player balance, prestige, game date, sales shortcuts, staff XP, and instant activity completion now live under the Test Systems tab.
-              </div>
-            </SimpleCard>
-
-            <SimpleCard
-              title="Research Visibility"
-              description="Keep the bypass panel here for inspecting research content without mutating through the old admin buttons"
-            >
-              <Button
-                variant="outline"
-                onClick={() => setShowAllResearch(value => !value)}
-                className="w-full"
-              >
-                {showAllResearch ? 'Hide Research Inspector' : 'Show All Research'}
-              </Button>
-              <p className="mt-2 text-xs text-gray-500">
-                Shows research projects without prestige or prerequisite gates.
-              </p>
-            </SimpleCard>
-
-            {showAllResearch && (
-              <div className="md:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>All Research Projects</CardTitle>
-                    <CardDescription>
-                      Gates bypassed for inspection.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {renderResearchInspector()}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="tests">
+        <TabsContent value="company-administration">
           <div className="space-y-6">
             <Card className="border-slate-200 bg-slate-50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <TestTube2 className="h-4 w-4" />
-                  Test Lab
+                  <Settings className="h-4 w-4" />
+                  Company Administration
                 </CardTitle>
                 <CardDescription>
-                  Automated test runs, active-company mutations, fixture scenarios, and instant activity completion live here.
+                  Direct maintenance, inspection, and state overrides for the active company.
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <TestLabPage testLab={testLab} />
+            <TestLabPage
+              testLab={testLab}
+              mode="company-administration"
+              renderResearchInspector={renderResearchInspector}
+            />
+
           </div>
+        </TabsContent>
+
+        <TabsContent value="manual-test-setup">
+          <TestLabPage testLab={testLab} mode="manual-test-setup" />
         </TabsContent>
       </Tabs>
     </div>

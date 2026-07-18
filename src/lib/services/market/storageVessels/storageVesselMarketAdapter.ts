@@ -11,8 +11,8 @@ import {
   releaseBuyMarketOfferUnits,
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { GAME_INITIALIZATION, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_MAX_PRICE, STORAGE_VESSEL_MIN_PRICE, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER, STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { calculateAsymmetricalMultiplier, deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
+import { GAME_INITIALIZATION, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_MAX_PRICE, STORAGE_VESSEL_MIN_PRICE, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
 import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import {
@@ -24,7 +24,7 @@ import {
   type BuyGoodsSupplierRelationshipLevel,
 } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import type { BuyMarketOfferRecord, BuyMarketPurchaseResult } from '@/lib/types/market';
-import type { StorageVessel, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
+import type { StorageVessel, StorageVesselCleanliness, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
 import { NotificationCategory, type Season } from '@/lib/types/types';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { v4 as uuidv4 } from 'uuid';
@@ -52,6 +52,7 @@ export interface StorageVesselPriceBreakdown extends BuyGoodsPriceBreakdown {
   qualityMultiplier: number;
   supplierBaseMultiplier: number;
   qualityScore: number;
+  cleanlinessMultiplier: number;
   capacityLitres: number;
   finalPricePerVessel: number;
 }
@@ -63,16 +64,18 @@ export function getStorageVesselOfferRetentionChance(level: BuyGoodsSupplierRela
 export function getStorageVesselPriceBreakdown(input: {
   capacityLitres: number;
   qualityScore: number;
+  cleanliness: StorageVesselCleanliness;
   supplierBaseMultiplier: number;
   supplierRelationshipMultiplier?: number;
   companyPrestige?: number;
   effectivePricePerVessel?: number;
 }): StorageVesselPriceBreakdown {
   const capacityMultiplier = input.capacityLitres / STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES;
-  const qualityMultiplier = STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER + input.qualityScore * STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER;
+  const qualityMultiplier = input.qualityScore * calculateAsymmetricalMultiplier(input.qualityScore);
+  const cleanlinessMultiplier = STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS[input.cleanliness];
   const genericBreakdown = getBuyGoodsPriceBreakdown({
     basePrice: STORAGE_VESSEL_BASE_PRICE,
-    itemMultiplier: capacityMultiplier * qualityMultiplier * input.supplierBaseMultiplier,
+    itemMultiplier: capacityMultiplier * qualityMultiplier * cleanlinessMultiplier * input.supplierBaseMultiplier,
     supplierRelationshipMultiplier: input.supplierRelationshipMultiplier,
     companyPrestige: input.companyPrestige,
     minimumPrice: STORAGE_VESSEL_MIN_PRICE,
@@ -83,6 +86,7 @@ export function getStorageVesselPriceBreakdown(input: {
     ...genericBreakdown,
     capacityMultiplier,
     qualityMultiplier,
+    cleanlinessMultiplier,
     supplierBaseMultiplier: input.supplierBaseMultiplier,
     qualityScore: input.qualityScore,
     capacityLitres: input.capacityLitres,
@@ -114,6 +118,7 @@ function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageV
   const priceBreakdown = getStorageVesselPriceBreakdown({
     capacityLitres: payload.capacityLitres,
     qualityScore: payload.qualityScore,
+    cleanliness: 'clean',
     supplierBaseMultiplier: payload.priceSnapshot.supplierBaseMultiplier,
     supplierRelationshipMultiplier: payload.priceSnapshot.supplierRelationshipMultiplier,
     companyPrestige: payload.priceSnapshot.companyPrestige,
@@ -178,7 +183,8 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
     };
     const priceBreakdown = getStorageVesselPriceBreakdown({
       capacityLitres,
-      qualityScore,
+        qualityScore,
+        cleanliness: 'clean',
       ...priceSnapshot,
     });
     return {
@@ -296,4 +302,25 @@ export async function refreshStorageVesselMarket(): Promise<void> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return;
   await ensureStorageVesselOffers(companyId);
+}
+
+/**
+ * Admin-only market reset for the active company. Supplier relationships and
+ * purchased inventory remain intact; only persisted storage vessel listings refresh.
+ */
+export async function recreateStorageVesselMarketOffers(): Promise<void> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId) throw new Error('No active company selected.');
+
+  const { data, error } = await getCompanyBuyMarketOffers(companyId, 'storage_vessels');
+  if (error) throw error;
+
+  const deletionResults = await Promise.all(
+    data.map((offer) => deleteBuyMarketOffer(companyId, offer.offerId)),
+  );
+  const deletionError = deletionResults.find((result) => result.error)?.error;
+  if (deletionError) throw deletionError;
+
+  await ensureStorageVesselOffers(companyId);
+  triggerTopicUpdate('storage_vessels');
 }
