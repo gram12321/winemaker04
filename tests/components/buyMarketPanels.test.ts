@@ -134,7 +134,7 @@ describe('Buy Market panels', () => {
       availableUnits: 2,
       pricePerVessel: 100,
       payload: { capacityLitres: 225, productionYear: 2024, qualityScore: 0.8, material: 'oak', vesselType: 'barrel' },
-      priceBreakdown: { basePrice: 100, capacityMultiplier: 1, qualityMultiplier: 1, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestigeMultiplier: 1, qualityScore: 0.8, capacityLitres: 225, minimumPrice: 1, maximumPrice: 1_000, finalPricePerVessel: 100 },
+      priceBreakdown: { basePrice: 100, capacityMultiplier: 1, qualityMultiplier: 1, ageYears: 2, ageMultiplier: 0.95, cleanlinessMultiplier: 1, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestigeMultiplier: 1, qualityScore: 0.8, capacityLitres: 225, minimumPrice: 1, maximumPrice: 1_000, finalPricePerVessel: 100 },
     }]);
     mocks.purchaseBuyMarketOffer.mockResolvedValue({ success: true });
     const onClose = vi.fn();

@@ -34,6 +34,7 @@ function getPriceDriverSummary(priceBreakdown: StorageVesselPriceBreakdown): { i
 
   classify(priceBreakdown.capacityMultiplier, 'vessel size');
   classify(priceBreakdown.qualityMultiplier, 'cask quality');
+  classify(priceBreakdown.ageMultiplier, 'cask age');
   classify(priceBreakdown.supplierBaseMultiplier, 'supplier terms');
   classify(priceBreakdown.supplierRelationshipMultiplier, 'supplier relationship');
   classify(priceBreakdown.companyPrestigeMultiplier, 'company reputation');
@@ -49,17 +50,22 @@ const PriceCalculationTooltip: React.FC<{
     title="Cask price calculation"
     content={(
       <div className="min-w-[230px] space-y-1 text-xs leading-snug">
-        <div className="text-gray-300">Base price x vessel size x quality x supplier terms x relationship x company reputation.</div>
+        <div className="text-gray-300">Base price x vessel size x quality x age x cleanliness x supplier terms x relationship x company reputation.</div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
           <span>Base price ({STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES} L)</span><span className="text-right">{formatNumber(breakdown.basePrice, { currency: true, decimals: 0 })}</span>
           <span>Vessel size</span><span className="text-right">x{breakdown.capacityMultiplier.toFixed(2)}</span>
           <span>Cask quality ({Math.round(breakdown.qualityScore * 100)}%)</span><span className="text-right">x{breakdown.qualityMultiplier.toFixed(2)}</span>
+          <span>Cask age ({breakdown.ageYears} years)</span><span className="text-right">x{breakdown.ageMultiplier.toFixed(2)}</span>
+          <span>Cleanliness</span><span className="text-right">x{breakdown.cleanlinessMultiplier.toFixed(2)}</span>
           <span>Supplier terms</span><span className="text-right">x{breakdown.supplierBaseMultiplier.toFixed(2)}</span>
           <span>Supplier relationship</span><span className="text-right">x{breakdown.supplierRelationshipMultiplier.toFixed(2)}</span>
           <span>Company reputation</span><span className="text-right">x{breakdown.companyPrestigeMultiplier.toFixed(2)}</span>
         </div>
         <div className="border-t border-gray-600 pt-1 text-gray-300">
-          Floor: {formatNumber(breakdown.minimumPrice, { currency: true, decimals: 0 })} · Cap: {formatNumber(breakdown.maximumPrice, { currency: true, decimals: 0 })} · Final: {formatNumber(breakdown.finalPricePerVessel, { currency: true, decimals: 0 })}
+          {Number.isFinite(breakdown.minimumPrice) && Number.isFinite(breakdown.maximumPrice)
+            ? <>Floor: {formatNumber(breakdown.minimumPrice, { currency: true, decimals: 0 })} · Cap: {formatNumber(breakdown.maximumPrice, { currency: true, decimals: 0 })} · </>
+            : 'Calculated price · '}
+          Final: {formatNumber(breakdown.finalPricePerVessel, { currency: true, decimals: 0 })}
         </div>
       </div>
     )}
@@ -152,7 +158,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     { key: 'available', header: headerWithTooltip('Supply', 'Finite supplier stock. Cask offers do not replenish during the season.'), sortable: true, className: 'text-right', render: (offer) => `${offer.availableUnits} vessels` },
     {
       key: 'price',
-      header: headerWithTooltip('Price', 'Hover the price to see vessel size, quality, supplier terms, relationship, and company reputation factors.'),
+      header: headerWithTooltip('Price', 'Hover the price to see vessel size, quality, age, cleanliness, supplier terms, relationship, and company reputation factors.'),
       sortable: true,
       className: 'text-right text-amber-300',
       render: (offer) => <PriceCalculationTooltip breakdown={offer.priceBreakdown}><span className="cursor-help underline decoration-dotted underline-offset-2">{formatNumber(offer.pricePerVessel, { currency: true, decimals: 0 })}</span></PriceCalculationTooltip>,
@@ -216,7 +222,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
             </div>
           </div>
           <div className="mt-3 text-xs">
-            <UnifiedTooltip title="What affects cask price?" content={<span className="text-xs leading-snug">Vessel size, cask quality, supplier terms, supplier relationship, and company reputation move the final price. Hover the price for the exact multiplier breakdown.</span>}>
+            <UnifiedTooltip title="What affects cask price?" content={<span className="text-xs leading-snug">Vessel size, cask quality, cask age, cleanliness, supplier terms, supplier relationship, and company reputation move the final price. Hover the price for the exact multiplier breakdown.</span>}>
               <div className="inline-flex cursor-help items-center gap-1 text-gray-400"><span>Price drivers</span><span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-600 text-[10px] text-gray-300">?</span></div>
             </UnifiedTooltip>
             {drivers && drivers.increases.length > 0 && <div className="mt-1 text-amber-200">Higher: {drivers.increases.join(' · ')}</div>}
