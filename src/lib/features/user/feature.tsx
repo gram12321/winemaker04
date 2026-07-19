@@ -21,6 +21,7 @@ export const userFeature: UserFeature = {
     },
     async observeCurrentPlayer(listener) {
       const { authService } = await import('./services/authService');
+      await authService.waitForInitialSession();
       return authService.onAuthStateChange(listener);
     },
     async selectPlayer(player) {
@@ -49,9 +50,10 @@ export const userFeature: UserFeature = {
     },
     async deleteProfile(playerId) {
       const { authService } = await import('./services/authService');
-      return authService.getCurrentUser()?.id === playerId
-        ? authService.deleteAccount()
-        : authService.deleteUserProfileById(playerId);
+      if (authService.getCurrentUser()?.id !== playerId) {
+        return { success: false, error: 'You can only delete the selected player' };
+      }
+      return authService.deleteAccount();
     },
   },
   wallet: {

@@ -74,6 +74,15 @@ function App({ adminFeature }: AppProps) {
 
   const handleCompanySelected = async (company: CompanyRecord) => {
     try {
+      const player = await userFeature.account.getCurrentPlayer();
+      if (company.ownerId && company.ownerId !== player?.id) {
+        console.warn('Blocked attempt to activate a company owned by another player');
+        setCurrentCompany(null);
+        setCurrentPage('login');
+        setIsGameInitialized(false);
+        return;
+      }
+
       await setActiveCompany(company);
       setCurrentCompany(company);
       setCurrentPage('company-overview');

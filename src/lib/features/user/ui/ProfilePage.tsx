@@ -51,17 +51,14 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
         setSelectedAvatar(user.avatar || 'default');
         setSelectedColor(user.avatarColor || 'blue');
       } else {
-        // If no authenticated user but there's a current company, show it
+        // Anonymous companies can still be inspected, but never promote the
+        // company owner into the active player. Doing so allowed a guest to
+        // edit or delete another player's profile.
         if (currentCompany) {
           setUserCompanies([currentCompany]);
           void portfolio.getStatsForCompany(currentCompany).then((stats) => {
             if (isActive) setCompanyStats(stats);
           });
-          
-          // If the company has a user_id, try to load that user's information
-          if (currentCompany.ownerId) {
-            loadCompanyUserData(currentCompany.ownerId);
-          }
         } else {
           setUserCompanies([]);
           setCompanyStats({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
