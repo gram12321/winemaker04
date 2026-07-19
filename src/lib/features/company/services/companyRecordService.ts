@@ -72,7 +72,12 @@ export async function getCompanyRecord(companyId: string): Promise<CompanyRecord
 }
 
 export async function listCompanyRecordsForOwner(ownerId: string): Promise<CompanyRecord[]> {
-  return (await getUserCompanies(ownerId)).map(toCompanyRecord);
+  // Keep ownership verification at the feature boundary as well as in the DB
+  // query. A malformed/stale adapter response must never expose another
+  // player's company as selectable.
+  return (await getUserCompanies(ownerId))
+    .map(toCompanyRecord)
+    .filter((company) => company.ownerId === ownerId);
 }
 
 export async function listCompanyRecords(limit = 50): Promise<CompanyRecord[]> {

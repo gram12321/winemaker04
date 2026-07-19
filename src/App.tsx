@@ -72,19 +72,58 @@ function App({ adminFeature }: AppProps) {
     setCurrentPage('login');
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+    let unsubscribe: () => void = () => undefined;
+
+    void userFeature.account.observeCurrentPlayer((player) => {
+      if (!isActive) return;
+      const activeCompany = getCurrentCompany();
+      if (activeCompany?.userId && activeCompany.userId !== player?.id) {
+        // Player identity is the authority for every owned company session,
+        // including auth changes that happen outside the explicit Logout UI.
+        resetGameState();
+        setCurrentCompany(null);
+        setCurrentPage('login');
+        setIsGameInitialized(false);
+        setForcePlayerSelection(true);
+      }
+    }).then((cleanup) => {
+      if (isActive) unsubscribe = cleanup;
+      else cleanup();
+    });
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, []);
+
   const handleCompanySelected = async (company: CompanyRecord) => {
     try {
-      const player = await userFeature.account.getCurrentPlayer();
-      if (company.ownerId && company.ownerId !== player?.id) {
+      const [player, persistedCompany] = await Promise.all([
+        userFeature.account.getCurrentPlayer(),
+        companyFeature.records.get(company.id),
+      ]);
+      if (!persistedCompany) {
+        console.warn('Blocked attempt to activate a company that no longer exists');
+        resetGameState();
+        setCurrentCompany(null);
+        setCurrentPage('login');
+        setIsGameInitialized(false);
+        return;
+      }
+      if (persistedCompany.ownerId && persistedCompany.ownerId !== player?.id) {
         console.warn('Blocked attempt to activate a company owned by another player');
+        resetGameState();
         setCurrentCompany(null);
         setCurrentPage('login');
         setIsGameInitialized(false);
         return;
       }
 
-      await setActiveCompany(company);
-      setCurrentCompany(company);
+      await setActiveCompany(persistedCompany);
+      setCurrentCompany(persistedCompany);
       setCurrentPage('company-overview');
       setIsGameInitialized(true);
       setForcePlayerSelection(false);
@@ -99,6 +138,11 @@ function App({ adminFeature }: AppProps) {
   };
 
   const handleCompanyCreated = async (input: { name: string; ownerId?: string }): Promise<CompanyCreateResult> => {
+    const player = await userFeature.account.getCurrentPlayer();
+    if (input.ownerId !== player?.id) {
+      return { success: false, error: 'A company can only be created for the selected player' };
+    }
+
     const result = await companyFeature.records.create(input);
     if (!result.success || !result.company) return { success: false, error: result.error || 'Failed to create company' };
 

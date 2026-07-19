@@ -57,6 +57,12 @@ describe('companyFeature.records', () => {
     await expect(companyFeature.records.listForOwner('user-1')).resolves.toEqual([companyRecord]);
   });
 
+  it('rejects mismatched ownership returned by the persistence adapter', async () => {
+    mocks.getUserCompanies.mockResolvedValue([{ ...company, userId: 'user-2' }]);
+
+    await expect(companyFeature.records.listForOwner('user-1')).resolves.toEqual([]);
+  });
+
   it('rejects a duplicate name before persistence', async () => {
     mocks.checkCompanyNameExists.mockResolvedValue(true);
     await expect(companyFeature.records.create({ name: company.name })).resolves.toEqual({ success: false, error: 'Company name already exists' });

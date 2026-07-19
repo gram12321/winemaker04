@@ -160,7 +160,7 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
           )}
           {onSignOut && (
             <Button variant="destructive" onClick={onSignOut}>
-              Sign Out
+              Log out player
             </Button>
           )}
         </div>

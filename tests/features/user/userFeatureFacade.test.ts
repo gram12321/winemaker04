@@ -10,6 +10,7 @@ vi.mock('@/lib/features/user/services/authService', () => ({
     selectLocalPlayer: vi.fn(),
     signOut: vi.fn(async () => ({ success: true })),
     getUserProfileById: vi.fn(async () => null),
+    listUserProfiles: vi.fn(async () => []),
     createLocalUserProfile: vi.fn(),
     updateUserProfileById: vi.fn(),
     deleteAccount: vi.fn(),
@@ -45,6 +46,7 @@ describe('userFeature', () => {
     expect(Object.keys(userFeature).sort()).toEqual(['account', 'preferences', 'ui', 'wallet']);
     expect(userFeature.account.getCurrentPlayer).toBeTypeOf('function');
     expect(userFeature.account.endSession).toBeTypeOf('function');
+    expect(userFeature.account.listPlayers).toBeTypeOf('function');
     expect(userFeature.wallet.getBalance).toBeTypeOf('function');
     expect(userFeature.preferences.setToastEnabled).toBeTypeOf('function');
     expect(userFeature.ui.renderProfilePage).toBeTypeOf('function');

@@ -362,7 +362,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   onClick={() => { void onLogout(); }}
                   className="text-red-600 focus:text-red-500"
                 >
-                  Logout
+                  Log out player
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -490,7 +490,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 className="w-full justify-start text-left py-2 text-destructive hover:text-destructive mt-2"
               >
                 <LogOut className="mr-3 h-4 w-4" />
-                Logout
+                Log out player
               </Button>
             </div>
           </nav>

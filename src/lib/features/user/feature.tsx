@@ -40,6 +40,10 @@ export const userFeature: UserFeature = {
       const { authService } = await import('./services/authService');
       return authService.getUserProfileById(playerId);
     },
+    async listPlayers() {
+      const { authService } = await import('./services/authService');
+      return authService.listUserProfiles();
+    },
     async createLocalPlayer(name) {
       const { authService } = await import('./services/authService');
       return authService.createLocalUserProfile(name);
