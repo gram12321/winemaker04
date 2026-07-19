@@ -5,7 +5,6 @@ import { formatNumber, getFlagIcon, getColorClass } from '@/lib/utils';
 import { getWageColorClass, getAllTeams, getStaffExperiencePresentation } from '@/lib/services';
 import { activitiesFeature } from '@/lib/features/activities';
 import { getSkillLevelInfo, SPECIALIZED_ROLES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
-import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
 import { useGameState, useGameStateWithData } from '@/hooks';
 
@@ -277,7 +276,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
               {activeAssignments.length > 0 ? (
                 <div className="space-y-3">
                   {activeAssignments.map(activity => {
-                    const categoryInfo = WORK_CATEGORY_INFO[activity.category];
+                    const categoryInfo = activitiesFeature.catalog.workCategoryInfo[activity.category];
                     const assignmentProgress = activity.totalWork > 0
                       ? Math.min(100, Math.round((activity.completedWork / activity.totalWork) * 100))
                       : 0;

@@ -10,7 +10,7 @@ import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constant
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
 import { getFeatureImpacts } from '../features/featureService';
-import { combineOvergrowthYears } from '@/lib/features/activities/services/workcalculators/overgrowthUtils';
+import { combineOvergrowthYears } from '@/lib/services/vineyard/overgrowthUtils';
 import { getTasteQualityIndex } from './wineScoreCalculation';
 
 export function getMaxLandValue(): number {

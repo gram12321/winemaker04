@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/shadCN/button';
 import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
 import { ActivityCard } from '@/lib/features/activities/ui/ActivityCard';
 import { Activity } from '@/lib/types/types';
-import { getAllActivities, getActivityProgress, cancelActivity, pauseActivity, resumeActivity } from '@/lib/features/activities/services/activitymanagers/activityManager';
+import { activitiesFeature } from '@/lib/features/activities';
 import { useGameStateWithData } from '@/hooks/useGameState';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -53,7 +53,7 @@ export const ActivityPanel: React.FC = () => {
   );
 
   // Load activities from database via game state hook
-  const activities = useGameStateWithData(getAllActivities, []);
+  const activities = useGameStateWithData(activitiesFeature.reads.getAll, []);
 
   useEffect(() => {
     // Initialize or update ordered IDs
@@ -72,7 +72,7 @@ export const ActivityPanel: React.FC = () => {
     const loadProgresses = async () => {
       const progresses: Record<string, any> = {};
       await Promise.all(activities.map(async (activity) => {
-        const progress = await getActivityProgress(activity.id);
+        const progress = await activitiesFeature.reads.getProgress(activity.id);
         if (progress) {
           progresses[activity.id] = progress;
         }
@@ -88,7 +88,7 @@ export const ActivityPanel: React.FC = () => {
   // Event handlers
   const handleCancelActivity = async (activityId: string) => {
     try {
-      await cancelActivity(activityId);
+      await activitiesFeature.lifecycle.cancel(activityId);
       // useGameStateWithData hook automatically refreshes activities
     } catch (error) {
       console.error('Error in handleCancelActivity:', error);
@@ -97,7 +97,7 @@ export const ActivityPanel: React.FC = () => {
 
   const handlePauseActivity = async (activityId: string) => {
     try {
-      await pauseActivity(activityId);
+      await activitiesFeature.lifecycle.pause(activityId);
     } catch (error) {
       console.error('Error in handlePauseActivity:', error);
     }
@@ -110,7 +110,7 @@ export const ActivityPanel: React.FC = () => {
         setCapacityActivity(activity);
         return;
       }
-      await resumeActivity(activityId);
+      await activitiesFeature.lifecycle.resume(activityId);
     } catch (error) {
       console.error('Error in handleResumeActivity:', error);
     }
@@ -129,7 +129,7 @@ export const ActivityPanel: React.FC = () => {
         }
         setCapacityAdded(true);
       }
-      const resumed = await resumeActivity(capacityActivity.id);
+      const resumed = await activitiesFeature.lifecycle.resume(capacityActivity.id);
       if (!resumed) {
         setCapacityError('Capacity was added, but the activity could not be resumed. Retry resume without adding more vessels.');
         return;

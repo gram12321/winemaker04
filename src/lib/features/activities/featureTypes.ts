@@ -16,6 +16,7 @@ import type { StaffSearchOptionsModal } from './ui/modals/StaffSearchOptionsModa
 import type { StaffSearchResultsModal } from './ui/modals/StaffSearchResultsModal';
 import type CrushingOptionsModal from './ui/modals/CrushingOptionsModal';
 import type { FermentationOptionsModal } from './ui/modals/FermentationOptionsModal';
+import type { ClearingTask } from './constants/activityConstants';
 
 export interface ActivityCreationResult {
   activityId: string | null;
@@ -23,6 +24,14 @@ export interface ActivityCreationResult {
 }
 
 export interface ActivitiesFeature {
+  config: { defaultVineDensity: number };
+  catalog: {
+    workCategoryInfo: typeof import('./constants/activityConstants').WORK_CATEGORY_INFO;
+    getClearingTask(taskId: string): ClearingTask | undefined;
+    getTaskTypeDisplayName(taskType: string): string;
+    isStaffSpecializationCategory(value: unknown): value is import('@/lib/types/types').WorkCategory;
+    getStaffSpecializationDisplayName(category: import('@/lib/types/types').WorkCategory): string;
+  };
   lifecycle: {
     create(options: ActivityCreationOptions): Promise<string | null>;
     createWithResult(options: ActivityCreationOptions): Promise<ActivityCreationResult>;
@@ -62,7 +71,6 @@ export interface ActivitiesFeature {
     calculateResearchCost: typeof import('./services/workcalculators/researchWorkCalculator').calculateResearchCost;
     calculateEmptyStorageVessel: typeof import('./services/workcalculators/storageVesselMaintenanceWorkCalculator').calculateEmptyStorageVesselWork;
     calculateTakeLoan: typeof import('./services/workcalculators/takeLoanWorkCalculator').calculateTakeLoanWork;
-    combineOvergrowthYears: typeof import('./services/workcalculators/overgrowthUtils').combineOvergrowthYears;
   };
   ticks: {
     progress(): Promise<void>;

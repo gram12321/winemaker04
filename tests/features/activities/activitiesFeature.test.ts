@@ -12,6 +12,8 @@ describe('activitiesFeature', () => {
     expect(activitiesFeature.ticks.progress).toBeTypeOf('function');
     expect(activitiesFeature.setup.initialize).toBeTypeOf('function');
     expect(activitiesFeature.ui.renderActivityPanel).toBeTypeOf('function');
+    expect(activitiesFeature.config.defaultVineDensity).toBeTypeOf('number');
+    expect(activitiesFeature.catalog.getTaskTypeDisplayName).toBeTypeOf('function');
   });
 
   it('contains lazy activity UI within a Suspense boundary', () => {

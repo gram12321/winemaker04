@@ -5,7 +5,7 @@ import { Vineyard } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY, getClearingTask } from '@/lib/features/activities/constants/activityConstants';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { getGameState } from '@/lib/services/core/gameState';
-import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
+import { calculateOvergrowthModifier, combineOvergrowthYears } from '@/lib/services/vineyard/overgrowthUtils';
 import { getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 
 export interface ClearingWorkCalculationOptions {

@@ -88,7 +88,12 @@ vi.mock('@/lib/features/activities', () => ({
   activitiesFeature: {
     lifecycle: {
       create: mocks.createActivity
-    }
+    },
+    work: {
+      validateCrushingBatch: () => ({ valid: true }),
+      calculateCrushing: () => ({ totalWork: 1, cost: 0 }),
+      calculateFermentation: () => ({ totalWork: 1, cost: 0 }),
+    },
   }
 }));
 

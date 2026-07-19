@@ -5,7 +5,7 @@ import { formatNumber } from '@/lib/utils/utils';
 import { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateSymmetricalMultiplier, vineyardAgePrestigeModifier, calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail, Normalize1000To01WithTail, normalizeXP } from '@/lib/utils/calculator';
 import { calculateVineyardYield } from '@/lib/services';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
-import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
+import { activitiesFeature } from '@/lib/features/activities';
 
 const toNumber = (value: unknown): number => (
   typeof value === 'number' && Number.isFinite(value) ? value : Number(value ?? 0)
@@ -196,7 +196,7 @@ export function MathematicalModelsTab() {
       soil: ['Gravel'],
       altitude: 60,
       aspect: 'South',
-      density: DEFAULT_VINE_DENSITY,
+      density: activitiesFeature.config.defaultVineDensity,
       vineyardHealth: 1.0,
       landValue: 0,
       vineyardTotalValue: 0,
@@ -236,7 +236,7 @@ export function MathematicalModelsTab() {
       const data = [] as { ripeness: number; yieldKg: number }[];
       for (let i = 0; i <= 40; i++) {
         const r = i / 40; // 0..1
-        const vineyard = createVineyard({ ripeness: r, vineAge: 10, density: DEFAULT_VINE_DENSITY });
+        const vineyard = createVineyard({ ripeness: r, vineAge: 10, density: activitiesFeature.config.defaultVineDensity });
         data.push({ ripeness: r, yieldKg: calculateVineyardYield(vineyard) });
       }
       return data;
@@ -825,7 +825,7 @@ export function MathematicalModelsTab() {
         <div className="border rounded-lg p-6">
           <h3 className="text-xl font-semibold mb-4">Yield Projection</h3>
           <p className="text-gray-600 mb-4">
-            Expected harvest yield (kg) under fixed assumptions (1 ha, density {DEFAULT_VINE_DENSITY}, Chardonnay, Bordeaux, health 1.0).
+            Expected harvest yield (kg) under fixed assumptions (1 ha, density {activitiesFeature.config.defaultVineDensity}, Chardonnay, Bordeaux, health 1.0).
             Charts show how yield scales with ripeness and age independently.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

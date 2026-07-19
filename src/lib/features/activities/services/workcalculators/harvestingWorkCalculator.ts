@@ -3,7 +3,7 @@ import { WorkFactor } from './workCalculator';
 import { HARVEST_YIELD_RATE, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/features/activities/constants/activityConstants';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { calculateVineyardYield } from '@/lib/services';
-import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
+import { calculateOvergrowthModifier, combineOvergrowthYears } from '@/lib/services/vineyard/overgrowthUtils';
 import { getGrapeFragilityModifier, getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 
 /**

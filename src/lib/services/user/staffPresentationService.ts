@@ -1,5 +1,5 @@
 import type { Staff } from '@/lib/types/types';
-import { getStaffSpecializationDisplayName, isStaffSpecializationCategory } from '@/lib/features/activities/constants/activityConstants';
+import { activitiesFeature } from '@/lib/features/activities';
 import { normalizeXP } from '@/lib/utils/calculator';
 
 export interface StaffExperienceDisplayItem {
@@ -21,8 +21,8 @@ function formatExperienceLabel(value: string): string {
 }
 
 function formatTaskMasteryLabel(value: string): string {
-  return isStaffSpecializationCategory(value)
-    ? getStaffSpecializationDisplayName(value)
+  return activitiesFeature.catalog.isStaffSpecializationCategory(value)
+    ? activitiesFeature.catalog.getStaffSpecializationDisplayName(value)
     : value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, character => character.toUpperCase());
 }
 

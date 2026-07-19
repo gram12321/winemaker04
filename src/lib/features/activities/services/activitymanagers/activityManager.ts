@@ -203,6 +203,12 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   }
 };
 
+async function finalizeCompletedActivity(activity: Activity): Promise<void> {
+  const handler = completionHandlers[activity.category];
+  if (handler) await handler(activity);
+  await removeActivityFromDb(activity.id);
+}
+
 /**
  * Create a new activity with optional auto-assignment
  */
@@ -440,12 +446,7 @@ export async function completeActivityNow(activityId: string): Promise<{ success
 
     await updateActivityInDb(activity.id, { completedWork: activity.totalWork });
 
-    const handler = completionHandlers[completedActivity.category];
-    if (handler) {
-      await handler(completedActivity);
-    }
-
-    await removeActivityFromDb(completedActivity.id);
+    await finalizeCompletedActivity(completedActivity);
 
     await refreshVisibleActivities();
 
@@ -585,13 +586,7 @@ export async function progressActivities(): Promise<void> {
     for (const completedActivity of completedActivities) {
       try {
         // Execute completion callback
-        const handler = completionHandlers[completedActivity.category];
-        if (handler) {
-          await handler(completedActivity);
-        }
-
-        // Remove the completed activity
-        await removeActivityFromDb(completedActivity.id);
+        await finalizeCompletedActivity(completedActivity);
 
         // Completion notification handled by individual completion handlers
       } catch (error) {

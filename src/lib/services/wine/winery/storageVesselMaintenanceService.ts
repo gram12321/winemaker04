@@ -1,6 +1,5 @@
 import { completeEmptyStorageVessel, getCompanyStorageAllocationPlans, getCompanyStorageAllocations, getCompanyStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { activitiesFeature } from '@/lib/features/activities';
-import { calculateEmptyStorageVesselWork } from '@/lib/features/activities/services/workcalculators/storageVesselMaintenanceWorkCalculator';
 import { getGameState } from '@/lib/services/core/gameState';
 import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan } from '@/lib/types/storageVessels';
 import { WorkCategory, type Activity, type WineBatch } from '@/lib/types/types';
@@ -107,7 +106,7 @@ export async function startEmptyStorageVesselActivity(vesselId: string): Promise
   }
 
   const vesselName = getStorageVesselDisplayName(vessel);
-  const work = calculateEmptyStorageVesselWork(allocation.filledLitres);
+  const work = activitiesFeature.work.calculateEmptyStorageVessel(allocation.filledLitres);
   const activityResult = await activitiesFeature.lifecycle.createWithResult({
     category: WorkCategory.MAINTENANCE,
     title: `Empty Vessel - ${vesselName}`,

@@ -1,11 +1,9 @@
 import { Activity, WorkCategory } from '@/lib/types/types';
-import { getClearingTask } from '@/lib/features/activities/constants/activityConstants';
 import { activitiesFeature } from '@/lib/features/activities';
 import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
-import { calculateClearingWork } from '@/lib/features/activities/services/workcalculators/clearingWorkCalculator';
 
 export interface ClearingActivityOptions {
   tasks: { [key: string]: boolean };
@@ -58,7 +56,7 @@ export async function createClearingActivity(
     }
 
     // Calculate work using the dedicated clearing work calculator
-    const workResult = calculateClearingWork(vineyard, options);
+    const workResult = activitiesFeature.work.calculateClearing(vineyard, options);
     
     if (workResult.selectedTasks.length === 0) {
       throw new Error('No clearing tasks selected');
@@ -119,7 +117,7 @@ export async function completeClearingActivity(activity: Activity): Promise<void
     const taskNames = Object.entries(tasks)
       .filter(([_, isSelected]) => isSelected)
       .map(([taskId, _]) => {
-        const task = getClearingTask(taskId);
+        const task = activitiesFeature.catalog.getClearingTask(taskId);
         return task?.name || taskId;
       });
     

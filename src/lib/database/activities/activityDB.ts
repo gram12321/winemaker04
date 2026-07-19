@@ -153,10 +153,42 @@ export async function removeActivityFromDb(activityId: string): Promise<boolean>
 }
 
 export async function getActivitiesByTarget(targetId: string): Promise<Activity[]> {
-  const activities = await loadActivitiesFromDb();
-  return activities.filter(activity => 
-    activity.targetId === targetId && (activity.status === 'active' || activity.status === 'paused')
-  );
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) return [];
+
+    const { data, error } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('target_id', targetId)
+      .in('status', ['active', 'paused'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading activities by target:', error);
+      return [];
+    }
+
+    return (data || []).map(record => ({
+      id: record.id,
+      category: record.category,
+      title: record.title,
+      totalWork: record.total_work,
+      completedWork: record.completed_work,
+      targetId: record.target_id,
+      params: record.params || {},
+      status: record.status,
+      gameWeek: record.game_week,
+      gameSeason: record.game_season,
+      gameYear: record.game_year,
+      isCancellable: record.is_cancellable,
+      createdAt: new Date(record.created_at),
+    }));
+  } catch (error) {
+    console.error('Error in getActivitiesByTarget:', error);
+    return [];
+  }
 }
 
 export async function hasActiveActivity(targetId: string, category?: string): Promise<boolean> {

@@ -1,7 +1,6 @@
 import { WineBatch } from '../../../types/types';
 import { WorkCategory } from '../../../types/types';
 import { activitiesFeature } from '@/lib/features/activities';
-import { calculateCrushingWork, validateCrushingBatch } from '@/lib/features/activities/services/workcalculators/crushingWorkCalculator';
 import { CrushingOptions } from '../characteristics/crushingCharacteristics';
 import { assertBatchHasUsableStorage } from './storageVesselAllocationService';
 import { isBatchEmptyingInProgress } from './storageVesselMaintenanceService';
@@ -16,7 +15,7 @@ import { isBatchEmptyingInProgress } from './storageVesselMaintenanceService';
  */
 export function validateCrushingActivity(batch: WineBatch, options: CrushingOptions): { valid: boolean; reason?: string } {
   // Validate batch first
-  const batchValidation = validateCrushingBatch(batch);
+  const batchValidation = activitiesFeature.work.validateCrushingBatch(batch);
   if (!batchValidation.valid) {
     return batchValidation;
   }
@@ -53,7 +52,7 @@ export async function startCrushingActivity(batch: WineBatch, options: CrushingO
     }
     
     // Calculate work and cost
-    const { totalWork, cost } = calculateCrushingWork(batch, options);
+    const { totalWork, cost } = activitiesFeature.work.calculateCrushing(batch, options);
     
     // Create the crushing activity
     const activityId = await activitiesFeature.lifecycle.create({

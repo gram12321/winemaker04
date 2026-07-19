@@ -40,7 +40,7 @@ import {
   type ResearchEligibilityContext,
 } from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
 import { getResearchViewSummary, loadResearchWorkspaceSnapshot } from '@/lib/features/researchUpgrade/services/research/researchViewService';
-import { calculateResearchCost, calculateResearchWork } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
+import { activitiesFeature } from '@/lib/features/activities';
 import { formatNumber } from '@/lib/utils';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { ChevronRight, CircleDot, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';
@@ -338,7 +338,7 @@ export function ResearchWorkspace({
         status === 'locked' && eligibilityContext
           ? formatLockReason(project, eligibilityContext)
           : '';
-      const { totalWork } = calculateResearchWork(project.id, {
+      const { totalWork } = activitiesFeature.work.calculateResearch(project.id, {
         workMultiplier: permanentEffects.administrationAndResearchWorkMultiplier,
       });
 
@@ -348,7 +348,7 @@ export function ResearchWorkspace({
         status,
         lockReason,
         totalWork,
-        totalCost: calculateResearchCost(project.id),
+        totalCost: activitiesFeature.work.calculateResearchCost(project.id),
       };
     });
   }, [activeResearch, bypassGates, completedResearch, currentPrestige, eligibilityContext, permanentEffects.administrationAndResearchWorkMultiplier, presentationRows]);

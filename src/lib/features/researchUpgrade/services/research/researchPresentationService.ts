@@ -11,7 +11,7 @@ import {
   LADDER_TYPES,
   MARKET_UNLOCK_TYPES,
 } from '@/lib/constants/researchPresentationConstants';
-import { calculateResearchCost, calculateResearchWork } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
+import { activitiesFeature } from '@/lib/features/activities';
 import {
   formatVineyardCapacityValue,
   getBaseVineyardCapacityValue,
@@ -489,7 +489,7 @@ export function buildResearchPresentationRows(
   return projects.map(project => {
     const dependencyMetadata = getResearchDependencyMetadata(project, allProjects);
     const unlockTypeLabels = Array.from(new Set((project.unlocks || []).map(unlock => getUnlockTypeLabel(unlock.type))));
-    const { totalWork } = calculateResearchWork(project.id);
+    const { totalWork } = activitiesFeature.work.calculateResearch(project.id);
 
     return {
       project,
@@ -507,7 +507,7 @@ export function buildResearchPresentationRows(
       chainLabel: dependencyMetadata.chainLabel,
       chainUnlockValue: dependencyMetadata.chainUnlockValue,
       totalWork,
-      totalCost: calculateResearchCost(project.id),
+      totalCost: activitiesFeature.work.calculateResearchCost(project.id),
     };
   });
 }

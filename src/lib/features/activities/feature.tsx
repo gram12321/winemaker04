@@ -7,10 +7,10 @@ import { calculateFermentationWork } from './services/workcalculators/fermentati
 import { calculateHarvestWork } from './services/workcalculators/harvestingWorkCalculator';
 import { calculateLandSearchWork } from './services/workcalculators/landSearchWorkCalculator';
 import { calculateLenderSearchCost, calculateLenderSearchWork } from './services/workcalculators/lenderSearchWorkCalculator';
-import { combineOvergrowthYears } from './services/workcalculators/overgrowthUtils';
 import { calculateResearchCost, calculateResearchWork } from './services/workcalculators/researchWorkCalculator';
 import { calculateEmptyStorageVesselWork } from './services/workcalculators/storageVesselMaintenanceWorkCalculator';
 import { calculateTakeLoanWork } from './services/workcalculators/takeLoanWorkCalculator';
+import { DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO, getClearingTask, getTaskTypeDisplayName, isStaffSpecializationCategory, getStaffSpecializationDisplayName } from './constants/activityConstants';
 
 const manager = () => import('./services/activitymanagers/activityManager');
 const bookkeeping = () => import('./services/activitymanagers/bookkeepingManager');
@@ -30,6 +30,8 @@ const renderLazy = (component: ComponentType<any>, props: object = {}) =>
   createElement(Suspense, { fallback: null }, createElement(component, props));
 
 export const activitiesFeature: ActivitiesFeature = {
+  config: { defaultVineDensity: DEFAULT_VINE_DENSITY },
+  catalog: { workCategoryInfo: WORK_CATEGORY_INFO, getClearingTask, getTaskTypeDisplayName, isStaffSpecializationCategory, getStaffSpecializationDisplayName },
   lifecycle: {
     create: options => manager().then(({ createActivity }) => createActivity(options)),
     createWithResult: options => manager().then(({ createActivityWithResult }) => createActivityWithResult(options)),
@@ -64,7 +66,6 @@ export const activitiesFeature: ActivitiesFeature = {
     calculateResearchCost,
     calculateEmptyStorageVessel: calculateEmptyStorageVesselWork,
     calculateTakeLoan: calculateTakeLoanWork,
-    combineOvergrowthYears,
   },
   ticks: {
     progress: () => manager().then(({ progressActivities }) => progressActivities()),

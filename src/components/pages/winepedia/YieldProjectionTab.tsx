@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tool
 import { formatNumber } from '@/lib/utils/utils';
 import { calculateVineyardYield, calculateVineYieldProgression, calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { Vineyard, GrapeVariety, Aspect } from '@/lib/types/types';
-import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
+import { activitiesFeature } from '@/lib/features/activities';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 
 // Use existing constants from vineyardConstants
@@ -26,7 +26,7 @@ function createVineyard(overrides: Partial<Vineyard>): Vineyard {
     soil: ['Gravel'],
     altitude: 60,
     aspect: 'South',
-    density: DEFAULT_VINE_DENSITY,
+    density: activitiesFeature.config.defaultVineDensity,
     vineyardHealth: 1.0,
     landValue: 0,
     vineyardTotalValue: 0,
@@ -47,7 +47,7 @@ export function YieldProjectionTab() {
   const availableRegions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP] || [];
   const [grape, setGrape] = useState<GrapeVariety>('Chardonnay');
   const [hectares, setHectares] = useState<number>(1);
-  const [density, setDensity] = useState<number>(DEFAULT_VINE_DENSITY);
+  const [density, setDensity] = useState<number>(activitiesFeature.config.defaultVineDensity);
   const [ripeness, setRipeness] = useState<number>(0.9);
   const vineyardAge = 10; // Fixed vineyard age for charts
   const [health, setHealth] = useState<number>(1.0);

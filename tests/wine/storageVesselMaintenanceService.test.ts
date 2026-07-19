@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   vessel: null as StorageVessel | null,
   batch: null as WineBatch | null,
   createActivityWithResult: vi.fn(async () => ({ activityId: 'activity-1' })),
+  calculateEmptyStorageVessel: vi.fn(() => ({ totalWork: 10, workFactors: [] })),
   loadActivitiesFromDb: vi.fn(async () => [] as Activity[]),
   getAllWineBatches: vi.fn(async () => [] as WineBatch[]),
   completeEmptyStorageVessel: vi.fn(async () => ({ completed: true, error: null })),
@@ -21,6 +22,7 @@ vi.mock('@/lib/features/activities', () => ({
   activitiesFeature: {
     reads: { getAll: mocks.loadActivitiesFromDb },
     lifecycle: { createWithResult: mocks.createActivityWithResult },
+    work: { calculateEmptyStorageVessel: mocks.calculateEmptyStorageVessel },
   },
 }));
 vi.mock('@/lib/services/core/gameState', () => ({ getGameState: () => ({ activities: mocks.activities }) }));

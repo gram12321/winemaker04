@@ -12,7 +12,7 @@ import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
-import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
+import { activitiesFeature } from '@/lib/features/activities';
 import { userFeature } from '@/lib/features/user';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
@@ -72,7 +72,7 @@ export function generateVineyardPreview(condition: StartingCondition): VineyardP
       ? Math.round(minAltitude + Math.random() * (maxAltitude - minAltitude))
       : getRandomAltitude(country, region);
   const soil = getRandomSoils(country, region);
-  const density = DEFAULT_VINE_DENSITY; // Use shared default density
+  const density = activitiesFeature.config.defaultVineDensity;
 
   return {
     name,
@@ -286,7 +286,7 @@ export async function applyStartingConditions(
         soil: vineyardPreview.soil,
         altitude: vineyardPreview.altitude,
         aspect: previewAspect,
-        density: isPlanted ? DEFAULT_VINE_DENSITY : 0,
+        density: isPlanted ? activitiesFeature.config.defaultVineDensity : 0,
         status: vineyardStatus,
         grape: startingGrape,
         vineAge: isPlanted ? startingVineAge : null,

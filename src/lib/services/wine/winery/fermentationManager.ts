@@ -5,7 +5,6 @@ import { recordBottledWine } from '../../user/wineLogService';
 import { processEventTrigger } from '../features/featureService';
 import { activitiesFeature } from '@/lib/features/activities';
 import { WorkCategory } from '@/lib/types/types';
-import { calculateFermentationWork } from '@/lib/features/activities/services/workcalculators/fermentationWorkCalculator';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
@@ -45,7 +44,7 @@ export async function startFermentationActivity(
     }
 
     // Calculate work and cost
-    const { totalWork, cost } = calculateFermentationWork(batch, options);
+    const { totalWork, cost } = activitiesFeature.work.calculateFermentation(batch, options);
 
     // Create the fermentation activity
     await activitiesFeature.lifecycle.create({

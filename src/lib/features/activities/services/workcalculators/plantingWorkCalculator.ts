@@ -6,7 +6,7 @@ import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, isDensityBased } from '@/lib/features/activities/constants/activityConstants';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { getGameState } from '@/lib/services/core/gameState';
-import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
+import { calculateOvergrowthModifier, combineOvergrowthYears } from '@/lib/services/vineyard/overgrowthUtils';
 import { getGrapeFragilityModifier, getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 
 /**

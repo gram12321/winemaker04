@@ -7,7 +7,6 @@ import { activitiesFeature } from '@/lib/features/activities';
 import type { Staff } from '@/lib/types/types';
 import { formatNumber, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
-import { getTaskTypeDisplayName } from '@/lib/features/activities/constants/activityConstants';
 import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffModal, StaffSkillBarsList } from '@/components/ui';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
@@ -434,7 +433,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                             onClick={() => handleTaskTypeSelect(taskType)}
                             disabled={newTeamData.defaultTaskTypes.includes(taskType)}
                           >
-                            {getTaskTypeDisplayName(taskType)}
+                            {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)}
                           </Button>
                         );
                       })}
@@ -450,7 +449,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                     className="text-xs cursor-pointer hover:bg-red-100"
                     onClick={() => handleTaskTypeRemove(taskType)}
                   >
-                    {getTaskTypeDisplayName(taskType)} ×
+                    {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)} ×
                   </Badge>
                 ))}
               </div>
@@ -610,7 +609,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                                   }}
                                   disabled={team.defaultTaskTypes.includes(taskType)}
                                 >
-                                  {getTaskTypeDisplayName(taskType)}
+                                  {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)}
                                 </Button>
                               );
                             })}
@@ -632,7 +631,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                             await updateTeam(updatedTeam);
                           }}
                         >
-                          {getTaskTypeDisplayName(taskType)} ×
+                    {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)} ×
                         </Badge>
                       ))}
                     </div>
