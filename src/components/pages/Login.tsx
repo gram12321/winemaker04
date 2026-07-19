@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
-import { Building2, User, UserPlus } from 'lucide-react';
+import { Building2, LogOut, User, UserPlus } from 'lucide-react';
 import { leaderboardsFeature, type LeaderboardEntry } from '@/lib/features/leaderboards';
 import { companyFeature, type CompanyCreateResult, type CompanyRecord } from '@/lib/features/company';
 import { userFeature } from '@/lib/features/user';
@@ -32,6 +32,8 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
   const [allCompanies, setAllCompanies] = useState<CompanyRecord[]>([]);
   const [companiesWithoutUsers, setCompaniesWithoutUsers] = useState<CompanyRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<PlayerProfile | null>(null);
+  const [isPlayerStateReady, setIsPlayerStateReady] = useState(false);
+  const [preventAutoLogin, setPreventAutoLogin] = useState(forcePlayerSelection);
   const [availableUsers, setAvailableUsers] = useState<PlayerProfile[]>([]);
   const [showUserSelection, setShowUserSelection] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
@@ -48,15 +50,34 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
   const [showStartingConditions, setShowStartingConditions] = useState(false);
   const [pendingCompany, setPendingCompany] = useState<CompanyRecord | null>(null);
   const [pendingMentorWelcome, setPendingMentorWelcome] = useState<MentorWelcomeData | null>(null);
+  const currentPlayerIdRef = useRef<string | null>(null);
+  const requiresPlayerSelection = forcePlayerSelection || preventAutoLogin;
+
+  const handlePlayerLogout = async () => {
+    setError('');
+    // Keep the player signed out even when this Login instance remains mounted.
+    setPreventAutoLogin(true);
+    const result = await userFeature.account.endSession();
+    if (!result.success) {
+      setError(result.error || 'Unable to sign out');
+    }
+    setCurrentUser(null);
+    setAllCompanies([]);
+    setShowUserSelection(false);
+  };
 
   useEffect(() => {
     let isActive = true;
     let unsubscribe: () => void = () => undefined;
     void userFeature.account.observeCurrentPlayer((player) => {
-      if (isActive) setCurrentUser(player);
+      if (isActive) {
+        currentPlayerIdRef.current = player?.id ?? null;
+        setCurrentUser(player);
+      }
     }).then((listenerCleanup) => {
       if (isActive) {
         unsubscribe = listenerCleanup;
+        setIsPlayerStateReady(true);
       } else {
         listenerCleanup();
       }
@@ -72,6 +93,7 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
 
   // Load companies when user state changes
   useEffect(() => {
+    if (!isPlayerStateReady) return;
     if (currentUser) {
       loadUserCompanies();
     } else {
@@ -79,20 +101,31 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
       loadAllCompanies();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  }, [currentUser, isPlayerStateReady]);
 
   const loadAllCompanies = async () => {
-    const companies = await companyFeature.records.listAll(20);
-    
-    if (companies.length === 0) return;
+    const [companies, players] = await Promise.all([
+      companyFeature.records.listAll(50),
+      userFeature.account.listPlayers(),
+    ]);
+    // A player may have been restored or selected while the anonymous query
+    // was running. Its result must never replace that player's company list.
+    if (currentPlayerIdRef.current) return;
 
-    // Check if there's a last company and detect company-linked user
+    const orphanCompanies = companies.filter((company) => !company.ownerId);
+    setCompaniesWithoutUsers(orphanCompanies);
+    // Anonymous company selection must never expose owned company operations.
+    setAllCompanies(orphanCompanies);
+    setAvailableUsers(players);
+
+    // Resolve the persisted company by ID instead of assuming it is inside a
+    // recent-company page. This keeps restoration correct for large datasets.
     try {
       const lastCompanyId = localStorage.getItem('lastCompanyId');
-      if (!forcePlayerSelection && lastCompanyId) {
-        const match = companies.find(c => c.id === lastCompanyId);
+      if (!requiresPlayerSelection && lastCompanyId) {
+        const match = await companyFeature.records.get(lastCompanyId);
+        if (currentPlayerIdRef.current) return;
         if (match) {
-          // If this company has a user_id, load that user's companies instead
           if (match.ownerId) {
             await loadCompanyLinkedUser(match.ownerId);
             return;
@@ -106,49 +139,27 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
     } catch (error) {
       console.error('Error checking lastCompanyId:', error);
     }
-    
-    // Separate companies with and without users
-    const companiesWithUsers = companies.filter(c => c.ownerId);
-    const orphanCompanies = companies.filter(c => !c.ownerId);
-    setCompaniesWithoutUsers(orphanCompanies);
-    
-    if (companiesWithUsers.length > 0) {
-      // Get unique user IDs
-      const uniqueUserIds = [...new Set(companiesWithUsers.map(c => c.ownerId))].filter((id): id is string => !!id);
-      
-      if (forcePlayerSelection || uniqueUserIds.length > 1) {
-        const loadedUsers = await Promise.all(
-          uniqueUserIds.map(userId => userFeature.account.getPlayer(userId))
-        );
-        const validUsers = loadedUsers.filter((user): user is PlayerProfile => !!user);
-        if (validUsers.length > 0) {
-          setAvailableUsers(validUsers);
-          setShowUserSelection(true);
-          return;
-        }
-      }
 
-      // A normal app entry can restore the only known player. Explicit logout
-      // passes forcePlayerSelection and deliberately skips this branch.
-      if (uniqueUserIds.length === 1) {
-        // All companies belong to the same user - detect and load that user
-        await loadCompanyLinkedUser(uniqueUserIds[0]);
+    if (players.length > 0) {
+      if (requiresPlayerSelection || players.length > 1) {
+        setShowUserSelection(true);
         return;
       }
-      
+
+      // Preserve the normal single-player convenience without deriving player
+      // identity from a limited company query.
+      await userFeature.account.selectPlayer(players[0]);
+      return;
     }
-    
-    // If no autologin happened and no single user detected, show all companies
-    setAllCompanies(companies);
+
+    setShowUserSelection(false);
   };
 
   const loadCompanyLinkedUser = async (userId: string) => {
     try {
       const user = await userFeature.account.getPlayer(userId);
-      
-      if (user) {
+      if (!currentPlayerIdRef.current && user) {
         await userFeature.account.selectPlayer(user);
-        setCurrentUser(user);
         // loadUserCompanies will be called automatically by the useEffect
       }
     } catch (error) {
@@ -158,16 +169,20 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
 
   const loadUserCompanies = async () => {
     if (!currentUser) return;
-    
-    const companies = await companyFeature.records.listForOwner(currentUser.id);
+    const playerId = currentUser.id;
+    const companies = await companyFeature.records.listForOwner(playerId);
+    // Do not apply a previous player's response after a logout or player swap.
+    if (currentPlayerIdRef.current !== playerId) return;
     setAllCompanies(companies);
+    setCompaniesWithoutUsers([]);
+    setShowUserSelection(false);
     
     if (companies.length === 0) return;
 
     // Attempt auto-login to last active company if it belongs to this user
     try {
       const lastCompanyId = localStorage.getItem('lastCompanyId');
-      if (lastCompanyId) {
+      if (!requiresPlayerSelection && lastCompanyId) {
         const match = companies.find(c => c.id === lastCompanyId);
         if (match) {
           onCompanySelected(match);
@@ -202,6 +217,7 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
     if (result.success && result.user) {
       setNewUserName('');
       setShowCreateUser(false);
+      setShowUserSelection(false);
       setCurrentUser(result.user);
     } else {
       setError(result.error || 'Failed to create user');
@@ -247,7 +263,8 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
         : pendingCompany;
  
        // Reload appropriate company list
-       if (currentUser) {
+       const player = await userFeature.account.getCurrentPlayer();
+       if (player) {
          await loadUserCompanies();
        } else {
          await loadAllCompanies();
@@ -260,6 +277,15 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
   };
 
   const handleGatewayCompanyDeleted = async (companyId: string) => {
+    const [company, player] = await Promise.all([
+      companyFeature.records.get(companyId),
+      userFeature.account.getCurrentPlayer(),
+    ]);
+    if (!company) return { success: false, error: 'Company no longer exists' };
+    if (company.ownerId && company.ownerId !== player?.id) {
+      return { success: false, error: 'You can only delete a company owned by the selected player' };
+    }
+
     const result = await companyFeature.records.remove(companyId);
     if (result.success) window.location.reload();
     return result;
@@ -286,6 +312,16 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
             <div className="mt-2 flex items-center justify-center gap-2 text-xs">
               <User className="h-3 w-3 text-wine" />
               <span className="text-wine font-medium">{currentUser.name}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => { void handlePlayerLogout(); }}
+                className="h-6 px-1.5 text-xs text-wine hover:text-wine"
+              >
+                <LogOut className="mr-1 h-3 w-3" />
+                Log out player
+              </Button>
             </div>
           )}
         </div>
@@ -312,9 +348,7 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
                   {currentUser && !showUserSelection && availableUsers.length > 0 && (
                     <Button
                       onClick={() => {
-                            void userFeature.account.selectPlayer(null);
-                            setCurrentUser(null);
-                        setShowUserSelection(true);
+                        void handlePlayerLogout();
                       }}
                       variant="ghost"
                       size="sm"

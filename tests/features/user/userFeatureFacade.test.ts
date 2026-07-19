@@ -5,10 +5,12 @@ import type { PlayerProfilePageInput } from '@/lib/features/user';
 vi.mock('@/lib/features/user/services/authService', () => ({
   authService: {
     getCurrentUser: vi.fn(() => null),
+    waitForInitialSession: vi.fn(async () => undefined),
     onAuthStateChange: vi.fn(() => () => undefined),
     selectLocalPlayer: vi.fn(),
     signOut: vi.fn(async () => ({ success: true })),
     getUserProfileById: vi.fn(async () => null),
+    listUserProfiles: vi.fn(async () => []),
     createLocalUserProfile: vi.fn(),
     updateUserProfileById: vi.fn(),
     deleteAccount: vi.fn(),
@@ -44,6 +46,7 @@ describe('userFeature', () => {
     expect(Object.keys(userFeature).sort()).toEqual(['account', 'preferences', 'ui', 'wallet']);
     expect(userFeature.account.getCurrentPlayer).toBeTypeOf('function');
     expect(userFeature.account.endSession).toBeTypeOf('function');
+    expect(userFeature.account.listPlayers).toBeTypeOf('function');
     expect(userFeature.wallet.getBalance).toBeTypeOf('function');
     expect(userFeature.preferences.setToastEnabled).toBeTypeOf('function');
     expect(userFeature.ui.renderProfilePage).toBeTypeOf('function');
@@ -66,6 +69,29 @@ describe('userFeature', () => {
 
     await expect(userFeature.account.endSession()).resolves.toEqual({ success: false, error: 'Network unavailable' });
     expect(authService.selectLocalPlayer).toHaveBeenCalledWith(null);
+  });
+
+  it('waits for persisted session restoration before observing the player', async () => {
+    const { userFeature } = await import('@/lib/features/user');
+    const { authService } = await import('@/lib/features/user/services/authService');
+
+    const unsubscribe = await userFeature.account.observeCurrentPlayer(vi.fn());
+
+    expect(authService.waitForInitialSession).toHaveBeenCalledOnce();
+    expect(authService.onAuthStateChange).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('does not allow a non-selected player profile to be deleted', async () => {
+    const { userFeature } = await import('@/lib/features/user');
+    const { authService } = await import('@/lib/features/user/services/authService');
+
+    await expect(userFeature.account.deleteProfile('another-player')).resolves.toEqual({
+      success: false,
+      error: 'You can only delete the selected player',
+    });
+    expect(authService.deleteAccount).not.toHaveBeenCalled();
+    expect(authService.deleteUserProfileById).not.toHaveBeenCalled();
   });
 
   it('contains lazy feature pages in a Suspense boundary', async () => {

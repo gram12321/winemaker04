@@ -52,6 +52,8 @@ export interface UserFeature {
     /** Ends both an authenticated session and the local player selection. */
     endSession(): Promise<UserOperationResult>;
     getPlayer(playerId: string): Promise<PlayerProfile | null>;
+    /** Lists local player profiles independently of company ownership. */
+    listPlayers(): Promise<PlayerProfile[]>;
     createLocalPlayer(name: string): Promise<{ success: boolean; user?: PlayerProfile; error?: string }>;
     updateProfile(playerId: string, updates: Partial<Pick<PlayerProfile, 'name' | 'avatar' | 'avatarColor'>>): Promise<UserOperationResult>;
     deleteProfile(playerId: string): Promise<UserOperationResult>;
