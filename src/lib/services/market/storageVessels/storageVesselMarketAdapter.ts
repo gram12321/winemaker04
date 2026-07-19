@@ -12,8 +12,8 @@ import {
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAsymmetricalMultiplier, deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { GAME_INITIALIZATION, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
-import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
+import { GAME_INITIALIZATION, NAMES, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import {
   getBuyGoodsSupplierPersistenceBonus,
@@ -24,10 +24,23 @@ import {
   type BuyGoodsSupplierRelationshipLevel,
 } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
 import type { BuyMarketOfferRecord, BuyMarketPurchaseResult } from '@/lib/types/market';
-import type { StorageVessel, StorageVesselCleanliness, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
+import type { StorageVessel, StorageVesselCleanliness, StorageVesselMaterial, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
 import { NotificationCategory, type Season } from '@/lib/types/types';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { v4 as uuidv4 } from 'uuid';
+
+const MATERIAL_NAME_COUNTRY: Record<StorageVesselMaterial, keyof typeof NAMES> = {
+  oak: 'Italy', chestnut: 'Italy', stainless_steel: 'France', concrete: 'Germany', ceramic: 'Spain', plastic: 'United States',
+};
+
+function getVesselNameBase(supplierId: string, year: number, material: StorageVesselMaterial, capacityLitres: number): string {
+  const country = MATERIAL_NAME_COUNTRY[material];
+  const gender = capacityLitres <= 500 ? 'female' : 'male';
+  const names = NAMES[country].firstNames[gender];
+  const seed = `${supplierId}:${year}:${material}:${gender}`;
+  const hash = Array.from(seed).reduce((value, character) => ((value * 31) + character.charCodeAt(0)) >>> 0, 7);
+  return names[hash % names.length];
+}
 
 export interface StorageVesselMarketOffer {
   id: string;
@@ -217,7 +230,11 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
       expiresYear: expires.year,
       expiresSeason: expires.season,
       expiresWeek: 1,
-      payload: { vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres, priceSnapshot },
+      payload: {
+        vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres, priceSnapshot,
+        vesselName: `${getVesselNameBase(supplier.id, productionYear, 'oak', capacityLitres)} #1`,
+        condition: 1, fillHistory: 0, cleanliness: 'clean',
+      },
     };
   }));
   const offersNeeded = Math.max(0, expectedOfferCount - retainedOffers.length);
@@ -254,6 +271,15 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
     year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
   };
+  const existingVesselsResult = await getCompanyStorageVessels(companyId);
+  if (existingVesselsResult.error) return { success: false, error: 'Could not determine the next vessel name.' };
+  const vesselNameBase = getVesselNameBase(offer.sellerId, payload.productionYear, payload.material, payload.capacityLitres);
+  const existingNameCount = existingVesselsResult.data.filter((vessel) =>
+    vessel.vesselName?.startsWith(`${vesselNameBase} #`)
+    && vessel.productionYear === payload.productionYear
+    && vessel.material === payload.material
+    && vessel.capacityLitres <= 500 === (payload.capacityLitres <= 500)
+  ).length;
   const { claimed, error: claimError } = await claimBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
   if (claimError || !claimed) {
     return { success: false, error: 'Offer availability or funds changed. Please reopen the market.' };
@@ -274,8 +300,9 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     return { success: false, error: 'Insufficient funds. Please reopen the market and try again.' };
   }
 
-  const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, () => ({
+  const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, (_, index) => ({
     id: uuidv4(),
+    vesselName: `${vesselNameBase} #${existingNameCount + index + 1}`,
     companyId,
     vesselType: payload.vesselType,
     material: payload.material,

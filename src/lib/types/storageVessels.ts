@@ -37,6 +37,7 @@ export interface StorageVesselAllocation {
 
 export interface StorageVessel {
   id: string;
+  vesselName?: string;
   companyId: string;
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
@@ -65,6 +66,10 @@ export interface StorageVesselOfferPayload {
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
   qualityScore: number;
+  vesselName?: string;
+  condition?: number;
+  fillHistory?: number;
+  cleanliness?: StorageVesselCleanliness;
   productionYear: number;
   capacityLitres: number;
   priceSnapshot: StorageVesselOfferPriceSnapshot;

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   releaseBuyMarketOfferUnits: vi.fn(async () => ({ released: true, error: null })),
   addTransaction: vi.fn(async () => 'tx-1'),
   insertStorageVessels: vi.fn(async () => ({ data: [], error: null })),
+  getCompanyStorageVessels: vi.fn(async () => ({ data: [], error: null })),
   upsertBuyMarketOffers: vi.fn(async (_records: BuyMarketOfferRecord[]) => ({ error: null })),
   addMessage: vi.fn(async () => undefined),
   triggerTopicUpdate: vi.fn(),
@@ -33,7 +34,7 @@ vi.mock('@/lib/database/market/buyMarketOffersDB', () => ({
   claimBuyMarketOfferUnits: mocks.claimBuyMarketOfferUnits,
   releaseBuyMarketOfferUnits: mocks.releaseBuyMarketOfferUnits,
 }));
-vi.mock('@/lib/database/winery/storageVesselsDB', () => ({ insertStorageVessels: mocks.insertStorageVessels }));
+vi.mock('@/lib/database/winery/storageVesselsDB', () => ({ insertStorageVessels: mocks.insertStorageVessels, getCompanyStorageVessels: mocks.getCompanyStorageVessels }));
 vi.mock('@/lib/services/finance/financeService', () => ({ calculateCompanyValue: vi.fn(async () => 0), addTransaction: mocks.addTransaction }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerTopicUpdate: mocks.triggerTopicUpdate }));
