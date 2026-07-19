@@ -69,6 +69,9 @@ const mocks = vi.hoisted(() => {
     completeStaffSearch: vi.fn(async () => undefined),
     completeHiringProcess: vi.fn(async () => undefined),
     completeLandSearch: vi.fn(async () => undefined),
+    completeLenderSearch: vi.fn(async () => undefined),
+    completeTakeLoan: vi.fn(async () => undefined),
+    completeResearch: vi.fn(async () => undefined),
     awardExperience: vi.fn(async () => undefined),
     releaseReservedStorageAllocationPlan: vi.fn(async () => true)
   };
@@ -168,8 +171,8 @@ vi.mock('@/hooks/useGameUpdates', () => ({
 vi.mock('@/lib/features/loanLender', () => ({
   loanLenderFeature: {
     workflow: {
-      completeLenderSearch: vi.fn(async () => undefined),
-      completeTakeLoan: vi.fn(async () => undefined)
+      completeLenderSearch: mocks.completeLenderSearch,
+      completeTakeLoan: mocks.completeTakeLoan
     }
   }
 }));
@@ -177,7 +180,7 @@ vi.mock('@/lib/features/loanLender', () => ({
 vi.mock('@/lib/features/researchUpgrade', () => ({
   researchUpgradeFeature: {
     workflow: {
-      completeResearch: vi.fn(async () => undefined)
+      completeResearch: mocks.completeResearch
     },
     effects: {
       getPermanentEffects: vi.fn(async () => ({
@@ -397,6 +400,45 @@ describe('activity lifecycle', () => {
       params: expect.objectContaining({ batchId: 'batch-1' }),
     }));
     expect(mocks.removeActivityFromDb).toHaveBeenCalledWith('activity-1');
+  });
+
+  it('routes lender, loan, and research completions through their public feature workflows', async () => {
+    const manager = await import('@/lib/features/activities/services/activitymanagers/activityManager');
+    const cases = [
+      {
+        id: 'lender-search-1',
+        category: WorkCategory.LENDER_SEARCH,
+        params: {},
+        complete: mocks.completeLenderSearch,
+      },
+      {
+        id: 'take-loan-1',
+        category: WorkCategory.TAKE_LOAN,
+        params: {},
+        complete: mocks.completeTakeLoan,
+      },
+      {
+        id: 'research-1',
+        category: WorkCategory.ADMINISTRATION_AND_RESEARCH,
+        params: { type: 'research', researchId: 'research-1' },
+        complete: mocks.completeResearch,
+      },
+    ];
+
+    for (const activityCase of cases) {
+      await manager.createActivity({
+        id: activityCase.id,
+        category: activityCase.category,
+        title: `Complete ${activityCase.id}`,
+        totalWork: 1,
+        params: activityCase.params,
+        skipNotification: true,
+      });
+
+      await expect(manager.completeActivityNow(activityCase.id)).resolves.toMatchObject({ success: true });
+      expect(activityCase.complete).toHaveBeenCalledWith(expect.objectContaining({ id: activityCase.id }));
+      expect(mocks.removeActivityFromDb).toHaveBeenCalledWith(activityCase.id);
+    }
   });
 
   it('applies current weather only to planting and harvesting work as conditions change', async () => {

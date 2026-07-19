@@ -84,14 +84,11 @@ vi.mock('@/lib/database/activities/inventoryDB', () => ({
   bulkUpdateWineBatches: mocks.bulkUpdateWineBatches
 }));
 
-vi.mock('@/lib/features/activities/services/activitymanagers/activityManager', () => ({
-  createActivity: mocks.createActivity
-}));
-
 vi.mock('@/lib/features/activities', () => ({
-  WorkCategory: {
-    CRUSHING: 'CRUSHING',
-    FERMENTATION: 'FERMENTATION'
+  activitiesFeature: {
+    lifecycle: {
+      create: mocks.createActivity
+    }
   }
 }));
 
