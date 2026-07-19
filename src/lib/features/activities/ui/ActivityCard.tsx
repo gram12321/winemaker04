@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { Badge } from '@/components/ui/shadCN/badge';
 import { Pause, Play } from 'lucide-react';
-import { StaffAssignmentModal } from '@/components/ui/modals/activitymodals/StaffAssignmentModal';
+import { StaffAssignmentModal } from '@/lib/features/activities/ui/modals/StaffAssignmentModal';
 import { formatNumber } from '@/lib/utils/utils';
 import { getSkillColor } from '@/lib/utils/colorMapping';
-import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { getTeamForCategory } from '@/lib/services';
 
 interface ActivityCardProps {

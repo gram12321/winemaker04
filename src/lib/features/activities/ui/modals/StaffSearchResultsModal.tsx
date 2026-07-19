@@ -4,7 +4,7 @@ import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConst
 import { formatNumber, getFlagIcon, getColorClass, setModalMinimized } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { Button, Badge, StaffSkillBarsList, WarningModal } from '@/components/ui';
-import { startHiringProcess, clearPendingCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
+import { startHiringProcess, clearPendingCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
 import { X, Minimize2 } from 'lucide-react';
 
 interface StaffSearchResultsModalProps {

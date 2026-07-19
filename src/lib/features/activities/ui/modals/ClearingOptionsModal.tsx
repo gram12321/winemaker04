@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { formatNumber, getColorClass } from '@/lib/utils/utils';
-import { WorkCalculationTable } from '@/components/ui';
-import { calculateClearingWork } from '@/lib/services/activity';
+import WorkCalculationTable from '../workCalculationTable';
+import { calculateClearingWork } from '../../services/workcalculators/clearingWorkCalculator';
 import { getGameState } from '@/lib/services';
 import { calculateClearingHealth } from '@/lib/services/vineyard/clearingRules';
 

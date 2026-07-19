@@ -79,11 +79,21 @@ vi.mock('@/lib/database/activities/activityDB', () => ({
   removeActivityFromDb: mocks.removeActivityFromDb
 }));
 
-vi.mock('@/lib/services/activity', () => ({
+vi.mock('@/lib/features/activities', () => ({
   WorkCategory: {
     PLANTING: 'PLANTING',
     HARVESTING: 'HARVESTING'
-  }
+  },
+  activitiesFeature: {
+    reads: {
+      getAll: mocks.loadActivitiesFromDb,
+      getByTarget: vi.fn(async () => mocks.loadActivitiesFromDb()),
+    },
+    lifecycle: {
+      remove: mocks.removeActivityFromDb,
+      update: mocks.updateActivityInDb,
+    },
+  },
 }));
 
 vi.mock('@/lib/services/core/notificationService', () => ({

@@ -1,13 +1,15 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
-import { getAllActivities, getAllWineBatches, getOwnedStorageVessels, bottleWine, isActionAvailable, getStorageVesselDisplayName, getWineBatchDisplayName, isBatchEmptyingInProgress } from '@/lib/services';
+import { getAllWineBatches, getOwnedStorageVessels, bottleWine, isActionAvailable, getStorageVesselDisplayName, getWineBatchDisplayName, isBatchEmptyingInProgress } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import { WineBatch } from '@/lib/types/types';
-import { Button, BuyMarketModal, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
+import { Button, BuyMarketModal, WineModal, SellGrapesModal } from '../ui';
+import CrushingOptionsModal from '@/lib/features/activities/ui/modals/CrushingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
-import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
+import { FermentationOptionsModal } from '@/lib/features/activities/ui/modals/FermentationOptionsModal';
 import { getQualityCategory, getColorClass, getCharacteristicDisplayName, formatNumber, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
@@ -128,7 +130,7 @@ const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
   const vessels = useGameStateWithData(getOwnedStorageVessels, [] as StorageVessel[], { topic: 'storage_vessels' });
-  useGameStateWithData(getAllActivities, [], { topic: 'activities' });
+  useGameStateWithData(activitiesFeature.reads.getAll, [], { topic: 'activities' });
   const [isBuyMarketOpen, setIsBuyMarketOpen] = useState(false);
   
   // Unified modal state

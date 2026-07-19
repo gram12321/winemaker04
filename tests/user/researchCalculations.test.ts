@@ -3,7 +3,7 @@ import {
   calculateResearchWork,
   calculateResearchCost,
   getResearchProjectWithCalculations
-} from '@/lib/services/activity/workcalculators/researchWorkCalculator';
+} from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
 import {
   RESEARCH_PROJECTS,
   RESEARCH_PROJECT_ECONOMICS,

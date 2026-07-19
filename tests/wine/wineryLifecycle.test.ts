@@ -84,11 +84,11 @@ vi.mock('@/lib/database/activities/inventoryDB', () => ({
   bulkUpdateWineBatches: mocks.bulkUpdateWineBatches
 }));
 
-vi.mock('@/lib/services/activity/activitymanagers/activityManager', () => ({
+vi.mock('@/lib/features/activities/services/activitymanagers/activityManager', () => ({
   createActivity: mocks.createActivity
 }));
 
-vi.mock('@/lib/services/activity', () => ({
+vi.mock('@/lib/features/activities', () => ({
   WorkCategory: {
     CRUSHING: 'CRUSHING',
     FERMENTATION: 'FERMENTATION'
@@ -188,8 +188,8 @@ describe('winery harvest-to-bottle lifecycle', () => {
   it('creates grapes, starts and completes crush/fermentation, processes weekly fermentation, and bottles with log snapshot', async () => {
     const { createWineBatchFromHarvest } = await import('@/lib/services/wine/winery/inventoryService');
     const { startCrushingActivity } = await import('@/lib/services/wine/winery/crushingManager');
-    const { completeCrushing } = await import('@/lib/services/activity/workcalculators/crushingWorkCalculator');
-    const { completeFermentationSetup } = await import('@/lib/services/activity/workcalculators/fermentationWorkCalculator');
+    const { completeCrushing } = await import('@/lib/features/activities/services/workcalculators/crushingWorkCalculator');
+    const { completeFermentationSetup } = await import('@/lib/features/activities/services/workcalculators/fermentationWorkCalculator');
     const {
       startFermentationActivity,
       processWeeklyFermentation,

@@ -3,7 +3,7 @@
 
 import { WineBatch, Activity, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
-import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
+import { TASK_RATES, INITIAL_WORK } from '@/lib/features/activities/constants/activityConstants';
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';

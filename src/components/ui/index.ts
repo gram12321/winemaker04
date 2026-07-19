@@ -36,26 +36,14 @@ export * from './constraints/ConstraintDisplay';
 
 // Modal exports (wildcard exports where possible)
 export * from './modals/UImodals/landValueModifierBreakdownModal';
-export * from './modals/activitymodals/LandSearchOptionsModal';
-export * from './modals/activitymodals/LandSearchResultsModal';
 export * from './modals/UImodals/StructureIndexBreakdownModal';
 export * from './modals/UImodals/WarningModal';
-export * from './modals/activitymodals/StaffSearchOptionsModal';
-export * from './modals/activitymodals/StaffSearchResultsModal';
-export * from './modals/activitymodals/HireStaffModal';
 export * from './modals/UImodals/StartingConditionsModal';
 
 // Default exports (must use named export syntax)
 export { default as WineModal } from './modals/UImodals/wineModal';
-export { default as WorkCalculationTable } from './activities/workCalculationTable';
-export { default as ActivityOptionsModal } from './activities/activityOptionsModal';
-export { default as PlantingOptionsModal } from './modals/activitymodals/PlantingOptionsModal';
-export { default as HarvestOptionsModal } from './modals/activitymodals/HarvestOptionsModal';
-export { default as CrushingOptionsModal } from './modals/activitymodals/CrushingOptionsModal';
 export { default as SellGrapesModal } from './modals/activitymodals/SellGrapesModal';
 export { default as BuyMarketModal } from './market/BuyMarketModal';
-export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
-export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
 export { default as StaffModal } from './modals/UImodals/StaffModal';
 export { default as VineyardModal } from './modals/UImodals/vineyardModal';
 export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
@@ -66,5 +54,4 @@ export { MarketQuickBuyRowAction } from './market/MarketQuickBuyRowAction';
 export { StorageVesselMarketPanel } from './market/StorageVesselMarketPanel';
 
 // Type exports (for default exports that also export types)
-export type { ActivityOptionField, ActivityWorkEstimate } from './activities/activityOptionsModal';
 

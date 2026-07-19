@@ -92,7 +92,7 @@ vi.mock('@/lib/services', () => ({
   handlePartialHarvesting: mocks.handlePartialHarvesting
 }));
 
-vi.mock('@/lib/services/activity', () => ({
+vi.mock('@/lib/features/activities', () => ({
   WorkCategory: {
     PLANTING: 'PLANTING',
     HARVESTING: 'HARVESTING',
@@ -117,17 +117,17 @@ vi.mock('@/lib/services/activity', () => ({
   calculateAppliedStaffWorkAllocation: mocks.calculateAppliedStaffWorkAllocation
 }));
 
-vi.mock('@/lib/services/activity/workcalculators/workCalculator', async importOriginal => ({
-  ...await importOriginal<typeof import('@/lib/services/activity/workcalculators/workCalculator')>(),
+vi.mock('@/lib/features/activities/services/workcalculators/workCalculator', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/features/activities/services/workcalculators/workCalculator')>(),
   calculateStaffWorkAllocation: mocks.calculateStaffWorkAllocation,
 }));
 
-vi.mock('@/lib/services/activity/activitymanagers/staffSearchManager', () => ({
+vi.mock('@/lib/features/activities/services/activitymanagers/staffSearchManager', () => ({
   completeStaffSearch: mocks.completeStaffSearch,
   completeHiringProcess: mocks.completeHiringProcess
 }));
 
-vi.mock('@/lib/services/activity/activitymanagers/landSearchManager', () => ({
+vi.mock('@/lib/features/activities/services/activitymanagers/landSearchManager', () => ({
   completeLandSearch: mocks.completeLandSearch
 }));
 
@@ -216,7 +216,7 @@ describe('activity lifecycle', () => {
   });
 
   it('creates an active activity, auto-assigns the matching team, and refreshes state', async () => {
-    const { createActivity } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { createActivity } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     const activityId = await createActivity({
       category: WorkCategory.BUILDING,
@@ -264,7 +264,7 @@ describe('activity lifecycle', () => {
       staff: []
     });
     mocks.setVineyards([vineyard({ grape: null, status: 'Barren', ripeness: 0 })]);
-    const { createActivity, createActivityWithResult } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { createActivity, createActivityWithResult } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     const result = await createActivityWithResult({
       category: WorkCategory.PLANTING,
@@ -293,7 +293,7 @@ describe('activity lifecycle', () => {
 
   it('allows weather-permitted planting and harvesting activity creation', async () => {
     mocks.setVineyards([vineyard({ grape: null, status: 'Barren', ripeness: 0 })]);
-    const { createActivity } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { createActivity } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     const plantingId = await createActivity({
       category: WorkCategory.PLANTING,
@@ -321,7 +321,7 @@ describe('activity lifecycle', () => {
   });
 
   it('pauses, resumes, cancels, and hides cancelled activities from visible state', async () => {
-    const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const manager = await import('@/lib/features/activities/services/activitymanagers/activityManager');
     await manager.createActivity({
       category: WorkCategory.BUILDING,
       title: 'Lifecycle Activity',
@@ -341,7 +341,7 @@ describe('activity lifecycle', () => {
   });
 
   it('keeps an active vessel plan intact when a partially completed harvest is cancelled', async () => {
-    const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const manager = await import('@/lib/features/activities/services/activitymanagers/activityManager');
     mocks.setVineyards([vineyard()]);
     await manager.createActivity({
       category: WorkCategory.HARVESTING,
@@ -357,7 +357,7 @@ describe('activity lifecycle', () => {
   });
 
   it('force-completes an activity through the same removal path used by weekly progress', async () => {
-    const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const manager = await import('@/lib/features/activities/services/activitymanagers/activityManager');
     await manager.createActivity({
       category: WorkCategory.BUILDING,
       title: 'Complete Now Activity',
@@ -381,7 +381,7 @@ describe('activity lifecycle', () => {
   });
 
   it('completes Empty Vessel maintenance through its dedicated cleanup handler', async () => {
-    const manager = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const manager = await import('@/lib/features/activities/services/activitymanagers/activityManager');
     await manager.createActivity({
       category: WorkCategory.MAINTENANCE,
       title: 'Empty Vessel - 2024 - 500 L oak cask',
@@ -414,7 +414,7 @@ describe('activity lifecycle', () => {
       activeActivity({ id: 'clearing-1', category: WorkCategory.CLEARING })
     ]);
     mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
 
@@ -467,7 +467,7 @@ describe('activity lifecycle', () => {
       activeActivity({ id: 'harvesting-1', category: WorkCategory.HARVESTING, totalWork: 6 })
     ]);
     mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
 
@@ -487,7 +487,7 @@ describe('activity lifecycle', () => {
       }),
     ]);
     mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
 
@@ -513,7 +513,7 @@ describe('activity lifecycle', () => {
       status: 'paused',
       params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', harvestedSoFar: 14, storageCapacityBlocked: true },
     });
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
 
@@ -533,7 +533,7 @@ describe('activity lifecycle', () => {
     ]);
     mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
     mocks.updateActivityInDb.mockResolvedValueOnce(false);
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
 
@@ -562,7 +562,7 @@ describe('activity lifecycle', () => {
       contributions: new Map(staff.map(member => [member.id, 10])),
       };
     });
-    const { progressActivities, updateActivity } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities, updateActivity } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
     await updateActivity('assignment-change-1', { params: { assignedStaffIds: ['staff-1', 'staff-2'] } });
@@ -598,8 +598,8 @@ describe('activity lifecycle', () => {
       activeActivity({ id: 'other-task-1', category: WorkCategory.CLEARING, params: { assignedStaffIds: ['staff-1'] } }),
     ]);
     mocks.calculateStaffWorkAllocation.mockReturnValue({ totalWork: 10, contributions: new Map([['staff-1', 10]]) });
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
-    const { getActivityStaffWorkContext } = await import('@/lib/services/activity/activityWorkPreviewService');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
+    const { getActivityStaffWorkContext } = await import('@/lib/features/activities/services/activityWorkPreviewService');
 
     const previewContext = await getActivityStaffWorkContext(
       previewActivity,
@@ -626,7 +626,7 @@ describe('activity lifecycle', () => {
   });
 
   it('accepts grape snapshots only for grape-aware activity categories', async () => {
-    const { getActivityGrapeContext } = await import('@/lib/services/activity/activityWorkContext');
+    const { getActivityGrapeContext } = await import('@/lib/features/activities/services/activityWorkContext');
 
     expect(getActivityGrapeContext(activeActivity({ category: WorkCategory.PLANTING, params: { grape: 'Pinot Noir' } }))).toBe('Pinot Noir');
     expect(getActivityGrapeContext(activeActivity({ category: WorkCategory.CLEARING, params: { grape: 'Pinot Noir' } }))).toBeUndefined();
@@ -651,7 +651,7 @@ describe('activity lifecycle', () => {
       storageCapacityBlocked: false,
       params: { assignedStaffIds: ['staff-1'], grape: 'Pinot Noir', storagePlanId: 'plan-1', outputBatchId: 'batch-1', harvestedSoFar: 100, currentTotalYield: 100 },
     });
-    const { progressActivities } = await import('@/lib/services/activity/activitymanagers/activityManager');
+    const { progressActivities } = await import('@/lib/features/activities/services/activitymanagers/activityManager');
 
     await progressActivities();
 
@@ -668,8 +668,8 @@ describe('activity lifecycle', () => {
       weatherIntensity: 'Mild'
     });
     mocks.calculateVineyardYield.mockReturnValue(1000);
-    const { calculatePlantingWork } = await import('@/lib/services/activity/workcalculators/plantingWorkCalculator');
-    const { calculateHarvestWork } = await import('@/lib/services/activity/workcalculators/harvestingWorkCalculator');
+    const { calculatePlantingWork } = await import('@/lib/features/activities/services/workcalculators/plantingWorkCalculator');
+    const { calculateHarvestWork } = await import('@/lib/features/activities/services/workcalculators/harvestingWorkCalculator');
     const targetVineyard = vineyard();
 
     // `calculatePlantingWork` imports this exact core-game-state module directly.

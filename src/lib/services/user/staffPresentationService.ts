@@ -1,5 +1,5 @@
 import type { Staff } from '@/lib/types/types';
-import { getStaffSpecializationDisplayName, isStaffSpecializationCategory } from '@/lib/constants/activityConstants';
+import { getStaffSpecializationDisplayName, isStaffSpecializationCategory } from '@/lib/features/activities/constants/activityConstants';
 import { normalizeXP } from '@/lib/utils/calculator';
 
 export interface StaffExperienceDisplayItem {

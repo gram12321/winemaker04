@@ -17,8 +17,12 @@ const mocks = vi.hoisted(() => ({
   triggerTopicUpdate: vi.fn(),
 }));
 
-vi.mock('@/lib/services/activity/activitymanagers/activityManager', () => ({ createActivityWithResult: mocks.createActivityWithResult }));
-vi.mock('@/lib/database/activities/activityDB', () => ({ loadActivitiesFromDb: mocks.loadActivitiesFromDb }));
+vi.mock('@/lib/features/activities', () => ({
+  activitiesFeature: {
+    reads: { getAll: mocks.loadActivitiesFromDb },
+    lifecycle: { createWithResult: mocks.createActivityWithResult },
+  },
+}));
 vi.mock('@/lib/services/core/gameState', () => ({ getGameState: () => ({ activities: mocks.activities }) }));
 vi.mock('@/lib/services/wine/winery/inventoryService', () => ({
   getAllWineBatches: mocks.getAllWineBatches,

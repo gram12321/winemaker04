@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatNumber } from '@/lib/utils/utils';
-import { WorkFactor } from '@/lib/services/activity';
+import type { WorkFactor } from '../services/workcalculators/workCalculator';
 
 interface WorkCalculationTableProps {
   factors: WorkFactor[];

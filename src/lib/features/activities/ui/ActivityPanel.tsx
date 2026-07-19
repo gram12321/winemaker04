@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/shadCN/button';
 import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
-import { ActivityCard } from '@/components/ui/activities/ActivityCard';
+import { ActivityCard } from '@/lib/features/activities/ui/ActivityCard';
 import { Activity } from '@/lib/types/types';
-import { getAllActivities, getActivityProgress, cancelActivity, pauseActivity, resumeActivity } from '@/lib/services/activity/activitymanagers/activityManager';
-import { useGameStateWithData } from '@/hooks';
+import { getAllActivities, getActivityProgress, cancelActivity, pauseActivity, resumeActivity } from '@/lib/features/activities/services/activitymanagers/activityManager';
+import { useGameStateWithData } from '@/hooks/useGameState';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';

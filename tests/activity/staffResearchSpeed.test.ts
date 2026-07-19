@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WorkCategory, type Staff } from '@/lib/types/types';
-import { calculateStaffWorkAllocation } from '@/lib/services/activity/workcalculators/workCalculator';
+import { calculateStaffWorkAllocation } from '@/lib/features/activities/services/workcalculators/workCalculator';
 
 const calculateContribution = (...args: Parameters<typeof calculateStaffWorkAllocation>): number =>
   calculateStaffWorkAllocation(...args).totalWork;

@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, NotificationCategory } from '@/lib/types/types';
-import { activateActivityWithParams, cancelActivity, createActivityWithResult, getGameState } from '@/lib/services';
-import { WorkCategory, WorkFactor } from '@/lib/services/activity';
-import { calculateHarvestWork } from '@/lib/services/activity';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WeatherOperationStatusNotice } from '@/components/ui';
+import { getGameState } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
+import { WorkCategory } from '@/lib/types/types';
+import type { WorkFactor } from '../../services/workcalculators/workCalculator';
+import { calculateHarvestWork } from '../../services/workcalculators/harvestingWorkCalculator';
+import ActivityOptionsModal, { type ActivityOptionField, type ActivityWorkEstimate } from '../activityOptionsModal';
+import { WeatherOperationStatusNotice } from '@/components/ui/components/WeatherOperationStatusNotice';
 import { notificationService } from '@/lib/services';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
@@ -95,7 +98,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     const activityId = uuidv4();
     const harvestBaseline = continuingBatch?.quantity ?? 0;
     const initialParams = { grape: vineyard.grape, harvestBaseline, harvestedSoFar: harvestBaseline, targetName: vineyard.name, outputBatchId: continuingBatch?.id ?? uuidv4(), storageVesselIds: continuingBatch ? [] : selectedVesselIds };
-    const creation = await createActivityWithResult({
+    const creation = await activitiesFeature.lifecycle.createWithResult({
       id: activityId,
       category: WorkCategory.HARVESTING,
       title: `Harvesting ${vineyard.name}`,
@@ -123,10 +126,10 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     const addedCapacity = continuingBatch && storagePlan.planId && selectedVesselIds.length > 0
       ? await addStorageVesselCapacity(storagePlan.planId, selectedVesselIds)
       : { success: Boolean(storagePlan.planId) };
-    if (!storagePlan.planId || !addedCapacity.success || !(await activateActivityWithParams(creation.activityId, { ...initialParams, storagePlanId: storagePlan.planId }))) {
+    if (!storagePlan.planId || !addedCapacity.success || !(await activitiesFeature.lifecycle.activate(creation.activityId, { ...initialParams, storagePlanId: storagePlan.planId }))) {
       if (storagePlan.planId && continuingBatch && selectedVesselIds.length > 0) await releaseUnusedStorageVesselCapacity(storagePlan.planId, selectedVesselIds);
       if (storagePlan.planId && !continuingBatch) await releaseStorageAllocationPlan(storagePlan.planId);
-      await cancelActivity(creation.activityId);
+      await activitiesFeature.lifecycle.cancel(creation.activityId);
       await notificationService.addMessage(storagePlan.error || addedCapacity.error || 'Could not reserve Storage Vessel capacity.', 'harvestOptionsModal.storage', 'Storage Capacity', NotificationCategory.SYSTEM);
     }
     

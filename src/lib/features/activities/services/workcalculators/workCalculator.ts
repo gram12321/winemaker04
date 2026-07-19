@@ -1,4 +1,4 @@
-import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { Staff, StaffSkills, WorkCategory } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
 import { calculateEffectiveSkill } from '@/lib/services/user/staffSkillService';

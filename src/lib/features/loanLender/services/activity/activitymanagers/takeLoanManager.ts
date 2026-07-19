@@ -1,5 +1,4 @@
 import { Activity, WorkCategory, NotificationCategory, LoanOffer, LoanApplicationPayload } from '@/lib/types/types';
-import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { applyForLoan } from '@/lib/features/loanLender/services/finance/loanService';
 import { formatNumber } from '@/lib/utils';
@@ -28,7 +27,8 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
     // Create the take loan activity
     const title = 'Processing Loan';
 
-    const activityId = await createActivity({
+    const { activitiesFeature } = await import('@/lib/features/activities');
+    const activityId = await activitiesFeature.lifecycle.create({
       category: WorkCategory.TAKE_LOAN,
       title,
       totalWork,

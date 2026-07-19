@@ -4,10 +4,10 @@ import { LOAN_AMOUNT_RANGES } from '@/lib/constants/loanConstants';
 import { calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { getAllLenders } from './lenderService';
 import { getCurrentCreditRating, getScaledLoanAmountLimit } from './loanService';
-import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services/activity/workcalculators/lenderSearchWorkCalculator';
-import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
+import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/features/activities/services/workcalculators/lenderSearchWorkCalculator';
+import { calculateTakeLoanWork } from '@/lib/features/activities/services/workcalculators/takeLoanWorkCalculator';
 import type { LenderSearchOptions } from '@/lib/types/types';
-import type { WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
+import type { WorkFactor } from '@/lib/features/activities/services/workcalculators/workCalculator';
 import {
   calculateLoanTerms,
   calculateRemainingInterest,

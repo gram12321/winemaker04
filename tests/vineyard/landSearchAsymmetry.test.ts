@@ -6,7 +6,7 @@ import {
   type LandSearchOptions,
   calculateLandSearchCost
 } from '@/lib/services/vineyard/landSearchService';
-import { calculateLandSearchWork } from '@/lib/services/activity/workcalculators/landSearchWorkCalculator';
+import { calculateLandSearchWork } from '@/lib/features/activities/services/workcalculators/landSearchWorkCalculator';
 import {
   probabilityMassInRange,
   getAsymmetricHectareMassRemoved

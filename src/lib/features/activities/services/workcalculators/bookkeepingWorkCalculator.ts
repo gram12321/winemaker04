@@ -1,6 +1,6 @@
 import { Transaction, Season, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
-import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
+import { TASK_RATES, INITIAL_WORK } from '@/lib/features/activities/constants/activityConstants';
 import { getGameState, getCurrentPrestige, getTransactions, notificationService } from '@/lib/services';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';

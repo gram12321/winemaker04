@@ -1,4 +1,4 @@
-import { INITIAL_WORK, TASK_RATES } from '@/lib/constants/activityConstants';
+import { INITIAL_WORK, TASK_RATES } from '@/lib/features/activities/constants/activityConstants';
 import { WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, type WorkFactor } from './workCalculator';
 

@@ -1,11 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { GrapeVariety, Vineyard, NotificationCategory } from '@/lib/types/types';
-import { cancelActivity, createActivityWithResult, getGameState, initializePlanting } from '@/lib/services';
-import { WorkCategory, WorkFactor } from '@/lib/services/activity';
-import { calculatePlantingWork } from '@/lib/services/activity';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WarningModal, WeatherOperationStatusNotice } from '@/components/ui';
+import { getGameState, initializePlanting } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
+import { WorkCategory } from '@/lib/types/types';
+import type { WorkFactor } from '../../services/workcalculators/workCalculator';
+import { calculatePlantingWork } from '../../services/workcalculators/plantingWorkCalculator';
+import ActivityOptionsModal, { type ActivityOptionField, type ActivityWorkEstimate } from '../activityOptionsModal';
+import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
+import { WeatherOperationStatusNotice } from '@/components/ui/components/WeatherOperationStatusNotice';
 import { notificationService } from '@/lib/services';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
+import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
@@ -125,7 +129,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     const density = submittedOptions.density as number;
 
     // Create against fresh service-side weather validation before mutating the vineyard.
-    const creation = await createActivityWithResult({
+    const creation = await activitiesFeature.lifecycle.createWithResult({
       category: WorkCategory.PLANTING,
       title: `Planting ${vineyard.name}`,
       totalWork: workCalculation.workEstimate.totalWork,
@@ -152,7 +156,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     // Initialize planting only after the authoritative service validation succeeds.
     const initialized = await initializePlanting(vineyard.id, grape);
     if (!initialized) {
-      await cancelActivity(creation.activityId);
+      await activitiesFeature.lifecycle.cancel(creation.activityId);
       await notificationService.addMessage('Failed to initialize planting.', 'plantingOptionsModal.handlePlant', 'Planting Error', NotificationCategory.SYSTEM);
       return;
     }

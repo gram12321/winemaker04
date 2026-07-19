@@ -1,10 +1,10 @@
-﻿import { Staff, Activity, WorkCategory } from '@/lib/types/types';
-import { getGameState, updateGameState } from '../../core/gameState';
+import { Staff, Activity, WorkCategory } from '@/lib/types/types';
+import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { createActivity } from './activityManager';
-import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from '../../user/staffService';
+import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from '@/lib/services/user/staffService';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { addTransaction } from '../../finance/financeService';
+import { addTransaction } from '@/lib/services/finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getSkillLevelInfo, isSpecializedRole, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import {

@@ -23,6 +23,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 ### Time, Weather, and Vineyard
 
 - Weekly tick advances activities, orders/contracts, forward contracts, vines, prestige decay, economy/weather, and seasonal/yearly finance hooks.
+- `src/lib/features/activities/` owns activity lifecycle, work calculators/previews, activity ticks, and activity UI behind `activitiesFeature`; host systems use only its public facade.
 - Weather state, intensity, seasonal pattern/confidence, and next-week forecast persist in company-scoped `GameState`.
 - `src/lib/features/weather/` resolves weather and supplies shared vineyard projection, market context, planting/harvesting operation impacts, and presentation models.
 - Vineyard weather is a bounded modifier of normal health/ripeness progression, including planting progress, research health-decay multiplier, aspect, altitude, suitability, and soil response. It does not directly modify yield, harvest anchors, or wine score.
@@ -68,6 +69,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 | Area | Locations |
 |---|---|
 | Core/tick | `src/lib/services/core/` |
+| Activities | `src/lib/features/activities/`, `src/lib/database/activities/activityDB.ts` |
 | Vineyard/weather | `src/lib/services/vineyard/`, `src/lib/features/weather/`, `src/components/pages/Vineyard.tsx`, `WeatherCenter.tsx` |
 | Wine/scoring | `src/lib/services/wine/`, `src/lib/wineStructure/`, wine modal components |
 | Sales/markets | `src/lib/services/sales/`, sales pages/modals, `src/lib/database/sales/` |

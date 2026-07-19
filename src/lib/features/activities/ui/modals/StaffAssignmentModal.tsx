@@ -3,13 +3,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
-import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext, getRelevantSkillKey, getRelevantSkillName, getStaffContributionBreakdown, type ActivityStaffWorkContext } from '@/lib/services/activity';
-import { getTeamForCategory, notificationService, updateActivity } from '@/lib/services';
+import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext, type ActivityStaffWorkContext } from '../../services/activityWorkPreviewService';
+import { getRelevantSkillKey, getRelevantSkillName, getStaffContributionBreakdown } from '../../services/workcalculators/workCalculator';
+import { activitiesFeature } from '@/lib/features/activities';
+import { getTeamForCategory, notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { formatNumber, getFlagIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { Button, StaffSkillBarsList } from '@/components/ui';
-import { useGameState } from '@/hooks';
+import { useGameState } from '@/hooks/useGameState';
 
 interface StaffAssignmentModalProps {
   isOpen: boolean;
@@ -78,7 +80,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   const handleSave = async () => {
     try {
       // Update activity with new staff assignments
-      const success = await updateActivity(activity.id, {
+      const success = await activitiesFeature.lifecycle.update(activity.id, {
         params: {
           ...activity.params,
           assignedStaffIds: selectedStaffIds

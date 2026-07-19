@@ -1,7 +1,6 @@
-import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { completeEmptyStorageVessel, getCompanyStorageAllocationPlans, getCompanyStorageAllocations, getCompanyStorageVessels } from '@/lib/database/winery/storageVesselsDB';
-import { createActivityWithResult } from '@/lib/services/activity/activitymanagers/activityManager';
-import { calculateEmptyStorageVesselWork } from '@/lib/services/activity/workcalculators/storageVesselMaintenanceWorkCalculator';
+import { activitiesFeature } from '@/lib/features/activities';
+import { calculateEmptyStorageVesselWork } from '@/lib/features/activities/services/workcalculators/storageVesselMaintenanceWorkCalculator';
 import { getGameState } from '@/lib/services/core/gameState';
 import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan } from '@/lib/types/storageVessels';
 import { WorkCategory, type Activity, type WineBatch } from '@/lib/types/types';
@@ -96,7 +95,7 @@ export async function startEmptyStorageVesselActivity(vesselId: string): Promise
   if (allocation.filledLitres <= 0) return { success: false, error: `${getStorageVesselDisplayName(vessel)} has no wine volume to empty.` };
   if (isStorageVesselEmptyingInProgress(vessel.id)) return { success: false, error: 'An Empty Vessel activity is already in progress for this vessel.' };
 
-  const persistedActivities = await loadActivitiesFromDb();
+  const persistedActivities = await activitiesFeature.reads.getAll();
   const activities = persistedActivities.length > 0 ? persistedActivities : (getGameState().activities ?? []);
   const blockingActivity = activities.find((activity) =>
     (activity.status === 'active' || activity.status === 'paused')
@@ -109,7 +108,7 @@ export async function startEmptyStorageVesselActivity(vesselId: string): Promise
 
   const vesselName = getStorageVesselDisplayName(vessel);
   const work = calculateEmptyStorageVesselWork(allocation.filledLitres);
-  const activityResult = await createActivityWithResult({
+  const activityResult = await activitiesFeature.lifecycle.createWithResult({
     category: WorkCategory.MAINTENANCE,
     title: `Empty Vessel - ${vesselName}`,
     targetId: vessel.id,

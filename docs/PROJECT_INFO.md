@@ -20,6 +20,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Domain | Logic/features | UI | Persistence/configuration |
 |---|---|---|---|
 | Core state/tick | `src/lib/services/core/` | `src/App.tsx`, layout | `database/core/gamestateDB.ts`, time constants |
+| Activities | `src/lib/features/activities/` | activity panel, host pages, core tick | `database/activities/activityDB.ts`, activity constants |
 | Vineyard | `src/lib/services/vineyard/` | `Vineyard.tsx`, vineyard modals | `database/activities/vineyardDB.ts`, vineyard/grape constants |
 | Weather | `src/lib/features/weather/`, `constants/weatherConstants.ts` | `WeatherCenter.tsx`, Vineyard tooltips, Winepedia Weather | company-scoped weather fields in `GameState`/`gamestateDB.ts` |
 | Winery/inventory | `src/lib/services/wine/winery/`, `anchors/`, `features/` | `Winery.tsx`, Equipment, wine modals | `database/activities/inventoryDB.ts`, `database/winery/`, wine-feature constants |
@@ -28,7 +29,7 @@ Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read
 | Buy Market and grape trading | Buy Market, Grape Procurement, buyer/supplier, loyalty, sell, cooperative modules | Buy Market, sell, and Storage Vessel surfaces | `database/market/`, `database/winery/`, `database/sales/`, market/cooperative constants |
 | Forward pre-sales | `services/sales/forwardContractService.ts` | `ContractsTab.tsx` | `database/sales/contractDB.ts` |
 | Finance/founders | `services/finance/`, `services/user/staffService.ts` | finance views, `FounderPanel.tsx` | transactions, staff founder field, finance/staff constants |
-| Staff competency/work | `services/activity/workcalculators/workCalculator.ts`, `services/activity/activityWorkContext.ts`, `services/user/staffService.ts`, `services/user/staffPresentationService.ts`, `services/finance/wageService.ts` | Staff page and staff/activity modals | `database/core/staffDB.ts`, `staff.specialized_roles`, `staff.experience`, staff/activity constants |
+| Staff competency/work | `features/activities/services/workcalculators/workCalculator.ts`, `features/activities/services/activityWorkContext.ts`, `services/user/staffService.ts`, `services/user/staffPresentationService.ts`, `services/finance/wageService.ts` | Staff page and activity feature UI | `database/core/staffDB.ts`, `staff.specialized_roles`, `staff.experience`, activity constants |
 | Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases, `loanCalculations.ts`, and loan constants |
 | Research | `features/researchUpgrade/`, research constants | `Research.tsx`, admin inspector | research unlock database and view services |
 | Prestige | `services/prestige/` | prestige UI | prestige-event database |

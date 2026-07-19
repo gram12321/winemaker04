@@ -1,11 +1,11 @@
 import { Activity, WorkCategory } from '@/lib/types/types';
-import { getClearingTask } from '@/lib/constants/activityConstants';
-import { createActivity } from '../activity/activitymanagers/activityManager';
+import { getClearingTask } from '@/lib/features/activities/constants/activityConstants';
+import { activitiesFeature } from '@/lib/features/activities';
 import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
-import { calculateClearingWork } from '../activity/workcalculators/clearingWorkCalculator';
+import { calculateClearingWork } from '@/lib/features/activities/services/workcalculators/clearingWorkCalculator';
 
 export interface ClearingActivityOptions {
   tasks: { [key: string]: boolean };
@@ -68,7 +68,7 @@ export async function createClearingActivity(
     const title = `Clearing ${vineyardName}`;
 
     // Create the activity
-    await createActivity({
+    await activitiesFeature.lifecycle.create({
       category: WorkCategory.CLEARING,
       title,
       totalWork: workResult.totalWork,

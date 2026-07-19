@@ -2,10 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, getTeamForCategory, handlePartialPlanting, handlePartialHarvesting } from '@/lib/services';
 import { completeLandSearch } from './landSearchManager';
-import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
+import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity, getActivitiesByTarget } from '@/lib/database/activities/activityDB';
 import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
 import { awardExperience } from '@/lib/services/user/staffService';
-import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { calculateAppliedStaffWorkAllocation } from '../workcalculators/workCalculator';
 import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
 import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
@@ -16,8 +16,6 @@ import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { releaseStorageAllocationPlan, releaseReservedStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import { completeEmptyStorageVesselActivity } from '@/lib/services/wine/winery/storageVesselMaintenanceService';
 import { formatNumber } from '@/lib/utils';
-import { loanLenderFeature } from '@/lib/features/loanLender';
-import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 
 
@@ -168,6 +166,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
       typeof activity.params?.researchId === 'string';
 
     if (isResearchActivity) {
+      const { researchUpgradeFeature } = await import('@/lib/features/researchUpgrade');
       await researchUpgradeFeature.workflow.completeResearch(activity);
       return;
     }
@@ -190,10 +189,12 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   },
 
   [WorkCategory.LENDER_SEARCH]: async (activity: Activity) => {
+      const { loanLenderFeature } = await import('@/lib/features/loanLender');
       await loanLenderFeature.workflow.completeLenderSearch(activity);
   },
 
   [WorkCategory.TAKE_LOAN]: async (activity: Activity) => {
+      const { loanLenderFeature } = await import('@/lib/features/loanLender');
       await loanLenderFeature.workflow.completeTakeLoan(activity);
   },
 
@@ -337,6 +338,9 @@ export async function getActivityById(activityId: string): Promise<Activity | nu
   const activities = await loadActivitiesFromDb();
   return activities.find(activity => activity.id === activityId) || null;
 }
+
+export { getActivitiesByTarget };
+export const removeActivity = removeActivityFromDb;
 
 export async function updateActivity(activityId: string, updates: Partial<Activity>): Promise<boolean> {
   try {

@@ -1,6 +1,6 @@
 import { Vineyard, GrapeVariety, WorkCategory } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
-import { HARVEST_YIELD_RATE, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
+import { HARVEST_YIELD_RATE, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/features/activities/constants/activityConstants';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { calculateVineyardYield } from '@/lib/services';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';

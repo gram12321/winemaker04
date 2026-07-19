@@ -2,7 +2,7 @@ import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
-import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { cn, getCharacteristicDisplayName, getStoryImageSrc } from './utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 

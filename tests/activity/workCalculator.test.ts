@@ -5,12 +5,12 @@ import {
   calculateAppliedStaffWorkAllocation,
   calculateIndividualStaffContribution,
   calculateStaffWorkAllocation
-} from '@/lib/services/activity/workcalculators/workCalculator';
+} from '@/lib/features/activities/services/workcalculators/workCalculator';
 import { WorkCategory, type Staff } from '@/lib/types/types';
 import {
   getStaffSpecializationCategories,
   isStaffSpecializationCategory
-} from '@/lib/constants/activityConstants';
+} from '@/lib/features/activities/constants/activityConstants';
 
 const baseHireDate = {
   week: 1,

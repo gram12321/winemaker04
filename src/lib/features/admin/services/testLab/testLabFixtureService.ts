@@ -8,7 +8,7 @@ import { saveVineyard } from '@/lib/database/activities/vineyardDB';
 import { createWineBatchFromHarvest, getAllWineBatches, updateInventoryBatch } from '@/lib/services/wine/winery/inventoryService';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { startFermentationActivity, processWeeklyFermentation, bottleWine } from '@/lib/services/wine/winery/fermentationManager';
-import { completeActivityNow, getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
+import { activitiesFeature } from '@/lib/features/activities';
 import { loadWineLogByVineyard } from '@/lib/database';
 import type { CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import type { FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
@@ -299,7 +299,7 @@ async function getBatchById(batchId: string): Promise<WineBatch> {
 }
 
 async function completeActivityForBatch(batchId: string, category: WorkCategory): Promise<void> {
-  const activities = await getAllActivities();
+  const activities = await activitiesFeature.reads.getAll();
   const activity = activities.find(candidate =>
     candidate.category === category &&
     candidate.params?.batchId === batchId
@@ -309,7 +309,7 @@ async function completeActivityForBatch(batchId: string, category: WorkCategory)
     throw new Error(`No ${category} activity found for batch ${batchId}`);
   }
 
-  const result = await completeActivityNow(activity.id);
+  const result = await activitiesFeature.lifecycle.completeNow(activity.id);
   if (!result.success) {
     throw new Error(result.error || `Failed to complete ${category} activity`);
   }

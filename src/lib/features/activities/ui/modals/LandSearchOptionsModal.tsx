@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork, getAllVineyards } from '@/lib/services';
+import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, getAllVineyards } from '@/lib/services';
+import { calculateLandSearchWork } from '../../services/workcalculators/landSearchWorkCalculator';
+import { startLandSearch } from '../../services/activitymanagers/landSearchManager';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
 import { Button, UnifiedTooltip } from '@/components/ui';
@@ -245,7 +247,6 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
       hectarePenaltyReferenceRange: [MIN_SEARCHABLE_HECTARES, clampedSearchLimit]
     };
 
-    const { startLandSearch } = await import('@/lib/services');
     const activityId = await startLandSearch(limitedOptions);
     if (activityId) {
       onClose();

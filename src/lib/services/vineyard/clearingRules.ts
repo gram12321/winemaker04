@@ -1,4 +1,4 @@
-import { getClearingTask } from '@/lib/constants/activityConstants';
+import { getClearingTask } from '@/lib/features/activities/constants/activityConstants';
 
 export function calculateClearingHealth(
   currentHealth: number,

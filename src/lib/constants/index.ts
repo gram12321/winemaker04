@@ -6,7 +6,6 @@ export * from './startingConditions';
 export * from './grapeConstants';
 export * from './namesConstants';
 export * from './vineyardConstants';
-export * from './activityConstants';
 export * from './economyConstants';
 export * from './loanConstants';
 export * from './financeConstants';
@@ -24,6 +23,7 @@ export * from './buyMarketConstants';
 export * from './storageVesselConstants';
 export * from './sellGrapesConstants';
 export * from './weatherConstants';
+
 
 // Wine features
 export * from './wineFeatures/oxidation';

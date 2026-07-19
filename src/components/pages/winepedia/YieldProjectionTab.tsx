@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tool
 import { formatNumber } from '@/lib/utils/utils';
 import { calculateVineyardYield, calculateVineYieldProgression, calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { Vineyard, GrapeVariety, Aspect } from '@/lib/types/types';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
+import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 
 // Use existing constants from vineyardConstants

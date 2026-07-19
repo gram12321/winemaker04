@@ -5,7 +5,7 @@ import { formatNumber } from '@/lib/utils/utils';
 import { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateSymmetricalMultiplier, vineyardAgePrestigeModifier, calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail, Normalize1000To01WithTail, normalizeXP } from '@/lib/utils/calculator';
 import { calculateVineyardYield } from '@/lib/services';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
+import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
 
 const toNumber = (value: unknown): number => (
   typeof value === 'number' && Number.isFinite(value) ? value : Number(value ?? 0)

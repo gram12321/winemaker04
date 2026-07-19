@@ -1,6 +1,6 @@
 import { getGameState, updateGameState } from '@/lib/services';
 import { WorkCategory, NotificationCategory } from '@/lib/types/types';
-import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
+import { createActivity } from '@/lib/features/activities/services/activitymanagers/activityManager';
 import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { calculateTotalBookkeepingWork } from '../workcalculators/bookkeepingWorkCalculator';
 import { notificationService } from '@/lib/services';

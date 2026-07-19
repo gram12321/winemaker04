@@ -97,6 +97,15 @@ vi.mock('@/lib/features/achievements', () => ({
   },
 }));
 
+vi.mock('@/lib/features/activities', () => ({
+  activitiesFeature: {
+    ticks: {
+      progress: mocks.progressActivities,
+      checkAndTriggerBookkeeping: mocks.checkAndTriggerBookkeeping,
+    },
+  },
+}));
+
 vi.mock('@/lib/services', () => ({
   getGameState: mocks.getGameState,
   updateGameState: mocks.updateGameState,

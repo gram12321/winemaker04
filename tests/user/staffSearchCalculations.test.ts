@@ -6,9 +6,9 @@ import {
   calculateHiringWorkRange,
   calculateSearchPreview,
   type StaffSearchOptions
-} from '@/lib/services/activity/workcalculators/staffSearchWorkCalculator';
+} from '@/lib/features/activities/services/workcalculators/staffSearchWorkCalculator';
 import { createStaff } from '@/lib/services/user/staffService';
-import { generateStaffCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
+import { generateStaffCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
 import { type Staff, type SpecializedRole } from '@/lib/types/types';
 
 describe('staff search calculations', () => {

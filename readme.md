@@ -36,6 +36,7 @@ npm run build
 - Prefer existing barrel exports and shared types. Do not add compatibility branches or migrations unless requested.
 - Callers import feature barrels, not feature internals or general-service re-exports.
 - `boardShare` is deliberately inactive and has no host wiring while public-company/share gameplay is deferred.
+ - we are in dev phase, and need no backward compability, no need to keep old database tables or backfill database. We will rather edit excisting types/interfaces/enums ect, than extend them. We have no need to keep excisting database structure, its fine to create new scheme and delete old ones. When we change functions/constant or other imports, we should not create reexports or wrappers, instead correct consumers to use the new names.
 
 ## Documentation Entry Points
 
@@ -53,6 +54,7 @@ npm run build
 
 ## Current Systems
 
+- Activities are owned by the installed `activitiesFeature` at `src/lib/features/activities/`. Host code uses its lifecycle, reads, work-preview, tick, setup, and UI namespaces; activity persistence remains an internal adapter under `database/activities/`.
 - Staff competency has three complementary layers: primary skills are the category-derived baseline; persisted broad career roles apply across their matching primary skill; and applied activity work earns exact task mastery. Grape-aware work also earns grape mastery for its variety. The shared work calculator applies the bounded bonuses and is the source for previews and weekly activity progress.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression; permanent effects currently include vineyard health-decay reduction.
 - Weather is persisted weekly state/forecast, a bounded site-aware vineyard projection, and grape-market context. Weather Center is operational; Winepedia is the technical reference.

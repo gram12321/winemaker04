@@ -11,7 +11,7 @@ import {
   LADDER_TYPES,
   MARKET_UNLOCK_TYPES,
 } from '@/lib/constants/researchPresentationConstants';
-import { calculateResearchCost, calculateResearchWork } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
+import { calculateResearchCost, calculateResearchWork } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
 import {
   formatVineyardCapacityValue,
   getBaseVineyardCapacityValue,

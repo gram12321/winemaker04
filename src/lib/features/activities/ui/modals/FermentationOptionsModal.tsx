@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
-import { WorkFactor, WorkCategory } from '@/lib/services/activity';
-import { calculateFermentationWork, validateFermentationBatch } from '@/lib/services/activity';
+import { WorkCategory } from '@/lib/types/types';
+import type { WorkFactor } from '../../services/workcalculators/workCalculator';
+import { calculateFermentationWork, validateFermentationBatch } from '../../services/workcalculators/fermentationWorkCalculator';
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
+import ActivityOptionsModal, { type ActivityOptionField, type ActivityWorkEstimate } from '../activityOptionsModal';
 import { notificationService } from '@/lib/services';
 import { formatNumber, getCharacteristicDisplayName, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';

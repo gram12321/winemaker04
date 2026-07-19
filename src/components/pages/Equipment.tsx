@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Button, BuyMarketModal, WarningModal } from '@/components/ui';
 import { useGameStateWithData, useLoadingState } from '@/hooks';
 import {
-  getAllActivities,
   getAllWineBatches,
   calculateStorageCapacitySummary,
   getOwnedStorageVessels,
@@ -11,6 +10,7 @@ import {
   isStorageVesselEmptyingInProgress,
   startEmptyStorageVesselActivity,
 } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import type { WineBatch } from '@/lib/types/types';
 import { formatNumber, getColorClass, getQualityInfo } from '@/lib/utils';
@@ -23,7 +23,7 @@ export const Equipment: React.FC<EquipmentProps> = () => {
   const { withLoading } = useLoadingState();
   const vessels = useGameStateWithData(getOwnedStorageVessels, [] as StorageVessel[], { topic: 'storage_vessels' });
   const batches = useGameStateWithData(getAllWineBatches, [] as WineBatch[], { topic: 'wine_batches' });
-  const activities = useGameStateWithData(getAllActivities, [], { topic: 'activities' });
+  const activities = useGameStateWithData(activitiesFeature.reads.getAll, [], { topic: 'activities' });
   const [isBuyMarketOpen, setIsBuyMarketOpen] = useState(false);
   const [emptyingRequest, setEmptyingRequest] = useState<{ vessel: StorageVessel; batch: WineBatch } | null>(null);
   const [emptyingError, setEmptyingError] = useState<string | null>(null);

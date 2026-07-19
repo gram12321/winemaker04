@@ -40,7 +40,7 @@ import {
   type ResearchEligibilityContext,
 } from '@/lib/features/researchUpgrade/services/research/researchEligibilityService';
 import { getResearchViewSummary, loadResearchWorkspaceSnapshot } from '@/lib/features/researchUpgrade/services/research/researchViewService';
-import { calculateResearchCost, calculateResearchWork } from '@/lib/services';
+import { calculateResearchCost, calculateResearchWork } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
 import { formatNumber } from '@/lib/utils';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { ChevronRight, CircleDot, Compass, FlaskConical, Grape, Landmark, Network } from 'lucide-react';

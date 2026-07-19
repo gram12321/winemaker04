@@ -66,9 +66,6 @@ export * from './wine/winery/storageVesselMaintenanceService';
 // Prestige services
 export * from './prestige/prestigeService';
 
-// Activity system
-export * from './activity';
-
 // Constants
 export * from '@/lib/constants';
 

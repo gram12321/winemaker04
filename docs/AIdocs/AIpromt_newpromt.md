@@ -61,7 +61,7 @@ Keep detailed status updates in `docs/AIdocs/AIDescriptions_coregame.md` and fil
 | Structure index | `src/lib/wineStructure/` |
 | Sales services | `src/lib/services/sales/` |
 | Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
-| Activity services | `src/lib/services/activity/` |
+| Activities feature | `src/lib/features/activities/` |
 | Database layer | `src/lib/database/` |
 | Game constants | `src/lib/constants/` |
 | Wine feature constants | `src/lib/constants/wineFeatures/` |

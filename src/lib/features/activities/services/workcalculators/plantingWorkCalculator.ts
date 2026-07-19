@@ -3,9 +3,9 @@
 
 import { Vineyard, GrapeVariety, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
-import { TASK_RATES, INITIAL_WORK, isDensityBased } from '@/lib/constants/activityConstants';
+import { TASK_RATES, INITIAL_WORK, isDensityBased } from '@/lib/features/activities/constants/activityConstants';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
-import { getGameState } from '../../core/gameState';
+import { getGameState } from '@/lib/services/core/gameState';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
 import { getGrapeFragilityModifier, getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 

@@ -2,16 +2,22 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { BarChart3, Grape, HeartPulse } from 'lucide-react';
 import { useLoadingState, useGameState, useGameStateWithData } from '@/hooks';
-import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, getCurrentCompany, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
+import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getCurrentCompany, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import { buildVineyardWeatherTooltip, createWeatherWeekContext, getWeatherIcon, resolveWeatherOperationImpact } from '@/lib/features/weather';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal, VineyardStatusBadge, WeatherOperationStatusNotice } from '../ui';
+import { VineyardModal, VineyardStatusBadge, WeatherOperationStatusNotice } from '../ui';
+import { LandSearchOptionsModal } from '@/lib/features/activities/ui/modals/LandSearchOptionsModal';
+import { LandSearchResultsModal } from '@/lib/features/activities/ui/modals/LandSearchResultsModal';
+import PlantingOptionsModal from '@/lib/features/activities/ui/modals/PlantingOptionsModal';
+import HarvestOptionsModal from '@/lib/features/activities/ui/modals/HarvestOptionsModal';
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
-import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
+import ClearingOptionsModal from '@/lib/features/activities/ui/modals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { formatNumber, getBadgeColorClasses, getRatingForRange, getRangeColor } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
-import { clearPendingLandSearchResults, calculateVineyardExpectedYield } from '@/lib/services';
+import { calculateVineyardExpectedYield } from '@/lib/services';
+import { clearPendingLandSearchResults } from '@/lib/features/activities/services/activitymanagers/landSearchManager';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../ui/shadCN/tooltip';
 
 // Progress bar color helpers via global utils
@@ -263,7 +269,7 @@ const Vineyard: React.FC = () => {
   const [showSellModal, setShowSellModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
-  const activities = useGameStateWithData(getAllActivities, []);
+  const activities = useGameStateWithData(activitiesFeature.reads.getAll, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0, season: 'Spring' });
   const liveGameState = useGameState();
   const currentCompany = getCurrentCompany();

@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
-import { WorkFactor, WorkCategory } from '@/lib/services/activity';
+import type { WorkCategory } from '@/lib/types/types';
+import type { WorkFactor } from '../services/workcalculators/workCalculator';
 import { WorkCalculationTable } from './workCalculationTable';
-import { UnifiedTooltip } from '../shadCN/tooltip';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
 export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group' | 'checkbox-group';
 

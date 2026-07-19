@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { SpecializedRole } from '@/lib/types/types';
-import { StaffSearchOptions, calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity';
+import type { StaffSearchOptions } from '../../services/workcalculators/staffSearchWorkCalculator';
+import { calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview } from '../../services/workcalculators/staffSearchWorkCalculator';
+import { startStaffSearch } from '../../services/activitymanagers/staffSearchManager';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui';

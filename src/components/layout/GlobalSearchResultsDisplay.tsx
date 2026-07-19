@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
-import { LandSearchResultsModal, StaffSearchResultsModal } from '@/components/ui';
-import { clearPendingLandSearchResults, clearPendingCandidates } from '@/lib/services';
+import { LandSearchResultsModal } from '@/lib/features/activities/ui/modals/LandSearchResultsModal';
+import { StaffSearchResultsModal } from '@/lib/features/activities/ui/modals/StaffSearchResultsModal';
+import { clearPendingLandSearchResults } from '@/lib/features/activities/services/activitymanagers/landSearchManager';
+import { clearPendingCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
 import { getMinimizedModals, restoreModal, isModalMinimized } from '@/lib/utils';
 
 type ModalType = 'land' | 'staff' | 'lender' | 'loan';

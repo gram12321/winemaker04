@@ -1,11 +1,10 @@
 import React from 'react';
 import {
-  completeActivityNow,
-  getAllActivities,
   getAllStaff,
   getStoredVineyards,
   recreateBuyGrapeMarketOffers
 } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import { userFeature } from '@/lib/features/user';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import type { AdminFeature } from './featureTypes';
@@ -89,7 +88,7 @@ const testLab: AdminTestLab = {
     const [vineyards, staffMembers, activities] = await Promise.all([
       getStoredVineyards().catch(() => []),
       getAllStaff().catch(() => []),
-      getAllActivities().catch(() => [])
+      activitiesFeature.reads.getAll().catch(() => [])
     ]);
     return { vineyards, staff: staffMembers, activities };
   },
@@ -102,7 +101,7 @@ const testLab: AdminTestLab = {
     createMustReadyBatch,
     createFermentingBatch,
     createBottledWine,
-    completeActivityNow,
+    completeActivityNow: activitiesFeature.lifecycle.completeNow,
     getCurrentUserId: async () => (await userFeature.account.getCurrentPlayer())?.id ?? null,
     runAutomatedTests
   })

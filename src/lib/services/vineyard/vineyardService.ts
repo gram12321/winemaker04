@@ -15,7 +15,7 @@ import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
-import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
+import { activitiesFeature } from '@/lib/features/activities';
 import { updateGameState } from '@/lib/services/core/gameState';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { buildVineyardCapacityState, getCapacityConstraintReason } from './vineyardCapacityService';
@@ -237,13 +237,13 @@ export async function sellVineyard(
     const proceeds = Math.max(0, Math.round(grossValue * (1 - penaltyRate)));
 
     // Auto-cancel/remove any active activities on this vineyard
-    const activeOnTarget = await getActivitiesByTarget(vineyardId);
+    const activeOnTarget = await activitiesFeature.reads.getByTarget(vineyardId);
     if (activeOnTarget.length > 0) {
       for (const act of activeOnTarget) {
-        await removeActivityFromDb(act.id);
+        await activitiesFeature.lifecycle.remove(act.id);
       }
       // Refresh activities in game state after removals
-      const remaining = await loadActivitiesFromDb();
+      const remaining = await activitiesFeature.reads.getAll();
       updateGameState({ activities: remaining.filter(a => a.status === 'active') });
     }
 

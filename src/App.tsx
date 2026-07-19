@@ -15,13 +15,13 @@ import { Login } from './components/pages/Login';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import Equipment from './components/pages/Equipment';
 import { Toaster } from './components/ui/shadCN/toaster';
-import { ActivityPanel } from './components/layout/ActivityPanel';
 import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import type { CompanyRecord } from '@/lib/features/company';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
-import { initializeCustomers, initializeActivitySystem, notificationService, preloadAllCustomerRelationships } from './lib/services';
+import { initializeCustomers, notificationService, preloadAllCustomerRelationships } from './lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import { companyFeature, type CompanyCreateResult } from '@/lib/features/company';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { achievementsFeature } from '@/lib/features/achievements';
@@ -117,7 +117,7 @@ function App({ adminFeature }: AppProps) {
       });
       
       // Initialize activity system
-      await initializeActivitySystem();
+      await activitiesFeature.setup.initialize();
       
     } catch (error) {
       console.error('Error initializing game for company:', error);
@@ -262,7 +262,7 @@ function App({ adminFeature }: AppProps) {
 
       {/* Activity Panel - only show when logged in */}
       {isGameInitialized && currentCompany && (
-        <ActivityPanel />
+        activitiesFeature.ui.renderActivityPanel()
       )}
 
       {isGameInitialized && currentCompany && loanLenderAppOverlays.map((overlay) => (

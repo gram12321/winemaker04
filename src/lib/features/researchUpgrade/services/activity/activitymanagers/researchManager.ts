@@ -1,9 +1,8 @@
-﻿import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
+import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
 import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState';
-import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
-import { calculateResearchWork, calculateResearchCost } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
+import { calculateResearchWork, calculateResearchCost } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
 import { getResearchProject, RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { addResearchPrestigeEvent } from '@/lib/services/prestige/prestigeService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -79,7 +78,8 @@ export async function startResearch(projectId: string): Promise<string | null> {
             );
 
             // Create the research activity
-            const activityId = await createActivity({
+    const { activitiesFeature } = await import('@/lib/features/activities');
+    const activityId = await activitiesFeature.lifecycle.create({
                   category: WorkCategory.ADMINISTRATION_AND_RESEARCH,
                   title: project.title,
                   totalWork,

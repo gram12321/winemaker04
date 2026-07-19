@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
-import { WorkFactor, WorkCategory } from '@/lib/services/activity';
-import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity';
+import { WorkCategory } from '@/lib/types/types';
+import type { WorkFactor } from '../../services/workcalculators/workCalculator';
+import { calculateCrushingWork, validateCrushingBatch } from '../../services/workcalculators/crushingWorkCalculator';
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
+import ActivityOptionsModal, { type ActivityOptionField, type ActivityWorkEstimate } from '../activityOptionsModal';
 import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
 import { formatNumber, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';

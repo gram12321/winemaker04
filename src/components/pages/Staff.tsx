@@ -2,11 +2,15 @@
 // Main page for viewing and managing staff members
 
 import React, { useMemo, useState } from 'react';
-import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam, getWageColorClass, getAllActivities, getStaffExperiencePresentation } from '@/lib/services';
+import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam, getWageColorClass, getStaffExperiencePresentation } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import type { Staff } from '@/lib/types/types';
 import { formatNumber, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
-import { getSkillLevelInfo, SPECIALIZED_ROLES, getTaskTypeDisplayName } from '@/lib/constants';
-import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffSearchOptionsModal, StaffSearchResultsModal, StaffModal, StaffSkillBarsList } from '@/components/ui';
+import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
+import { getTaskTypeDisplayName } from '@/lib/features/activities/constants/activityConstants';
+import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffModal, StaffSkillBarsList } from '@/components/ui';
+import { StaffSearchOptionsModal } from '@/lib/features/activities/ui/modals/StaffSearchOptionsModal';
+import { StaffSearchResultsModal } from '@/lib/features/activities/ui/modals/StaffSearchResultsModal';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
 import { useGameState, useGameStateWithData } from '@/hooks';
@@ -43,7 +47,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   });
 
   const { staff: gameStaff, teams: gameTeams } = useGameState();
-  const activities = useGameStateWithData(getAllActivities, []);
+  const activities = useGameStateWithData(activitiesFeature.reads.getAll, []);
   const allStaff = gameStaff || [];
   const allTeams = gameTeams || [];
   const totalWages = allStaff.reduce((sum, staff) => sum + staff.wage, 0);

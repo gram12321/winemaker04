@@ -1,6 +1,8 @@
 import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researchConstants';
 import { getUnlockedResearchIds } from '@/lib/database';
-import { calculateResearchCost, calculateResearchWork, getAllActivities, getCurrentPrestige } from '@/lib/services';
+import { getCurrentPrestige } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
+import { calculateResearchCost, calculateResearchWork } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
 import { WorkCategory } from '@/lib/types/types';
 import {
   getResearchRequirementReasons,
@@ -142,7 +144,7 @@ function buildResearchSearchableText(model: ResearchProjectModel): string {
 
 export async function loadResearchWorkspaceSnapshot(bypassGates: boolean): Promise<ResearchWorkspaceSnapshot> {
   const [activities, completedIds, currentPrestige, permanentEffects] = await Promise.all([
-    getAllActivities(),
+    activitiesFeature.reads.getAll(),
     getUnlockedResearchIds(),
     getCurrentPrestige(),
     getResearchPermanentEffects(),

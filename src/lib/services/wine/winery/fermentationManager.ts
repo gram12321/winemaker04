@@ -3,9 +3,9 @@ import { bottleStorageBackedWineBatch, loadWineBatches, bulkUpdateWineBatches, u
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
 import { processEventTrigger } from '../features/featureService';
-import { createActivity } from '../../activity/activitymanagers/activityManager';
-import { WorkCategory } from '../../activity';
-import { calculateFermentationWork } from '../../activity/workcalculators/fermentationWorkCalculator';
+import { activitiesFeature } from '@/lib/features/activities';
+import { WorkCategory } from '@/lib/types/types';
+import { calculateFermentationWork } from '@/lib/features/activities/services/workcalculators/fermentationWorkCalculator';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
@@ -48,7 +48,7 @@ export async function startFermentationActivity(
     const { totalWork, cost } = calculateFermentationWork(batch, options);
 
     // Create the fermentation activity
-    await createActivity({
+    await activitiesFeature.lifecycle.create({
       category: WorkCategory.FERMENTATION,
       title: `Fermentation Setup - ${batch.grape},  ${batch.harvestStartDate.year}, ${batch.vineyardName}`,
       totalWork,

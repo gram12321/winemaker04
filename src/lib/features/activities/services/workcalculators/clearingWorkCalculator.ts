@@ -2,9 +2,9 @@
 // Calculates work required for clearing activities on vineyards
 
 import { Vineyard } from '@/lib/types/types';
-import { DEFAULT_VINE_DENSITY, getClearingTask } from '@/lib/constants/activityConstants';
+import { DEFAULT_VINE_DENSITY, getClearingTask } from '@/lib/features/activities/constants/activityConstants';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
-import { getGameState } from '../../core/gameState';
+import { getGameState } from '@/lib/services/core/gameState';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
 import { getVineyardAltitudeModifier, getVineyardSoilModifier } from './vineyardWorkModifiers';
 

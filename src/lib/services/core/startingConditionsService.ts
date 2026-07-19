@@ -3,7 +3,7 @@ import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanCo
 import { createStaff, addStaff } from '../user/staffService';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
-import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
+import { TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { formatNumber, getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
 import { companyFeature } from '@/lib/features/company';
@@ -12,6 +12,7 @@ import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
+import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
 import { userFeature } from '@/lib/features/user';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';

@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getColorClass } from '@/lib/utils';
-import { getWageColorClass, getAllTeams, getAllActivities, getStaffExperiencePresentation } from '@/lib/services';
-import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext } from '@/lib/services/activity';
-import { WORK_CATEGORY_INFO, getSkillLevelInfo, SPECIALIZED_ROLES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { getWageColorClass, getAllTeams, getStaffExperiencePresentation } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
+import { getSkillLevelInfo, SPECIALIZED_ROLES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
 import { useGameState, useGameStateWithData } from '@/hooks';
 
@@ -15,7 +16,7 @@ interface StaffModalProps extends DialogProps {
 
 const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire }) => {
   const gameState = useGameState();
-  const activities = useGameStateWithData(getAllActivities, []);
+  const activities = useGameStateWithData(activitiesFeature.reads.getAll, []);
   const allStaffMembers = gameState.staff ?? [];
   const { activeAssignments, staffTaskCounts } = useMemo(() => {
     const counts = new Map<string, number>();
@@ -45,8 +46,8 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
     void Promise.all(activeAssignments.map(async activity => {
       const assignedIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaffMembers.filter(member => assignedIds.includes(member.id));
-      const context = await getActivityStaffWorkContext(activity, activities, gameState, assignedIds);
-      const preview = calculateActivityStaffWorkPreview(activity, assignedStaff, context);
+      const context = await activitiesFeature.work.getContext(activity, activities, gameState, assignedIds);
+      const preview = activitiesFeature.work.getPreview(activity, assignedStaff, context);
       return [activity.id, {
         teamWorkPerWeek: preview.workPerWeek,
         personalWorkPerWeek: preview.allocation.contributions.get(staff?.id || '') || 0,

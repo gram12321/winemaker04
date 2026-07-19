@@ -1,7 +1,7 @@
 import type { GrapeVariety, Vineyard } from '@/lib/types/types';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
-import { getAltitudeRating } from '../../vineyard/vineyardValueCalc';
+import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
 
 export function getGrapeFragilityModifier(grape: GrapeVariety): number {
   return GRAPE_CONST[grape]?.fragile ?? 0;

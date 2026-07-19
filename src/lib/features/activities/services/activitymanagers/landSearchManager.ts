@@ -1,5 +1,5 @@
-﻿import { Activity, WorkCategory, NotificationCategory } from '@/lib/types/types';
-import { getGameState, updateGameState } from '../../core/gameState';
+import { Activity, WorkCategory, NotificationCategory } from '@/lib/types/types';
+import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { createActivity } from './activityManager';
 import { notificationService, addTransaction, calculateLandSearchCost, generateVineyardSearchResults, LandSearchOptions, getAllVineyards } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';

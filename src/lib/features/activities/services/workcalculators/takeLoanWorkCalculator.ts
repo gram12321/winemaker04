@@ -1,6 +1,6 @@
 import { WorkCategory, LoanOffer } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
-import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
+import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/features/activities/constants/activityConstants';
 import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_COMPLEXITY } from '@/lib/constants/loanConstants';
 import { clamp01 } from '@/lib/utils';
 

@@ -98,7 +98,8 @@ vi.mock('@/lib/features/admin/services/adminService', () => ({
   adminSetStaffXP: runnerMocks.adminSetStaffXP
 }));
 
-vi.mock('@/lib/services/activity/activitymanagers/activityManager', () => ({
+vi.mock('@/lib/features/activities/services/activitymanagers/activityManager', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/features/activities/services/activitymanagers/activityManager')>()),
   getAllActivities: runnerMocks.getAllActivities,
   completeActivityNow: runnerMocks.completeActivityNow
 }));

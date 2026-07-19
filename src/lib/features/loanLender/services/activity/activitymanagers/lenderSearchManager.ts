@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Activity, WorkCategory, NotificationCategory, LenderSearchOptions, LoanOffer } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
-import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
@@ -48,7 +47,8 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
     // Create the search activity
     const title = 'Lender Search';
 
-    const activityId = await createActivity({
+    const { activitiesFeature } = await import('@/lib/features/activities');
+    const activityId = await activitiesFeature.lifecycle.create({
       category: WorkCategory.LENDER_SEARCH,
       title,
       totalWork,

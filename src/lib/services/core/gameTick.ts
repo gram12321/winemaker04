@@ -1,5 +1,6 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { activitiesFeature } from '@/lib/features/activities';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
@@ -119,14 +120,14 @@ const executeGameTick = async (): Promise<void> => {
   await updateVineyardHealthDegradation(season, week, weatherContext);
 
   // Progress all activities based on assigned staff work contribution
-  await progressActivities();
+  await activitiesFeature.ticks.progress();
 
   // Process weekly effects (wage payment will be handled here, but we'll suppress it if season changed)
   const wageMessage = await processWeeklyEffects(!!newSeason);
 
   // Check for bookkeeping activity creation (week 1 of any season)
   // Pass season change info and all collected messages if we just changed seasons
-  await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
+  await activitiesFeature.ticks.checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
 
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);

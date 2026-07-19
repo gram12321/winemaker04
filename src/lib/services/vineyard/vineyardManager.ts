@@ -2,8 +2,8 @@ import { Vineyard, Activity, GameDate, Season } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityMetrics, type GrapeSuitabilityMetrics, calculateAdjustedLandValue, calculateLandValue } from './vineyardValueCalc';
 import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '../../database/activities/vineyardDB';
-import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '../../database/activities/activityDB';
-import { WorkCategory } from '../../services/activity';
+import { activitiesFeature } from '@/lib/features/activities';
+import { WorkCategory } from '@/lib/types/types';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
@@ -33,7 +33,7 @@ export {
 async function terminatePlantingActivity(vineyardId: string, vineyardName: string): Promise<void> {
   try {
     // Find the active planting activity
-    const activities = await loadActivitiesFromDb();
+    const activities = await activitiesFeature.reads.getAll();
     const plantingActivity = activities.find(
       (a) => a.category === WorkCategory.PLANTING && 
              a.status === 'active' && 
@@ -52,7 +52,7 @@ async function terminatePlantingActivity(vineyardId: string, vineyardName: strin
         const plantingProgress = targetDensity > 0 ? Math.round((currentDensity / targetDensity) * 100) : 0;
         
         // Remove the planting activity
-        await removeActivityFromDb(plantingActivity.id);
+        await activitiesFeature.lifecycle.remove(plantingActivity.id);
         
         // Add notification about terminated planting
         await notificationService.addMessage(
@@ -148,7 +148,7 @@ export async function updateVineyardRipeness(
 ): Promise<void> {
   try {
     const vineyards = await loadVineyards();
-    const activities = await loadActivitiesFromDb();
+    const activities = await activitiesFeature.reads.getAll();
     const currentState = getGameState();
     const currentYear = weatherContext?.date.year || currentState.currentYear || 1;
     const companyId = getCurrentCompanyId() || 'default-company';
@@ -386,7 +386,7 @@ export async function updateVineyardRipeness(
         const activityId = activitiesToCancel[i];
         const vineyardName = cancelledActivityVineyards[i];
         
-        const success = await updateActivityInDb(activityId, { status: 'cancelled' });
+        const success = await activitiesFeature.lifecycle.update(activityId, { status: 'cancelled' });
         
         if (success) {
           // Use different messages for Winter vs Spring cancellations
@@ -404,7 +404,7 @@ export async function updateVineyardRipeness(
       }
       
       // Update game state once after all cancellations
-      const currentActivities = await loadActivitiesFromDb();
+        const currentActivities = await activitiesFeature.reads.getAll();
       const activeActivities = currentActivities.filter(a => a.status === 'active');
       await updateGameState({ activities: activeActivities });
     }
@@ -505,7 +505,7 @@ export async function updateVineyardHealthDegradation(
 ): Promise<void> {
   try {
     const vineyards = await loadVineyards();
-    const activities = await loadActivitiesFromDb();
+    const activities = await activitiesFeature.reads.getAll();
     const companyId = getCurrentCompanyId();
     const currentState = getGameState();
     const contextYear = weatherContext?.date.year || currentState.currentYear || 1;
