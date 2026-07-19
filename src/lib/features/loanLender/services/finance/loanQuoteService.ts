@@ -4,10 +4,8 @@ import { LOAN_AMOUNT_RANGES } from '@/lib/constants/loanConstants';
 import { calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { getAllLenders } from './lenderService';
 import { getCurrentCreditRating, getScaledLoanAmountLimit } from './loanService';
-import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/features/activities/services/workcalculators/lenderSearchWorkCalculator';
-import { calculateTakeLoanWork } from '@/lib/features/activities/services/workcalculators/takeLoanWorkCalculator';
+import { activitiesFeature, type WorkFactor } from '@/lib/features/activities';
 import type { LenderSearchOptions } from '@/lib/types/types';
-import type { WorkFactor } from '@/lib/features/activities/services/workcalculators/workCalculator';
 import {
   calculateLoanTerms,
   calculateRemainingInterest,
@@ -15,6 +13,7 @@ import {
   calculateTotalInterest,
   estimatePrepaymentPenalty,
 } from './loanCalculations';
+
 
 export interface LoanPaymentSummary {
   totalInterest: number;
@@ -39,16 +38,16 @@ export interface LenderSearchQuote {
 }
 
 export function buildLenderSearchQuote(options: LenderSearchOptions): LenderSearchQuote {
-  const work = calculateLenderSearchWork(options);
+  const work = activitiesFeature.work.calculateLenderSearch(options);
   return {
-    totalCost: calculateLenderSearchCost(options),
+    totalCost: activitiesFeature.work.calculateLenderSearchCost(options),
     totalWork: work.totalWork,
     factors: work.factors,
   };
 }
 
 export function buildTakeLoanQuote(offer: LoanOffer, amount: number, durationSeasons: number) {
-  return calculateTakeLoanWork(offer, amount, durationSeasons);
+  return activitiesFeature.work.calculateTakeLoan(offer, amount, durationSeasons);
 }
 
 export async function loadBorrowerLoanCapacity(selectedLender?: Lender): Promise<BorrowerLoanCapacity> {

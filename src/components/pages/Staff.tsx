@@ -9,8 +9,6 @@ import { formatNumber, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
 import { getTaskTypeDisplayName } from '@/lib/features/activities/constants/activityConstants';
 import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffModal, StaffSkillBarsList } from '@/components/ui';
-import { StaffSearchOptionsModal } from '@/lib/features/activities/ui/modals/StaffSearchOptionsModal';
-import { StaffSearchResultsModal } from '@/lib/features/activities/ui/modals/StaffSearchResultsModal';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
 import { useGameState, useGameStateWithData } from '@/hooks';
@@ -884,23 +882,23 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       </Dialog>
 
       {/* Staff Search Options Modal */}
-      <StaffSearchOptionsModal
-        isOpen={showSearchModal}
-        onClose={() => setShowSearchModal(false)}
-        onSearchStarted={() => {
+      {activitiesFeature.ui.renderStaffSearchOptions({
+        isOpen: showSearchModal,
+        onClose: () => setShowSearchModal(false),
+        onSearchStarted: () => {
           // Modal auto-closes, results will show when search completes
-        }}
-      />
+        },
+      })}
 
       {/* Staff Search Results Modal */}
-      <StaffSearchResultsModal
-        isOpen={showResultsModal}
-        onClose={() => {
+      {activitiesFeature.ui.renderStaffSearchResults({
+        isOpen: showResultsModal,
+        onClose: () => {
           setShowResultsModal(false);
           setSearchCandidates([]);
-        }}
-        candidates={searchCandidates}
-      />
+        },
+        candidates: searchCandidates,
+      })}
 
       {/* Staff Detail Modal */}
       <StaffModal

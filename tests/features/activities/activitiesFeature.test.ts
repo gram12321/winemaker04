@@ -1,3 +1,4 @@
+import { isValidElement, Suspense } from 'react';
 import { describe, expect, it } from 'vitest';
 import { activitiesFeature } from '@/lib/features/activities';
 
@@ -11,5 +12,10 @@ describe('activitiesFeature', () => {
     expect(activitiesFeature.ticks.progress).toBeTypeOf('function');
     expect(activitiesFeature.setup.initialize).toBeTypeOf('function');
     expect(activitiesFeature.ui.renderActivityPanel).toBeTypeOf('function');
+  });
+
+  it('contains lazy activity UI within a Suspense boundary', () => {
+    const activityPanel = activitiesFeature.ui.renderActivityPanel();
+    expect(isValidElement(activityPanel) && activityPanel.type).toBe(Suspense);
   });
 });

@@ -6,10 +6,8 @@ import { activitiesFeature } from '@/lib/features/activities';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import { WineBatch } from '@/lib/types/types';
 import { Button, BuyMarketModal, WineModal, SellGrapesModal } from '../ui';
-import CrushingOptionsModal from '@/lib/features/activities/ui/modals/CrushingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
-import { FermentationOptionsModal } from '@/lib/features/activities/ui/modals/FermentationOptionsModal';
 import { getQualityCategory, getColorClass, getCharacteristicDisplayName, formatNumber, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
@@ -377,17 +375,17 @@ const Winery: React.FC = () => {
 
 
       {/* Modals */}
-      <CrushingOptionsModal
-        isOpen={!!modals.crushing}
-        onClose={() => closeModal('crushing')}
-        batch={modals.crushing}
-      />
+      {activitiesFeature.ui.renderCrushingOptions({
+        isOpen: !!modals.crushing,
+        onClose: () => closeModal('crushing'),
+        batch: modals.crushing,
+      })}
 
-      <FermentationOptionsModal
-        isOpen={!!modals.fermentation}
-        onClose={() => closeModal('fermentation')}
-        batch={modals.fermentation}
-      />
+      {activitiesFeature.ui.renderFermentationOptions({
+        isOpen: !!modals.fermentation,
+        onClose: () => closeModal('fermentation'),
+        batch: modals.fermentation,
+      })}
 
       <WineModal
         isOpen={!!modals.wine}

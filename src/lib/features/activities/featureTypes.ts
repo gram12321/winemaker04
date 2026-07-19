@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type {
   Activity,
   ActivityCreationOptions,
@@ -7,6 +7,15 @@ import type {
   Staff,
 } from '@/lib/types/types';
 import type { ActivityStaffWorkContext, ActivityStaffWorkPreview } from './services/activityWorkPreviewService';
+import type { LandSearchOptionsModal } from './ui/modals/LandSearchOptionsModal';
+import type { LandSearchResultsModal } from './ui/modals/LandSearchResultsModal';
+import type PlantingOptionsModal from './ui/modals/PlantingOptionsModal';
+import type HarvestOptionsModal from './ui/modals/HarvestOptionsModal';
+import type ClearingOptionsModal from './ui/modals/ClearingOptionsModal';
+import type { StaffSearchOptionsModal } from './ui/modals/StaffSearchOptionsModal';
+import type { StaffSearchResultsModal } from './ui/modals/StaffSearchResultsModal';
+import type CrushingOptionsModal from './ui/modals/CrushingOptionsModal';
+import type { FermentationOptionsModal } from './ui/modals/FermentationOptionsModal';
 
 export interface ActivityCreationResult {
   activityId: string | null;
@@ -24,6 +33,8 @@ export interface ActivitiesFeature {
     completeNow(id: string): Promise<{ success: boolean; error?: string; activity?: Activity }>;
     cancel(id: string): Promise<boolean>;
     remove(id: string): Promise<boolean>;
+    clearPendingLandSearchResults(): Promise<void>;
+    clearPendingStaffCandidates(): Promise<void>;
   };
   reads: {
     getAll(): Promise<Activity[]>;
@@ -39,6 +50,19 @@ export interface ActivitiesFeature {
       assignedStaffIds?: string[],
     ): Promise<ActivityStaffWorkContext>;
     getPreview(activity: Activity, assignedStaff: Staff[], context: ActivityStaffWorkContext): ActivityStaffWorkPreview;
+    calculateClearing: typeof import('./services/workcalculators/clearingWorkCalculator').calculateClearingWork;
+    calculateCrushing: typeof import('./services/workcalculators/crushingWorkCalculator').calculateCrushingWork;
+    validateCrushingBatch: typeof import('./services/workcalculators/crushingWorkCalculator').validateCrushingBatch;
+    calculateFermentation: typeof import('./services/workcalculators/fermentationWorkCalculator').calculateFermentationWork;
+    calculateHarvest: typeof import('./services/workcalculators/harvestingWorkCalculator').calculateHarvestWork;
+    calculateLandSearch: typeof import('./services/workcalculators/landSearchWorkCalculator').calculateLandSearchWork;
+    calculateLenderSearch: typeof import('./services/workcalculators/lenderSearchWorkCalculator').calculateLenderSearchWork;
+    calculateLenderSearchCost: typeof import('./services/workcalculators/lenderSearchWorkCalculator').calculateLenderSearchCost;
+    calculateResearch: typeof import('./services/workcalculators/researchWorkCalculator').calculateResearchWork;
+    calculateResearchCost: typeof import('./services/workcalculators/researchWorkCalculator').calculateResearchCost;
+    calculateEmptyStorageVessel: typeof import('./services/workcalculators/storageVesselMaintenanceWorkCalculator').calculateEmptyStorageVesselWork;
+    calculateTakeLoan: typeof import('./services/workcalculators/takeLoanWorkCalculator').calculateTakeLoanWork;
+    combineOvergrowthYears: typeof import('./services/workcalculators/overgrowthUtils').combineOvergrowthYears;
   };
   ticks: {
     progress(): Promise<void>;
@@ -47,7 +71,17 @@ export interface ActivitiesFeature {
   setup: { initialize(): Promise<void> };
   ui: {
     renderActivityPanel(): ReactNode;
+    renderLandSearchOptions(props: ComponentProps<typeof LandSearchOptionsModal>): ReactNode;
+    renderLandSearchResults(props: ComponentProps<typeof LandSearchResultsModal>): ReactNode;
+    renderPlantingOptions(props: ComponentProps<typeof PlantingOptionsModal>): ReactNode;
+    renderHarvestOptions(props: ComponentProps<typeof HarvestOptionsModal>): ReactNode;
+    renderClearingOptions(props: ComponentProps<typeof ClearingOptionsModal>): ReactNode;
+    renderStaffSearchOptions(props: ComponentProps<typeof StaffSearchOptionsModal>): ReactNode;
+    renderStaffSearchResults(props: ComponentProps<typeof StaffSearchResultsModal>): ReactNode;
+    renderCrushingOptions(props: ComponentProps<typeof CrushingOptionsModal>): ReactNode;
+    renderFermentationOptions(props: ComponentProps<typeof FermentationOptionsModal>): ReactNode;
   };
 }
 
 export type { ActivityStaffWorkContext, ActivityStaffWorkPreview };
+export type { WorkFactor } from './services/workcalculators/workCalculator';

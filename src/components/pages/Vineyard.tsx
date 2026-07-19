@@ -7,17 +7,11 @@ import { activitiesFeature } from '@/lib/features/activities';
 import { buildVineyardWeatherTooltip, createWeatherWeekContext, getWeatherIcon, resolveWeatherOperationImpact } from '@/lib/features/weather';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { VineyardModal, VineyardStatusBadge, WeatherOperationStatusNotice } from '../ui';
-import { LandSearchOptionsModal } from '@/lib/features/activities/ui/modals/LandSearchOptionsModal';
-import { LandSearchResultsModal } from '@/lib/features/activities/ui/modals/LandSearchResultsModal';
-import PlantingOptionsModal from '@/lib/features/activities/ui/modals/PlantingOptionsModal';
-import HarvestOptionsModal from '@/lib/features/activities/ui/modals/HarvestOptionsModal';
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
-import ClearingOptionsModal from '@/lib/features/activities/ui/modals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { formatNumber, getBadgeColorClasses, getRatingForRange, getRangeColor } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
 import { calculateVineyardExpectedYield } from '@/lib/services';
-import { clearPendingLandSearchResults } from '@/lib/features/activities/services/activitymanagers/landSearchManager';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../ui/shadCN/tooltip';
 
 // Progress bar color helpers via global utils
@@ -1331,38 +1325,38 @@ const Vineyard: React.FC = () => {
         )}
       </div>
 
-      <PlantingOptionsModal
-        isOpen={showPlantDialog}
-        vineyard={selectedVineyard}
-        onClose={() => {
+      {activitiesFeature.ui.renderPlantingOptions({
+        isOpen: showPlantDialog,
+        vineyard: selectedVineyard,
+        onClose: () => {
           setShowPlantDialog(false);
           setSelectedVineyard(null);
-        }}
-      />
+        },
+      })}
 
-      <HarvestOptionsModal
-        isOpen={showHarvestDialog}
-        vineyard={selectedVineyard}
-        onClose={() => {
+      {activitiesFeature.ui.renderHarvestOptions({
+        isOpen: showHarvestDialog,
+        vineyard: selectedVineyard,
+        onClose: () => {
           setShowHarvestDialog(false);
           setSelectedVineyard(null);
-        }}
-      />
+        },
+      })}
 
-      <LandSearchOptionsModal
-        isOpen={showLandSearchModal}
-        onClose={() => setShowLandSearchModal(false)}
-        onSearchStarted={() => setShowLandSearchModal(false)}
-      />
+      {activitiesFeature.ui.renderLandSearchOptions({
+        isOpen: showLandSearchModal,
+        onClose: () => setShowLandSearchModal(false),
+        onSearchStarted: () => setShowLandSearchModal(false),
+      })}
 
-      <LandSearchResultsModal
-        isOpen={showLandResultsModal}
-        onClose={() => {
+      {activitiesFeature.ui.renderLandSearchResults({
+        isOpen: showLandResultsModal,
+        onClose: () => {
           setShowLandResultsModal(false);
-          clearPendingLandSearchResults();
-        }}
-        options={gameState.pendingLandSearchResults?.options || []}
-      />
+          void activitiesFeature.lifecycle.clearPendingLandSearchResults();
+        },
+        options: gameState.pendingLandSearchResults?.options || [],
+      })}
 
       <VineyardModal
         isOpen={showVineyardModal}
@@ -1370,15 +1364,15 @@ const Vineyard: React.FC = () => {
         vineyard={selectedVineyard}
       />
 
-      <ClearingOptionsModal
-        isOpen={showClearingModal}
-        vineyard={selectedVineyard}
-        onClose={() => {
+      {activitiesFeature.ui.renderClearingOptions({
+        isOpen: showClearingModal,
+        vineyard: selectedVineyard,
+        onClose: () => {
           setShowClearingModal(false);
           setSelectedVineyard(null);
-        }}
-        onSubmit={handleClearingSubmit}
-      />
+        },
+        onSubmit: handleClearingSubmit,
+      })}
       {showSellModal && selectedVineyard && (
         <WarningModal
           isOpen={showSellModal}

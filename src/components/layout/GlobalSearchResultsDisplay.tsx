@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
-import { LandSearchResultsModal } from '@/lib/features/activities/ui/modals/LandSearchResultsModal';
-import { StaffSearchResultsModal } from '@/lib/features/activities/ui/modals/StaffSearchResultsModal';
-import { clearPendingLandSearchResults } from '@/lib/features/activities/services/activitymanagers/landSearchManager';
-import { clearPendingCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
+import { activitiesFeature } from '@/lib/features/activities';
 import { getMinimizedModals, restoreModal, isModalMinimized } from '@/lib/utils';
 
 type ModalType = 'land' | 'staff' | 'lender' | 'loan';
@@ -67,12 +64,12 @@ export function GlobalSearchResultsDisplay() {
 
   const handleCloseLandResults = () => {
     setShowLandResults(false);
-    clearPendingLandSearchResults();
+    void activitiesFeature.lifecycle.clearPendingLandSearchResults();
   };
 
   const handleCloseStaffResults = () => {
     setShowStaffResults(false);
-    clearPendingCandidates();
+    void activitiesFeature.lifecycle.clearPendingStaffCandidates();
   };
 
   const getModalTitle = (type: ModalType): string => {
@@ -103,22 +100,18 @@ export function GlobalSearchResultsDisplay() {
   return (
     <>
       {/* Land Search Results Modal */}
-      {gameState.pendingLandSearchResults?.options && (
-        <LandSearchResultsModal
-          isOpen={showLandResults && !isModalMinimized('land')}
-          onClose={handleCloseLandResults}
-          options={gameState.pendingLandSearchResults.options}
-        />
-      )}
+      {gameState.pendingLandSearchResults?.options && activitiesFeature.ui.renderLandSearchResults({
+        isOpen: showLandResults && !isModalMinimized('land'),
+        onClose: handleCloseLandResults,
+        options: gameState.pendingLandSearchResults.options,
+      })}
 
       {/* Staff Search Results Modal */}
-      {gameState.pendingStaffCandidates?.candidates && (
-        <StaffSearchResultsModal
-          isOpen={showStaffResults && !isModalMinimized('staff')}
-          onClose={handleCloseStaffResults}
-          candidates={gameState.pendingStaffCandidates.candidates}
-        />
-      )}
+      {gameState.pendingStaffCandidates?.candidates && activitiesFeature.ui.renderStaffSearchResults({
+        isOpen: showStaffResults && !isModalMinimized('staff'),
+        onClose: handleCloseStaffResults,
+        candidates: gameState.pendingStaffCandidates.candidates,
+      })}
 
       {/* Floating Restore Buttons for Minimized Modals */}
       {minimizedModals.length > 0 && (

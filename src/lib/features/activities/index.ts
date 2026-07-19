@@ -1,2 +1,2 @@
 export { activitiesFeature } from './feature';
-export type { ActivitiesFeature, ActivityCreationResult, ActivityStaffWorkContext, ActivityStaffWorkPreview } from './featureTypes';
+export type { ActivitiesFeature, ActivityCreationResult, ActivityStaffWorkContext, ActivityStaffWorkPreview, WorkFactor } from './featureTypes';

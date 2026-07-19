@@ -2,7 +2,6 @@ import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researc
 import { getUnlockedResearchIds } from '@/lib/database';
 import { getCurrentPrestige } from '@/lib/services';
 import { activitiesFeature } from '@/lib/features/activities';
-import { calculateResearchCost, calculateResearchWork } from '@/lib/features/activities/services/workcalculators/researchWorkCalculator';
 import { WorkCategory } from '@/lib/types/types';
 import {
   getResearchRequirementReasons,
@@ -10,6 +9,7 @@ import {
   loadResearchEligibilityContext,
   type ResearchEligibilityContext,
 } from './researchEligibilityService';
+
 import { type ResearchPermanentEffectsSummary, getResearchPermanentEffects } from './researchPermanentEffectsService';
 import {
   getResearchDisplayGroup,
@@ -194,7 +194,7 @@ export function buildResearchProjectModels({
       status === 'locked' && eligibilityContext
         ? getResearchLockReason(project, eligibilityContext)
         : '';
-    const { totalWork } = calculateResearchWork(project.id, {
+    const { totalWork } = activitiesFeature.work.calculateResearch(project.id, {
       workMultiplier: permanentEffects.administrationAndResearchWorkMultiplier,
     });
 
@@ -204,7 +204,7 @@ export function buildResearchProjectModels({
       status,
       lockReason,
       totalWork,
-      totalCost: calculateResearchCost(project.id),
+      totalCost: activitiesFeature.work.calculateResearchCost(project.id),
     };
   });
 }
