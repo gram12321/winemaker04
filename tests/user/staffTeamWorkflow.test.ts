@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => {
     }),
     saveTeamToDb: vi.fn(async () => true),
     loadTeamsFromDb: vi.fn(async () => []),
-    deleteTeamFromDb: vi.fn(async () => true),
+    deleteTeamAndStaffAssignmentsFromDb: vi.fn(async () => true),
     saveTeamsToDb: vi.fn(async () => true),
     saveStaffToDb: vi.fn(async (staff: Staff) => {
       dbStaff = dbStaff.map(candidate => candidate.id === staff.id ? staff : candidate);
@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => {
     }),
     loadStaffFromDb: vi.fn(async () => dbStaff),
     getStaffByIdFromDb: vi.fn(async (staffId: string) => dbStaff.find(candidate => candidate.id === staffId) ?? null),
-    deleteStaffFromDb: vi.fn(async () => true),
+    deleteStaffAndTeamMembershipsFromDb: vi.fn(async () => true),
     notificationAddMessage: vi.fn(async () => undefined)
   };
 });
@@ -44,7 +44,7 @@ vi.mock('@/lib/services/core/gameState', () => ({
 vi.mock('@/lib/database/core/teamDB', () => ({
   saveTeamToDb: mocks.saveTeamToDb,
   loadTeamsFromDb: mocks.loadTeamsFromDb,
-  deleteTeamFromDb: mocks.deleteTeamFromDb,
+  deleteTeamAndStaffAssignmentsFromDb: mocks.deleteTeamAndStaffAssignmentsFromDb,
   saveTeamsToDb: mocks.saveTeamsToDb
 }));
 
@@ -52,7 +52,7 @@ vi.mock('@/lib/database/core/staffDB', () => ({
   saveStaffToDb: mocks.saveStaffToDb,
   loadStaffFromDb: mocks.loadStaffFromDb,
   getStaffByIdFromDb: mocks.getStaffByIdFromDb,
-  deleteStaffFromDb: mocks.deleteStaffFromDb
+  deleteStaffAndTeamMembershipsFromDb: mocks.deleteStaffAndTeamMembershipsFromDb
 }));
 
 vi.mock('@/lib/services/core/notificationService', () => ({
@@ -142,6 +142,22 @@ describe('staff and team workflow', () => {
 
     await expect(staffFeature.teams.removeMember('staff-1', 'team-1')).resolves.toBe(true);
     expect(mocks.getState().staff[0].teamIds).toEqual([]);
+    expect(mocks.getState().teams[0].memberIds).toEqual([]);
+  });
+
+  it('removes a team through the atomic persistence operation and clears every local assignment', async () => {
+    await staffFeature.teams.assign('staff-1', 'team-1');
+    await expect(staffFeature.teams.remove('team-1')).resolves.toBe(true);
+    expect(mocks.deleteTeamAndStaffAssignmentsFromDb).toHaveBeenCalledWith('team-1');
+    expect(mocks.getState().teams).toEqual([]);
+    expect(mocks.getState().staff[0].teamIds).toEqual([]);
+  });
+
+  it('removes staff through the atomic persistence operation and clears every local membership', async () => {
+    await staffFeature.teams.assign('staff-1', 'team-1');
+    await expect(staffFeature.records.remove('staff-1')).resolves.toBe(true);
+    expect(mocks.deleteStaffAndTeamMembershipsFromDb).toHaveBeenCalledWith('staff-1');
+    expect(mocks.getState().staff).toEqual([]);
     expect(mocks.getState().teams[0].memberIds).toEqual([]);
   });
 

@@ -182,3 +182,13 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
     throw error;
   }
 }
+
+/** Atomically remove a staff record and its memberships from company teams. */
+export async function deleteStaffAndTeamMembershipsFromDb(staffId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('delete_staff_and_team_memberships', { p_staff_id: staffId });
+  if (error) {
+    console.error('Error deleting staff memberships:', error);
+    return false;
+  }
+  return data === true;
+}

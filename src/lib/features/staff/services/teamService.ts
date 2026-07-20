@@ -6,7 +6,7 @@ import { StaffTeam, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
-import { saveTeamToDb, loadTeamsFromDb, deleteTeamFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
+import { saveTeamToDb, loadTeamsFromDb, deleteTeamAndStaffAssignmentsFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
 import { saveStaffToDb } from '@/lib/database/core/staffDB';
 
 // ===== DEFAULT TEAMS =====
@@ -179,7 +179,7 @@ export async function removeTeam(teamId: string): Promise<boolean> {
   }
 
   // Delete from database
-  const success = await deleteTeamFromDb(teamId);
+  const success = await deleteTeamAndStaffAssignmentsFromDb(teamId);
   if (!success) {
     console.error('Failed to delete team from database');
     return false;

@@ -11,16 +11,10 @@ vi.mock('@/lib/services/core/gameState', () => {
 describe('staffFeature facade', () => {
   it('keeps candidate creation and wage previews synchronous without loading runtime features', async () => {
     const { staffFeature } = await import('@/lib/features/staff');
-    const candidate = staffFeature.records.create(
-      'Ada',
-      'Cellar',
-      0.5,
-      'France',
-      { week: 3, season: 'Summer', year: 2026 },
-      undefined,
-      false,
-      ['winery'],
-    );
+    const candidate = staffFeature.records.create({
+      firstName: 'Ada', lastName: 'Cellar', skillLevel: 0.5, nationality: 'France',
+      hireDate: { week: 3, season: 'Summer', year: 2026 }, specializedRoles: ['winery'],
+    });
 
     expect(candidate.hireDate).toEqual({ week: 3, season: 'Summer', year: 2026 });
     expect(candidate.wage).toBe(staffFeature.wages.calculate(candidate.skills, candidate.specializedRoles));

@@ -71,7 +71,7 @@ describe('staff search calculations', () => {
     };
 
     const candidate = (overrides: Partial<Staff> = {}): Staff => ({
-      ...staffFeature.records.create('Test', 'Staff', 0.5, 'United States', { week: 1, season: 'Spring', year: 2026 }),
+      ...staffFeature.records.create({ firstName: 'Test', lastName: 'Staff', skillLevel: 0.5, nationality: 'United States', hireDate: { week: 1, season: 'Spring', year: 2026 } }),
       skills: fixedSkills,
       ...overrides
     });

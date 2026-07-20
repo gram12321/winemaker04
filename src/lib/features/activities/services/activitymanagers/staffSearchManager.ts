@@ -30,16 +30,7 @@ export function generateStaffCandidates(options: StaffSearchOptions, hireDate: G
     const lastName = staffFeature.recruitment.getRandomLastName(nationality);
 
     // Create staff with the search parameters
-    const staff = staffFeature.records.create(
-      firstName,
-      lastName,
-      skillLevel,
-      nationality,
-      hireDate,
-      undefined,
-      false,
-      specializedRoles
-    );
+    const staff = staffFeature.records.create({ firstName, lastName, skillLevel, nationality, hireDate, specializedRoles });
 
     candidates.push(staff);
   }

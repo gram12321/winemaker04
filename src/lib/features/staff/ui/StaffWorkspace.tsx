@@ -126,12 +126,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
     if (!newTeamData.name.trim()) return;
 
     try {
-      const newTeam = staffFeature.teams.create(
-        newTeamData.name.trim(),
-        newTeamData.description.trim(),
-        newTeamData.defaultTaskTypes,
-        newTeamData.icon
-      );
+      const newTeam = staffFeature.teams.create({
+        name: newTeamData.name.trim(), description: newTeamData.description.trim(),
+        defaultTaskTypes: newTeamData.defaultTaskTypes, icon: newTeamData.icon,
+      });
 
       await staffFeature.teams.add(newTeam);
       setIsCreatingNewTeam(false);

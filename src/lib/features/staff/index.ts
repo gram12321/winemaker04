@@ -1,2 +1,11 @@
 export { staffFeature } from './feature';
-export type { StaffFeature } from './featureTypes';
+export type {
+  StaffActivityAdapter,
+  StaffCreateInput,
+  StaffExperienceDisplayItem,
+  StaffFeature,
+  StaffRecord,
+  StaffSkillSet,
+  StaffTeamCreateInput,
+  StaffTeamRecord,
+} from './featureTypes';

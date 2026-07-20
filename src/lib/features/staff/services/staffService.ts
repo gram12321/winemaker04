@@ -2,7 +2,7 @@ import type { Staff } from '@/lib/types/types';
 import { NotificationCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { notificationService } from '@/lib/services/core/notificationService';
-import { deleteStaffFromDb, getStaffByIdFromDb, loadStaffFromDb, saveStaffToDb } from '@/lib/database/core/staffDB';
+import { deleteStaffAndTeamMembershipsFromDb, getStaffByIdFromDb, loadStaffFromDb, saveStaffToDb } from '@/lib/database/core/staffDB';
 import { FOUNDER_BUYOUT_PERCENT_OF_ASSETS } from '@/lib/constants/staffConstants';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateWage } from './wageCalculations';
@@ -22,8 +22,9 @@ export async function removeStaff(staffId: string): Promise<boolean> {
   const gameState = getGameState();
   const currentStaff = gameState.staff || [];
   const staff = currentStaff.find(member => member.id === staffId);
-  if (!staff || !await deleteStaffFromDb(staffId)) return false;
-  updateGameState({ staff: currentStaff.filter(member => member.id !== staffId) });
+  if (!staff || !await deleteStaffAndTeamMembershipsFromDb(staffId)) return false;
+  const teams = (gameState.teams || []).map(team => ({ ...team, memberIds: team.memberIds.filter(id => id !== staffId) }));
+  updateGameState({ staff: currentStaff.filter(member => member.id !== staffId), teams });
   return true;
 }
 

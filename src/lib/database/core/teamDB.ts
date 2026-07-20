@@ -106,6 +106,16 @@ export async function deleteTeamFromDb(teamId: string): Promise<boolean> {
   }
 }
 
+/** Atomically remove a team and clear its ID from every company staff record. */
+export async function deleteTeamAndStaffAssignmentsFromDb(teamId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('delete_team_and_staff_assignments', { p_team_id: teamId });
+  if (error) {
+    console.error('Error deleting team assignments:', error);
+    return false;
+  }
+  return data === true;
+}
+
 /**
  * Get a single team by ID
  */

@@ -243,16 +243,15 @@ export async function applyStartingConditions(
     const createdStaff: Staff[] = [];
     for (const staffConfig of condition.staff) {
       const gameState = getGameState();
-      const staff = staffFeature.records.create(
-        staffConfig.firstName,
-        staffConfig.lastName,
-        staffConfig.skillLevel,
-        staffConfig.nationality as import('@/lib/types/types').Nationality,
-        { week: gameState.week || 1, season: gameState.season || 'Spring', year: gameState.currentYear || 2025 },
-        undefined,
-        staffConfig.isFounder ?? false,
-        staffConfig.specializedRoles,
-      );
+      const staff = staffFeature.records.create({
+        firstName: staffConfig.firstName,
+        lastName: staffConfig.lastName,
+        skillLevel: staffConfig.skillLevel,
+        nationality: staffConfig.nationality as import('@/lib/types/types').Nationality,
+        hireDate: { week: gameState.week || 1, season: gameState.season || 'Spring', year: gameState.currentYear || 2025 },
+        isFounder: staffConfig.isFounder ?? false,
+        specializedRoles: staffConfig.specializedRoles,
+      });
 
       const addedStaff = await staffFeature.records.add(staff);
       if (addedStaff) {
