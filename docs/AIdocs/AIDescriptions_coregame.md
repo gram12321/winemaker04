@@ -48,7 +48,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 - `loanLenderFeature` exposes a shared borrower quote seam and keeps repayment operations separate from payment/default/restructure lifecycle orchestration.
 - `achievementsFeature` owns the game-specific catalog, evaluation, company-keyed tick cadence, read models, and player page; its database adapter remains under `database/core/`. Each evaluation captures one company and game-state snapshot, and unlock plus company/vineyard prestige uniqueness is enforced in persistence so overlapping checks are retry-safe; malformed retired achievement rows are discarded rather than translated. Vineyard grape-tenure achievements remain deferred until grape-change history is persisted.
 - `userFeature` owns optional player identity/session/profile, player wallet, company-scoped preferences, and the Profile/Settings UI. Its session operation clears both authenticated and local-player selection.
-- `companyFeature.records` owns explicit company records, feature-owned read models, and owner-scoped portfolio statistics; `companyFeature.ui` owns the company gateway.
+- `companyFeature.records` owns explicit company records, feature-owned read models, and owner-scoped portfolio statistics; `companyFeature.setup` owns starting-condition preview/application; `companyFeature.lifecycle` exposes the company-activation hook seam; and `companyFeature.ui` owns the company gateway. Core game state remains the host for active-company session orchestration.
 - `leaderboardsFeature` owns feature-native score recording inputs, rankings, and leaderboard presentation. A migration and database RPC atomically retain each company's best aggregate value/per-week score; wine/vineyard records remain historical entries and `lowest_price` ranks ascending.
 - App composes lender initialization and active-company activation. Unowned companies remain a supported active-company mode.
 - Maintenance is a distinct persisted staff skill and task class; the default Maintenance Team handles it separately from Winery's crushing and fermentation work. Staff can hold broad `specializedRoles` and learned task/grape mastery; role, task, and grape bonuses are additive and capped, while wages count broad-role primary-skill groups once.
@@ -71,6 +71,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 |---|---|
 | Core/tick | `src/lib/services/core/` |
 | Activities | `src/lib/features/activities/`, `src/lib/database/activities/activityDB.ts` |
+| Company setup/lifecycle | `src/lib/features/company/`, `src/lib/services/core/gameState.ts` |
 | Vineyard/weather | `src/lib/services/vineyard/`, `src/lib/features/weather/`, `src/components/pages/Vineyard.tsx`, `WeatherCenter.tsx` |
 | Wine/scoring | `src/lib/services/wine/`, `src/lib/wineStructure/`, wine modal components |
 | Sales/markets | `src/lib/services/sales/`, sales pages/modals, `src/lib/database/sales/` |

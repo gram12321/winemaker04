@@ -2,7 +2,6 @@
 export * from './core/gameState';
 export * from './core/notificationService';
 export * from './core/gameTick';
-export * from './core/startingConditionsService';
 
 // User services
 export * from './user/wineLogService';

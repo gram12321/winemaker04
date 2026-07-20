@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { 
-  generateVineyardPreview,
-   
-} from '@/lib/services/core/startingConditionsService';
+import { companyFeature } from '@/lib/features/company';
 import { 
   STARTING_CONDITIONS, 
   type StartingCountry,
@@ -24,7 +21,7 @@ describe('Starting Conditions - Pure Functions', () => {
         const condition = STARTING_CONDITIONS[country];
         expect(condition).toBeDefined();
         
-        const preview = generateVineyardPreview(condition);
+        const preview = companyFeature.setup.generateVineyardPreview(condition);
         
         // Validate preview structure
         expect(preview.name).toBeTruthy();
@@ -53,8 +50,8 @@ describe('Starting Conditions - Pure Functions', () => {
 
       it(`generates different previews for ${country} on multiple calls`, () => {
         const condition = STARTING_CONDITIONS[country];
-        const preview1 = generateVineyardPreview(condition);
-        const preview2 = generateVineyardPreview(condition);
+        const preview1 = companyFeature.setup.generateVineyardPreview(condition);
+        const preview2 = companyFeature.setup.generateVineyardPreview(condition);
         
         // Some properties should vary (at least hectares, altitude, aspect might differ)
         // But country and region should always match

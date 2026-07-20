@@ -1,5 +1,7 @@
 export { companyFeature } from './feature';
 export type {
+  ApplyStartingConditionsResult,
+  CompanyActivationHook,
   CompanyCreateInput,
   CompanyCreateResult,
   CompanyFeature,
@@ -8,4 +10,5 @@ export type {
   CompanyRecord,
   CompanyStats,
   CompanyUpdateInput,
+  VineyardPreview,
 } from './featureTypes';

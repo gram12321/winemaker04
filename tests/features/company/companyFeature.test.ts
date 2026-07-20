@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   getAllCompanies: vi.fn(), updateCompany: vi.fn(), deleteCompany: vi.fn(), getCompanyStats: vi.fn(), checkCompanyNameExists: vi.fn(),
 }));
 
-vi.mock('@/lib/database', () => ({
+vi.mock('@/lib/database/core/companiesDB', () => ({
   insertCompany: mocks.insertCompany, getCompanyById: mocks.getCompanyById,
   getUserCompanies: mocks.getUserCompanies, getAllCompanies: mocks.getAllCompanies, updateCompany: mocks.updateCompany,
   deleteCompany: mocks.deleteCompany, getCompanyStats: mocks.getCompanyStats, checkCompanyNameExists: mocks.checkCompanyNameExists,
@@ -41,6 +41,16 @@ describe('companyFeature.records', () => {
     mocks.checkCompanyNameExists.mockResolvedValue(false);
     mocks.insertCompany.mockResolvedValue({ success: true, data: { id: company.id } });
     mocks.getCompanyById.mockResolvedValue(company);
+  });
+
+  it('exposes company activation lifecycle through the feature seam', async () => {
+    const hook = vi.fn(async () => undefined);
+    const unregister = companyFeature.lifecycle.registerActivationHook(hook);
+
+    await companyFeature.lifecycle.notifyActivated('company-1');
+    unregister();
+
+    expect(hook).toHaveBeenCalledWith('company-1');
   });
 
   it('creates an explicitly owned company without inferring or creating a player', async () => {

@@ -2,7 +2,9 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => {
+  const activationHooks = new Set<(companyId: string) => void | Promise<void>>();
+  return {
   loadGameState: vi.fn(),
   saveGameState: vi.fn(async () => undefined),
   resolveWeatherWeek: vi.fn(() => ({
@@ -12,8 +14,10 @@ const mocks = vi.hoisted(() => ({
     seasonalPattern: 'Dry' as const,
     forecast: { state: 'Clear' as const, intensity: 'Mild' as const, confidence: 'High' as const },
   })),
-  rollSeasonalWeatherForecast: vi.fn(() => ({ pattern: 'Dry' as const, confidence: 'High' as const })),
-}));
+    rollSeasonalWeatherForecast: vi.fn(() => ({ pattern: 'Dry' as const, confidence: 'High' as const })),
+    activationHooks,
+  };
+});
 
 vi.mock('@/lib/database', () => ({
   loadGameState: mocks.loadGameState,
@@ -28,7 +32,20 @@ vi.mock('@/lib/services/prestige/prestigeService', () => ({
   initializeBasePrestigeEvents: vi.fn(async () => undefined),
   updateCompanyValuePrestige: vi.fn(async () => undefined),
 }));
-vi.mock('@/lib/features/company', () => ({ companyFeature: { records: { update: vi.fn(async () => undefined) } } }));
+vi.mock('@/lib/features/company', () => ({
+  companyFeature: {
+    records: { update: vi.fn(async () => undefined) },
+    lifecycle: {
+      registerActivationHook: (hook: (companyId: string) => void | Promise<void>) => {
+        mocks.activationHooks.add(hook);
+        return () => mocks.activationHooks.delete(hook);
+      },
+      notifyActivated: async (companyId: string) => {
+        await Promise.all([...mocks.activationHooks].map((hook) => hook(companyId)));
+      },
+    },
+  },
+}));
 vi.mock('@/lib/features/staff', () => ({
   staffFeature: { setup: { initialize: vi.fn(async () => undefined) } }
 }));
@@ -43,6 +60,7 @@ const company = {
 describe('weather tick integration seams', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.activationHooks.clear();
     localStorage.clear();
     const { resetGameState } = await import('@/lib/services/core/gameState');
     resetGameState();
@@ -82,8 +100,8 @@ describe('weather tick integration seams', () => {
   it('notifies registered company lifecycle hooks after activation', async () => {
     mocks.loadGameState.mockResolvedValue({ economyPhase: 'Stable' });
     const hook = vi.fn(async () => undefined);
-    const { registerCompanyActivationHook } = await import('@/lib/services/core/companyLifecycle');
-    const unregister = registerCompanyActivationHook(hook);
+    const { companyFeature } = await import('@/lib/features/company');
+    const unregister = companyFeature.lifecycle.registerActivationHook(hook);
     const { setActiveCompany } = await import('@/lib/services/core/gameState');
 
     await setActiveCompany(company as any);

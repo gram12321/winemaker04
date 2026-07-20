@@ -2,7 +2,7 @@ import { Aspect } from '@/lib/types/types';
 import { REGION_PRESTIGE_RANKINGS, COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 import { REGION_GRAPE_SUITABILITY } from '@/lib/constants/grapeConstants';
 import { calculateLandValue } from './vineyardValueCalc';
-import { generateVineyardName } from './vineyardService';
+import { generateVineyardName } from './vineyardGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { getAsymmetricHectareMassRemoved, getRandomHectares, NormalizeScrewed1000To01WithTail, calculateInvertedSkewedMultiplier } from '@/lib/utils/calculator';
 import { getRandomFromArray, randomInt } from '@/lib/utils';
