@@ -1,6 +1,6 @@
 # Winemaker Copilot instructions
 
-The canonical repository instructions are in the root `readme.md`; use `skills/winemaker-game/SKILL.md` for routing. This file exists as an adapter for tools that discover Copilot instructions here.
+Read [`../readme.md`](../readme.md) as the canonical repository guide and [`../skills/winemaker-game/SKILL.md`](../skills/winemaker-game/SKILL.md) for task routing.
 
 - The human owns git commits; do not commit.
 - Do not start `npm run dev` unless explicitly asked.
