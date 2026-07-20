@@ -60,6 +60,78 @@ Use this structure for every new entry:
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.338e-0.338i - Staff Feature Isolation and Cleanup
+**Date:** 2026-07-20 | **Commit(s):** e80c1a4, fb564e3, 3430044, 0a818f6, 8aa52ac | **Stats:** 1,189 insertions(+), 1,669 deletions(-)
+
+### Summary
+- Moved staff records, recruitment, competency, teams, wages, founders, presentation, and Staff UI behind the `staffFeature` facade.
+- Preserved staff specialization, task/grape mastery, wage, and team workflows while removing legacy ownership and duplicated Staff UI paths.
+- Made denormalized staff/team membership writes company-scoped and atomic, with focused regression coverage.
+
+### Changes
+- **NEW FILE:** `src/lib/features/staff/feature.tsx` (70 lines), `featureTypes.ts` (54 lines), `services/staffFactory.ts` (84 lines), `services/wageCalculations.ts` (63 lines), and related feature services/UI - feature-owned staff contracts, lifecycle, presentation, and lazy workspace wiring.
+- `src/lib/features/activities/services/activitymanagers/staffSearchManager.ts`, `src/App.tsx`, core tick/starting-condition code, finance/admin consumers, and staff tests - migrated callers to the staff and activity seams.
+- **NEW FILE:** `migrations/20260720150000_make_staff_team_memberships_atomic.sql` (45 lines) and `src/lib/database/core/teamDB.ts` - lock both company-owned rows and update `staff.team_ids`/`teams.member_ids` together.
+- `src/lib/features/staff/ui/StaffWorkspace.tsx`, `StaffModal.tsx`, `StaffSkillBar.tsx`, and presentation/team services - removed obsolete local search-result state, consolidated picker markup/contracts, and deleted narration-only cleanup noise.
+
+### Notes
+- The cleanup is intended to preserve the specialization and wage behavior introduced by the preceding staff release; it does not add a new staff mechanic.
+- Merge commit `ba17d25` integrates the staff branch with the player-session branch; its merge diff is not counted a second time.
+
+## Version 0.327-0.327e - Storage Vessel Maintenance and Used-Market Expansion
+**Date:** 2026-07-17 to 2026-07-20 | **Commit(s):** b0bf6ec, 2430c05, 114c935, 292ce9c, d2d9183, 814912a | **Stats:** 2,918 insertions(+), 614 deletions(-)
+
+### Summary
+- Added clean/dirty vessel state and cancellable maintenance activities for cleaning empty vessels and emptying selected filled vessels.
+- Expanded vessel value and Buy Market presentation with condition, cleanliness, age, capacity, and fill-history modifiers.
+- Added a global used-vessel marketplace with named NPC and player sellers, projected condition, atomic purchase/sellback flows, and buyer-to-counterparty relationships.
+
+### Changes
+- **NEW FILE:** `migrations/20260718100000_add_storage_vessel_cleanliness.sql` (70 lines), `20260718120000_add_storage_vessel_condition_and_fill_history.sql` (26 lines), and `20260718140000_add_storage_vessel_names.sql` (3 lines) - persisted vessel state/history used by maintenance and valuation.
+- `src/lib/services/wine/winery/storageVesselMaintenanceService.ts`, `src/lib/features/activities/services/workcalculators/storageVesselMaintenanceWorkCalculator.ts`, `storageVesselsDB.ts`, `Equipment.tsx`, and maintenance tests - validate empty/dirty vessels, run cancellable maintenance work, and persist cleaning or selected-vessel emptying without releasing unrelated allocations.
+- `src/lib/services/market/storageVessels/storageVesselMarketAdapter.ts`, `storageVesselConstants.ts`, `StorageVesselMarketPanel.tsx`, admin test-lab services, and market tests - apply explicit capacity/quality/age/condition/cleanliness/fill-history price factors and expose their breakdown.
+- **NEW FILE:** `migrations/20260719100000_global_used_storage_vessel_market.sql` (197 lines), `migrations/20260720110000_add_buy_market_counterparty_relationships.sql` (151 lines), `src/lib/database/market/storageVesselMarketListingsDB.ts` (104 lines), and used-market/counterparty services - persist global listings, NPC generation, player sellback, listing evolution, atomic ownership transfer, and relationship-based quotes.
+- `src/components/ui/market/BuyMarketCounterpartyPanel.tsx` (49 lines), Buy Market panels/modal, `src/lib/types/storageVessels.ts`, and related adapters - identify sellers consistently and retain vessel identity, name, material, condition, cleanliness, age, and fill history across resale.
+
+### Notes
+- The storage-vessel migrations are development cutovers: older listing/purchase shapes are replaced rather than backfilled through compatibility paths.
+- Merge commits `2a4fd35` and `ed98982` integrate the market branch; their merge diffs are not added to the grouped stats a second time.
+
+## Version 0.338a-0.338d - Activities Feature Isolation and Boundary Cleanup
+**Date:** 2026-07-19 | **Commit(s):** ae97a42, cb8c924, aaceebd, e5b73db, 24f135b | **Stats:** 1,178 insertions(+), 466 deletions(-)
+
+### Summary
+- Moved activity lifecycle, reads, work previews/calculators, weekly ticks, setup, persistence orchestration, and activity UI behind `activitiesFeature`.
+- Removed the legacy activity service barrel and migrated vineyard, winery, loan, research, admin, and test consumers to the feature-owned seams.
+- Replaced the activity table shape with company-scoped constraints/RLS and added facade/lifecycle regression coverage.
+
+### Changes
+- **NEW FILE:** `src/lib/features/activities/feature.tsx` (40 lines), `featureTypes.ts` (53 lines), `index.ts` (2 lines), and `tests/features/activities/activitiesFeature.test.ts` (15 lines) - public lifecycle/read/work/tick/setup/UI contracts and facade coverage.
+- **NEW FILE:** `migrations/20260718120000_replace_activities_schema.sql` (41 lines) - development-only activity schema replacement with company ownership, status/work constraints, indexes, RLS, and storage-plan linkage.
+- `src/lib/features/activities/services/`, `src/lib/features/activities/ui/`, `src/App.tsx`, core tick, host pages, vineyard/winery services, loan/research integrations, and tests - moved activity implementation and direct consumers behind the feature boundary.
+- `src/lib/database/activities/activityDB.ts`, activity lifecycle tests, and `migrations/20260719100000_harden_activity_rls.sql` - retained database ownership inside the feature path and hardened company activity access.
+- `src/lib/services/vineyard/overgrowthUtils.ts` and clearing/storage-vessel callers - relocated shared overgrowth rules while keeping vineyard behavior outside the activity facade.
+
+### Notes
+- This is an architecture and persistence cutover; the activity migration explicitly drops the old table shape and does not provide a compatibility view or backfill.
+- The activity merge review also updates project guidance (`CONTEXT.md`, `docs/AIdocs/`, `docs/PROJECT_INFO.md`) to document the new ownership boundary.
+
+## Version 0.338 - Player Session and Company Ownership Hardening
+**Date:** 2026-07-19 | **Commit(s):** bbdaa7b, e46060b | **Stats:** 577 insertions(+), 93 deletions(-)
+
+### Summary
+- Made selected player identity authoritative for company activation, profile operations, login restoration, and session changes.
+- Prevented stale asynchronous company/profile results from replacing the current player after logout or player switching.
+- Added independent player listing and regression coverage for authentication/session races and company ownership checks.
+
+### Changes
+- `src/lib/features/user/services/authService.ts`, `src/lib/features/user/feature.tsx`, and `featureTypes.ts` - wait for initial auth restoration, invalidate stale profile loads with an identity revision, clear local selections on sign-out, and list players independently of company ownership.
+- `src/components/pages/Login.tsx`, `src/App.tsx`, `src/lib/database/core/companiesDB.ts`, `usersDB.ts`, and company services - validate persisted company ownership, separate owned/orphan company selection, and reset active game state when identity changes.
+- `tests/features/user/authService.test.ts`, `loginSession.test.ts`, `userFeatureFacade.test.ts`, and company tests - cover stale-session, logout, player-selection, and ownership invariants.
+
+### Notes
+- Merge commit `7e9cf5f` integrates the player-session branch into the activity line, and `ba17d25` carries it into the final staff/main integration; those merge diffs are not counted again.
+
 ## Version 0.336b-0.336h - User, Company, and Leaderboard Isolation
 **Date:** 2026-07-17 | **Commit(s):** db7a376, 68b3661, 2911fda, 12aa093, b9b60e0, bd4821d, 00e01a1 | **Stats:** 2,567 insertions(+), 2,235 deletions(-)
 

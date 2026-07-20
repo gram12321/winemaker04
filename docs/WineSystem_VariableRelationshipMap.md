@@ -1,162 +1,126 @@
 # Wine System Variable Relationship Map
 
-Date: 2026-07-16
+Date: 2026-07-20
 Status: Current mainline relationship map
 
-Stable terms and constants live in [CONTEXT.md](../CONTEXT.md). Implementation ownership/status lives in [AIDescriptions_coregame.md](AIdocs/AIDescriptions_coregame.md) and [PROJECT_INFO.md](PROJECT_INFO.md).
+Stable terminology and rules live in [CONTEXT.md](../CONTEXT.md). Code ownership is in [PROJECT_INFO.md](PROJECT_INFO.md); current implementation status is in [AIDescriptions_coregame.md](AIdocs/AIDescriptions_coregame.md).
 
-## Reading Rules
+## Reading rules
 
 - Arrows show data dependency, not call order.
-- Harvest/bottling/winelog snapshots are immutable; current cellar values may evolve.
+- Harvest and bottling/Wine Log snapshots are immutable; cellar values may continue to evolve.
 - `landValueModifier`, `tasteQualityIndex`, and `structureIndex` are separate signals.
 
-## Main Gameflow
+## Main gameflow
 
 ```mermaid
 flowchart LR
-  LS["Land/site factors"] --> VM["Vineyard management"]
-  WX["Weather module"] --> VM
-  VM --> H["Harvest + snapshots"] --> WB["Wine batch"]
-  WB --> P["Crushing / fermentation / aging"] --> B["Bottling snapshots"]
-  B --> CE["Cellar evolution"] --> S["Sales, contracts, grape markets"]
-  B --> WL["Wine log"] --> PR["Highscores, achievements, prestige"]
-  S --> ECO["Money, relationships, prestige"]
-  WX --> S
+  SITE["Site factors"] --> HARVEST["Harvest anchors + batch"]
+  GRAPE["Grape traits"] --> HARVEST
+  WEATHER["Weather"] --> VINE["Vineyard progression / operations"] --> HARVEST
+  HARVEST --> PROCESS["Crushing / fermentation / aging / features"]
+  PROCESS --> CURRENT["Current wine"] --> BOTTLE["Bottling snapshot"]
+  CURRENT --> SALES["Sales / contracts"]
+  BOTTLE --> LOG["Wine Log"] --> PROGRESSION["Leaderboards / achievements / prestige"]
+  WEATHER --> SALES
+  SALES --> ECONOMY["Money / relationships / prestige"]
 ```
 
-## Variable Groups
+## Variable groups
 
-| Group | Inputs | Outputs/consumers |
+| Group | Main inputs | Main consumers |
 |---|---|---|
-| Site factors | Vineyard generation and state | Suitability, land value, harvest anchors, contracts |
-| Grape traits | Grape constants | Base characteristics, yield, risk, anchor bias |
+| Site | Region, soil, altitude, aspect, land value, vines, health | Suitability, anchors, vineyard projection, contracts |
+| Grape | Variety constants, color, yield, fragility, oxidation risk | Characteristics, yield, anchor bias, markets |
 | Anchors | Site, grape, process, features | Structure ranges, taste profile, lifecycle risk |
-| Structure | Characteristics and anchor-adjusted ranges | `structureIndex`, structure contracts |
-| Taste | Anchors, characteristics, color, features, aging | Families, descriptors, `tasteQualityIndex` |
+| Structure | Characteristics and anchor-adjusted ranges | `structureIndex`, contracts, score |
+| Taste | Anchors, characteristics, color, features, aging | Families, descriptors, `tasteQualityIndex`, score |
 | Lifecycle | Features, oxidation, aging, prestige | Current taste, price, cellar value, risks |
-| Weather | Weekly state, forecast, site response | Health/ripeness deltas, market pressure, planting/harvesting availability and work pace, forecast explanations |
-| Markets | Wine/grape state, economy, weather, loyalty, research | Orders, contracts, grape prices, Buy Market offers, purchases, revenue |
-| Storage vessels | Buy Market cask suppliers, allocation plans, Empty Vessel and Clean Vessel Maintenance activities | Individually owned cellar assets from rotating supplier offers, with capacity and normalized quality; wine contact makes a vessel dirty, releasing wine does not clean it, and a cancellable Clean Vessel Maintenance activity is required before reuse |
-| Progression | Sales, scores, assets, research | Prestige, achievements, highscores, gates; aggregate company boards retain one atomic best entry while wine/vineyard boards preserve historical bottling records |
-| Staff competency | `staffFeature`: category-derived primary skill and broad-skill XP; persisted career role; learned exact task mastery; learned grape mastery | Activity work allocation, staff previews, role wage premium |
+| Weather | Weekly state/forecast, site response, economy | Health/ripeness, operation work, market context |
+| Markets | Wine/grape state, economy, weather, loyalty, research | Offers, orders, contracts, prices, revenue |
+| Storage | Vessels, allocations, maintenance activities | Capacity, batch volume, equipment and market assets |
+| Progression | Scores, sales, assets, research | Prestige, achievements, leaderboards, gates |
 
-## Invariants
-
-- Site factors and grape traits establish harvest identity; process choices modify it through anchors, characteristics, and features.
-- Structure measures physical balance. Taste Quality measures family balance. Neither is land value.
-- Weather uses an explicit bounded projection and must not be hidden in wine-score formulas or historical snapshots.
-- Weather owns planting/harvesting availability and work pace; Winter blocks starting planting, severe conditions slow work, and extreme conditions can pause it. Clearing's annual availability remains a vineyard-maintenance rule.
-- Buy-market previews may simulate implied state/age/features but suppress notifications and prestige events. Every offer exposes one source/seller contract and builds a buyer-to-seller market relationship; supplier stock, NPC-used assets, and company listings share relationship progression and buyer-specific quote adjustments while each adapter retains its own stock, evolution, and base-price rules. Storage Vessels are canonical assets: supplier purchases create company-owned vessels, while used-market purchases transfer a globally listed vessel with its identity, age, material, condition, fills, and cleanliness intact. Wine contact marks a vessel dirty; Empty Vessel removes only the selected vessel's filled volume, while Clean Vessel returns an empty dirty vessel to service. Cancelling production preserves an active storage plan and its partial batch; cancellation releases only plans that remain reserved and unfilled.
-- Static market tuning belongs in `src/lib/constants/`; UI consumes service-prepared models rather than database rows or service-local tuning.
-- Research modifies access/scaling or explicit upstream inputs; it does not bypass structure/taste computation.
-- Prestige writes use `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source and decay metadata.
-- Staff work has one category-derived primary skill. A persisted broad career role adds 20% to every activity using its matching primary skill. Learned `task:<WorkCategory>` mastery adds up to 20% only to its exact implemented activity; learned `grape:<variety>` mastery adds up to 10% only to matching grape-aware planting, harvesting, crushing, and fermentation. These bonuses are additive and capped at 50%.
-- The shared work calculator combines those bonuses with effective broad-skill XP, multitasking, team, weather, research, storage, and final-tick limits. Its applied allocation is the sole source of broad-skill, task, and eligible grape XP. Sales has a primary skill but no task mastery until a Sales category exists.
-
-## Core Subsystems
-
-### Site, Process, Structure, and Taste
+## Wine calculation flow
 
 ```mermaid
 flowchart LR
-  SF["Site factors"] --> HA["Harvest anchors"]
-  GT["Grape traits"] --> HA
+  SITE["Site factors"] --> HA["Harvest anchors"]
+  GRAPE["Grape traits"] --> HA
   HA --> CA["Current anchors"]
-  PC["Process controls"] --> CA
-  PC --> CH["Characteristics / features"]
-  CA --> AR["Anchor-adjusted ranges"]
-  AR --> SI["structureIndex"]
-  CH --> SI
-  CA --> TF["Taste families"]
-  CH --> TF
-  TF --> TQI["tasteQualityIndex"]
-  SI --> WS["wineScore"]
-  TQI --> WS
+  PROCESS["Process controls"] --> CA
+  PROCESS --> CHAR["Characteristics / features"]
+  CA --> RANGES["Anchor-adjusted ranges"] --> SI["structureIndex"]
+  CHAR --> SI
+  CA --> FAMILIES["Taste families"]
+  CHAR --> FAMILIES
+  FAMILIES --> TQI["tasteQualityIndex"]
+  SI --> SCORE["wineScore"]
+  TQI --> SCORE
 ```
 
-### Price and Historical Outputs
+Price consumes wine score, score curve, land value, features, company prestige, and vineyard prestige. Current wine feeds sales and cellar value; bottling snapshots feed historical records.
+
+## Weather, markets, and finance flow
 
 ```mermaid
 flowchart LR
-  WS["wineScore"] --> BASE["Base price"]
-  WS --> CURVE["Score curve"]
-  LVM["Land value modifier"] --> PRICE["Estimated price"]
-  FE["Feature effects"] --> PRICE
-  CP["Company prestige"] --> PRICE
-  VP["Vineyard prestige"] --> PRICE
-  BASE --> PRICE
-  CURVE --> PRICE
-  CUR["Current wine"] --> SNAP["Bottling snapshots"]
-  PRICE --> SALES["Sales / cellar value"]
-  SNAP --> WL["Wine log"] --> ACH["Achievements / highscores"]
-```
-
-### Weather, Markets, and Founder Finance
-
-```mermaid
-flowchart LR
-  TIME["Week / season / year"] --> WTH["Persisted weather context"]
-  SITE["Aspect / altitude / suitability / soil"] --> PROJ["Bounded vineyard projection"]
-  WTH --> PROJ --> VINE["Health / ripeness"]
-  WTH --> OPS["Planting / harvesting operation impact"] --> WORK["Activity availability / work pace"]
-  WTH --> MARKET["Grape-market pressure"]
-  ECO["Economy"] --> MARKET
-  LOY["Loyalty"] --> MARKET
-  RES["Research"] --> MARKET
+  TIME["Week / season / year"] --> WX["Persisted weather"]
+  SITE["Site response"] --> PROJ["Bounded vineyard projection"]
+  WX --> PROJ --> VINE["Health / ripeness"]
+  WX --> OPS["Planting / harvesting impacts"] --> WORK["Availability / work pace"]
+  WX --> MARKET["Grape and Buy Market context"]
+  ECONOMY["Economy"] --> MARKET
+  LOYALTY["Loyalty / research"] --> MARKET
   MARKET --> CASH["Transactions / inventory / prestige"]
-  STAFF["Founder staff"] --> ZERO["Zero wages"] --> CASH
+  STAFF["Founder staff"] --> CASH
   PROFIT["Positive yearly profit"] --> RETURN["Founder Return"] --> CASH
   VALUE["Company value"] --> BUYOUT["Founder buyout"] --> CASH
-  CREDIT["Credit rating + assets + economy"] --> TERMS["Loan limits / rates / fees / payments"]
-  LENDERS["Persisted lenders"] --> OFFERS["Lender-search offers"]
-  TERMS --> OFFERS --> ACTIVITY["Take-loan activity"] --> LOANS["Active loans"]
-  LOANS --> PAYMENTS["Seasonal payments / warnings / restructure / default"] --> CASH
+  CREDIT["Credit / assets / economy"] --> OFFERS["Lender offers"] --> ACTIVITY["Take-loan activity"] --> LOANS["Active loans"] --> PAYMENTS["Payments / warning / default"] --> CASH
 ```
 
-## Contract and Snapshot Relationships
+## Cross-domain invariants
 
-| Requirement/snapshot | Source | Consumer |
+- Structure measures physical balance; Taste Quality measures family balance; neither is land value.
+- Weather uses an explicit bounded projection and does not enter wine-score formulas or historical snapshots as a hidden side effect.
+- Winter blocks starting planting; severe conditions slow planting/harvesting work and extreme conditions can pause it. Clearing's annual availability is a vineyard rule.
+- Buy Market previews are side-effect-free. Each offer has one seller/source and buyer-to-seller relationship pricing; adapters retain their own stock, evolution, and base-price rules.
+- Storage Vessels are canonical assets. Supplier purchases create company-owned assets; used-market purchases transfer a globally listed asset with identity and history intact. Wine contact marks a vessel dirty, but cleanliness is warning-only; Empty Vessel changes only the selected filled volume and Clean Vessel is a separate cancellable activity.
+- Research changes access, scaling, or explicit upstream inputs; it does not bypass structure/taste computation. `unlocks` and `permanentEffects` are authoritative over descriptive benefit copy.
+- Prestige writes carry explicit source and decay metadata. Staff work has one category-derived primary skill; role/task/grape bonuses are additive and capped at 50%, and XP comes only from persisted applied work.
+
+## Contract and snapshot relationships
+
+| Requirement or snapshot | Source | Consumer |
 |---|---|---|
 | `tasteQuality` | Current `tasteQualityIndex` | Contract validation |
 | `structureIndex` | Current structure score | Contract validation |
-| `landValue`, origin, altitude, aspect | Vineyard/site | Contract validation and pricing |
-| `grape`, `grapeColor` | Batch identity | Contracts, customers, markets |
-| Characteristic thresholds/deviation | Current characteristics | Contract validation |
-| Harvest snapshots | Site, structure, taste | Batch history and debugging |
-| Bottling snapshots | Taste, structure, land value, wine score | Wine Log, highscores, achievements |
+| Land value, origin, altitude, aspect | Vineyard/site | Contracts and pricing |
+| Grape and color | Batch identity | Contracts, customers, markets |
+| Characteristic thresholds | Current characteristics | Contract validation |
+| Harvest snapshot | Site, structure, taste | Batch history and debugging |
+| Bottling snapshot | Taste, structure, land value, wine score | Wine Log, leaderboards, achievements |
 
-## UI Relationship Surfaces
+## UI relationship surfaces
 
-| Surface | Shows |
+| Surface | Primary relationship shown |
 |---|---|
-| Wine modal | Current score/price and snapshot comparison |
-| Structure/Taste tabs | Characteristics, ranges, penalties, families, descriptors, quality reasons |
-| Land-value/origins tabs | Site factors and source/effect breakdowns |
-| Weather Center | Current/next-week weather and vineyard health/ripeness outcomes |
-| Planting/harvesting actions | Weather operation status, reason, and current-condition estimate caveat |
-| Vineyard weather tooltips | Site summary and aspect/altitude/soil exposure reasons |
-| Winepedia Weather | Weather formulas, matrices, bounds, forecast and market derivation |
-| Research page | Chain-first progression, gates, permanent effects, project inspector |
-| Market modals | Offers, price/limit factors, loyalty, economy/weather context, service-prepared previews |
-| Founder Panel | Active founders, returns, buyout action/cost |
+| Wine modal / Structure and Taste tabs | Current score, price, characteristics, ranges, families, descriptors, snapshot comparison |
+| Vineyard and Weather Center | Site inputs, forecast, health/ripeness, operation status and work impact |
+| Research page | Progression chains, gates, permanent effects, project state |
+| Market modals | Offers, sellers, price/limit factors, loyalty, economy/weather context, projected asset state |
+| Founder Panel and Finance | Founders, returns, buyout, cash flow, loans and payment state |
+| Wine Log and Leaderboards | Immutable bottling history, rankings, and progression outputs |
 
-## Implementation Checkpoints
+## Current checkpoints
 
-| Area | Current rule |
+| Area | Relationship to preserve |
 |---|---|
-| Anchors | Compact 12-key `WineAnchorValues`; strict database parsing |
-| Taste | 14 family profiles; descriptors display-only |
+| Anchors | Compact persisted anchor set with strict database parsing |
 | Score | `wineScore = (tasteQualityIndex + structureIndex) / 2` |
-| Snapshots | Bottling values drive historical records and score achievements |
-| Weather | Feature facade persists/resolves facts, applies one bounded site-aware projection, and supplies planting/harvesting operation impacts; clearing's annual rule remains outside weather |
-| Markets | Sell-side grape trading remains separate; one Buy Market modal hosts registered Grape Procurement and Storage Vessels adapters |
-| Research | Gates cover grapes, fermentation, staff/vineyard caps, contracts, and buyer progression; health-decay effect is active |
-| Ownership | Founder economy active; board/share runtime remains intentionally inactive and not wired into host behavior |
-| Loans | `loanQuoteService` is the shared seam for borrower caps, terms, finalized applications, and payment summaries; `loanPaymentService` owns repayment mutations. Persisted lenders and loans remain authoritative, and failed finance reads are not replaced with synthetic dashboard data |
+| Weather | One bounded site-aware projection plus explicit operation impacts |
+| Markets | Sell-side grape trading remains separate from registered Buy Market adapters |
+| Research | Gates cover grapes, fermentation, staff/vineyard caps, contracts, and buyer progression |
+| Ownership | Founder economy is active; public-company/share runtime is inactive |
 
-## Alignment Rules
-
-- Keep permanent research effects routed through explicit domain services and keep benefit copy aligned with actual unlocks/effects.
-- Update this map and `CONTEXT.md` before descriptors, customer taste matching, severe weather, or board/share systems become player-visible.
-- Keep prestige creator inventory and market constants synchronized when adding new sources or tuning.
+Update this map when a new cross-domain dependency or player-visible flow is introduced; keep isolated implementation details in the owning feature/service documentation.
