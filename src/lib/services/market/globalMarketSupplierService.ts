@@ -10,8 +10,22 @@ export interface GlobalMarketSupplierDate {
  * names, prices, or state.
  */
 export interface GlobalMarketSupplierAdapter<TListingInput> {
+  /** Stable registration metadata; generation remains domain-owned. */
+  id?: string;
+  wareGroup?: import('@/lib/types/market').BuyMarketWareGroup;
   generateListings(date: GlobalMarketSupplierDate): TListingInput[];
   persistListings(date: GlobalMarketSupplierDate, listings: TListingInput[]): Promise<void>;
+}
+
+const globalMarketSupplierAdapters: GlobalMarketSupplierAdapter<unknown>[] = [];
+
+export function registerGlobalMarketSupplierAdapter<TListingInput>(adapter: GlobalMarketSupplierAdapter<TListingInput>): void {
+  if (adapter.id && globalMarketSupplierAdapters.some((registered) => registered.id === adapter.id)) return;
+  globalMarketSupplierAdapters.push(adapter as GlobalMarketSupplierAdapter<unknown>);
+}
+
+export async function ensureRegisteredGlobalMarketSupplierListings(date: GlobalMarketSupplierDate): Promise<void> {
+  await Promise.all(globalMarketSupplierAdapters.map((adapter) => ensureGlobalMarketSupplierListings(adapter, date)));
 }
 
 export async function ensureGlobalMarketSupplierListings<TListingInput>(

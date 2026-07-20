@@ -11,7 +11,7 @@ import {
   type StorageVesselMarketOffer,
   type StorageVesselPriceBreakdown,
 } from '@/lib/services/market/storageVessels/storageVesselMarketAdapter';
-import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
+import { purchaseBuyMarketOfferForDomain } from '@/lib/services/market/buyMarketService';
 import { formatNumber, getColorClass, getQualityInfo } from '@/lib/utils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
@@ -20,7 +20,7 @@ import {
   BUY_MARKET_COUNTERPARTY_LEVELS,
   getBuyMarketRelationshipPreview,
 } from '@/lib/services/market/buyMarketCounterpartyRelationshipService';
-import { getBuyMarketOfferSourcePresentation } from '@/lib/services/market/buyMarketOfferSource';
+import { getBuyMarketOfferSourcePresentation, isBuyMarketOfferInSourceFilter } from '@/lib/services/market/buyMarketOfferSource';
 import type { BuyMarketSourceFilter } from '@/lib/types/market';
 
 interface StorageVesselMarketPanelProps {
@@ -110,9 +110,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
 
   useEffect(() => { void loadOffers(); }, [loadOffers]);
 
-  const filteredOffers = useMemo(() => offers.filter((offer) => sourceFilter === 'all'
-    || (sourceFilter === 'local_supplier' && offer.source.kind === 'supplier_stock')
-    || (sourceFilter === 'global_supplier' && offer.source.kind !== 'supplier_stock')), [offers, sourceFilter]);
+  const filteredOffers = useMemo(() => offers.filter((offer) => isBuyMarketOfferInSourceFilter(offer, sourceFilter)), [offers, sourceFilter]);
 
   const sortedOffers = useMemo(() => !sortDirection ? filteredOffers : [...filteredOffers].sort((left, right) => {
     const value = (offer: StorageVesselMarketOffer): string | number => ({
@@ -198,7 +196,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     try {
       const result = selectedOffer.kind === 'used_listing'
         ? await purchaseUsedStorageVesselOffer(selectedOffer)
-        : await purchaseBuyMarketOffer(selectedOffer.id, selectedQuantity);
+        : await purchaseBuyMarketOfferForDomain('storage_vessels', selectedOffer.id, selectedQuantity);
       if (!result.success) {
         setErrorByOfferId((current) => ({ ...current, [selectedOffer.id]: result.error ?? 'Purchase failed.' }));
         return;

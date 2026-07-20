@@ -10,6 +10,7 @@ import {
 } from '@/lib/constants';
 import { isBuyMarketDateInWindow, toBuyMarketAbsoluteWeek, type BuyMarketGameDate } from '@/lib/services/market/buyMarketDate';
 import type { StorageVessel, StorageVesselMarketListing } from '@/lib/types/storageVessels';
+import type { BuyMarketLifecycleAdapter } from '@/lib/services/market/buyMarketLifecycleService';
 
 export function projectUsedStorageVesselCondition(listing: StorageVesselMarketListing, vessel: StorageVessel, date: BuyMarketGameDate): number {
   const elapsedWeeks = Math.max(0, toBuyMarketAbsoluteWeek(date) - toBuyMarketAbsoluteWeek({ year: listing.listedYear, season: listing.listedSeason, week: listing.listedWeek }));
@@ -23,6 +24,15 @@ export function isUsedStorageVesselListingVisible(listing: StorageVesselMarketLi
     { year: listing.retiredYear, season: listing.retiredSeason, week: listing.retiredWeek },
   );
 }
+
+export const storageVesselMarketLifecycleAdapter: BuyMarketLifecycleAdapter<
+  StorageVesselMarketListing,
+  StorageVessel,
+  number
+> = {
+  project: projectUsedStorageVesselCondition,
+  isVisible: isUsedStorageVesselListingVisible,
+};
 
 export function calculateUsedStorageVesselMarketValue(vessel: StorageVessel, condition: number, currentYear: number): number {
   const ageYears = Math.max(0, currentYear - vessel.productionYear);

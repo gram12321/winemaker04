@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   getBuyGrapeMarketOffers: vi.fn<() => Promise<Array<Record<string, unknown>>>>(async () => []),
   getBuyMarketRelationshipPreview: vi.fn(() => ({ appliedPoints: 0, cappedPoints: 0, rawPoints: 0 })),
   getStorageVesselMarketOffers: vi.fn<() => Promise<Array<Record<string, unknown>>>>(async () => []),
-  purchaseBuyMarketOffer: vi.fn(),
+  purchaseBuyMarketOfferForDomain: vi.fn(),
 }));
 
 vi.mock('@/components/ui', async () => {
@@ -65,7 +65,7 @@ vi.mock('@/lib/services/sales/buyGrapeMarketService', () => ({
   }),
   getBuyOfferStateLabel: () => 'Grapes',
 }));
-vi.mock('@/lib/services/market/buyMarketService', () => ({ purchaseBuyMarketOffer: mocks.purchaseBuyMarketOffer }));
+vi.mock('@/lib/services/market/buyMarketService', () => ({ purchaseBuyMarketOfferForDomain: mocks.purchaseBuyMarketOfferForDomain }));
 vi.mock('@/lib/services/market/buyMarketCounterpartyRelationshipService', () => ({
   BUY_MARKET_COUNTERPARTY_LEVELS: { 0: { name: 'Unknown Seller' } },
   getBuyMarketRelationshipPreview: mocks.getBuyMarketRelationshipPreview,
@@ -138,7 +138,7 @@ describe('Buy Market panels', () => {
       payload: { capacityLitres: 225, productionYear: 2024, qualityScore: 0.8, material: 'oak', vesselType: 'barrel' },
       priceBreakdown: { basePrice: 100, capacityMultiplier: 1, qualityMultiplier: 1, ageYears: 2, ageMultiplier: 0.95, cleanlinessMultiplier: 1, conditionMultiplier: 1, fillHistoryMultiplier: 1, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestigeMultiplier: 1, qualityScore: 0.8, capacityLitres: 225, minimumPrice: 1, maximumPrice: 1_000, finalPricePerVessel: 100 },
     }]);
-    mocks.purchaseBuyMarketOffer.mockResolvedValue({ success: true });
+    mocks.purchaseBuyMarketOfferForDomain.mockResolvedValue({ success: true });
     const onClose = vi.fn();
 
     await act(async () => {
@@ -151,7 +151,7 @@ describe('Buy Market panels', () => {
       await flushPromises();
     });
 
-    expect(mocks.purchaseBuyMarketOffer).toHaveBeenCalledWith('cask-offer-1', 1);
+    expect(mocks.purchaseBuyMarketOfferForDomain).toHaveBeenCalledWith('storage_vessels', 'cask-offer-1', 1);
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -166,11 +166,13 @@ describe('Buy Market panels', () => {
       effectivePricePerKg: 10,
       batchState: 'grapes',
       originTag: 'seasonal_rotation',
+      source: { kind: 'supplier_stock', seller: { kind: 'supplier', id: 'supplier-1', name: 'Grower' } },
+      counterpartyRelationship: null,
       weeksOnMarket: 0,
       previewBatch: { features: [] },
     }]);
     mocks.getAvailableStorageVessels.mockResolvedValueOnce([{ id: 'vessel-1', capacityLitres: 10, material: 'oak', vesselType: 'barrel' }]);
-    mocks.purchaseBuyMarketOffer.mockReturnValueOnce(purchase.promise);
+    mocks.purchaseBuyMarketOfferForDomain.mockReturnValueOnce(purchase.promise);
     const onClose = vi.fn();
 
     await act(async () => {
@@ -190,7 +192,7 @@ describe('Buy Market panels', () => {
     });
 
     expect(findButton(container, 'Buying').disabled).toBe(true);
-    expect(mocks.purchaseBuyMarketOffer).toHaveBeenCalledWith('grape-offer-1', 10, { storageVesselIds: ['vessel-1'] });
+    expect(mocks.purchaseBuyMarketOfferForDomain).toHaveBeenCalledWith('grapes', 'grape-offer-1', 10, { storageVesselIds: ['vessel-1'] });
 
     await act(async () => {
       purchase.resolve({ success: true });
@@ -209,11 +211,13 @@ describe('Buy Market panels', () => {
       effectivePricePerKg: 10,
       batchState: 'grapes',
       originTag: 'seasonal_rotation',
+      source: { kind: 'supplier_stock', seller: { kind: 'supplier', id: 'supplier-1', name: 'Grower' } },
+      counterpartyRelationship: null,
       weeksOnMarket: 0,
       previewBatch: { features: [] },
     }]);
     mocks.getAvailableStorageVessels.mockResolvedValueOnce([{ id: 'vessel-1', capacityLitres: 10, material: 'oak', vesselType: 'barrel' }]);
-    mocks.purchaseBuyMarketOffer.mockResolvedValueOnce({ success: false, error: 'Supplier is unavailable.' });
+    mocks.purchaseBuyMarketOfferForDomain.mockResolvedValueOnce({ success: false, error: 'Supplier is unavailable.' });
 
     await act(async () => {
       root.render(React.createElement(GrapeMarketPanel, { onClose: vi.fn() }));

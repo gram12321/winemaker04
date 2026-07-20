@@ -3,7 +3,7 @@ import type { Season } from './types';
 export type BuyMarketWareGroup = 'grapes' | 'storage_vessels';
 export type BuyMarketUnit = 'kg' | 'vessel';
 export type BuyMarketOfferSourceKind = 'supplier_stock' | 'npc_used' | 'company_listing';
-export type BuyMarketSourceFilter = 'all' | 'local_supplier' | 'global_supplier';
+export type BuyMarketSourceFilter = 'all' | 'local_supplier' | 'global_market';
 export type BuyMarketSellerKind = 'supplier' | 'npc' | 'company';
 
 /**
@@ -17,12 +17,39 @@ export interface BuyMarketOfferSource {
   seller: BuyMarketOfferSeller;
 }
 
+export interface BuyMarketOfferLifecycle {
+  createdYear: number;
+  createdSeason: Season;
+  createdWeek: number;
+  expiresYear?: number | null;
+  expiresSeason?: Season | null;
+  expiresWeek?: number | null;
+}
+
+/**
+ * Shared market-facing read model. Domain adapters may add richer payload and
+ * pricing breakdowns, but the modal only needs this stable contract for source,
+ * seller, quantity, lifecycle, and purchase presentation.
+ */
+export interface BuyMarketOfferView<TPayload = Record<string, unknown>> extends BuyMarketOfferLifecycle {
+  id: string;
+  wareGroup: BuyMarketWareGroup;
+  source: BuyMarketOfferSource;
+  availableUnits: number;
+  unit: BuyMarketUnit;
+  basePricePerUnit: number;
+  effectivePricePerUnit: number;
+  payload: TPayload;
+}
+
 export type BuyMarketOfferSeller =
   | { kind: 'supplier' | 'npc'; id: string; name: string; companyId?: never }
   | { kind: 'company'; id: string; name: string; companyId: string };
 
 export interface BuyGoodsPriceQuoteInput {
   supplierRelationshipMultiplier: number;
+  /** Generic buyer-to-market-counterparty term. */
+  marketRelationshipMultiplier?: number;
   companyPrestige: number;
 }
 

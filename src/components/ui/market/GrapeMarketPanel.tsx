@@ -11,7 +11,7 @@ import {
   getBuyOfferStateLabel,
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
-import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
+import { purchaseBuyMarketOfferForDomain } from '@/lib/services/market/buyMarketService';
 import { getBuyMarketRelationshipPreview, type BuyMarketCounterpartyRelationshipLevel } from '@/lib/services/market/buyMarketCounterpartyRelationshipService';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
@@ -24,6 +24,7 @@ import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { getAvailableStorageVessels, initializeHarvestVolumeLitres } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import type { BuyMarketSourceFilter } from '@/lib/types/market';
+import { getBuyMarketOfferSourcePresentation, isBuyMarketOfferInSourceFilter } from '@/lib/services/market/buyMarketOfferSource';
 
 type SortDirection = 'asc' | 'desc' | null;
 
@@ -182,7 +183,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
     setLoading(true);
     try {
       const nextOffers = await getBuyGrapeMarketOffers();
-      setOffers(sourceFilter === 'global_supplier' ? [] : nextOffers);
+      setOffers(nextOffers);
       const vessels = await getAvailableStorageVessels();
       setAvailableVessels(vessels);
       setSelectedVesselIds([]);
@@ -202,7 +203,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
   const handleBuy = useCallback(async (offerId: string, quantityKg: number, vesselIds: string[]) => {
     setLoading(true);
     try {
-      const result = await purchaseBuyMarketOffer(offerId, quantityKg, { storageVesselIds: vesselIds });
+      const result = await purchaseBuyMarketOfferForDomain('grapes', offerId, quantityKg, { storageVesselIds: vesselIds });
 
       if (!result.success) {
         setErrorByOfferId((current) => ({
@@ -230,6 +231,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
 
   const filteredAndSortedOffers = useMemo(() => {
     const filtered = offers.filter((offer) => {
+      if (!isBuyMarketOfferInSourceFilter(offer, sourceFilter)) return false;
       if (grapeFilter !== 'all' && offer.grapeVariety !== grapeFilter) return false;
       if (stateFilter !== 'all' && offer.batchState !== stateFilter) return false;
       return true;
@@ -318,7 +320,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
 
   const trustPreview = useMemo(() => {
     if (!selectedOffer || selectedPurchaseKg <= 0) return null;
-    return getBuyMarketRelationshipPreview(selectedOffer.supplierLoyalty, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
+    return getBuyMarketRelationshipPreview(selectedOffer.counterpartyRelationship, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
   }, [companyValue, currentYear, selectedOffer, selectedPurchaseKg]);
 
   const displayedOffers = useMemo(() => {
@@ -366,13 +368,15 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
   const columns = useMemo<MarketOfferTableColumn<BuyGrapeMarketOffer>[]>(() => [
     {
       key: 'offer',
-      header: 'Offer',
+      header: 'Market source',
       sortable: true,
       className: 'w-[23%] min-w-[205px]',
       render: (offer) => (
         <div className="space-y-1">
-          <div className="font-medium text-white leading-tight">{offer.supplierName}</div>
+          <div className="font-medium text-white leading-tight">{getBuyMarketOfferSourcePresentation(offer.source).sellerLabel}</div>
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-gray-400">
+            <span>{getBuyMarketOfferSourcePresentation(offer.source).label}</span>
+            <span className="text-gray-600">•</span>
             <span>{getOriginLabel(offer.originTag)}</span>
             <span className="text-gray-600">•</span>
             <span>{offer.grapeVariety}</span>
@@ -389,8 +393,8 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
               title="Market Relationship"
               content={<span className="text-xs leading-snug">A relationship with this seller can improve pricing and, for local supplier stock, listing persistence over time.</span>}
             >
-              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getBuyMarketCounterpartyTrustColor((offer.supplierLoyalty?.level ?? 0) as BuyMarketCounterpartyRelationshipLevel)}`}>
-                Relationship {offer.supplierLoyalty?.level ?? 0}
+              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getBuyMarketCounterpartyTrustColor((offer.counterpartyRelationship?.level ?? 0) as BuyMarketCounterpartyRelationshipLevel)}`}>
+                Relationship {offer.counterpartyRelationship?.level ?? 0}
               </span>
             </UnifiedTooltip>
           </div>
@@ -510,7 +514,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
 
             <BuyMarketCounterpartyPanel
               counterpartyName={selectedOffer?.supplierName}
-              relationship={selectedOffer?.supplierLoyalty ?? null}
+              relationship={selectedOffer?.counterpartyRelationship ?? null}
               companyValue={companyValue}
               currentYear={currentYear}
               unitsLabel="kg"

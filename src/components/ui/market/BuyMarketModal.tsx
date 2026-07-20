@@ -53,7 +53,7 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose, initia
         {([
           ['all', 'All sources'],
           ['local_supplier', 'Local supplier'],
-          ['global_supplier', 'Global suppliers'],
+          ['global_market', 'Global market'],
         ] as const).map(([filter, label]) => <Button
           key={filter}
           size="sm"

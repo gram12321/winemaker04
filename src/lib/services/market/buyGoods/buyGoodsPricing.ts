@@ -15,6 +15,7 @@ export interface BuyGoodsPriceBreakdown {
   itemMultiplier: number;
   marketMultiplier: number;
   supplierRelationshipMultiplier: number;
+  marketRelationshipMultiplier: number;
   companyPrestigeMultiplier: number;
   spreadMultiplier: number;
   unclampedPrice: number;
@@ -46,7 +47,8 @@ export function calculateBuyGoodsPrice(input: BuyGoodsPriceInput): number {
 export function getBuyGoodsPriceBreakdown(input: BuyGoodsPriceInput): BuyGoodsPriceBreakdown {
   const itemMultiplier = input.itemMultiplier ?? 1;
   const marketMultiplier = input.marketMultiplier ?? 1;
-  const supplierRelationshipMultiplier = input.supplierRelationshipMultiplier ?? 1;
+  const marketRelationshipMultiplier = input.marketRelationshipMultiplier ?? input.supplierRelationshipMultiplier ?? 1;
+  const supplierRelationshipMultiplier = marketRelationshipMultiplier;
   const companyPrestigeMultiplier = getBuyGoodsPrestigePriceMultiplier(input.companyPrestige ?? 0);
   const spreadMultiplier = input.spreadMultiplier ?? 1;
   const unclampedPrice = input.basePrice
@@ -61,6 +63,7 @@ export function getBuyGoodsPriceBreakdown(input: BuyGoodsPriceInput): BuyGoodsPr
     itemMultiplier,
     marketMultiplier,
     supplierRelationshipMultiplier,
+    marketRelationshipMultiplier,
     companyPrestigeMultiplier,
     spreadMultiplier,
     unclampedPrice,

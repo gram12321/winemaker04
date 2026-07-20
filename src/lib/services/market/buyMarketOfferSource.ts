@@ -1,4 +1,4 @@
-import type { BuyMarketOfferSource } from '@/lib/types/market';
+import type { BuyMarketOfferSource, BuyMarketOfferView, BuyMarketSourceFilter } from '@/lib/types/market';
 
 export interface BuyMarketOfferSourcePresentation {
   label: string;
@@ -16,4 +16,13 @@ export function getBuyMarketOfferSourcePresentation(source: BuyMarketOfferSource
     case 'company_listing':
       return { label: 'Global Market', sellerLabel: source.seller.name, usesMarketRelationship: true };
   }
+}
+
+export function isBuyMarketOfferInSourceFilter(
+  offer: Pick<BuyMarketOfferView, 'source'>,
+  filter: BuyMarketSourceFilter,
+): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'local_supplier') return offer.source.kind === 'supplier_stock';
+  return offer.source.kind !== 'supplier_stock';
 }

@@ -48,6 +48,7 @@ import {
 import { initializeHarvestVolumeLitres } from '../wine/winery/storageVesselAllocationService';
 import { v4 as uuidv4 } from 'uuid';
 import { prepareWineBatchForInsert } from '@/lib/database/activities/inventoryDB';
+import type { BuyMarketOfferSource } from '@/lib/types/market';
 
 export interface BuyGrapeMarketOffer {
   id: string;
@@ -73,6 +74,8 @@ export interface BuyGrapeMarketOffer {
   provenanceSnapshot: MarketBatchProvenanceSnapshot;
   previewBatch: WineBatch;
   previewVersion: number;
+  source: BuyMarketOfferSource;
+  counterpartyRelationship: SupplierLoyaltyRecord | null;
 }
 
 export interface BuyOfferPriceBreakdown extends BuyGoodsPriceBreakdown {
@@ -389,6 +392,11 @@ function toOfferModel(
     provenanceSnapshot: row.provenance_snapshot!,
     previewBatch: row.preview_snapshot!,
     previewVersion: row.preview_version ?? BUY_OFFER_PREVIEW_VERSION,
+    source: {
+      kind: 'supplier_stock',
+      seller: { kind: 'supplier', id: row.supplier_id, name: row.supplier_name },
+    },
+    counterpartyRelationship: supplierLoyaltyById[row.supplier_id] ?? null,
   };
 }
 

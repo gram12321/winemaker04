@@ -48,7 +48,7 @@ Estimated price combines wine score, score curve, land-value, feature, company-p
 | Vineyard projection | Normal seasonal health/ripeness delta × bounded weather/site multiplier; includes planting progress, research health decay, aspect, altitude, suitability, and soil response |
 | Market impact | Weather and economy affect grape prices/limits; loyalty and research affect buyer/supplier access and scaling |
 | Operation impact | Winter prevents starting planting; severe weather slows planting/harvesting work and extreme conditions can pause it. Clearing's annual availability remains a vineyard-maintenance rule. |
-| Buy-market previews | One Buy Market modal hosts registered domain panels; offers persist, expire, decay, and refresh, while previews simulate bounded state/age/features without notifications or prestige events |
+| Buy-market previews | One Buy Market modal hosts registered domain panels through a shared offer/source/counterparty read contract; local catalogues and global assets remain separate internally, while adapters own domain-specific evolution and pricing |
 
 The feature facade at `src/lib/features/weather/` owns resolution, vineyard projection, market context, operation impacts, and presentation models. Weather does not directly affect yield, harvest anchors, or wine score. Severe events, mitigation actions, weather research, and weather achievements remain future work.
 

@@ -1,13 +1,14 @@
-import { getCompanyBuyMarketOffer } from '@/lib/database/market/buyMarketOffersDB';
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { BuyMarketPurchaseResult } from '@/lib/types/market';
-import { getBuyMarketDomainAdapter } from './buyMarketDomainRegistry';
-import type { BuyMarketPurchaseInput } from './buyMarketDomainRegistry';
+import { getBuyMarketDomainAdapter, getBuyMarketOffers, type BuyMarketPurchaseInput } from './buyMarketDomainRegistry';
 
-export async function purchaseBuyMarketOffer(offerId: string, quantity: number, input: BuyMarketPurchaseInput = {}): Promise<BuyMarketPurchaseResult> {
-  const companyId = getCurrentCompanyId();
-  if (!companyId) return { success: false, error: 'No active company selected.' };
-  const { data: offer, error } = await getCompanyBuyMarketOffer(companyId, offerId);
-  if (error || !offer) return { success: false, error: 'Offer not found.' };
-  return getBuyMarketDomainAdapter(offer.wareGroup).purchase(offerId, quantity, input);
+export async function purchaseBuyMarketOfferForDomain(
+  wareGroup: Parameters<typeof getBuyMarketDomainAdapter>[0],
+  offerId: string,
+  quantity: number,
+  input: BuyMarketPurchaseInput = {},
+): Promise<BuyMarketPurchaseResult> {
+  return getBuyMarketDomainAdapter(wareGroup).purchase(offerId, quantity, input);
 }
+
+/** Shared read seam used by future market panels and global goods adapters. */
+export { getBuyMarketOffers };

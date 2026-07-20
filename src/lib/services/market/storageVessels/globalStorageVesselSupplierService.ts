@@ -10,10 +10,12 @@ import {
   STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_RANGE,
 } from '@/lib/constants';
 import { ensureNpcUsedStorageVesselListings, type NpcStorageVesselListingInput } from '@/lib/database/market/storageVesselMarketListingsDB';
-import { ensureGlobalMarketSupplierListings, type GlobalMarketSupplierAdapter, type GlobalMarketSupplierDate } from '@/lib/services/market/globalMarketSupplierService';
+import { ensureGlobalMarketSupplierListings, registerGlobalMarketSupplierAdapter, type GlobalMarketSupplierAdapter, type GlobalMarketSupplierDate } from '@/lib/services/market/globalMarketSupplierService';
 import { getStorageVesselNameBase } from './storageVesselNamingService';
 
 const globalStorageVesselSupplierAdapter: GlobalMarketSupplierAdapter<NpcStorageVesselListingInput> = {
+  id: 'storage_vessels:npc_used',
+  wareGroup: 'storage_vessels',
   generateListings(date) {
     const nameCounts = new Map<string, number>();
     return STORAGE_VESSEL_USED_MARKET_NPC_PROFILES.map((profile) => {
@@ -41,6 +43,8 @@ const globalStorageVesselSupplierAdapter: GlobalMarketSupplierAdapter<NpcStorage
     if (error) throw error;
   },
 };
+
+registerGlobalMarketSupplierAdapter(globalStorageVesselSupplierAdapter);
 
 export function ensureGlobalStorageVesselSupplierListings(date: GlobalMarketSupplierDate): Promise<void> {
   return ensureGlobalMarketSupplierListings(globalStorageVesselSupplierAdapter, date);
