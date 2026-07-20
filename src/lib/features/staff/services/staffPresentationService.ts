@@ -1,20 +1,6 @@
 import { WorkCategory } from '@/lib/types/types';
-import type { StaffRecord } from '../featureTypes';
+import type { StaffExperienceDisplayItem, StaffExperiencePresentation, StaffRecord } from '../featureTypes';
 import { normalizeXP } from '@/lib/utils/calculator';
-
-export interface StaffExperienceDisplayItem {
-  key: string;
-  label: string;
-  xp: number;
-  progressPercent: number;
-}
-
-export interface StaffExperiencePresentation {
-  skillExperience: StaffExperienceDisplayItem[];
-  taskMastery: StaffExperienceDisplayItem[];
-  grapeMastery: StaffExperienceDisplayItem[];
-  totalXP: number;
-}
 
 function formatExperienceLabel(value: string): string {
   return value.replace(/([A-Z])/g, ' $1').trim();

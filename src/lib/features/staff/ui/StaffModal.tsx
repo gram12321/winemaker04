@@ -79,7 +79,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
-        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-700">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -98,10 +97,8 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 scrollbar-styled">
           <div className="space-y-6">
-            {/* Personal Information */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Personal Information</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -133,7 +130,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
               </div>
             </div>
 
-            {/* Skills */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Skills</h3>
               <StaffSkillBarsList staff={staff} />
@@ -142,7 +138,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
               </p>
             </div>
 
-            {/* Compensation */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Compensation</h3>
               <div className="space-y-3">
@@ -168,12 +163,10 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
               </p>
             </div>
 
-            {/* Experience Breakdown */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Experience Breakdown</h3>
               {experiencePresentation.totalXP > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  {/* Skill Experience */}
                   <div>
                     <span className="text-gray-400 block mb-2">Skill Experience</span>
                     <div className="space-y-3">
@@ -197,7 +190,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
                     </div>
                   </div>
 
-                  {/* Task Mastery */}
                   <div>
                     <span className="text-gray-400 block mb-2">Task Mastery</span>
                     <div className="space-y-3">
@@ -211,7 +203,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
                     </div>
                   </div>
 
-                  {/* Grape Mastery */}
                   <div>
                     <span className="text-gray-400 block mb-2">Grape Mastery</span>
                     <div className="space-y-3">
@@ -240,7 +231,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
               )}
             </div>
 
-            {/* Employment Details */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Employment Details</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -273,7 +263,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
               </div>
             </div>
 
-            {/* Active Assignments */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Active Assignments</h3>
               {activeAssignments.length > 0 ? (
@@ -359,7 +348,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
           <Button
             variant="outline"

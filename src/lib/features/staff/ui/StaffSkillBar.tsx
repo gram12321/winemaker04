@@ -31,7 +31,6 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
   const color = getSkillColor(skillKey);
   const effectiveContribution = staff.workforce * effectiveSkill / Math.max(1, taskCount);
 
-  // Build tooltip content JSX
   const buildTooltipContent = () => {
     return (
       <div className={tooltipStyles.text}>
@@ -88,7 +87,6 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
           triggerClassName={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}
         >
           <div className={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}>
-            {/* Base skill bar - only round left corners if there's XP bonus */}
             <div
               className="absolute top-0 bottom-0"
               style={{
@@ -99,7 +97,6 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
                 borderRadius: xpBonus > 0.001 ? '9999px 0 0 9999px' : '9999px'
               }}
             />
-            {/* XP bonus extension (lighter color) - only round right corners */}
             {xpBonus > 0.001 && (
               <div
                 className="absolute top-0 bottom-0"

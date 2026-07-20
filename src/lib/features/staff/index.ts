@@ -3,6 +3,7 @@ export type {
   StaffActivityAdapter,
   StaffCreateInput,
   StaffExperienceDisplayItem,
+  StaffExperiencePresentation,
   StaffFeature,
   StaffRecord,
   StaffSkillSet,

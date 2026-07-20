@@ -1,5 +1,3 @@
-// Team Service
-// Business logic for staff team management
 
 import { v4 as uuidv4 } from 'uuid';
 import { StaffTeam } from '@/lib/types/types';
@@ -8,7 +6,6 @@ import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { saveTeamToDb, loadTeamsFromDb, deleteTeamAndStaffAssignmentsFromDb, saveTeamsToDb, setStaffTeamMembershipInDb } from '@/lib/database/core/teamDB';
 
-// ===== DEFAULT TEAMS =====
 
 function getDefaultTeams(): StaffTeam[] {
   return [
@@ -100,7 +97,6 @@ function upgradeDefaultMaintenanceTeam(teams: StaffTeam[]): StaffTeam[] {
  * Get team for a specific work category based on default task types
  * Maps WorkCategory enum to task type string (lowercase) and finds matching team
  */
-// ===== TEAM MANAGEMENT FUNCTIONS =====
 
 /**
  * Create a new team
@@ -113,14 +109,12 @@ export async function addTeam(team: StaffTeam): Promise<StaffTeam> {
   const gameState = getGameState();
   const currentTeams = gameState.teams || [];
 
-  // Check if team name already exists
   const existingTeam = currentTeams.find(t => t.name === team.name);
   if (existingTeam) {
     await notificationService.addMessage('A team with this name already exists', 'teamService.addTeam', 'Team Creation Error', NotificationCategory.SYSTEM);
     throw new Error('Team name already exists');
   }
 
-  // Save to database
   const success = await saveTeamToDb(team);
   if (!success) {
     console.error('Failed to save team to database');
@@ -147,14 +141,12 @@ export async function removeTeam(teamId: string): Promise<boolean> {
     return false;
   }
 
-  // Delete from database
   const success = await deleteTeamAndStaffAssignmentsFromDb(teamId);
   if (!success) {
     console.error('Failed to delete team from database');
     return false;
   }
 
-  // Remove team assignments from all staff members
   const allStaff = gameState.staff || [];
   const updatedStaff = allStaff.map(staff =>
     staff.teamIds.includes(teamId) ? { ...staff, teamIds: staff.teamIds.filter(id => id !== teamId) } : staff
@@ -180,14 +172,12 @@ export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
     throw new Error('Team not found');
   }
 
-  // Check if team name already exists (excluding current team)
   const existingTeam = currentTeams.find(t => t.name === updatedTeam.name && t.id !== updatedTeam.id);
   if (existingTeam) {
     await notificationService.addMessage('A team with this name already exists', 'teamService.updateTeam', 'Team Update Error', NotificationCategory.SYSTEM);
     throw new Error('Team name already exists');
   }
 
-  // Save to database
   const success = await saveTeamToDb(updatedTeam);
   if (!success) {
     console.error('Failed to update team in database');
@@ -220,7 +210,6 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
     return false;
   }
 
-  // Verify team exists
   const team = allTeams.find(t => t.id === teamId);
   if (!team) {
     await notificationService.addMessage('Team not found', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
@@ -234,7 +223,6 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
     return false;
   }
 
-  // Update teams: add staff to team
   const updatedTeam = {
     ...team,
     memberIds: [...new Set([...team.memberIds, staffId])]
@@ -244,7 +232,6 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
     t.id === teamId ? updatedTeam : t
   );
 
-  // Update staff member: add team to their assignments
   const updatedStaffMember = {
     ...staff,
     teamIds: [...new Set([...staff.teamIds, teamId])]
@@ -290,7 +277,6 @@ export async function removeStaffFromTeam(staffId: string, teamId: string): Prom
     return false;
   }
 
-  // Update teams: remove staff from team
   const updatedTeam = {
     ...team,
     memberIds: team.memberIds.filter(id => id !== staffId)
@@ -300,7 +286,6 @@ export async function removeStaffFromTeam(staffId: string, teamId: string): Prom
     t.id === teamId ? updatedTeam : t
   );
 
-  // Update staff member: remove team from their assignments
   const updatedStaffMember = {
     ...staff,
     teamIds: staff.teamIds.filter(id => id !== teamId)
@@ -323,14 +308,12 @@ export async function removeStaffFromTeam(staffId: string, teamId: string): Prom
   return true;
 }
 
-// ===== INITIALIZATION FUNCTIONS =====
 
 /**
  * Initialize teams system with default teams or load from database
  */
 export async function initializeTeamsSystem(): Promise<void> {
   try {
-    // Try to load teams from database first
     const dbTeams = await loadTeamsFromDb();
 
     if (dbTeams.length > 0) {
@@ -339,22 +322,18 @@ export async function initializeTeamsSystem(): Promise<void> {
       if (teams !== dbTeams) await saveTeamsToDb(teams);
       updateGameState({ teams });
     } else {
-      // No teams in database, create default teams
       const defaultTeams = getDefaultTeams();
 
-      // Save default teams to database
       const success = await saveTeamsToDb(defaultTeams);
       if (success) {
         updateGameState({ teams: defaultTeams });
       } else {
         console.error('[Teams] Failed to save default teams to database');
-        // Still set in game state even if database save failed
         updateGameState({ teams: defaultTeams });
       }
     }
   } catch (error) {
     console.error('[Teams] Error initializing teams system:', error);
-    // Fallback to default teams if database fails
     const defaultTeams = getDefaultTeams();
     updateGameState({ teams: defaultTeams });
   }

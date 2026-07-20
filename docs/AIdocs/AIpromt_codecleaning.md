@@ -5,6 +5,8 @@
 ### **Current Project Status**
 We have implemented comprehensive systems across multiple files and may need cleanup after extensive development cycles.
 
+- Prefer in-place deletion. Do not add wrappers, compatibility paths, caches, generic abstractions, migrations, hooks, or components unless the final production-code delta is negative and control flow is simpler.
+
 ### **Cleanup Targets**
 - **Illogical Code Placement**: Functions/services in wrong directories or files
 - **Duplicate Code**: Repeated functionality across multiple files

@@ -52,7 +52,7 @@ export interface StaffFeature {
     processFounderDistributions(staff: StaffRecord[], previousYear: number): Promise<void>;
   };
   founders: { buyout(staffId: string): Promise<string | null> };
-  presentation: { getExperience(staff: StaffRecord): { skillExperience: StaffExperienceDisplayItem[]; taskMastery: StaffExperienceDisplayItem[]; grapeMastery: StaffExperienceDisplayItem[]; totalXP: number } };
+  presentation: { getExperience(staff: StaffRecord): StaffExperiencePresentation };
   setup: { initialize(): Promise<void> };
   ui: {
     renderWorkspace(props: { title: string; activity: StaffActivityAdapter }): ReactNode;
@@ -61,3 +61,9 @@ export interface StaffFeature {
 }
 
 export interface StaffExperienceDisplayItem { key: string; label: string; xp: number; progressPercent: number; }
+export interface StaffExperiencePresentation {
+  skillExperience: StaffExperienceDisplayItem[];
+  taskMastery: StaffExperienceDisplayItem[];
+  grapeMastery: StaffExperienceDisplayItem[];
+  totalXP: number;
+}
