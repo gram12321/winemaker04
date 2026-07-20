@@ -17,7 +17,7 @@ import {
 } from '../../constants/grapeConstants';
 import { Aspect, GrapeVariety, Vineyard } from '../../types/types';
 import { NormalizeScrewed1000To01WithTail, vineyardAgePrestigeModifier } from '@/lib/utils/calculator';
-import { clamp01 } from '@/lib/utils';
+import { clamp01 } from '@/lib/utils/utils';
 
 
 function normalizeTo01(value: number, min: number, max: number): number {
