@@ -125,35 +125,6 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
 }
 
 /**
- * Delete a staff member from the database
- */
-export async function deleteStaffFromDb(staffId: string): Promise<boolean> {
-  try {
-    const companyId = getCurrentCompanyId();
-    if (!companyId) {
-      console.error('No company ID found to delete staff.');
-      return false;
-    }
-
-    const { error } = await supabase
-      .from('staff')
-      .delete()
-      .eq('id', staffId)
-      .eq('company_id', companyId);
-
-    if (error) {
-      console.error('Error deleting staff from Supabase:', error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error in deleteStaffFromDb:', error);
-    return false;
-  }
-}
-
-/**
  * Get a single staff member by ID
  */
 export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null> {

@@ -8,7 +8,6 @@ import * as wages from './services/wageCalculations';
 import { toStaff, toStaffRecord, toStaffTeam, toStaffTeamRecord } from './services/staffModels';
 
 const StaffWorkspace = lazy(() => import('./ui/StaffWorkspace').then(module => ({ default: module.StaffPage })));
-const StaffModal = lazy(() => import('./ui/StaffModal'));
 const StaffSkillBarsList = lazy(() => import('./ui/StaffSkillBar').then(module => ({ default: module.StaffSkillBarsList })));
 
 const renderLazy = <Props extends object>(component: ComponentType<Props>, props: Props) =>
@@ -23,10 +22,6 @@ export const staffFeature: StaffFeature = {
     }),
     remove: staffId => import('./services/staffService').then(({ removeStaff }) => removeStaff(staffId)),
     getAll: () => import('./services/staffService').then(async ({ getAllStaff }) => (await getAllStaff()).map(toStaffRecord)),
-    getById: staffId => import('./services/staffService').then(async ({ getStaffById }) => {
-      const staff = await getStaffById(staffId);
-      return staff ? toStaffRecord(staff) : undefined;
-    }),
   },
   recruitment: {
     generateSkills: factory.generateRandomSkills,
@@ -44,7 +39,6 @@ export const staffFeature: StaffFeature = {
       const team = teams.getTeamForCategory(teamRecords.map(toStaffTeam), category);
       return team ? toStaffTeamRecord(team) : null;
     },
-    getDefault: () => import('./services/teamService').then(({ getDefaultTeams }) => getDefaultTeams().map(toStaffTeamRecord)),
     add: team => import('./services/teamService').then(async ({ addTeam }) => toStaffTeamRecord(await addTeam(toStaffTeam(team)))),
     update: team => import('./services/teamService').then(async ({ updateTeam }) => toStaffTeamRecord(await updateTeam(toStaffTeam(team)))),
     remove: teamId => import('./services/teamService').then(({ removeTeam }) => removeTeam(teamId)),
@@ -74,7 +68,6 @@ export const staffFeature: StaffFeature = {
   },
   ui: {
     renderWorkspace: props => renderLazy(StaffWorkspace, props),
-    renderStaffModal: props => renderLazy(StaffModal, props),
     renderSkillBars: props => renderLazy(StaffSkillBarsList, props),
   },
 };

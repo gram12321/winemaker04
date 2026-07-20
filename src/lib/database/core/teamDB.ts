@@ -77,35 +77,6 @@ export async function loadTeamsFromDb(): Promise<StaffTeam[]> {
   }
 }
 
-/**
- * Delete a team from the database
- */
-export async function deleteTeamFromDb(teamId: string): Promise<boolean> {
-  try {
-    const companyId = getCurrentCompanyId();
-    if (!companyId) {
-      console.error('No company ID found to delete team.');
-      return false;
-    }
-
-    const { error } = await supabase
-      .from('teams')
-      .delete()
-      .eq('id', teamId)
-      .eq('company_id', companyId);
-
-    if (error) {
-      console.error('Error deleting team from Supabase:', error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error in deleteTeamFromDb:', error);
-    return false;
-  }
-}
-
 /** Atomically remove a team and clear its ID from every company staff record. */
 export async function deleteTeamAndStaffAssignmentsFromDb(teamId: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('delete_team_and_staff_assignments', { p_team_id: teamId });

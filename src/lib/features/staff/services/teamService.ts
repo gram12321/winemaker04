@@ -2,7 +2,7 @@
 // Business logic for staff team management
 
 import { v4 as uuidv4 } from 'uuid';
-import { StaffTeam, WorkCategory } from '@/lib/types/types';
+import { StaffTeam } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
@@ -11,7 +11,7 @@ import { saveStaffToDb } from '@/lib/database/core/staffDB';
 
 // ===== DEFAULT TEAMS =====
 
-export function getDefaultTeams(): StaffTeam[] {
+function getDefaultTeams(): StaffTeam[] {
   return [
     {
       id: uuidv4(),
@@ -101,41 +101,11 @@ function upgradeDefaultMaintenanceTeam(teams: StaffTeam[]): StaffTeam[] {
  * Get team for a specific work category based on default task types
  * Maps WorkCategory enum to task type string (lowercase) and finds matching team
  */
-export function getTeamForCategory(category: WorkCategory): StaffTeam | null {
-  const teams = getAllTeams();
-
-  // Convert WorkCategory enum to lowercase task type string
-  // e.g., WorkCategory.PLANTING -> 'planting'
-  const taskType = category.toLowerCase();
-
-  // Find team that has this task type in their defaultTaskTypes
-  const matchingTeam = teams.find(team =>
-    team.defaultTaskTypes.includes(taskType)
-  );
-
-  return matchingTeam || null;
-}
-
 // ===== TEAM MANAGEMENT FUNCTIONS =====
 
 /**
  * Create a new team
  */
-export function createTeam(
-  name: string,
-  description: string,
-  defaultTaskTypes: string[] = [],
-  icon: string = '👥'
-): StaffTeam {
-  return {
-    id: uuidv4(),
-    name,
-    description,
-    memberIds: [],
-    icon,
-    defaultTaskTypes
-  };
-}
 
 /**
  * Add a team to the game state and database
@@ -236,9 +206,6 @@ export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
 /**
  * Get all teams
  */
-export function getAllTeams(): StaffTeam[] {
-  return getGameState().teams || [];
-}
 
 /**
  * Assign a staff member to a team
@@ -405,19 +372,4 @@ export async function initializeTeamsSystem(): Promise<void> {
 /**
  * Reset teams to default configuration
  */
-export async function resetTeamsToDefault(): Promise<void> {
-  const defaultTeams = getDefaultTeams();
-
-  // Clear all team assignments from staff
-  const gameState = getGameState();
-  const allStaff = gameState.staff || [];
-  const updatedStaff = allStaff.map(staff => ({ ...staff, teamIds: [] }));
-
-  updateGameState({
-    teams: defaultTeams,
-    staff: updatedStaff
-  });
-
-  await notificationService.addMessage('Teams reset to default configuration', 'teamService.resetTeamsToDefault', 'Team Reset', NotificationCategory.STAFF_MANAGEMENT);
-}
 

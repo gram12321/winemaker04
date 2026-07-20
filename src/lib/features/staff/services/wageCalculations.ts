@@ -1,5 +1,5 @@
 import type { SpecializedRole, StaffSkills } from '@/lib/types/types';
-import { getBadgeColorClasses, getColorClass, formatNumber } from '@/lib/utils/utils';
+import { getColorClass } from '@/lib/utils/utils';
 import {
   BASE_WEEKLY_WAGE,
   DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM,
@@ -28,22 +28,18 @@ export function calculateWage(skills: StaffSkills, specializedRoles: Specialized
   ));
 }
 
-export function getMaxWage(): number {
+function getMaxWage(): number {
   const groupCount = new Set(Object.values(SPECIALIZED_ROLES).map(role => role.skillBonus)).size;
   return (BASE_WEEKLY_WAGE + SKILL_WAGE_MULTIPLIER) * Math.pow(1 + DISTINCT_PRIMARY_SKILL_WAGE_PREMIUM, groupCount);
 }
 
-export function normalizeWage(wage: number, maxWage = getMaxWage()): number {
+function normalizeWage(wage: number, maxWage = getMaxWage()): number {
   return Math.pow(wage / maxWage, 0.7);
 }
 
 export function getWageColorClass(wage: number, period: 'weekly' | 'seasonal' | 'annual' = 'weekly'): string {
   const scale = period === 'seasonal' ? WEEKS_PER_SEASON : period === 'annual' ? WEEKS_PER_YEAR : 1;
   return getColorClass(normalizeWage(wage, getMaxWage() * scale));
-}
-
-export function getWageBadgeColorClasses(wage: number): { text: string; bg: string } {
-  return getBadgeColorClasses(normalizeWage(wage));
 }
 
 export function calculateTotalWeeklyWages(staff: { wage: number }[]): number {
@@ -56,8 +52,4 @@ export function calculateTotalSeasonalWages(staff: { wage: number }[]): number {
 
 export function calculateTotalYearlyWages(staff: { wage: number }[]): number {
   return calculateTotalWeeklyWages(staff) * WEEKS_PER_YEAR;
-}
-
-export function formatWageWithColor(wage: number, period = '', wagePeriod: 'weekly' | 'seasonal' | 'annual' = 'weekly') {
-  return { text: `${formatNumber(wage, { currency: true, decimals: 0 })}${period}`, colorClass: getWageColorClass(wage, wagePeriod) };
 }

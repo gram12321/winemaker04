@@ -118,7 +118,8 @@ describe('staff and team workflow', () => {
   });
 
   it('creates a dedicated default Maintenance Team task class', async () => {
-    const defaultTeams = await staffFeature.teams.getDefault();
+    await staffFeature.setup.initialize();
+    const defaultTeams: StaffTeam[] = mocks.getState().teams;
 
     expect(defaultTeams.find((candidate) => candidate.name === 'Maintenance Team')).toMatchObject({
       defaultTaskTypes: ['maintenance'],

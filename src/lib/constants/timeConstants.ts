@@ -8,6 +8,8 @@ export const SEASON_ORDER: ReadonlyArray<Season> = SEASONS;
 
 export const WEEKS_PER_SEASON = 12;
 
+export const WEEKS_PER_MONTH = 4;
+
 export const SEASONS_PER_YEAR = SEASONS.length;
 
 export const WEEKS_PER_YEAR = WEEKS_PER_SEASON * SEASONS_PER_YEAR;

@@ -1,6 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
 import type { GameDate, Nationality, SpecializedRole, WorkCategory } from '@/lib/types/types';
-import type StaffModal from './ui/StaffModal';
 import type { StaffSkillBarsList } from './ui/StaffSkillBar';
 
 export type StaffActivityAdapter = Pick<import('@/lib/features/activities').ActivitiesFeature, 'catalog' | 'reads' | 'work' | 'ui'>;
@@ -22,7 +21,6 @@ export interface StaffFeature {
     add(staff: StaffRecord): Promise<StaffRecord | null>;
     remove(staffId: string): Promise<boolean>;
     getAll(): Promise<StaffRecord[]>;
-    getById(staffId: string): Promise<StaffRecord | undefined>;
   };
   recruitment: {
     generateSkills(skillModifier?: number, specializedRoles?: SpecializedRole[]): StaffSkillSet;
@@ -37,7 +35,6 @@ export interface StaffFeature {
   teams: {
     create(input: StaffTeamCreateInput): StaffTeamRecord;
     getForCategory(teams: StaffTeamRecord[], category: WorkCategory): StaffTeamRecord | null;
-    getDefault(): Promise<StaffTeamRecord[]>;
     add(team: StaffTeamRecord): Promise<StaffTeamRecord>;
     update(team: StaffTeamRecord): Promise<StaffTeamRecord>;
     remove(teamId: string): Promise<boolean>;
@@ -59,7 +56,6 @@ export interface StaffFeature {
   setup: { initialize(): Promise<void> };
   ui: {
     renderWorkspace(props: { title: string; activity: StaffActivityAdapter }): ReactNode;
-    renderStaffModal(props: ComponentProps<typeof StaffModal>): ReactNode;
     renderSkillBars(props: ComponentProps<typeof StaffSkillBarsList>): ReactNode;
   };
 }
