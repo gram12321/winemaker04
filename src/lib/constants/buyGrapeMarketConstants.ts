@@ -47,6 +47,19 @@ export const BUY_OFFER_PREVIEW_QUALITY_MIN_MULTIPLIER = 0.75;
 export const BUY_OFFER_PREVIEW_QUALITY_MAX_MULTIPLIER = 1.25;
 export const MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS = 6;
 
+/** Maximum global-market exposure before a grape lot is retired. */
+export const GLOBAL_GRAPE_MARKET_MAX_WEEKS: Record<BuyOfferBatchState, number> = {
+  grapes: 12,
+  must_ready: 10,
+  must_fermenting: 8,
+};
+export const GLOBAL_GRAPE_MARKET_IMMEDIATE_PAYOUT_RATE = 0.7;
+export const GLOBAL_GRAPE_MARKET_BASE_PRICE_PER_KG = 3;
+export const GLOBAL_GRAPE_MARKET_QUALITY_FLOOR = 0.16;
+export const GLOBAL_GRAPE_MARKET_PRICE_QUALITY_MIN_MULTIPLIER = 0.2;
+export const GLOBAL_GRAPE_MARKET_PRICE_QUALITY_LINEAR_BASE = 0.7;
+export const GLOBAL_GRAPE_MARKET_PRICE_QUALITY_LINEAR_SCALE = 0.6;
+
 export const MARKET_CRUSHING_PROFILE_BY_COLOR: Record<'red' | 'white', CrushingOptions> = {
   red: {
     method: 'Mechanical Press',

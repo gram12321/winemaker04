@@ -1,4 +1,4 @@
-import type { Season } from './types';
+import type { MarketBatchProvenanceSnapshot, Season, WineBatch } from './types';
 
 export type BuyMarketWareGroup = 'grapes' | 'storage_vessels';
 export type BuyMarketUnit = 'kg' | 'vessel';
@@ -80,4 +80,22 @@ export interface BuyMarketOfferRecord {
 export interface BuyMarketPurchaseResult {
   success: boolean;
   error?: string;
+}
+
+/** Canonical, NPC-custodied grape lot listed in the global Buy Market. */
+export interface GlobalGrapeMarketListing extends BuyMarketOfferLifecycle {
+  id: string;
+  seller: BuyMarketOfferSeller;
+  origin: 'npc_generated' | 'company_listing';
+  status: 'active' | 'sold' | 'retired';
+  evolutionSeed: string;
+  availableKg: number;
+  basePricePerKg: number;
+  qualityScore: number;
+  qualityDecayPerWeek: number;
+  minQualityFloor: number;
+  batchState: Extract<WineBatch['state'], 'grapes' | 'must_ready' | 'must_fermenting'>;
+  grapeVariety: WineBatch['grape'];
+  batchSnapshot: WineBatch;
+  provenanceSnapshot?: MarketBatchProvenanceSnapshot;
 }

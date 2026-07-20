@@ -172,7 +172,6 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
   const [stateFilter, setStateFilter] = useState<'all' | BuyGrapeMarketOffer['batchState']>('all');
   const [sortKey, setSortKey] = useState<string>('quality');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [showAllOffers, setShowAllOffers] = useState(false);
   const [companyValue, setCompanyValue] = useState(0);
   const [purchaseQuantityByOfferId, setPurchaseQuantityByOfferId] = useState<Record<string, number>>({});
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
@@ -195,10 +194,6 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
   }, [sourceFilter]);
 
   React.useEffect(() => { void loadOffers(); }, [loadOffers]);
-
-  useEffect(() => {
-    setShowAllOffers(false);
-  }, [grapeFilter, stateFilter, sortKey, sortDirection]);
 
   const handleBuy = useCallback(async (offerId: string, quantityKg: number, vesselIds: string[]) => {
     setLoading(true);
@@ -323,10 +318,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
     return getBuyMarketRelationshipPreview(selectedOffer.counterpartyRelationship, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
   }, [companyValue, currentYear, selectedOffer, selectedPurchaseKg]);
 
-  const displayedOffers = useMemo(() => {
-    if (showAllOffers) return filteredAndSortedOffers;
-    return filteredAndSortedOffers.slice(0, 5);
-  }, [filteredAndSortedOffers, showAllOffers]);
+  const displayedOffers = filteredAndSortedOffers;
 
   useEffect(() => {
     if (displayedOffers.length === 0) return;
@@ -614,20 +606,6 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
               />
             </div>
           </div>
-
-          {filteredAndSortedOffers.length > 5 && (
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
-                onClick={() => setShowAllOffers((current) => !current)}
-              >
-                {showAllOffers ? 'Show Less' : `Show More (${filteredAndSortedOffers.length - 5} more)`}
-              </Button>
-            </div>
-          )}
 
           {filteredAndSortedOffers.length === 0 && (
             <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">

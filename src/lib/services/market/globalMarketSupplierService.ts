@@ -13,7 +13,7 @@ export interface GlobalMarketSupplierAdapter<TListingInput> {
   /** Stable registration metadata; generation remains domain-owned. */
   id?: string;
   wareGroup?: import('@/lib/types/market').BuyMarketWareGroup;
-  generateListings(date: GlobalMarketSupplierDate): TListingInput[];
+  generateListings(date: GlobalMarketSupplierDate): TListingInput[] | Promise<TListingInput[]>;
   persistListings(date: GlobalMarketSupplierDate, listings: TListingInput[]): Promise<void>;
 }
 
@@ -32,5 +32,5 @@ export async function ensureGlobalMarketSupplierListings<TListingInput>(
   adapter: GlobalMarketSupplierAdapter<TListingInput>,
   date: GlobalMarketSupplierDate,
 ): Promise<void> {
-  await adapter.persistListings(date, adapter.generateListings(date));
+  await adapter.persistListings(date, await adapter.generateListings(date));
 }

@@ -11,6 +11,8 @@ import {
   getAvailableBuyers,
   calculateGrapeSalePrice,
   getGrapeBuyerMarketIndex,
+  getGlobalGrapeMarketSellbackPayout,
+  listGrapesOnGlobalMarket,
   sellGrapes,
 } from '@/lib/services/sales/sellGrapesService';
 import {
@@ -410,6 +412,23 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     }
   };
 
+  const handleGlobalListing = async () => {
+    if (!batch || selectedQuantityKg <= 0) return;
+    setIsSelling(true);
+    try {
+      const result = await listGrapesOnGlobalMarket(batch.id, selectedQuantityKg);
+      if (result.success) onClose();
+      else console.error('Global grape listing failed:', result.error);
+    } finally {
+      setIsSelling(false);
+    }
+  };
+
+  const globalListingPayout = useMemo(
+    () => batch && selectedQuantityKg > 0 ? getGlobalGrapeMarketSellbackPayout(batch, selectedQuantityKg) : 0,
+    [batch, selectedQuantityKg],
+  );
+
   const qualityPercent = pricing ? Math.round(pricing.wineScore * 100) : 0;
   const volatilitySeason = selectedBuyer?.demandFactors?.volatilitySeason;
   const seasonIcon = getSeasonVolatilityIcon(volatilitySeason);
@@ -739,6 +758,14 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
           >
             Cancel
+          </Button>
+          <Button
+            onClick={handleGlobalListing}
+            disabled={isSelling || selectedQuantityKg <= 0}
+            variant="outline"
+            className="border-cyan-600 text-cyan-200 hover:bg-cyan-950/50"
+          >
+            {isSelling ? 'Listing…' : `List globally for ${formatNumber(globalListingPayout, { currency: true, decimals: 0 })}`}
           </Button>
           <Button
             onClick={handleSell}

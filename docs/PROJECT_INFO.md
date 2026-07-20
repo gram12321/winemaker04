@@ -21,7 +21,7 @@ This document is the ownership and boundary map. Stable game rules live in `CONT
 | Winery/inventory | `services/wine/`, Winery and Equipment | `database/activities/inventoryDB.ts`, `database/winery/` |
 | Structure/taste/score | `wineStructure/`, wine taste/score services | wine/taste constants |
 | Sales/contracts | `services/sales/`, Sales UI | sales/customer/contract databases |
-| Buy Market | market adapters, Buy Market UI, grape trading | `database/market/`, `database/winery/`, `database/sales/` |
+| Buy Market | market adapters, Buy Market UI, grape trading | `database/market/` (including global grape/vessel listings), `database/winery/`, `database/sales/` |
 | Finance/founders | finance services, Finance UI, Founder Panel | transactions, founder field, finance constants |
 | Staff | `features/staff/`, Staff UI and activity staff seam | staff/team databases and staff constants |
 | Loans | `features/loanLender/`, finance UI injections | loan/lender databases and loan constants |

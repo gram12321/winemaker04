@@ -49,6 +49,7 @@ import { initializeHarvestVolumeLitres } from '../wine/winery/storageVesselAlloc
 import { v4 as uuidv4 } from 'uuid';
 import { prepareWineBatchForInsert } from '@/lib/database/activities/inventoryDB';
 import type { BuyMarketOfferSource } from '@/lib/types/market';
+import { getGlobalGrapeMarketOffers, purchaseGlobalGrapeOffer } from '@/lib/services/market/grapes/globalGrapeMarketService';
 
 export interface BuyGrapeMarketOffer {
   id: string;
@@ -228,7 +229,11 @@ function getMarketStateProfile(
   }
 
   const fermentationOptions = cloneStateProfile(MARKET_FERMENTATION_PROFILE_BY_COLOR[grapeColor]);
-  const progress = Math.round(deterministicSeasonalVariation(`${getOfferSeed(row)}:fermentation-progress`, 18, 68));
+  const initialProgress = deterministicSeasonalVariation(`${getOfferSeed(row)}:fermentation-progress`, 18, 68);
+  // This is the same elapsed-week progression used by global grape-lot
+  // projection. Local offers persist their weekly state; global offers derive
+  // it on read so all viewers agree at a given game date.
+  const progress = Math.min(100, Math.round(initialProgress + weeksOnMarket * (100 / MARKET_FERMENTATION_PREVIEW_TOTAL_WEEKS)));
   const fermentationWeeksApplied = Math.max(
     0,
     Math.min(
@@ -748,10 +753,12 @@ export async function getBuyGrapeMarketOffers(): Promise<BuyGrapeMarketOffer[]> 
   const supplierIds = Array.from(new Set(hydratedRows.map((row) => row.supplier_id)));
   const supplierLoyaltyById = await getSupplierLoyalties(supplierIds);
 
-  return hydratedRows
+  const localOffers = hydratedRows
     .filter(row => row.available_kg > 0)
     .sort((left, right) => right.quality_score - left.quality_score)
     .map((row) => toOfferModel(row, demandFactors, supplierLoyaltyById));
+  const globalOffers = await getGlobalGrapeMarketOffers();
+  return [...localOffers, ...globalOffers].sort((left, right) => right.qualityScore - left.qualityScore);
 }
 
 export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
@@ -906,7 +913,7 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
   const roundedQuantity = Math.max(1, Math.round(quantityKg));
   const { data, error } = await getCompanyGrapeMarketOfferRow(companyId, offerId);
   if (error || !data) {
-    return { success: false, error: 'Offer not found.' };
+    return purchaseGlobalGrapeOffer(offerId, quantityKg, storageVesselIds);
   }
 
   const { country } = await getMarketContext(companyId);

@@ -19,7 +19,7 @@ This is the concise behavior/status guide. Use `CONTEXT.md` for rules and vocabu
 
 ### Markets and storage
 
-- Sell-side grape buyers remain independent from the generic Buy Market. Buy Market combines Grape Procurement with local quantity-based and globally listed asset sources through one normalized offer/source/counterparty contract; offers have displayed sellers and buyer-to-seller relationship pricing while adapters retain domain-specific lifecycle, pricing, and fulfilment. Global grape lots remain a future adapter.
+- Direct grape buyers remain an immediate-liquidity sell route alongside the generic Buy Market. Buy Market combines local quantity-based stock and global listings through one normalized offer/source/counterparty contract; global grape lots preserve a seller-facing counterparty while NPC custody pays the seller 70% immediately. Their quality and fermentation are projected deterministically from listing date for every viewer.
 - Used vessels preserve asset identity, ownership history, material, age, condition, fills, and cleanliness. Condition/value are projected for the viewer's game date and purchase/sell-back use atomic listing commands.
 - Wine contact marks vessels dirty, but cleanliness is warning-only and dirty operational vessels remain allocatable. Empty Vessel and Clean Vessel are cancellable Maintenance activities; emptying changes only the selected vessel's volume and releases only that vessel.
 

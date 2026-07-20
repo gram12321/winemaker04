@@ -84,7 +84,7 @@ flowchart LR
 - Structure measures physical balance; Taste Quality measures family balance; neither is land value.
 - Weather uses an explicit bounded projection and does not enter wine-score formulas or historical snapshots as a hidden side effect.
 - Winter blocks starting planting; severe conditions slow planting/harvesting work and extreme conditions can pause it. Clearing's annual availability is a vineyard rule.
-- Buy Market previews are side-effect-free. Each offer has one seller/source and buyer-to-seller relationship pricing; adapters retain their own stock, evolution, and base-price rules.
+- Buy Market previews are side-effect-free. Each offer has one seller/source and buyer-to-seller relationship pricing; adapters retain their own stock, evolution, and base-price rules. Global grape lots are projected from an immutable listing snapshot and game date, so no viewer-specific evolution writes occur.
 - Storage Vessels are canonical assets. Supplier purchases create company-owned assets; used-market purchases transfer a globally listed asset with identity and history intact. Wine contact marks a vessel dirty, but cleanliness is warning-only; Empty Vessel changes only the selected filled volume and Clean Vessel is a separate cancellable activity.
 - Research changes access, scaling, or explicit upstream inputs; it does not bypass structure/taste computation. `unlocks` and `permanentEffects` are authoritative over descriptive benefit copy.
 - Prestige writes carry explicit source and decay metadata. Staff work has one category-derived primary skill; role/task/grape bonuses are additive and capped at 50%, and XP comes only from persisted applied work.

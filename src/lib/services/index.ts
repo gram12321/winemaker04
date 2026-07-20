@@ -55,6 +55,7 @@ export * from './market/buyMarketLifecycleService';
 export * from './market/buyMarketDomainRegistry';
 export * from './market/buyMarketOfferSource';
 export * from './market/globalMarketSupplierService';
+export * from './market/grapes/globalGrapeMarketService';
 export * from './market/storageVessels/storageVesselMarketAdapter';
 export * from './market/storageVessels/globalStorageVesselSupplierService';
 export * from './market/storageVessels/storageVesselNamingService';

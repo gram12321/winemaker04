@@ -5,6 +5,9 @@ import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } fro
 import { syncPersistedTransaction } from '../finance/financeService';
 import { getInventoryBatchById } from '../wine/winery/inventoryService';
 import { sellStorageBackedWineBatch } from '@/lib/database/activities/inventoryDB';
+import { listGrapeBatchOnGlobalMarket } from '@/lib/database/market/globalGrapeMarketListingsDB';
+import { getGlobalGrapeMarketBaseValue, getGlobalGrapeMarketSellbackPayout } from '@/lib/services/market/grapes/globalGrapeMarketService';
+import { companyFeature } from '@/lib/features/company';
 import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
@@ -24,6 +27,8 @@ import { recordBuyerSale } from '@/lib/services';
 import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';
 import { GrapeVariety } from '../../types/types';
 import { formatNumber } from '../../utils/utils';
+
+export { getGlobalGrapeMarketSellbackPayout } from '@/lib/services/market/grapes/globalGrapeMarketService';
 
 // ===== TYPES =====
 
@@ -296,4 +301,49 @@ export async function sellGrapes(
   triggerTopicUpdate('wine_batches');
 
   return { success: true, revenue: pricing.totalRevenue };
+}
+
+/**
+ * Lists a sellable lot in the shared global market. The market pays 70% now,
+ * then holds the lot in NPC custody while preserving this company as seller.
+ */
+export async function listGrapesOnGlobalMarket(
+  batchId: string,
+  quantityKgOverride?: number,
+): Promise<{ success: boolean; payout: number; error?: string }> {
+  const batch = await getInventoryBatchById(batchId);
+  if (!batch) return { success: false, payout: 0, error: 'Batch not found.' };
+  if (!SELLABLE_BATCH_STATES.includes(batch.state as Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>)) {
+    return { success: false, payout: 0, error: 'Batch is not in a sellable state.' };
+  }
+  const quantityKg = Math.max(1, Math.min(batch.quantity, Math.round(quantityKgOverride ?? batch.quantity)));
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return { success: false, payout: 0, error: 'No active company selected.' };
+  const company = await companyFeature.records.get(companyId).catch(() => null);
+  const state = getGameState();
+  const snapshot: WineBatch = {
+    ...batch,
+    quantity: quantityKg,
+    volumeLitres: batch.volumeLitres === undefined ? undefined : Number((batch.volumeLitres * quantityKg / batch.quantity).toFixed(3)),
+  };
+  const basePricePerKg = getGlobalGrapeMarketBaseValue(snapshot);
+  const payout = getGlobalGrapeMarketSellbackPayout(snapshot, quantityKg);
+  const listed = await listGrapeBatchOnGlobalMarket({
+    companyId,
+    companyName: company?.name ?? 'Winery',
+    batchId,
+    quantityKg,
+    payout,
+    batchSnapshot: snapshot,
+    basePricePerKg,
+    qualityScore: Math.max(0.16, Math.min(1, (batch.structureIndex + batch.tasteQualityIndex) / 2)),
+    week: state.week ?? 1,
+    season: (state.season ?? 'Spring') as Season,
+    year: state.currentYear ?? 1,
+  });
+  if (listed.error || !listed.data?.transaction) return { success: false, payout: 0, error: 'Could not list this lot on the global market.' };
+  await syncPersistedTransaction(listed.data.transaction);
+  triggerTopicUpdate('wine_batches');
+  triggerTopicUpdate('buy_grape_market');
+  return { success: true, payout };
 }
