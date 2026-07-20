@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { useGameStateWithData } from '@/hooks';
-import { getAllVineyards, getAllWineBatches, getWineLogEntries } from '@/lib/services';
+import { getAllVineyards, getAllWineBatches } from '@/lib/services';
+import { getWineLogEntries } from '../services/wineLogService';
 import { WineLogEntry, WineBatch } from '@/lib/types/types';
-import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineModal } from '../ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineModal } from '@/components/ui';
 import { Wine, Award, BarChart3 } from 'lucide-react';
 import { getQualityCategory, getColorClass, formatNumber } from '@/lib/utils/utils';
 import { CompanyProps } from '@/lib/types/UItypes';
-import ProductionHistoryTab from './winelog/ProductionHistoryTab';
-import VineyardStatisticsTab from './winelog/VineyardStatisticsTab';
+import ProductionHistoryTab from './ProductionHistoryTab';
+import VineyardStatisticsTab from './VineyardStatisticsTab';
 
 interface WineLogProps extends CompanyProps {
   // Inherits currentCompany from CompanyProps

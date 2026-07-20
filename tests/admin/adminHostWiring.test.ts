@@ -37,7 +37,9 @@ vi.mock('@/components/pages/Research', () => ({ ResearchPage: () => createElemen
 vi.mock('@/lib/features/staff', () => ({ staffFeature: { ui: { renderWorkspace: () => createElement('div', null, 'Staff') } } }));
 vi.mock('@/components/pages/Profile', () => ({ Profile: () => createElement('div', null, 'Profile') }));
 vi.mock('@/components/pages/Settings', () => ({ Settings: () => createElement('div', null, 'Settings') }));
-vi.mock('@/components/pages/WineLog', () => ({ WineLog: () => createElement('div', null, 'Wine Log') }));
+vi.mock('@/lib/features/wineLog', () => ({
+  wineLogFeature: { ui: { renderPage: () => createElement('div', null, 'Wine Log') } }
+}));
 vi.mock('@/components/pages/Winepedia.tsx', () => ({ default: () => createElement('div', null, 'Winepedia') }));
 vi.mock('@/components/pages/WeatherCenter', () => ({ WeatherCenterPage: () => createElement('div', null, 'Weather') }));
 vi.mock('@/lib/features/leaderboards', () => ({ leaderboardsFeature: { ui: { renderPage: () => createElement('div', null, 'Highscores') } } }));

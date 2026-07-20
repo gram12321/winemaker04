@@ -1,10 +1,10 @@
 import React from 'react';
 import { WineLogEntry, WineBatch, Vineyard } from '@/lib/types/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from '../../ui';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from '@/components/ui';
 import { Wine, TrendingUp, Award, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
 import { getColorClass, formatNumber, formatPercent, getQualityCategory } from '@/lib/utils/utils';
-import { UnifiedTooltip } from '../../ui/shadCN/tooltip';
-import { calculateVineyardAnalytics } from '@/lib/services';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
+import { calculateVineyardAnalytics } from '../services/wineLogService';
 
 interface VineyardStatisticsTabProps {
   vineyards: Vineyard[];

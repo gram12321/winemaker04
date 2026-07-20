@@ -7,7 +7,7 @@ import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
 import { ResearchPage } from './components/pages/Research';
 import type { AdminFeature } from '@/lib/features/admin';
-import { WineLog } from './components/pages/WineLog';
+import { wineLogFeature } from '@/lib/features/wineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
 import { WeatherCenterPage } from './components/pages/WeatherCenter';
 import { Login } from './components/pages/Login';
@@ -267,11 +267,7 @@ function App({ adminFeature }: AppProps) {
           onBack: () => setCurrentPage('company-overview')
         });
       case 'wine-log':
-        return (
-          <WineLog
-            currentCompany={currentCompany}
-          />
-        );
+        return wineLogFeature.ui.renderPage({ currentCompany });
       case 'highscores':
         return leaderboardsFeature.ui.renderPage({
           currentCompanyId: currentCompany?.id,

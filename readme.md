@@ -27,7 +27,7 @@ npm run build
 
 | Pattern | Features | Public interface | Lifecycle |
 |---|---|---|---|
-| Installed feature facade | `achievements`, `loanLender`, `researchUpgrade`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
+| Installed feature facade | `achievements`, `loanLender`, `researchUpgrade`, `boardShare`, `wineLog` | one static feature value plus public types | assembled once; no opt-out or configuration |
 | Development-only feature | `admin` | host type passed to `App` | dynamically loaded in Vite development only |
 | Always-on functional module | `weather` | stable function/type barrel | required application capability |
 

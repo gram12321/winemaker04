@@ -3,9 +3,6 @@ export * from './core/gameState';
 export * from './core/notificationService';
 export * from './core/gameTick';
 
-// User services
-export * from './user/wineLogService';
-
 // Finance services
 export * from './finance/economyService';
 export * from './finance/financeService';

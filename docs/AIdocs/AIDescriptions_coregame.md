@@ -50,6 +50,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 - `userFeature` owns optional player identity/session/profile, player wallet, company-scoped preferences, and the Profile/Settings UI. Its session operation clears both authenticated and local-player selection.
 - `companyFeature.records` owns explicit company records, feature-owned read models, and owner-scoped portfolio statistics; `companyFeature.setup` owns starting-condition preview/application; `companyFeature.lifecycle` exposes the company-activation hook seam; and `companyFeature.ui` owns the company gateway. Core game state remains the host for active-company session orchestration.
 - `leaderboardsFeature` owns feature-native score recording inputs, rankings, and leaderboard presentation. A migration and database RPC atomically retain each company's best aggregate value/per-week score; wine/vineyard records remain historical entries and `lowest_price` ranks ascending.
+- `wineLogFeature` owns immutable bottling-history records, vineyard history/analytics, Wine Log presentation, and the bottling-to-leaderboard integration. The winery lifecycle calls its public record seam; player identity and session behavior remain owned by `userFeature`.
 - App composes lender initialization and active-company activation. Unowned companies remain a supported active-company mode.
 - Maintenance is a distinct persisted staff skill and task class; the default Maintenance Team handles it separately from Winery's crushing and fermentation work. Staff can hold broad `specializedRoles` and learned task/grape mastery; role, task, and grape bonuses are additive and capped, while wages count broad-role primary-skill groups once.
 - Staff use one primary skill per activity category. `specializedRoles` is an innate persisted career-role array with six title-bearing roles; a matching role adds its 20% bonus to every activity using that primary skill. Learned `task:<WorkCategory>` experience only improves its exact implemented task, while learned `grape:<variety>` is a separate bounded bonus for grape-aware planting, harvesting, crushing, and fermentation. Sales remains a primary skill without task mastery until a Sales activity exists.
@@ -72,6 +73,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 | Core/tick | `src/lib/services/core/` |
 | Activities | `src/lib/features/activities/`, `src/lib/database/activities/activityDB.ts` |
 | Company setup/lifecycle | `src/lib/features/company/`, `src/lib/services/core/gameState.ts` |
+| Wine Log | `src/lib/features/wineLog/`, `src/lib/database/core/wineLogDB.ts` |
 | Vineyard/weather | `src/lib/services/vineyard/`, `src/lib/features/weather/`, `src/components/pages/Vineyard.tsx`, `WeatherCenter.tsx` |
 | Wine/scoring | `src/lib/services/wine/`, `src/lib/wineStructure/`, wine modal components |
 | Sales/markets | `src/lib/services/sales/`, sales pages/modals, `src/lib/database/sales/` |

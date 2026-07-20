@@ -29,7 +29,7 @@ vi.mock('@/lib/database', () => ({
 }));
 
 const { insertWineLogEntry } = await import('@/lib/database');
-const { recordBottledWine } = await import('@/lib/services/user/wineLogService');
+const { recordBottledWine } = await import('@/lib/features/wineLog/services/wineLogService');
 
 const mockedInsertWineLogEntry = vi.mocked(insertWineLogEntry);
 const mockedSubmitWineHighscores = leaderboardMocks.submitWineHighscores;

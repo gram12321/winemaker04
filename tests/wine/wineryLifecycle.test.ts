@@ -129,8 +129,12 @@ vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
   assertBatchHasUsableStorage: vi.fn(async () => ({ valid: true })),
 }));
 
-vi.mock('@/lib/services/user/wineLogService', () => ({
-  recordBottledWine: mocks.recordBottledWine
+vi.mock('@/lib/features/wineLog', () => ({
+  wineLogFeature: {
+    records: {
+      recordBottledWine: mocks.recordBottledWine
+    }
+  }
 }));
 
 function vineyard(overrides: Partial<Vineyard> = {}): Vineyard {

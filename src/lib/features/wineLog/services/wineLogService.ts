@@ -1,10 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
-import { WineBatch, WineLogEntry } from '../../types/types';
-import { getCurrentCompanyId } from '../../utils/companyUtils';
+import { WineBatch, WineLogEntry } from '@/lib/types/types';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
-import { getGameState, getCurrentCompany } from '../core/gameState';
-import { insertWineLogEntry, loadWineLog, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
-import { calculateWineScore, getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
+import { getGameState, getCurrentCompany } from '@/lib/services/core/gameState';
+import {
+  getWineProductionSummary as loadWineProductionSummary,
+  insertWineLogEntry,
+  loadWineLog,
+  loadWineLogByVineyard,
+  type WineLogData,
+} from '@/lib/database';
+import { calculateWineScore, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 const getEntryTasteQualityIndex = (entry: Pick<WineLogEntry, 'tasteQualityIndex'>): number =>
   entry.tasteQualityIndex;
@@ -98,12 +104,16 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
 /**
  * Get wine log entries for a specific vineyard
  */
-export async function getVineyardWineHistory(vineyardId: string): Promise<WineLogEntry[]> {
-  return await loadWineLogByVineyard(vineyardId);
+export async function getVineyardWineHistory(vineyardId: string, companyId?: string): Promise<WineLogEntry[]> {
+  return await loadWineLogByVineyard(vineyardId, companyId);
 }
 
 export async function getWineLogEntries(): Promise<WineLogEntry[]> {
   return await loadWineLog();
+}
+
+export async function getWineProductionSummary(companyId?: string) {
+  return loadWineProductionSummary(companyId);
 }
 
 
