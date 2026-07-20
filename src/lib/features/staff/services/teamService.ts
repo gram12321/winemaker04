@@ -6,8 +6,7 @@ import { StaffTeam } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
-import { saveTeamToDb, loadTeamsFromDb, deleteTeamAndStaffAssignmentsFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
-import { saveStaffToDb } from '@/lib/database/core/staffDB';
+import { saveTeamToDb, loadTeamsFromDb, deleteTeamAndStaffAssignmentsFromDb, saveTeamsToDb, setStaffTeamMembershipInDb } from '@/lib/database/core/teamDB';
 
 // ===== DEFAULT TEAMS =====
 
@@ -228,8 +227,9 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
     return false;
   }
 
-  // Check if staff is already assigned to this team
-  if (staff.teamIds.includes(teamId)) {
+  const assignedInStaff = staff.teamIds.includes(teamId);
+  const assignedInTeam = team.memberIds.includes(staffId);
+  if (assignedInStaff && assignedInTeam) {
     await notificationService.addMessage('Staff member is already assigned to this team', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     return false;
   }
@@ -237,7 +237,7 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
   // Update teams: add staff to team
   const updatedTeam = {
     ...team,
-    memberIds: [...team.memberIds, staffId]
+    memberIds: [...new Set([...team.memberIds, staffId])]
   };
 
   const updatedTeams = allTeams.map(t =>
@@ -247,18 +247,14 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
   // Update staff member: add team to their assignments
   const updatedStaffMember = {
     ...staff,
-    teamIds: [...staff.teamIds, teamId]
+    teamIds: [...new Set([...staff.teamIds, teamId])]
   };
 
   const updatedStaff = allStaff.map(s =>
     s.id === staffId ? updatedStaffMember : s
   );
 
-  // Persist to database
-  const staffSaved = await saveStaffToDb(updatedStaffMember);
-  const teamSaved = await saveTeamToDb(updatedTeam);
-
-  if (!staffSaved || !teamSaved) {
+  if (!await setStaffTeamMembershipInDb(staffId, teamId, true)) {
     console.error('Failed to persist staff-team assignment to database');
     await notificationService.addMessage('Failed to save team assignment', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     return false;
@@ -289,8 +285,7 @@ export async function removeStaffFromTeam(staffId: string, teamId: string): Prom
     return false;
   }
 
-  // Check if staff is assigned to this team
-  if (!staff.teamIds.includes(teamId)) {
+  if (!staff.teamIds.includes(teamId) && !team.memberIds.includes(staffId)) {
     await notificationService.addMessage('Staff member is not assigned to this team', 'teamService.removeStaffFromTeam', 'Staff Removal Error', NotificationCategory.SYSTEM);
     return false;
   }
@@ -315,11 +310,7 @@ export async function removeStaffFromTeam(staffId: string, teamId: string): Prom
     s.id === staffId ? updatedStaffMember : s
   );
 
-  // Persist to database
-  const staffSaved = await saveStaffToDb(updatedStaffMember);
-  const teamSaved = await saveTeamToDb(updatedTeam);
-
-  if (!staffSaved || !teamSaved) {
+  if (!await setStaffTeamMembershipInDb(staffId, teamId, false)) {
     console.error('Failed to persist staff-team removal to database');
     await notificationService.addMessage('Failed to save team removal', 'teamService.removeStaffFromTeam', 'Staff Removal Error', NotificationCategory.SYSTEM);
     return false;

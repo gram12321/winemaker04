@@ -56,7 +56,7 @@ export const staffFeature: StaffFeature = {
     processFounderDistributions: (staff, previousYear) => import('./services/wageService').then(({ processYearlyFounderDistributions }) => processYearlyFounderDistributions(staff, previousYear)),
   },
   founders: { buyout: staffId => import('./services/staffService').then(({ buyoutFounder }) => buyoutFounder(staffId)) },
-  presentation: { getExperience: staff => presentation.getStaffExperiencePresentation(toStaff(staff)) },
+  presentation: { getExperience: presentation.getStaffExperiencePresentation },
   setup: {
     async initialize() {
       const [{ initializeStaffSystem }, { initializeTeamsSystem }] = await Promise.all([

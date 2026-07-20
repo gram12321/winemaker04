@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => {
     saveTeamToDb: vi.fn(async () => true),
     loadTeamsFromDb: vi.fn(async () => []),
     deleteTeamAndStaffAssignmentsFromDb: vi.fn(async () => true),
+    setStaffTeamMembershipInDb: vi.fn(async () => true),
     saveTeamsToDb: vi.fn(async () => true),
     saveStaffToDb: vi.fn(async (staff: Staff) => {
       dbStaff = dbStaff.map(candidate => candidate.id === staff.id ? staff : candidate);
@@ -45,6 +46,7 @@ vi.mock('@/lib/database/core/teamDB', () => ({
   saveTeamToDb: mocks.saveTeamToDb,
   loadTeamsFromDb: mocks.loadTeamsFromDb,
   deleteTeamAndStaffAssignmentsFromDb: mocks.deleteTeamAndStaffAssignmentsFromDb,
+  setStaffTeamMembershipInDb: mocks.setStaffTeamMembershipInDb,
   saveTeamsToDb: mocks.saveTeamsToDb
 }));
 
@@ -132,18 +134,24 @@ describe('staff and team workflow', () => {
     await expect(staffFeature.teams.assign('staff-1', 'team-1')).resolves.toBe(true);
     expect(mocks.getState().staff[0].teamIds).toEqual(['team-1']);
     expect(mocks.getState().teams[0].memberIds).toEqual(['staff-1']);
-    expect(mocks.saveStaffToDb).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'staff-1',
-      teamIds: ['team-1']
-    }));
-    expect(mocks.saveTeamToDb).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'team-1',
-      memberIds: ['staff-1']
-    }));
+    expect(mocks.setStaffTeamMembershipInDb).toHaveBeenCalledWith('staff-1', 'team-1', true);
 
     await expect(staffFeature.teams.removeMember('staff-1', 'team-1')).resolves.toBe(true);
     expect(mocks.getState().staff[0].teamIds).toEqual([]);
     expect(mocks.getState().teams[0].memberIds).toEqual([]);
+    expect(mocks.setStaffTeamMembershipInDb).toHaveBeenLastCalledWith('staff-1', 'team-1', false);
+  });
+
+  it('repairs a one-sided local membership through the atomic operation', async () => {
+    mocks.setState({
+      ...mocks.getState(),
+      teams: [team({ memberIds: ['staff-1'] })],
+    });
+
+    await expect(staffFeature.teams.assign('staff-1', 'team-1')).resolves.toBe(true);
+    expect(mocks.getState().staff[0].teamIds).toEqual(['team-1']);
+    expect(mocks.getState().teams[0].memberIds).toEqual(['staff-1']);
+    expect(mocks.setStaffTeamMembershipInDb).toHaveBeenCalledWith('staff-1', 'team-1', true);
   });
 
   it('removes a team through the atomic persistence operation and clears every local assignment', async () => {

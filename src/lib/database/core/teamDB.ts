@@ -87,6 +87,20 @@ export async function deleteTeamAndStaffAssignmentsFromDb(teamId: string): Promi
   return data === true;
 }
 
+/** Atomically synchronize both sides of a company-scoped staff/team membership. */
+export async function setStaffTeamMembershipInDb(staffId: string, teamId: string, isAssigned: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('set_staff_team_membership', {
+    p_staff_id: staffId,
+    p_team_id: teamId,
+    p_is_assigned: isAssigned,
+  });
+  if (error) {
+    console.error('Error updating staff-team membership:', error);
+    return false;
+  }
+  return data === true;
+}
+
 /**
  * Get a single team by ID
  */

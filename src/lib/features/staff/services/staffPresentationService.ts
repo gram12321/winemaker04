@@ -1,4 +1,5 @@
-import { WorkCategory, type Staff } from '@/lib/types/types';
+import { WorkCategory } from '@/lib/types/types';
+import type { StaffRecord } from '../featureTypes';
 import { normalizeXP } from '@/lib/utils/calculator';
 
 export interface StaffExperienceDisplayItem {
@@ -32,7 +33,7 @@ function formatTaskMasteryLabel(value: string): string {
 }
 
 /** Converts namespaced persisted XP into display-ready, normalized models. */
-export function getStaffExperiencePresentation(staff: Staff): StaffExperiencePresentation {
+export function getStaffExperiencePresentation(staff: StaffRecord): StaffExperiencePresentation {
   const entries = Object.entries(staff.experience || {});
   const toItem = (key: string, xp: number, prefix: string, label = formatExperienceLabel(key.slice(prefix.length))): StaffExperienceDisplayItem => ({
     key,

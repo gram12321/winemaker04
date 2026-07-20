@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Staff } from '@/lib/types/types';
+import { Activity } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getColorClass } from '@/lib/utils';
-import type { StaffActivityAdapter } from '../featureTypes';
+import type { StaffActivityAdapter, StaffRecord } from '../featureTypes';
 import { getStaffExperiencePresentation } from '../services/staffPresentationService';
 import { getWageColorClass } from '../services/wageCalculations';
 import { getSkillLevelInfo, SPECIALIZED_ROLES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
@@ -11,7 +11,7 @@ import { StaffSkillBarsList } from './StaffSkillBar';
 import { useGameState, useGameStateWithData } from '@/hooks/useGameState';
 
 interface StaffModalProps extends DialogProps {
-  staff: Staff | null;
+  staff: StaffRecord | null;
   activityApi: StaffActivityAdapter;
   onFire?: (staffId: string) => void;
 }

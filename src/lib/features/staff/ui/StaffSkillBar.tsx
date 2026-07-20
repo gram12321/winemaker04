@@ -1,13 +1,13 @@
 import React from 'react';
-import type { Staff } from '@/lib/types/types';
+import type { StaffRecord } from '../featureTypes';
 import { getSkillColor, formatNumber, getColorClass } from '@/lib/utils';
 import { calculateEffectiveSkill } from '../services/competencyService';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 
 interface StaffSkillBarProps {
   label: string;
-  skillKey: keyof Staff['skills'];
-  staff: Staff;
+  skillKey: keyof StaffRecord['skills'];
+  staff: StaffRecord;
   isRelevant?: boolean; // highlight when relevant for current activity
   taskCount?: number; // multitasking count for this staff
   showValue?: boolean;
@@ -123,8 +123,8 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
 };
 
 interface StaffSkillBarsListProps {
-  staff: Staff;
-  relevantSkill?: keyof Staff['skills'];
+  staff: StaffRecord;
+  relevantSkill?: keyof StaffRecord['skills'];
   taskCountMap?: Map<string, number>;
   className?: string;
 }

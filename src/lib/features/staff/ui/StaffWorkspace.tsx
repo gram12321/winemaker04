@@ -2,8 +2,9 @@
 // Main page for viewing and managing staff members
 
 import React, { useMemo, useState } from 'react';
-import type { StaffActivityAdapter } from '../featureTypes';
+import type { StaffActivityAdapter, StaffRecord } from '../featureTypes';
 import type { Staff } from '@/lib/types/types';
+import { toStaffRecord, toStaffTeam, toStaffTeamRecord } from '../services/staffModels';
 import { removeStaff } from '../services/staffService';
 import { assignStaffToTeam, removeStaffFromTeam, addTeam, updateTeam, removeTeam } from '../services/teamService';
 import { createTeam } from '../services/teamDefinitions';
@@ -32,10 +33,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [searchCandidates, setSearchCandidates] = useState<Staff[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<StaffRecord | null>(null);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
   const [showTeamAssignmentDialog, setShowTeamAssignmentDialog] = useState(false);
-  const [staffForTeamAssignment, setStaffForTeamAssignment] = useState<Staff | null>(null);
+  const [staffForTeamAssignment, setStaffForTeamAssignment] = useState<StaffRecord | null>(null);
 
   // Team management states
   const [isCreatingNewTeam, setIsCreatingNewTeam] = useState(false);
@@ -52,8 +53,8 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
 
   const { staff: gameStaff, teams: gameTeams } = useGameState();
   const activities = useGameStateWithData(activity.reads.getAll, []);
-  const allStaff = gameStaff || [];
-  const allTeams = gameTeams || [];
+  const allStaff = (gameStaff || []).map(toStaffRecord);
+  const allTeams = (gameTeams || []).map(toStaffTeamRecord);
   const totalWages = calculateTotalWeeklyWages(allStaff);
   const { staffTaskCounts, totalActiveTasks } = useMemo(() => {
     const counts = new Map<string, number>();
@@ -88,13 +89,13 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
     await removeStaff(staffId);
   };
 
-  const handleStaffCardClick = (staff: Staff) => {
+  const handleStaffCardClick = (staff: StaffRecord) => {
     setSelectedStaff(staff);
     setShowStaffModal(true);
   };
 
   // Handle team assignment
-  const handleTeamAssignment = (staff: Staff) => {
+  const handleTeamAssignment = (staff: StaffRecord) => {
     setStaffForTeamAssignment(staff);
     setShowTeamAssignmentDialog(true);
   };
@@ -137,7 +138,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
         newTeamData.icon,
       );
 
-      await addTeam(newTeam);
+      await addTeam(toStaffTeam(newTeam));
       setIsCreatingNewTeam(false);
       setNewTeamData({
         name: '',
@@ -182,7 +183,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
       [editingField]: tempValue
     };
 
-    await updateTeam(updatedTeam);
+    await updateTeam(toStaffTeam(updatedTeam));
     setEditingField(null);
     setTempValue('');
   };
@@ -606,7 +607,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                                         ...team,
                                         defaultTaskTypes: [...team.defaultTaskTypes, taskType]
                                       };
-                                      await updateTeam(updatedTeam);
+                                      await updateTeam(toStaffTeam(updatedTeam));
                                     }
                                   }}
                                   disabled={team.defaultTaskTypes.includes(taskType)}
@@ -630,7 +631,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                               ...team,
                               defaultTaskTypes: team.defaultTaskTypes.filter(t => t !== taskType)
                             };
-                            await updateTeam(updatedTeam);
+                            await updateTeam(toStaffTeam(updatedTeam));
                           }}
                         >
                     {activity.catalog.getTaskTypeDisplayName(taskType)} ×
