@@ -81,6 +81,25 @@ export const getUserById = async (userId: string): Promise<PlayerProfile | null>
   }
 };
 
+export const getAllUsers = async (): Promise<PlayerProfile[]> => {
+  try {
+    const { data, error } = await supabase
+      .from(USERS_TABLE)
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error getting users:', error);
+      return [];
+    }
+
+    return (data || []).map(mapUserFromDB);
+  } catch (error) {
+    console.error('Error getting users:', error);
+    return [];
+  }
+};
+
 export const updateUser = async (userId: string, updates: Partial<UserData>): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase

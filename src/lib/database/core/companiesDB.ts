@@ -145,7 +145,10 @@ export const getUserCompanies = async (userId: string): Promise<Company[]> => {
       .eq('user_id', userId)
       .order('last_played', { ascending: false });
 
-    if (error) return [];
+    if (error) {
+      console.error('Error getting user companies:', error);
+      return [];
+    }
     return await Promise.all((data || []).map(dbCompany => mapCompanyFromDB(dbCompany)));
   } catch (error) {
     console.error('Error getting user companies:', error);

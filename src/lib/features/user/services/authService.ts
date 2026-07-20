@@ -1,6 +1,6 @@
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
-import { supabase, getUserById, insertUser, updateUser, deleteUser, type PlayerProfile as PlayerProfileRecord } from '@/lib/database';
+import { supabase, getAllUsers, getUserById, insertUser, updateUser, deleteUser, type PlayerProfile as PlayerProfileRecord } from '@/lib/database';
 
 export interface SignUpData {
   email: string;
@@ -18,33 +18,46 @@ export interface SignInData {
 class AuthService {
   private currentUser: PlayerProfileRecord | null = null;
   private listeners: ((user: PlayerProfileRecord | null) => void)[] = [];
+  private readonly initialSessionReady: Promise<void>;
+  private identityRevision = 0;
 
   constructor() {
-    this.initializeAuth();
+    this.initialSessionReady = this.initializeAuth();
   }
 
-  private async initializeAuth() {
-    // Get current session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      await this.loadUserProfile(session.user.id);
-    }
-
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
+  private async initializeAuth(): Promise<void> {
+    // Subscribe before reading the persisted session so a sign-out or account
+    // change cannot be missed while getSession/profile loading is in flight.
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        await this.loadUserProfile(session.user.id);
+        void this.selectAuthenticatedUser(session.user.id);
       } else if (event === 'SIGNED_OUT') {
+        this.identityRevision += 1;
         this.setCurrentUser(null);
       }
     });
+
+    const revision = this.identityRevision;
+    try {
+      // Wait for Supabase to restore its persisted session before exposing the
+      // local player state. Without this, Login can briefly treat a signed-in
+      // player as anonymous and select a company from the wrong account.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && revision === this.identityRevision) {
+        await this.loadUserProfileAtRevision(session.user.id, revision);
+      }
+    } catch (error) {
+      console.error('Error restoring authentication session:', error);
+    }
+
   }
 
-  private async loadUserProfile(userId: string): Promise<void> {
+  private async loadUserProfileAtRevision(userId: string, revision: number): Promise<void> {
     try {
       const user = await getUserById(userId);
-
-      if (user) {
+      if (revision === this.identityRevision) {
+        // A session without a corresponding player profile is not a valid
+        // player session and must not preserve a previously selected player.
         this.setCurrentUser(user);
       }
     } catch (error) {
@@ -96,13 +109,37 @@ class AuthService {
     return this.currentUser;
   }
 
+  private async selectAuthenticatedUser(userId: string): Promise<void> {
+    const revision = ++this.identityRevision;
+    await this.loadUserProfileAtRevision(userId, revision);
+  }
+
+  private async reloadSelectedUser(userId: string): Promise<void> {
+    const revision = this.identityRevision;
+    const user = await getUserById(userId);
+    if (revision === this.identityRevision && this.currentUser?.id === userId) {
+      this.setCurrentUser(user);
+    }
+  }
+
+  /** Resolves once the persisted Supabase session has been restored. */
+  public async waitForInitialSession(): Promise<void> {
+    await this.initialSessionReady;
+  }
+
   /** Selects the local player used by the offline/gameplay flow. */
   public selectLocalPlayer(user: PlayerProfileRecord | null): void {
+    // Invalidate any profile request started by an earlier auth event.
+    this.identityRevision += 1;
     this.setCurrentUser(user);
   }
 
   public async getUserProfileById(userId: string): Promise<PlayerProfileRecord | null> {
     return await getUserById(userId);
+  }
+
+  public async listUserProfiles(): Promise<PlayerProfileRecord[]> {
+    return await getAllUsers();
   }
 
   public isAuthenticated(): boolean {
@@ -160,6 +197,7 @@ class AuthService {
       }
 
       if (data.user) {
+        await this.selectAuthenticatedUser(data.user.id);
         await notificationService.addMessage('Welcome back!', 'authService.signIn', 'User Sign In', NotificationCategory.SYSTEM);
         return { success: true };
       }
@@ -179,6 +217,8 @@ class AuthService {
         return { success: false, error: error.message };
       }
 
+      this.identityRevision += 1;
+      this.setCurrentUser(null);
       await notificationService.addMessage('Signed out successfully', 'authService.signOut', 'User Sign Out', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
@@ -204,7 +244,7 @@ class AuthService {
       }
 
       // Reload user profile
-      await this.loadUserProfile(this.currentUser.id);
+      await this.reloadSelectedUser(this.currentUser.id);
       await notificationService.addMessage('Profile updated successfully', 'authService.updateProfile', 'Profile Update', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
@@ -241,6 +281,10 @@ class AuthService {
     userId: string,
     updates: Partial<Pick<PlayerProfileRecord, 'name' | 'avatar' | 'avatarColor'>>
   ): Promise<{ success: boolean; error?: string }> {
+    if (this.currentUser?.id !== userId) {
+      return { success: false, error: 'You can only update the selected player' };
+    }
+
     try {
       const result = await updateUser(userId, {
         name: updates.name,
@@ -253,7 +297,7 @@ class AuthService {
       }
 
       if (this.currentUser?.id === userId) {
-        await this.loadUserProfile(userId);
+        await this.reloadSelectedUser(userId);
       }
 
       return { success: true };
@@ -264,6 +308,10 @@ class AuthService {
   }
 
   public async deleteUserProfileById(userId: string): Promise<{ success: boolean; error?: string }> {
+    if (this.currentUser?.id !== userId) {
+      return { success: false, error: 'You can only delete the selected player' };
+    }
+
     try {
       const result = await deleteUser(userId);
       if (!result.success) {
@@ -296,6 +344,9 @@ class AuthService {
 
       // Sign out from auth
       await supabase.auth.signOut();
+      // Local players have no Supabase session, so a SIGNED_OUT event is not a
+      // reliable way to clear this in-memory selection.
+      this.setCurrentUser(null);
       
       await notificationService.addMessage('Account deleted successfully', 'authService.deleteAccount', 'Account Deletion', NotificationCategory.SYSTEM);
       return { success: true };
