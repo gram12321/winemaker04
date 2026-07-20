@@ -14,7 +14,7 @@ import { NotificationCategory } from "@/lib/types/types";
 import type { GameDate } from "@/lib/types/types";
 import { getCurrentCompanyId } from "@/lib/utils";
 import { userFeature } from '@/lib/features/user';
-import { registerCompanyActivationHook } from './companyLifecycle';
+import { companyFeature } from '@/lib/features/company';
 
 export interface PlayerNotification {
   id: string;
@@ -274,6 +274,6 @@ export const notificationService = {
   }
 };
 
-registerCompanyActivationHook(() => notificationService.onCompanyActivated());
+companyFeature.lifecycle.registerActivationHook(() => notificationService.onCompanyActivated());
 
 

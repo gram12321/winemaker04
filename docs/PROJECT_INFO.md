@@ -40,7 +40,7 @@ This document is the ownership and boundary map. Stable game rules live in `CONT
 | `researchUpgradeFeature` | Research workflow, unlock checks, starting unlocks, permanent effects, Research page, and Admin inspector integration. |
 | `achievementsFeature` | Catalog, company-snapshot evaluation, cadence, read models, and achievement UI. |
 | `userFeature` | Optional player identity/session, profile, wallet, company-scoped preferences, and Profile/Settings UI. |
-| `companyFeature` | Company CRUD, owner-scoped portfolio/read models, and company gateway UI. Unowned companies remain valid. |
+| `companyFeature` | Company CRUD, owner-scoped portfolio/read models, starting-condition preview/application, company-activation lifecycle hooks, and company gateway UI. Unowned companies remain valid. |
 | `leaderboardsFeature` | Score recording, rankings/read models, maintenance, and leaderboard UI. |
 | `weather` | Always-on weather resolution, vineyard/market/operation projections, and presentation models. |
 | `admin` | Development-only host seam, dynamically loaded in Vite development. |

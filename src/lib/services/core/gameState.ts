@@ -5,7 +5,6 @@ import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { CREDIT_RATING } from '../../constants/loanConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
 import { companyFeature } from '@/lib/features/company';
-import { notifyCompanyActivated } from './companyLifecycle';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
 import { staffFeature } from '@/lib/features/staff';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
@@ -266,7 +265,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
 
   // Company-scoped presentation and finance caches are reset through their
   // public lifecycle hooks after the active company is established.
-  await notifyCompanyActivated(company.id);
+  await companyFeature.lifecycle.notifyActivated(company.id);
 
   if (!hasPersistedWeather || !persisted?.weatherForecastPattern || !persisted.weatherForecastConfidence) {
     await saveGameState(gameState);

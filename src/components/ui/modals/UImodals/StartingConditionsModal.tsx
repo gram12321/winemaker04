@@ -7,17 +7,10 @@ import { Button } from '../../shadCN/button';
 import { ScrollArea } from '../../shadCN/scroll-area';
 import { StartingCountry, STARTING_CONDITIONS, getStartingCountries } from '@/lib/constants/startingConditions';
 import { SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import {
-  generateVineyardPreview,
-  applyStartingConditions,
-  VineyardPreview,
-  type ApplyStartingConditionsResult,
-  FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
-} from '@/lib/services/core/startingConditionsService';
+import { companyFeature, type ApplyStartingConditionsResult, type VineyardPreview } from '@/lib/features/company';
 import { formatNumber, getFlagIcon, StoryPortrait } from '@/lib/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
 import type { Aspect } from '@/lib/types/types';
-import { companyFeature } from '@/lib/features/company';
 import { userFeature } from '@/lib/features/user';
 
 type MentorWelcomeData = {
@@ -98,7 +91,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     countries.forEach((country) => {
       const condition = STARTING_CONDITIONS[country];
       if (condition) {
-        newPreviews[country] = generateVineyardPreview(condition);
+        newPreviews[country] = companyFeature.setup.generateVineyardPreview(condition);
       }
     });
     
@@ -143,7 +136,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   // Calculate derived values (after selectedCondition is defined)
   const familyContribution = estimatedVineyardValue;
   const playerCashContribution = isFirstCompany
-    ? FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
+    ? companyFeature.setup.firstCompanyPlayerCashContribution
     : selectedCondition.startingMoney;
   const canAffordContribution = isFirstCompany || (playerBalance >= playerCashContribution);
   const loanPrincipal = selectedCondition.startingLoan?.principal ?? 0;
@@ -175,7 +168,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     
     setIsApplying(true);
     try {
-      const result: ApplyStartingConditionsResult = await applyStartingConditions(
+      const result: ApplyStartingConditionsResult = await companyFeature.setup.applyStartingConditions(
         companyId,
         selectedCountry,
         vineyardPreview

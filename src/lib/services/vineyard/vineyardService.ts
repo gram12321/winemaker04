@@ -1,15 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Vineyard, GrapeVariety, Aspect, ASPECTS } from '../../types/types';
+import { Vineyard, GrapeVariety } from '../../types/types';
 import { calculateVineyardYieldBreakdown, type VineyardYieldBreakdown } from './vineyardManager';
+import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName } from './vineyardGeneration';
 import { saveVineyard, loadVineyards } from '../../database/activities/vineyardDB';
 import { deleteVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
-import { getRandomFromArray, randomInt } from '../../utils';
+import { getRandomFromArray } from '../../utils';
 import { formatNumber } from '../../utils/utils';
-import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES } from '../../constants';
+import { COUNTRY_REGION_MAP, DEFAULT_VINEYARD_HEALTH } from '../../constants';
 import { addTransaction, getGameState } from '../index';
 import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
@@ -73,52 +74,6 @@ function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<V
       replant: 0
     }
   };
-}
-
-export function getRandomAspect(): Aspect {
-  return getRandomFromArray(ASPECTS);
-}
-
-export function getRandomSoils(country: string, region: string): string[] {
-  const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
-  const soils = countryData ? (countryData[region as keyof typeof countryData] as readonly string[] || []) : [];
-
-  const numberOfSoils = Math.floor(Math.random() * 3) + 1; // 1-3 soil types
-  const selectedSoils = new Set<string>();
-
-  while (selectedSoils.size < numberOfSoils && selectedSoils.size < soils.length) {
-    selectedSoils.add(getRandomFromArray(soils));
-  }
-
-  return Array.from(selectedSoils);
-}
-
-export function getRandomAltitude(country: string, region: string): number {
-  const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
-  const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
-  const [min, max] = altitudeRange;
-
-  return randomInt(min, max);
-}
-
-// Generate a vineyard name based on country and aspect
-export function generateVineyardName(country: string, aspect: Aspect): string {
-  const isFemaleAspect = ["East", "Southeast", "South", "Southwest"].includes(aspect);
-  const nameData = NAMES[country as keyof typeof NAMES];
-
-  if (!nameData) {
-    console.error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
-    throw new Error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
-  }
-
-  // Select appropriate name list based on aspect gender
-  const names = isFemaleAspect ? nameData.firstNames.female : nameData.firstNames.male;
-
-  // Select a random name
-  const selectedName = getRandomFromArray(names);
-
-  // Construct the name like "[Random Name]'s [Aspect] Vineyard"
-  return `${selectedName}'s ${aspect} Vineyard`;
 }
 
 // Create a new vineyard with auto-generated name by default

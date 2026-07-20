@@ -11,7 +11,7 @@ import {
   updateCompany,
   type Company as DatabaseCompany,
   type CompanyData,
-} from '@/lib/database';
+} from '@/lib/database/core/companiesDB';
 import type {
   CompanyCreateInput,
   CompanyCreateResult,

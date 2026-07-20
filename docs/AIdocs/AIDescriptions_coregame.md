@@ -27,6 +27,7 @@ This is the concise behavior/status guide. Use `CONTEXT.md` for rules and vocabu
 
 - Finance statements, cash flow, loans/lenders, staff/team work, founders, prestige, achievements, and leaderboards are active. Founder returns, buyout, loan payments, warnings, restructuring, and defaults are persisted workflows.
 - Staff use category-derived primary skills, six innate broad roles, exact task mastery, and bounded grape mastery. Work previews and ticks share one calculator; XP is awarded only from persisted applied work.
+- `companyFeature.records` owns explicit company records and owner-scoped portfolio statistics; `companyFeature.setup` owns starting-condition preview/application; `companyFeature.lifecycle` exposes the company-activation hook seam; and `companyFeature.ui` owns the company gateway. Core game state remains the host for active-company session orchestration.
 - Research activity and unlock gates are active for grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. The current permanent effect reduces vineyard-health decay. Companies may be owned or unowned and remain playable.
 
 ## Deferred or partial
@@ -42,6 +43,7 @@ This is the concise behavior/status guide. Use `CONTEXT.md` for rules and vocabu
 |---|---|
 | Core/tick | `src/lib/services/core/` |
 | Activities | `src/lib/features/activities/`, `src/lib/database/activities/activityDB.ts` |
+| Company setup/lifecycle | `src/lib/features/company/`, `src/lib/services/core/gameState.ts` |
 | Vineyard/weather | `src/lib/services/vineyard/`, `src/lib/features/weather/` |
 | Wine/scoring | `src/lib/services/wine/`, `src/lib/wineStructure/` |
 | Sales/markets | `src/lib/services/sales/`, `src/lib/database/market/` |
