@@ -27,7 +27,22 @@ export async function clearAllAchievements(): Promise<void> {
   if (error) throw error;
 }
 
+export async function clearGlobalMarketGoods(goods: 'grapes' | 'storage_vessels'): Promise<void> {
+  const { error } = await supabase.rpc('admin_clear_global_market', { p_ware_group: goods });
+  if (error) throw error;
+}
+
+export async function clearGlobalMarket(): Promise<void> {
+  const { error } = await supabase.rpc('admin_clear_global_market', { p_ware_group: null });
+  if (error) throw error;
+}
+
 export async function fullDatabaseReset(): Promise<void> {
+  // Global listings retain seller provenance and therefore can violate their
+  // seller constraint when the referenced companies are deleted. Clear the
+  // global market assets first; this is a deliberate development reset.
+  await clearGlobalMarket();
+
   const tables = [
     'relationship_boosts', 'wine_orders', 'wine_batches', 'vineyards', 'activities',
     'achievements', 'user_settings', 'highscores', 'prestige_events', 'transactions',

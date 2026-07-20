@@ -14,6 +14,8 @@ import {
   startEmptyStorageVesselActivity,
   isStorageVesselCleaningInProgress,
   startCleanStorageVesselActivity,
+  getStorageVesselSellbackEligibility,
+  sellOwnedStorageVesselToMarket,
 } from '@/lib/services';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import type { WineBatch } from '@/lib/types/types';
@@ -34,6 +36,8 @@ export const Equipment: React.FC<EquipmentProps> = () => {
   const [emptyingError, setEmptyingError] = useState<string | null>(null);
   const [cleaningRequest, setCleaningRequest] = useState<StorageVessel | null>(null);
   const [cleaningError, setCleaningError] = useState<string | null>(null);
+  const [sellRequest, setSellRequest] = useState<StorageVessel | null>(null);
+  const [sellError, setSellError] = useState<string | null>(null);
   const summary = useMemo(() => calculateStorageCapacitySummary(vessels), [vessels]);
   const currentYear = getGameState().currentYear ?? 2024;
 
@@ -56,6 +60,16 @@ export const Equipment: React.FC<EquipmentProps> = () => {
       if (!result.success) setCleaningError(result.error ?? 'Could not start the Clean Vessel activity.');
     });
   }, [cleaningRequest, withLoading]);
+
+  const handleSellVessel = useCallback(async () => {
+    if (!sellRequest) return;
+    const vessel = sellRequest;
+    setSellRequest(null);
+    await withLoading(async () => {
+      const result = await sellOwnedStorageVesselToMarket(vessel, activities);
+      if (!result.success) setSellError(result.error ?? 'Could not sell this vessel.');
+    });
+  }, [activities, sellRequest, withLoading]);
 
   return (
     <div className="space-y-4">
@@ -100,6 +114,7 @@ export const Equipment: React.FC<EquipmentProps> = () => {
               ...relatedActivities.map((candidate) => `Ongoing activity: ${candidate.title}`),
             ].filter((reason, index, reasons) => reasons.indexOf(reason) === index);
             const availability = { available: availabilityReasons.length === 0, reasons: availabilityReasons };
+            const sellback = getStorageVesselSellbackEligibility(vessel, activities);
 
             return (
               <div key={vessel.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1.5fr_0.8fr_1fr_0.8fr_1fr_0.8fr_1fr_0.7fr_1fr_1.2fr_1.8fr_auto]">
@@ -159,6 +174,23 @@ export const Equipment: React.FC<EquipmentProps> = () => {
                       {cleaningActivity ? 'Cleaning…' : 'Clean Vessel'}
                     </Button>
                   )}
+                  <UnifiedTooltip
+                    title="Sell to Market"
+                    content={<TooltipRow label={sellback.eligible ? 'Status' : 'Unavailable'} value={sellback.eligible ? 'Sell this empty vessel to the global used-vessel market.' : sellback.reasons.join(' ')} tone={sellback.eligible ? 'default' : 'danger'} />}
+                    side="top"
+                  >
+                    <span className="inline-block">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!sellback.eligible}
+                        className="mt-1 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        onClick={() => setSellRequest(vessel)}
+                      >
+                        Sell to Market
+                      </Button>
+                    </span>
+                  </UnifiedTooltip>
                 </div>
               </div>
             );
@@ -178,6 +210,18 @@ export const Equipment: React.FC<EquipmentProps> = () => {
           { label: 'Start Empty Vessel', variant: 'destructive', onClick: () => void handleEmptyVessel() },
         ]}
       />
+      <WarningModal
+        isOpen={Boolean(sellRequest)}
+        onClose={() => setSellRequest(null)}
+        severity="warning"
+        title="Sell Vessel to Market?"
+        message={sellRequest ? `${getStorageVesselDisplayName(sellRequest)} will become a globally listed used vessel. You receive 70% of its current used-market value immediately.` : ''}
+        actions={[
+          { label: 'Cancel', variant: 'outline', onClick: () => setSellRequest(null) },
+          { label: 'Sell to Market', variant: 'default', onClick: () => void handleSellVessel() },
+        ]}
+      />
+      <WarningModal isOpen={Boolean(sellError)} onClose={() => setSellError(null)} severity="error" title="Vessel Could Not Be Sold" message={sellError ?? ''} />
       <WarningModal
         isOpen={Boolean(cleaningRequest)}
         onClose={() => setCleaningRequest(null)}

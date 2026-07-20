@@ -21,6 +21,7 @@ export * from './sales/grapeSupplierLoyaltyDB';
 export * from './sales/cooperativeDB';
 export * from './market/buyMarketOffersDB';
 export * from './market/grapeMarketOffersDB';
-export * from './market/buyGoodsSupplierRelationshipsDB';
+export * from './market/buyMarketCounterpartyRelationshipsDB';
+export * from './market/storageVesselMarketListingsDB';
 export * from './winery/storageVesselsDB';
 export { supabase } from './core/supabase';

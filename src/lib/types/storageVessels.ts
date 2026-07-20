@@ -5,6 +5,9 @@ export type StorageVesselMaterial = 'oak' | 'chestnut' | 'stainless_steel' | 'co
 export type StorageVesselOperationalStatus = 'operational' | 'maintenance';
 export type StorageVesselCleanliness = 'clean' | 'dirty';
 export type StorageVesselOccupancy = 'available' | 'reserved' | 'in_use' | 'maintenance';
+export type StorageVesselOwnerKind = 'company' | 'npc_market';
+export type StorageVesselMarketListingStatus = 'active' | 'sold' | 'retired';
+export type StorageVesselMarketListingOrigin = 'npc_generated' | 'player_sellback';
 export type StorageAllocationPlanStatus = 'reserved' | 'active' | 'released';
 
 export interface StorageVesselAllocationPlan {
@@ -38,7 +41,8 @@ export interface StorageVesselAllocation {
 export interface StorageVessel {
   id: string;
   vesselName?: string;
-  companyId: string;
+  ownerKind: StorageVesselOwnerKind;
+  ownerCompanyId?: string;
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
   qualityScore: number;
@@ -56,6 +60,36 @@ export interface StorageVessel {
   purchasedYear: number;
   purchasedSeason: string;
   purchasedWeek: number;
+}
+
+export interface StorageVesselMarketListing {
+  id: string;
+  vesselId: string;
+  sellerKind: 'npc' | 'company';
+  sellerCounterpartyId: string;
+  sellerName: string;
+  sellerCompanyId?: string;
+  origin: StorageVesselMarketListingOrigin;
+  status: StorageVesselMarketListingStatus;
+  evolutionSeed: string;
+  generationKey?: string;
+  startingCondition: number;
+  listedYear: number;
+  listedSeason: string;
+  listedWeek: number;
+  retiredYear: number;
+  retiredSeason: string;
+  retiredWeek: number;
+}
+
+export interface UsedStorageVesselMarketOffer {
+  id: string;
+  kind: 'used_listing';
+  sellerName: string;
+  listing: StorageVesselMarketListing;
+  vessel: StorageVessel;
+  projectedCondition: number;
+  pricePerVessel: number;
 }
 
 export interface StorageVesselOfferPriceSnapshot extends BuyGoodsPriceQuoteInput {

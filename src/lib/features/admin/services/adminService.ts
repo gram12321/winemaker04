@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { clearAllAchievements, clearAllCompanies, clearAllCompaniesAndUsers, clearAllCustomers, clearAllUsers, fullDatabaseReset } from '@/lib/database/admin/adminDB';
+import { clearAllAchievements, clearAllCompanies, clearAllCompaniesAndUsers, clearAllCustomers, clearAllUsers, fullDatabaseReset, clearGlobalMarket, clearGlobalMarketGoods } from '@/lib/database/admin/adminDB';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, initializeCustomers, updateGameState } from '@/lib/services';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { insertPrestigeEvent } from '@/lib/database';
@@ -507,6 +507,14 @@ export async function adminGenerateTestForwardPresaleContract(): Promise<{ succe
  */
 export async function adminClearAllAchievements(): Promise<void> {
   await clearAllAchievements();
+}
+
+export async function adminClearGlobalMarket(): Promise<void> {
+  await clearGlobalMarket();
+}
+
+export async function adminClearGlobalMarketGoods(goods: 'grapes' | 'storage_vessels'): Promise<void> {
+  await clearGlobalMarketGoods(goods);
 }
 
 interface AdminGameDatePayload {

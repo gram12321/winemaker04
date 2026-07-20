@@ -39,7 +39,7 @@ describe('Storage Vessel maintenance service', () => {
   beforeEach(() => {
     mocks.activities = [];
     mocks.vessel = {
-      id: 'vessel-1', companyId: 'company-1', vesselType: 'cask', material: 'oak', qualityScore: 0.8,
+      id: 'vessel-1', ownerKind: 'company', ownerCompanyId: 'company-1', vesselType: 'cask', material: 'oak', qualityScore: 0.8,
        productionYear: 2024, capacityLitres: 500, acquisitionPrice: 1000, sourceOfferId: 'offer-1', condition: 1, fillHistory: 0,
       operationalStatus: 'operational', cleanliness: 'dirty', occupancy: 'in_use', activePlanId: 'plan-1', activeWineBatchId: 'batch-1',
       purchasedYear: 2026, purchasedSeason: 'Spring', purchasedWeek: 1,

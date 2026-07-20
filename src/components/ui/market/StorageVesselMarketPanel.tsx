@@ -4,9 +4,10 @@ import { Button, DialogFooter } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from './MarketOfferTable';
 import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
-import { BuyGoodsSupplierTrustPanel, getBuyGoodsSupplierTrustColor } from './BuyGoodsSupplierTrustPanel';
+import { BuyMarketCounterpartyPanel, getBuyMarketCounterpartyTrustColor } from './BuyMarketCounterpartyPanel';
 import {
   getStorageVesselMarketOffers,
+  purchaseUsedStorageVesselOffer,
   type StorageVesselMarketOffer,
   type StorageVesselPriceBreakdown,
 } from '@/lib/services/market/storageVessels/storageVesselMarketAdapter';
@@ -16,12 +17,15 @@ import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
 import { STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES } from '@/lib/constants';
 import {
-  BUY_GOODS_SUPPLIER_LEVELS,
-  getBuyGoodsSupplierTrustPreview,
-} from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
+  BUY_MARKET_COUNTERPARTY_LEVELS,
+  getBuyMarketRelationshipPreview,
+} from '@/lib/services/market/buyMarketCounterpartyRelationshipService';
+import { getBuyMarketOfferSourcePresentation } from '@/lib/services/market/buyMarketOfferSource';
+import type { BuyMarketSourceFilter } from '@/lib/types/market';
 
 interface StorageVesselMarketPanelProps {
   onClose: () => void;
+  sourceFilter?: BuyMarketSourceFilter;
 }
 
 function getPriceDriverSummary(priceBreakdown: StorageVesselPriceBreakdown): { increases: string[]; reduces: string[] } {
@@ -36,7 +40,9 @@ function getPriceDriverSummary(priceBreakdown: StorageVesselPriceBreakdown): { i
   classify(priceBreakdown.qualityMultiplier, 'cask quality');
   classify(priceBreakdown.ageMultiplier, 'cask age');
   classify(priceBreakdown.supplierBaseMultiplier, 'supplier terms');
-  classify(priceBreakdown.supplierRelationshipMultiplier, 'supplier relationship');
+  classify(priceBreakdown.conditionMultiplier, 'vessel condition');
+  classify(priceBreakdown.fillHistoryMultiplier, 'fill history');
+  classify(priceBreakdown.supplierRelationshipMultiplier, 'market relationship');
   classify(priceBreakdown.companyPrestigeMultiplier, 'company reputation');
 
   return { increases, reduces };
@@ -44,22 +50,25 @@ function getPriceDriverSummary(priceBreakdown: StorageVesselPriceBreakdown): { i
 
 const PriceCalculationTooltip: React.FC<{
   breakdown: StorageVesselPriceBreakdown;
+  isSupplierStock: boolean;
   children: React.ReactNode;
-}> = ({ breakdown, children }) => (
+}> = ({ breakdown, isSupplierStock, children }) => (
   <UnifiedTooltip
     title="Cask price calculation"
     content={(
       <div className="min-w-[230px] space-y-1 text-xs leading-snug">
-        <div className="text-gray-300">Base price x vessel size x quality x age x cleanliness x supplier terms x relationship x company reputation.</div>
+        <div className="text-gray-300">Base price x vessel size x quality x age x condition x fills x cleanliness x market relationship.{isSupplierStock ? ' Local supplier stock also uses supplier terms and company reputation.' : ''}</div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
           <span>Base price ({STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES} L)</span><span className="text-right">{formatNumber(breakdown.basePrice, { currency: true, decimals: 0 })}</span>
           <span>Vessel size</span><span className="text-right">x{breakdown.capacityMultiplier.toFixed(2)}</span>
           <span>Cask quality ({Math.round(breakdown.qualityScore * 100)}%)</span><span className="text-right">x{breakdown.qualityMultiplier.toFixed(2)}</span>
           <span>Cask age ({breakdown.ageYears} years)</span><span className="text-right">x{breakdown.ageMultiplier.toFixed(2)}</span>
           <span>Cleanliness</span><span className="text-right">x{breakdown.cleanlinessMultiplier.toFixed(2)}</span>
-          <span>Supplier terms</span><span className="text-right">x{breakdown.supplierBaseMultiplier.toFixed(2)}</span>
-          <span>Supplier relationship</span><span className="text-right">x{breakdown.supplierRelationshipMultiplier.toFixed(2)}</span>
-          <span>Company reputation</span><span className="text-right">x{breakdown.companyPrestigeMultiplier.toFixed(2)}</span>
+          <span>Condition</span><span className="text-right">x{breakdown.conditionMultiplier.toFixed(2)}</span>
+          <span>Fill history</span><span className="text-right">x{breakdown.fillHistoryMultiplier.toFixed(2)}</span>
+          {isSupplierStock && <><span>Supplier terms</span><span className="text-right">x{breakdown.supplierBaseMultiplier.toFixed(2)}</span>
+          <span>Company reputation</span><span className="text-right">x{breakdown.companyPrestigeMultiplier.toFixed(2)}</span></>}
+          <span>Market relationship</span><span className="text-right">x{breakdown.supplierRelationshipMultiplier.toFixed(2)}</span>
         </div>
         <div className="border-t border-gray-600 pt-1 text-gray-300">
           {Number.isFinite(breakdown.minimumPrice) && Number.isFinite(breakdown.maximumPrice)
@@ -74,7 +83,7 @@ const PriceCalculationTooltip: React.FC<{
   </UnifiedTooltip>
 );
 
-export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> = ({ onClose }) => {
+export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> = ({ onClose, sourceFilter = 'all' }) => {
   const [offers, setOffers] = useState<StorageVesselMarketOffer[]>([]);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [quantityByOfferId, setQuantityByOfferId] = useState<Record<string, number>>({});
@@ -101,9 +110,15 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
 
   useEffect(() => { void loadOffers(); }, [loadOffers]);
 
-  const sortedOffers = useMemo(() => !sortDirection ? offers : [...offers].sort((left, right) => {
+  const filteredOffers = useMemo(() => offers.filter((offer) => sourceFilter === 'all'
+    || (sourceFilter === 'local_supplier' && offer.source.kind === 'supplier_stock')
+    || (sourceFilter === 'global_supplier' && offer.source.kind !== 'supplier_stock')), [offers, sourceFilter]);
+
+  const sortedOffers = useMemo(() => !sortDirection ? filteredOffers : [...filteredOffers].sort((left, right) => {
     const value = (offer: StorageVesselMarketOffer): string | number => ({
-      supplier: offer.sellerName,
+      supplier: offer.source.seller.name,
+      source: offer.source.kind,
+      vessel: offer.payload.vesselName ?? '',
       capacity: offer.payload.capacityLitres,
       age: offer.payload.productionYear,
       quality: offer.payload.qualityScore,
@@ -112,7 +127,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     }[sortKey] ?? offer.payload.qualityScore);
     const result = value(left) > value(right) ? 1 : value(left) < value(right) ? -1 : 0;
     return sortDirection === 'asc' ? result : -result;
-  }), [offers, sortDirection, sortKey]);
+  }), [filteredOffers, sortDirection, sortKey]);
 
   const selectedOffer = useMemo(() => sortedOffers.find((offer) => offer.id === selectedOfferId) ?? sortedOffers[0] ?? null, [selectedOfferId, sortedOffers]);
   const getQuantity = useCallback((offer: StorageVesselMarketOffer) => Math.max(1, Math.min(quantityByOfferId[offer.id] ?? 1, offer.availableUnits)), [quantityByOfferId]);
@@ -120,12 +135,12 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
   const selectedPriceBreakdown = selectedOffer?.priceBreakdown;
   const selectedTotal = selectedOffer ? selectedOffer.pricePerVessel * selectedQuantity : 0;
   const marketState = getGameState();
-  const selectedRelationship = selectedOffer?.supplierLoyalty;
+  const selectedRelationship = selectedOffer?.counterpartyRelationship;
   const currentYear = marketState.currentYear ?? 0;
 
   const trustPreview = useMemo(() => {
     if (!selectedOffer) return null;
-    return getBuyGoodsSupplierTrustPreview(selectedRelationship, selectedTotal, companyValue, currentYear);
+    return getBuyMarketRelationshipPreview(selectedRelationship, selectedTotal, companyValue, currentYear);
   }, [companyValue, currentYear, selectedOffer, selectedRelationship, selectedTotal]);
 
   const headerWithTooltip = useCallback((label: string, tooltip: string) => (
@@ -136,13 +151,14 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
 
   const columns = useMemo<MarketOfferTableColumn<StorageVesselMarketOffer>[]>(() => [
     {
-      key: 'supplier',
-      header: 'Supplier',
+      key: 'source',
+      header: 'Market source',
       sortable: true,
       className: 'min-w-[180px]',
       render: (offer) => {
-        const level = offer.supplierLoyalty?.level ?? 0;
-        return <div><div className="font-medium text-white">{offer.sellerName}</div><div className={`text-[11px] ${getBuyGoodsSupplierTrustColor(level)}`}>Trust {level} · {BUY_GOODS_SUPPLIER_LEVELS[level].name}</div></div>;
+        const source = getBuyMarketOfferSourcePresentation(offer.source);
+        const level = offer.counterpartyRelationship?.level ?? 0;
+        return <div><div className="font-medium text-white">{source.label}</div><div className="text-[11px] text-gray-300">{source.sellerLabel}</div><div className={`text-[11px] ${getBuyMarketCounterpartyTrustColor(level)}`}>Relationship {level} · {BUY_MARKET_COUNTERPARTY_LEVELS[level].name}</div></div>;
       },
     },
     {
@@ -159,13 +175,13 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     { key: 'condition', header: 'Condition', sortable: false, className: 'text-right', render: (offer) => `${Math.round((offer.payload.condition ?? 1) * 100)}%` },
     { key: 'fills', header: 'Fills', sortable: false, className: 'text-right', render: (offer) => offer.payload.fillHistory ?? 0 },
     { key: 'cleanliness', header: 'Cleanliness', sortable: false, className: 'text-right capitalize', render: (offer) => offer.payload.cleanliness ?? 'clean' },
-    { key: 'available', header: headerWithTooltip('Supply', 'Finite supplier stock. Cask offers do not replenish during the season.'), sortable: true, className: 'text-right', render: (offer) => `${offer.availableUnits} vessels` },
+    { key: 'available', header: headerWithTooltip('Supply', 'Global assets are one-off. Local supplier stock is company-specific.'), sortable: true, className: 'text-right', render: (offer) => offer.source.kind === 'supplier_stock' ? `${offer.availableUnits} vessels` : '1 vessel' },
     {
       key: 'price',
-      header: headerWithTooltip('Price', 'Hover the price to see vessel size, quality, age, cleanliness, supplier terms, relationship, and company reputation factors.'),
+      header: headerWithTooltip('Price', 'Hover the price to see the factors used for this market source.'),
       sortable: true,
       className: 'text-right text-amber-300',
-      render: (offer) => <PriceCalculationTooltip breakdown={offer.priceBreakdown}><span className="cursor-help underline decoration-dotted underline-offset-2">{formatNumber(offer.pricePerVessel, { currency: true, decimals: 0 })}</span></PriceCalculationTooltip>,
+      render: (offer) => <PriceCalculationTooltip breakdown={offer.priceBreakdown} isSupplierStock={offer.source.kind === 'supplier_stock'}><span className="cursor-help underline decoration-dotted underline-offset-2">{formatNumber(offer.pricePerVessel, { currency: true, decimals: 0 })}</span></PriceCalculationTooltip>,
     },
     {
       key: 'quantity',
@@ -180,7 +196,9 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     if (!selectedOffer) return;
     setLoading(true);
     try {
-      const result = await purchaseBuyMarketOffer(selectedOffer.id, selectedQuantity);
+      const result = selectedOffer.kind === 'used_listing'
+        ? await purchaseUsedStorageVesselOffer(selectedOffer)
+        : await purchaseBuyMarketOffer(selectedOffer.id, selectedQuantity);
       if (!result.success) {
         setErrorByOfferId((current) => ({ ...current, [selectedOffer.id]: result.error ?? 'Purchase failed.' }));
         return;
@@ -191,7 +209,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     }
   }, [onClose, selectedOffer, selectedQuantity]);
 
-  const totalAvailable = offers.reduce((total, offer) => total + offer.availableUnits, 0);
+  const totalAvailable = filteredOffers.reduce((total, offer) => total + offer.availableUnits, 0);
   const drivers = selectedPriceBreakdown ? getPriceDriverSummary(selectedPriceBreakdown) : null;
 
   return <>
@@ -202,20 +220,20 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
           <span className="inline-flex items-center gap-1 rounded border border-emerald-700/70 bg-emerald-900/30 px-2 py-1 text-emerald-200">{marketState.season} rotation</span>
         </div>
         <div className="mt-2 space-y-1 text-[11px] text-gray-300">
-          <div><span className="font-medium text-cyan-300">Supply outlook:</span> {totalAvailable} casks across {offers.length} rotating supplier offers.</div>
-          <div><span className="font-medium text-amber-300">Rotation:</span> Unpurchased stock is replaced or retained when the season changes.</div>
-          <div><span className="font-medium text-blue-300">Price outlook:</span> Capacity and quality set vessel value; supplier terms, trust, and reputation adjust the quote.</div>
+          <div><span className="font-medium text-cyan-300">Supply outlook:</span> {totalAvailable} casks across {filteredOffers.length} offers.</div>
+          <div><span className="font-medium text-amber-300">Rotation:</span> Local supplier stock rotates by season; global assets evolve from their listing date.</div>
+          <div><span className="font-medium text-blue-300">Price outlook:</span> Each adapter sets its base value; your relationship with the displayed seller adjusts your quote.</div>
         </div>
       </div>
 
-      <BuyGoodsSupplierTrustPanel supplierName={selectedOffer?.sellerName} relationship={selectedRelationship} companyValue={companyValue} currentYear={currentYear} unitsLabel="vessels" />
+      <BuyMarketCounterpartyPanel counterpartyName={selectedOffer?.source.seller.name} relationship={selectedRelationship} companyValue={companyValue} currentYear={currentYear} unitsLabel="vessels" />
 
       {selectedOffer && selectedPriceBreakdown ? (
         <div className="rounded border border-gray-700/70 bg-gray-800 p-3 text-sm">
           <div className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">Purchase Summary</div>
           <div className="flex items-end justify-between gap-3 border-b border-gray-700 pb-3">
             <div>
-              <PriceCalculationTooltip breakdown={selectedPriceBreakdown}>
+              <PriceCalculationTooltip breakdown={selectedPriceBreakdown} isSupplierStock={selectedOffer.source.kind === 'supplier_stock'}>
                 <div className="cursor-help text-2xl font-bold text-amber-300 underline decoration-dotted underline-offset-4">{formatNumber(selectedPriceBreakdown.finalPricePerVessel, { currency: true, decimals: 0 })}<span className="ml-1 text-sm font-normal text-gray-400 no-underline">/cask</span></div>
               </PriceCalculationTooltip>
               <div className="mt-1 text-xs text-gray-400">Final market price</div>
@@ -226,23 +244,23 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
             </div>
           </div>
           <div className="mt-3 text-xs">
-            <UnifiedTooltip title="What affects cask price?" content={<span className="text-xs leading-snug">Vessel size, cask quality, cask age, cleanliness, supplier terms, supplier relationship, and company reputation move the final price. Hover the price for the exact multiplier breakdown.</span>}>
+            <UnifiedTooltip title="What affects cask price?" content={<span className="text-xs leading-snug">Vessel state and the seller relationship adjust each quote. Local supplier stock also has supplier terms and company reputation. Hover the price for exact multipliers.</span>}>
               <div className="inline-flex cursor-help items-center gap-1 text-gray-400"><span>Price drivers</span><span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-600 text-[10px] text-gray-300">?</span></div>
             </UnifiedTooltip>
             {drivers && drivers.increases.length > 0 && <div className="mt-1 text-amber-200">Higher: {drivers.increases.join(' · ')}</div>}
             {drivers && drivers.reduces.length > 0 && <div className="mt-1 text-emerald-200">Lower: {drivers.reduces.join(' · ')}</div>}
             {drivers && drivers.increases.length === 0 && drivers.reduces.length === 0 && <div className="mt-1 text-gray-300">Close to the reference cask price.</div>}
           </div>
-          {trustPreview && <div className="mt-2 border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-cyan-300">Trust preview: +{trustPreview.appliedPoints.toLocaleString()} points this purchase{trustPreview.cappedPoints > 0 ? ` (${trustPreview.rawPoints.toLocaleString()} raw, ${trustPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}</div>}
+          {trustPreview && <div className="mt-2 border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-cyan-300">Relationship preview: +{trustPreview.appliedPoints.toLocaleString()} points this purchase{trustPreview.cappedPoints > 0 ? ` (${trustPreview.rawPoints.toLocaleString()} raw, ${trustPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}</div>}
         </div>
       ) : (
         <div className="rounded border border-gray-700/70 bg-gray-800 p-3 text-sm text-gray-300">Select an offer to inspect price breakdown.</div>
       )}
     </div>
 
-    <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm"><span className="font-medium text-cyan-200">Storage Vessels</span><p className="mt-1 text-xs text-gray-300">Each purchase creates a separately owned vessel with a fixed capacity. Wine and operation effects will be assigned explicitly in a later winery workflow.</p></div>
+    <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm"><span className="font-medium text-cyan-200">Storage Vessels</span><p className="mt-1 text-xs text-gray-300">Supplier casks are new stock. Used listings are the same globally listed assets and retain their name, material, condition, cleanliness, age, and fill history when purchased.</p></div>
     <div className="overflow-hidden rounded border border-gray-700 bg-gray-800/60"><div className="overflow-x-auto"><MarketOfferTable rows={sortedOffers} columns={columns} rowKey={(offer) => offer.id} sortKey={sortKey} sortDirection={sortDirection} onSort={(key) => { if (key !== sortKey) { setSortKey(key); setSortDirection('asc'); } else { setSortDirection((current) => current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc'); } }} selectedRowKey={selectedOffer?.id ?? null} onRowClick={(offer) => setSelectedOfferId(offer.id)} /></div></div>
-    {sortedOffers.length === 0 && <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">No cask offers are currently available.</div>}
+    {sortedOffers.length === 0 && <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">No cask offers are currently available for this source.</div>}
 
     <DialogFooter><Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button><Button className="bg-amber-600 hover:bg-amber-500" disabled={loading || !selectedOffer} onClick={() => void handlePurchase()}>{loading ? 'Buying...' : `Buy for ${formatNumber(selectedTotal, { currency: true, decimals: 0 })}`}</Button></DialogFooter>
   </>;

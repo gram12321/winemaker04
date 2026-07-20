@@ -16,6 +16,8 @@ export interface AdminDatabaseOps {
   recreateCustomers(): Promise<void>;
   clearAllAchievements(): Promise<void>;
   fullDatabaseReset(): Promise<void>;
+  clearGlobalMarket(): Promise<void>;
+  clearGlobalMarketGoods(goods: 'grapes' | 'storage_vessels'): Promise<void>;
 }
 
 export interface AdminCheatOps {

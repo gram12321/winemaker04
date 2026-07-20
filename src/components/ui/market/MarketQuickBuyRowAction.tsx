@@ -17,12 +17,21 @@ export const MarketQuickBuyRowAction: React.FC<MarketQuickBuyRowActionProps> = (
   unitLabel = 'kg',
 }) => {
   const parsedQuantity = useMemo(() => Math.max(1, Math.round(quantity)), [quantity]);
+  const boundedQuantity = Math.min(parsedQuantity, Math.max(1, maxQuantity));
+
+  if (maxQuantity <= 1) {
+    return (
+      <div className="w-[132px] ml-auto text-right text-[11px] text-gray-400">
+        1 {unitLabel}
+      </div>
+    );
+  }
 
   return (
     <div className="w-[132px] space-y-1 ml-auto">
       <div>
         <Slider
-          value={[Math.min(parsedQuantity, Math.max(1, maxQuantity))]}
+          value={[boundedQuantity]}
           min={1}
           max={Math.max(1, maxQuantity)}
           step={1}

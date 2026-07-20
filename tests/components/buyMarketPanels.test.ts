@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   calculateCompanyValue: vi.fn(async () => 0),
   getAvailableStorageVessels: vi.fn<() => Promise<Array<Record<string, unknown>>>>(async () => []),
   getBuyGrapeMarketOffers: vi.fn<() => Promise<Array<Record<string, unknown>>>>(async () => []),
-  getBuyGoodsSupplierTrustPreview: vi.fn(() => ({ appliedPoints: 0, cappedPoints: 0, rawPoints: 0 })),
+  getBuyMarketRelationshipPreview: vi.fn(() => ({ appliedPoints: 0, cappedPoints: 0, rawPoints: 0 })),
   getStorageVesselMarketOffers: vi.fn<() => Promise<Array<Record<string, unknown>>>>(async () => []),
   purchaseBuyMarketOffer: vi.fn(),
 }));
@@ -38,9 +38,9 @@ vi.mock('@/components/ui/market/MarketOfferTable', async () => {
   };
 });
 vi.mock('@/components/ui/market/MarketQuickBuyRowAction', () => ({ MarketQuickBuyRowAction: () => null }));
-vi.mock('@/components/ui/market/BuyGoodsSupplierTrustPanel', () => ({
-  BuyGoodsSupplierTrustPanel: () => null,
-  getBuyGoodsSupplierTrustColor: () => '',
+vi.mock('@/components/ui/market/BuyMarketCounterpartyPanel', () => ({
+  BuyMarketCounterpartyPanel: () => null,
+  getBuyMarketCounterpartyTrustColor: () => '',
 }));
 vi.mock('@/lib/services/market/storageVessels/storageVesselMarketAdapter', () => ({
   getStorageVesselMarketOffers: mocks.getStorageVesselMarketOffers,
@@ -66,9 +66,9 @@ vi.mock('@/lib/services/sales/buyGrapeMarketService', () => ({
   getBuyOfferStateLabel: () => 'Grapes',
 }));
 vi.mock('@/lib/services/market/buyMarketService', () => ({ purchaseBuyMarketOffer: mocks.purchaseBuyMarketOffer }));
-vi.mock('@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService', () => ({
-  BUY_GOODS_SUPPLIER_LEVELS: { 0: { name: 'Unknown Seller' } },
-  getBuyGoodsSupplierTrustPreview: mocks.getBuyGoodsSupplierTrustPreview,
+vi.mock('@/lib/services/market/buyMarketCounterpartyRelationshipService', () => ({
+  BUY_MARKET_COUNTERPARTY_LEVELS: { 0: { name: 'Unknown Seller' } },
+  getBuyMarketRelationshipPreview: mocks.getBuyMarketRelationshipPreview,
 }));
 vi.mock('@/lib/services/finance/financeService', () => ({ calculateCompanyValue: mocks.calculateCompanyValue }));
 vi.mock('@/lib/services/core/gameState', () => ({ getGameState: () => ({ currentYear: 2026, season: 'Spring' }) }));
@@ -130,11 +130,13 @@ describe('Buy Market panels', () => {
   it('routes cask purchases through the shared Buy Market dispatcher', async () => {
     mocks.getStorageVesselMarketOffers.mockResolvedValueOnce([{
       id: 'cask-offer-1',
+      kind: 'supplier',
+      source: { kind: 'supplier_stock', seller: { kind: 'supplier', id: 'cooper', name: 'Cooper' } },
       sellerName: 'Cooper',
       availableUnits: 2,
       pricePerVessel: 100,
       payload: { capacityLitres: 225, productionYear: 2024, qualityScore: 0.8, material: 'oak', vesselType: 'barrel' },
-      priceBreakdown: { basePrice: 100, capacityMultiplier: 1, qualityMultiplier: 1, ageYears: 2, ageMultiplier: 0.95, cleanlinessMultiplier: 1, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestigeMultiplier: 1, qualityScore: 0.8, capacityLitres: 225, minimumPrice: 1, maximumPrice: 1_000, finalPricePerVessel: 100 },
+      priceBreakdown: { basePrice: 100, capacityMultiplier: 1, qualityMultiplier: 1, ageYears: 2, ageMultiplier: 0.95, cleanlinessMultiplier: 1, conditionMultiplier: 1, fillHistoryMultiplier: 1, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestigeMultiplier: 1, qualityScore: 0.8, capacityLitres: 225, minimumPrice: 1, maximumPrice: 1_000, finalPricePerVessel: 100 },
     }]);
     mocks.purchaseBuyMarketOffer.mockResolvedValue({ success: true });
     const onClose = vi.fn();

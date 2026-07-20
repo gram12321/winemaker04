@@ -81,6 +81,14 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, testLab, r
     }, 2000);
   });
 
+  const handleClearGlobalMarket = () => withLoading(async () => {
+    await database.clearGlobalMarket();
+  });
+
+  const handleClearGlobalMarketGoods = (goods: 'grapes' | 'storage_vessels') => withLoading(async () => {
+    await database.clearGlobalMarketGoods(goods);
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -181,6 +189,37 @@ export function AdminDashboard({ onBack, onNavigateToLogin, database, testLab, r
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <SimpleCard
+                title="Buy Market Management"
+                description="Clear generated market offers and global used-vessel listings. The next market open regenerates stock."
+              >
+                <Button
+                  variant="destructive"
+                  onClick={handleClearGlobalMarket}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All Market Goods
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleClearGlobalMarketGoods('grapes')}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Clear Grape Market
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleClearGlobalMarketGoods('storage_vessels')}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Clear Storage Vessel Market
+                </Button>
+              </SimpleCard>
+
               <SimpleCard
                 title="System Data"
                 description="Clear system and progression data"

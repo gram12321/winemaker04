@@ -18,6 +18,8 @@ import {
   adminClearAllCompanies,
   adminClearAllCompaniesAndUsers,
   adminClearAllHighscores,
+  adminClearGlobalMarket,
+  adminClearGlobalMarketGoods,
   adminClearAllUsers,
   adminClearCompanyValueHighscores,
   adminClearCompanyValuePerWeekHighscores,
@@ -66,7 +68,9 @@ const database: AdminDatabaseOps = {
   clearAllCompaniesAndUsers: adminClearAllCompaniesAndUsers,
   recreateCustomers: adminRecreateCustomers,
   clearAllAchievements: adminClearAllAchievements,
-  fullDatabaseReset: adminFullDatabaseReset
+  fullDatabaseReset: adminFullDatabaseReset,
+  clearGlobalMarket: adminClearGlobalMarket,
+  clearGlobalMarketGoods: adminClearGlobalMarketGoods,
 };
 
 const cheats: AdminCheatOps = {

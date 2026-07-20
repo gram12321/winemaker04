@@ -1,8 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import { deleteStorageVessels, getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { getGameState } from '@/lib/services/core/gameState';
+import { getGameState, getCurrentCompany } from '@/lib/services/core/gameState';
 import { GAME_INITIALIZATION } from '@/lib/constants';
+import { STORAGE_VESSEL_USED_MARKET_SELLBACK_MULTIPLIER } from '@/lib/constants';
+import { sellStorageVesselToMarket } from '@/lib/database/market/storageVesselMarketListingsDB';
+import { calculateUsedStorageVesselMarketValue } from '@/lib/services/market/storageVessels/usedStorageVesselMarketService';
+import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
+import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import type { StorageVessel, StorageVesselOfferPayload } from '@/lib/types/storageVessels';
 
 export async function getOwnedStorageVessels(): Promise<StorageVessel[]> {
@@ -26,7 +31,8 @@ export async function createPurchasedStorageVessels(
   const safeQuantity = Math.max(1, Math.round(quantity));
   const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, () => ({
     id: uuidv4(),
-    companyId,
+    ownerKind: 'company',
+    ownerCompanyId: companyId,
     vesselType: payload.vesselType,
     material: payload.material,
     qualityScore: payload.qualityScore,
@@ -51,6 +57,34 @@ export async function createPurchasedStorageVessels(
 
 export function getStorageVesselDisplayName(vessel: StorageVessel): string {
   return vessel.vesselName ?? `Vessel ${vessel.id.slice(-4).toUpperCase()}`;
+}
+
+export function getStorageVesselSellbackEligibility(vessel: StorageVessel, activities: Awaited<ReturnType<typeof getAllActivities>>): { eligible: boolean; reasons: string[] } {
+  const reasons = [
+    ...(vessel.occupancy !== 'available' ? ['Vessel is allocated or contains wine.'] : []),
+    ...(vessel.operationalStatus !== 'operational' ? ['Vessel is under maintenance.'] : []),
+    ...activities.filter((activity) => (activity.status === 'active' || activity.status === 'paused') && (
+      activity.params.vesselId === vessel.id || activity.params.storagePlanId === vessel.activePlanId
+    )).map((activity) => `Ongoing activity: ${activity.title}`),
+  ];
+  return { eligible: reasons.length === 0, reasons };
+}
+
+export async function sellOwnedStorageVesselToMarket(vessel: StorageVessel, activities: Awaited<ReturnType<typeof getAllActivities>>): Promise<{ success: boolean; error?: string; payout?: number }> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId || vessel.ownerKind !== 'company' || vessel.ownerCompanyId !== companyId) return { success: false, error: 'Vessel is not owned by the active company.' };
+  const eligibility = getStorageVesselSellbackEligibility(vessel, activities);
+  if (!eligibility.eligible) return { success: false, error: eligibility.reasons.join(' ') };
+  const state = getGameState();
+  const year = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
+  const payout = Number((calculateUsedStorageVesselMarketValue(vessel, vessel.condition, year) * STORAGE_VESSEL_USED_MARKET_SELLBACK_MULTIPLIER).toFixed(2));
+  const { data, error } = await sellStorageVesselToMarket({
+    companyId, companyName: getCurrentCompany()?.name ?? 'Unknown Winery', vesselId: vessel.id, payout, year,
+    season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON, week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+  });
+  if (error || !data) return { success: false, error: 'Could not list this vessel on the used market.' };
+  triggerTopicUpdate('storage_vessels');
+  return { success: true, payout };
 }
 
 export async function removePurchasedStorageVessels(vesselIds: string[]): Promise<void> {
