@@ -1,5 +1,7 @@
 Original prompt: PLEASE IMPLEMENT THIS PLAN: Board/Share Detachment Plan
 
+Status: Completed historical implementation record. The board/share runtime is intentionally inactive; the optional dormant database-adapter cleanup remains outside this completed plan.
+
 - 2026-03-06: Continuing prior in-progress strip work on branch feature/no-board-share.
 - Missing docs referenced by skill in this repo: .github/copilot-instructions.md, DESIGN.md.
 - Next actions: run typecheck, remove remaining board/share exports and tests, simplify finance contribution model, fix compile errors, run tests, commit C and D.

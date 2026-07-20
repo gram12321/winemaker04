@@ -1,5 +1,7 @@
 # Activities Feature Isolation Implementation Plan
 
+Status: Completed. Activity lifecycle, persistence orchestration, calculators, constants, UI, completion dispatch, consumers, and the replacement schema are now owned by `activitiesFeature`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Move activity lifecycle, work calculation, activity UI, and activity persistence orchestration behind `activitiesFeature` while preserving current behavior and allowing current database/types to be replaced without compatibility shims.

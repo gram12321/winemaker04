@@ -1,5 +1,7 @@
 # Loan Lender Cleanup Implementation Plan
 
+Status: Completed. Finalized loan payloads, shared quote/payment calculations, named loan constants, repayment extraction, and regression coverage are implemented.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Make loan quotes, activities, UI previews, and completed loans use one consistent payload while reducing duplicated lifecycle and finance logic.

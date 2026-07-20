@@ -1,5 +1,7 @@
 # Research Page Consolidation And ResearchPanel Removal
 
+Status: Completed. The standalone research page, module-owned admin inspector, and removal of the legacy ResearchPanel/Winepedia research tab are implemented.
+
 ## Summary
 Make the standalone research page the only player-facing research surface, delete `ResearchPanel.tsx`, and move the remaining useful research UI/state assembly into the `researchUpgrade` module. In the same pass, remove the outdated Winepedia research tab, keep a dedicated read-only admin research inspector, and remove the obsolete finance-tab UI contract from `researchUpgrade`.
 

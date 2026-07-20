@@ -1,7 +1,7 @@
 # Activities Feature Isolation Design
 
 **Date:** 2026-07-18  
-**Status:** Approved for implementation
+**Status:** Completed. The approved facade and ownership boundary are implemented; see the corresponding completed implementation plan for the migration record.
 
 ## Goal
 

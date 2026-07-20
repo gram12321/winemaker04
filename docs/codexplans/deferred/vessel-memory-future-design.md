@@ -1,6 +1,6 @@
 # Future Design: Storage Vessel Memory
 
-Status: Future design. No vessel-memory gameplay is implemented by this document.
+Status: Deferred future design. No vessel-memory gameplay is implemented; the design remains intentionally outside the current gameplay scope.
 
 ## Idea
 
