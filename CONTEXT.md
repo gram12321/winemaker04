@@ -1,82 +1,51 @@
 # Project Context
 
-Date: 2026-07-16
-Stable terminology and high-value gameplay relationships. See `docs/WineSystem_VariableRelationshipMap.md` for dependency diagrams and `docs/AIdocs/AIDescriptions_coregame.md` for implementation status.
+Date: 2026-07-20
+This is the stable vocabulary and rules snapshot. Use `docs/PROJECT_INFO.md` for code ownership and `docs/AIdocs/AIDescriptions_coregame.md` for implementation status.
 
-## Wine Vocabulary
+## Wine vocabulary
 
-| Layer | Meaning | Representative fields |
+| Layer | Meaning | Representative data |
 |---|---|---|
-| Site factors | Vineyard/region context before processing | `country`, `region`, `soil`, `altitude`, `aspect`, `landValue`, `density`, `overgrowth`, `vineAge`, `vineyardHealth`, `ripeness` |
-| Grape traits | Grape-inherent effects | `grapeColor`, `naturalYield`, `fragile`, `proneToOxidation`, base structure |
-| Anchors | Persisted hidden wine identity | `sugarPotential`, `acidPotential`, `phenolicPotential`, `aromaticPotential`, `bodyPotential`, `terroirExpression`, process states |
-| Process controls | Player production choices | crush options, fermentation method/temperature, harvest timing |
-| Structure | Physical balance and score | six characteristics, `structureIndex` |
-| Taste | Flavor families and descriptors | 14 families, `tasteQualityIndex` |
+| Site | Vineyard and regional inputs | country, region, soil, altitude, aspect, land value, density, overgrowth, vine age, health, ripeness |
+| Grape | Variety-inherent traits | color, yield, fragility, oxidation risk, base structure |
+| Anchors | Persisted hidden wine identity | sugar, acid, phenolic, aromatic, body, terroir, and process states |
+| Process | Player production choices | harvest timing, crush options, fermentation method/temperature |
+| Quality | Physical and sensory results | six structure channels, structure index, 14 taste families, taste quality index |
 | Lifecycle | Post-creation evolution | features, oxidation, bottle aging, prestige |
-| Weather | Weekly state/forecast and operation modifiers | state, intensity, pattern, confidence, site exposure, planting/harvesting operation impact |
-| Market | Buyer/supplier demand and supply | economy, weather, loyalty, grape/batch state |
-| Storage vessels | Individually owned cellar equipment from supplier stock or global canonical assets; each Buy Market source shows its seller and uses the same buyer-to-seller relationship framework | casks, steel tanks, concrete tanks, containers, vessel type, capacity, material, quality score (0-1), condition, fills, cleanliness, relationship price, purchase price, vessel state; an occupied vessel may be emptied through a cancellable Maintenance activity, reducing the batch volume and releasing only that vessel. Cancelling production preserves the active plan and its existing wine; only an unused reservation is released; future inputs to taste, structure, price, vineyard, and winery operations |
-| Ownership | Founder and future board/share concepts | `isFounder`, Founder Return, `boardShare` seam |
-| Outcomes | Progression/economy outputs | price, contracts, grape sales, prestige, achievements |
+| Market | Supply, demand, and relationships | economy, weather, loyalty, buyers, suppliers, grape/batch state |
+| Equipment | Individually owned storage assets | type, capacity, material, quality, condition, fills, cleanliness, ownership |
 
-## Wine Model
+## Core wine rules
 
-Current database parsing accepts only the compact anchor keys; unknown keys are ignored. Anchors and process controls produce current characteristics, features, structure, taste, and lifecycle state.
+- Anchors are compact persisted values. Unknown database keys are ignored; missing anchors resolve to neutral values.
+- Structure channels are `acidity`, `aroma`, `body`, `spice`, `sweetness`, and `tannins`. `structureIndex` uses ideal ranges, penalties, and synergies; base ranges are 0.40–0.60, 0.30–0.70, 0.40–0.80, 0.35–0.65, 0.40–0.60, and 0.35–0.65 respectively.
+- `tasteQualityIndex` measures family-level balance and is distinct from land value. Descriptors are presentation only.
+- `wineScore = (tasteQualityIndex + structureIndex) / 2`. Estimated price combines the score curve, land value, features, company prestige, and vineyard prestige; the base rate is 25 per bottle, with a 0.2–3.0 land-value multiplier and a 99,999,999.99 ceiling.
+- Harvest and bottling snapshots are immutable historical inputs for Wine Log, leaderboards, and achievements; cellar values can continue to evolve.
 
-Structure channels: `acidity`, `aroma`, `body`, `spice`, `sweetness`, `tannins`. `structureIndex` uses dynamic ideal ranges, penalties, and synergies. Base accepted ranges are acidity 0.40–0.60, aroma 0.30–0.70, body 0.40–0.80, spice 0.35–0.65, sweetness 0.40–0.60, tannins 0.35–0.65.
+## Production, equipment, and markets
 
-Taste has 14 flavor families; descriptors remain display-only. `tasteQualityIndex` is family-level balance, distinct from `landValueModifier`. Current `wineScore = (tasteQualityIndex + structureIndex) / 2`.
+- Production moves through grapes, must, wine, and bottled states. Fermentation methods are Basic, Temperature Controlled, and Extended Maceration; temperatures are Ambient, Cool, and Warm.
+- Contracts distinguish taste quality, structure, land value, origin, grape, site, and characteristic thresholds. Forward contracts can target bottled wine, grapes, `must_ready`, or `must_fermenting`.
+- Buy Market is separate from sell-side grape trading. It combines registered domain panels through one normalized offer/source/counterparty contract. Local catalogues and global assets remain separate internally; adapters retain their own evolution, base pricing, and fulfilment rules while sharing seller presentation and relationship pricing. Grape global lots remain a future adapter.
+- Wine contact marks a vessel dirty. Cleanliness is currently warning-only: dirty operational vessels remain allocatable. Empty Vessel is cancellable Maintenance that removes only the selected vessel's filled volume; Clean Vessel is a separate cancellable activity. Cancellation preserves already placed wine and its active plan.
 
-Estimated price combines wine score, score curve, land-value, feature, company-prestige, and vineyard-prestige multipliers. `BASE_RATE_PER_BOTTLE = 25`; land-value multiplier is bounded by 0.2–3.0; `MAX_PRICE = 99,999,999.99`.
+## Weather, research, and ownership
 
-## Process, Sales, and Snapshots
+- Weather stores company-scoped weekly state, intensity, seasonal pattern/confidence, and next-week forecast. It bounds vineyard progression and operation work and supplies market context; it does not directly change yield, harvest anchors, or wine score.
+- Research uses work profiles plus prestige, prerequisite, company-value, buyer-loyalty, and achievement gates. Implemented unlocks cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression; the active permanent effect is vineyard-health decay reduction.
+- Founders have zero wages, receive 20% of positive yearly net profit per founder, and can be bought out for 15% of company asset value. Prestige is derived from permanent and decaying ledger events.
+- `boardShare` remains an inactive seam; public-company/share gameplay is deferred.
 
-- Production progresses through grapes, must, wine, and bottled states; fermentation methods are Basic, Temperature Controlled, and Extended Maceration, with Ambient/Cool/Warm temperature options.
-- Contract requirements distinguish `tasteQuality`, `structureIndex`, `landValue`, origin, grape identity, site factors, and characteristic thresholds.
-- Forward pre-sale contracts are generated by bulk buyers for bottled wine, grapes, `must_ready`, or `must_fermenting`; quantity/price scale with company value, prestige, market context, and loyalty.
-- Harvest and bottling snapshots are immutable. Bottling snapshots feed Wine Log, highscores, and achievements; current cellar values may continue to evolve.
+## Staff competency
 
-## Weather and Grape Markets
+- Each activity category maps to one primary skill. `specializedRoles` is the six-role innate career layer; matching roles add 20% to that primary skill.
+- `experience["task:<WorkCategory>"]` is learned exact-task mastery (up to 20%); `experience["grape:<GrapeVariety>"]` is bounded variety mastery (up to 10%) for planting, harvesting, crushing, and fermentation. Neither changes wages.
+- Role, task, and grape bonuses are additive and capped at 50%. The shared work calculator applies skill, team, multitasking, weather, research, storage, and final-tick limits; XP is awarded only for persisted applied work.
 
-| Concept | Current behavior |
-|---|---|
-| Weather states | `Clear`, `Rain`, `Heat`, `Frost`, `Storm`, `Snow` |
-| Intensities | `VeryMild`, `Mild`, `Moderate`, `Severe`, `Extreme` |
-| Forecast patterns | `Stable`, `Wet`, `Dry`, `Cold`, `Heat`, `Storm-prone` |
-| Persistence | Company-scoped current state/intensity, seasonal pattern/confidence, and next-week forecast in `GameState` |
-| Vineyard projection | Normal seasonal health/ripeness delta × bounded weather/site multiplier; includes planting progress, research health decay, aspect, altitude, suitability, and soil response |
-| Market impact | Weather and economy affect grape prices/limits; loyalty and research affect buyer/supplier access and scaling |
-| Operation impact | Winter prevents starting planting; severe weather slows planting/harvesting work and extreme conditions can pause it. Clearing's annual availability remains a vineyard-maintenance rule. |
-| Buy-market previews | One Buy Market modal hosts registered domain panels through a shared offer/source/counterparty read contract; local catalogues and global assets remain separate internally, while adapters own domain-specific evolution and pricing |
+## Naming rules
 
-The feature facade at `src/lib/features/weather/` owns resolution, vineyard projection, market context, operation impacts, and presentation models. Weather does not directly affect yield, harvest anchors, or wine score. Severe events, mitigation actions, weather research, and weather achievements remain future work.
-
-## Research and Progression
-
-Research projects use complexity, work profiles, prestige/prerequisite gates, company-value gates, buyer-loyalty gates, achievement gates, `unlocks`, and `permanentEffects`. Starting conditions may apply regional `startingResearch` pre-unlocks.
-
-Implemented enforcement covers grape planting, fermentation methods, staff cap, vineyard size/total-hectare/vineyard-count caps, contract channels, and grape-buyer progression. Current permanent effect: `vineyard_health_decay_multiplier`. `unlocks` and `permanentEffects` are authoritative; some `benefits` copy remains descriptive only.
-
-## Founder, Prestige, and Board/Share
-
-- Founders have zero wages, receive 20% of positive yearly net profit per founder, and can be bought out for 15% of company asset value.
-- Prestige is ledger-derived from permanent (`decay_rate = 0`) and decaying (`0 < decay_rate < 1`) events. Write through `insertPrestigeEvent()` or `upsertPrestigeEventBySource()` with explicit source metadata.
-- Founder ownership behavior is active. `boardShare` remains an intentionally inactive facade while public-company/share gameplay is deferred and it is not wired into host behavior.
-
-## Naming Rules
-
-- Structure, Taste Quality, and land value are separate concepts; do not use one as an alias for another.
-- Weather and research modify explicit upstream inputs/access rules, not score formulas through hidden side effects.
-- Business logic should not add fallback aliases for renamed fields. Update this file and the relationship map before making descriptors or deferred systems player-visible.
-
-## Staff Competency Model
-
-- Every `WorkCategory` maps to exactly one existing primary staff skill through `WORK_CATEGORY_INFO`: Field, Winery, Maintenance, Finance & Staff, or Administration & Research. Sales remains a valid primary skill, but no Sales task mastery exists until a Sales work category is implemented.
-- `Staff.specializedRoles` is the persisted innate career-role array. The six role definitions in `SPECIALIZED_ROLES` retain their title, description, matching primary skill, and 20% work bonus. A role helps every activity that uses its matching primary skill; it is distinct from learned mastery.
-- Exact task mastery is learned through `Staff.experience["task:<WorkCategory>"]`. Every implemented `WorkCategory` has a task track. It provides up to a 20% bonus only for that exact category, is not selected during recruitment, and does not affect wages.
-- `Staff.experience` also stores broad-skill XP as `skill:<primarySkill>` and grape mastery as `grape:<GrapeVariety>`. Grape mastery provides up to a 10% bonus only for a matching variety during planting, harvesting, crushing, or fermentation; it neither applies to clearing/non-grape activities nor affects wages.
-- Role, task, and grape bonuses are additive and capped at 50%. The work calculator also applies the established effective-skill, multitasking, team, weather, and research rules.
-- The activity work calculator is the single source for work shares and previews. Broad-skill XP, task XP, and eligible grape XP are awarded only from applied work after weather, team, storage, and final-tick limits, so assignment changes affect future ticks only.
-- Activities are isolated behind `src/lib/features/activities/`; lifecycle, reads, work previews, ticks, setup, and activity UI are exposed through `activitiesFeature`, while host code does not import activity managers directly.
-- The breaking staff migration removes the former `specializations` and interim `task_specializations` columns, adds validated `staff.specialized_roles`, and retains the `experience` JSONB map. There is no runtime fallback for the removed columns.
+- Structure, Taste Quality, and land value are separate concepts.
+- Weather and research modify explicit inputs or access rules, not hidden score side effects.
+- Development-stage schema changes are clean cutovers: update consumers to renamed types/functions and do not add compatibility aliases, wrappers, backfills, or legacy-table support.

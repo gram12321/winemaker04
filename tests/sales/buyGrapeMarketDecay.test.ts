@@ -85,7 +85,10 @@ vi.mock('@/lib/services/core/gameState', () => ({
 }));
 
 vi.mock('@/lib/features/company', () => ({
-  companyFeature: { records: { get: mocks.getCompany } },
+  companyFeature: {
+    records: { get: mocks.getCompany },
+    lifecycle: { registerActivationHook: vi.fn(), notifyActivated: vi.fn(async () => undefined) },
+  },
 }));
 
 vi.mock('@/lib/services/sales/grapeBuyerMarketService', async () => {

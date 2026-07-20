@@ -27,7 +27,7 @@ npm run build
 
 | Pattern | Features | Public interface | Lifecycle |
 |---|---|---|---|
-| Installed feature facade | `achievements`, `loanLender`, `researchUpgrade`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
+| Installed feature facade | `activities`, `achievements`, `company`, `leaderboards`, `loanLender`, `researchUpgrade`, `staff`, `user`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
 | Development-only feature | `admin` | host type passed to `App` | dynamically loaded in Vite development only |
 | Always-on functional module | `weather` | stable function/type barrel | required application capability |
 
@@ -47,7 +47,7 @@ npm run build
 | Ownership/module map | `docs/PROJECT_INFO.md` |
 | Variable dependencies | `docs/WineSystem_VariableRelationshipMap.md` |
 | Change history | `docs/versionlog.md` |
-| Research design/status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
+| Research design/status | `docs/superpowers/deferred/2026-05-21-research-mechanic-design.md` |
 | Weather implementation record | `docs/superpowers/completed/2026-07-10-weather-module-redesign-design.md`, `2026-07-10-weather-module-redesign.md` |
 | Bulk grape market rollout | `docs/superpowers/completed/2026-05-23-bulk-grape-buy-market-design.md`, `2026-05-23-bulk-grape-buy-market-execution.md` |
 | Public-company reintroduction references | `docs/superpowers/deferred/PublicCompanyPlan.md`, `PublicCompanyImplementation.md` |
@@ -56,9 +56,10 @@ npm run build
 
 - Activities are owned by the installed `activitiesFeature` at `src/lib/features/activities/`. Host code uses its lifecycle, reads, work-preview, tick, setup, and UI namespaces; activity persistence remains an internal adapter under `database/activities/`.
 - Staff is an installed `staffFeature` at `src/lib/features/staff/`. It owns staff records, teams, competency, wages/founders, presentation, and the Staff workspace; Activities consume its public recruitment, team-selection, and competency seam. Staff competency has three complementary layers: primary skills are the category-derived baseline; persisted broad career roles apply across their matching primary skill; and applied activity work earns exact task mastery. Grape-aware work also earns grape mastery for its variety. The shared work calculator applies the bounded bonuses and is the source for previews and weekly activity progress.
+- Company is an installed `companyFeature` at `src/lib/features/company/`. It owns company records, starting-condition setup, and the public company-activation lifecycle seam; core game state remains the host for active-company session orchestration.
 - Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression; permanent effects currently include vineyard health-decay reduction.
 - Weather is persisted weekly state/forecast, a bounded site-aware vineyard projection, and grape-market context. Weather Center is operational; Winepedia is the technical reference.
-- Sell-side grape trading remains separate from Buy Market. Buy Market supports Grape Procurement plus individually owned fixed-capacity casks; wine contact makes a vessel dirty, an occupied cask can be emptied through a cancellable Empty Vessel maintenance activity, and an empty dirty vessel must complete Clean Vessel maintenance before reuse. Cancelling production preserves any wine already placed in an active vessel plan; only unused reservations are released.
+- Sell-side grape trading remains separate from Buy Market. Buy Market supports Grape Procurement plus individually owned fixed-capacity casks; wine contact makes a vessel dirty, while cleanliness is currently warning-only. Empty Vessel and Clean Vessel are cancellable Maintenance activities. Cancelling production preserves any wine already placed in an active vessel plan; only unused reservations are released.
 - Founder economy is active as a light ownership layer: zero founder wages, profitable-year returns, and buyout into salaried staff.
 - Full public-company/share-market runtime is intentionally inactive, and `boardShare` remains isolated from host wiring.
 

@@ -1,90 +1,23 @@
 import { v4 as uuidv4 } from 'uuid';
-import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanConfig } from '@/lib/constants/startingConditions';
+import { FIRST_COMPANY_PLAYER_BALANCE_SEED, FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION, STARTING_CONDITIONS, type StartingCondition, type StartingCountry, type StartingLoanConfig } from '@/lib/constants/startingConditions';
 import { staffFeature } from '@/lib/features/staff';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
-import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
+import { getPlantedVineyardStatus } from '@/lib/services/vineyard/vineyardService';
 import { TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
-import { formatNumber, getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
-import { addTransaction } from '../finance/financeService';
+import { formatNumber, getStoryImageSrc } from '@/lib/utils';
+import { addTransaction } from '@/lib/services/finance/financeService';
 import { companyFeature } from '@/lib/features/company';
 import { upsertPrestigeEventBySource } from '@/lib/database/customers/prestigeEventsDB';
-import { getGameState } from './gameState';
+import { getGameState } from '@/lib/services/core/gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
-import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
-import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
-import { activitiesFeature } from '@/lib/features/activities';
+import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
+import { calculateBaselineVineYieldForAge } from '@/lib/services/vineyard/vineyardManager';
+import { DEFAULT_VINE_DENSITY } from '@/lib/features/activities/constants/activityConstants';
 import { userFeature } from '@/lib/features/user';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { createStartingVineyard } from '@/lib/database/activities/vineyardDB';
-
-// Preview vineyard type (not yet saved to database)
-export interface VineyardPreview {
-  name: string;
-  country: string;
-  region: string;
-  hectares: number;
-  soil: string[];
-  altitude: number;
-  aspect: string;
-  density: number;
-}
-
-export interface ApplyStartingConditionsResult {
-  success: boolean;
-  error?: string;
-  mentorMessage?: string;
-  mentorName?: string;
-  mentorImage?: string;
-  startingMoney?: number;
-  startingLoanId?: string;
-  startingPrestige?: number;
-}
-
-export const FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION = 100000;
-const FIRST_COMPANY_PLAYER_BALANCE_SEED = 110000;
-
-/**
- * Generate a preview vineyard for a starting condition
- * This is called before the user confirms the selection
- */
-export function generateVineyardPreview(condition: StartingCondition): VineyardPreview {
-  const {
-    country,
-    region,
-    minHectares,
-    maxHectares,
-    minAltitude,
-    maxAltitude,
-    preferredAspects
-  } = condition.startingVineyard;
-
-  // Generate random hectares within range
-  const hectares = Number((minHectares + Math.random() * (maxHectares - minHectares)).toFixed(2));
-
-  // Generate random vineyard properties
-  const aspect = preferredAspects && preferredAspects.length > 0
-    ? getRandomFromArray(preferredAspects)
-    : getRandomAspect();
-  const name = generateVineyardName(country, aspect);
-  const altitude =
-    minAltitude !== undefined && maxAltitude !== undefined
-      ? Math.round(minAltitude + Math.random() * (maxAltitude - minAltitude))
-      : getRandomAltitude(country, region);
-  const soil = getRandomSoils(country, region);
-  const density = activitiesFeature.config.defaultVineDensity;
-
-  return {
-    name,
-    country,
-    region,
-    hectares,
-    soil,
-    altitude,
-    aspect: aspect as string,
-    density
-  };
-}
+import type { ApplyStartingConditionsResult, VineyardPreview } from '../featureTypes';
 
 /**
  * Apply starting conditions to a new company
@@ -287,7 +220,7 @@ export async function applyStartingConditions(
         soil: vineyardPreview.soil,
         altitude: vineyardPreview.altitude,
         aspect: previewAspect,
-        density: isPlanted ? activitiesFeature.config.defaultVineDensity : 0,
+        density: isPlanted ? DEFAULT_VINE_DENSITY : 0,
         status: vineyardStatus,
         grape: startingGrape,
         vineAge: isPlanted ? startingVineAge : null,

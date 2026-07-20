@@ -1,5 +1,7 @@
 # Staff Feature Cleanup Implementation Plan
 
+Status: Completed. Staff production code is below the stated baseline, obsolete local search-result state is gone, presentation contracts are consolidated, and the full suite/build pass.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reduce Staff production code and incidental complexity without changing gameplay, persistence, or the installed feature boundary.

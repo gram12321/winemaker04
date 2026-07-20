@@ -2,6 +2,9 @@ import { type Aspect, type Nationality, type LenderType, type GrapeVariety, type
 
 export type StartingCountry = Nationality;
 
+export const FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION = 100000;
+export const FIRST_COMPANY_PLAYER_BALANCE_SEED = 110000;
+
 export interface StartingStaffMember {
   firstName: string;
   lastName: string;

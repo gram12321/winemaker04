@@ -1,5 +1,7 @@
 # User, Company, and Leaderboards Isolation Implementation Plan
 
+Status: Completed. The user, company, and leaderboard feature facades, host wiring, ownership isolation, and atomic leaderboard persistence are implemented and covered by the feature/lifecycle suites.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Isolate player identity/profile/preferences, company records, and global leaderboards behind small installed feature facades while preserving playable unowned companies.

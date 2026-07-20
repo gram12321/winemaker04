@@ -1,85 +1,70 @@
-# Winemaker 0.4 - Project Information
+# Winemaker 0.4 — Project Information
 
-Last code-verified: 2026-07-16
+Last code-verified: 2026-07-20
+This document is the ownership and boundary map. Stable game rules live in `CONTEXT.md`; current behavior and deferred scope live in `docs/AIdocs/AIDescriptions_coregame.md`.
 
-Ownership and module map for the mainline codebase. Behavior details belong in `docs/AIdocs/AIDescriptions_coregame.md`; vocabulary belongs in `CONTEXT.md`.
+## Stack and entrypoints
 
-Agent workflow and routing are defined in `skills/winemaker-game/SKILL.md`. Read the repository entry docs before implementation, use the worktree/subagent skills for substantial planned work, and verify before claiming completion.
+- React, Vite, TypeScript, Tailwind, ShadCN UI, Supabase, and Vitest.
+- Bootstrap/routing: `src/main.tsx`, `src/App.tsx`.
+- Domain code: `src/lib/services/`, `src/lib/features/`; persistence: `src/lib/database/`, `migrations/`.
+- Shared types/constants: `src/lib/types/`, `src/lib/constants/`; tests/admin tools: `tests/`, `src/lib/features/admin/`, `server/`.
 
-## Stack and Entrypoints
+## Domain ownership
 
-- React, Vite, TypeScript, Tailwind, ShadCN UI, Supabase, Vitest.
-- App boot/routing: `src/main.tsx`, `src/App.tsx`.
-- Shared types/constants: `src/lib/types/`, `src/lib/constants/`.
-- Domain logic: `src/lib/services/`, `src/lib/features/`.
-- Persistence/migrations: `src/lib/database/`, `migrations/`.
-- Tests/admin: `tests/`, `src/lib/features/admin/`, `server/`.
+| Domain | Rules and UI | Persistence/configuration |
+|---|---|---|
+| Core state/tick | `services/core/`, `App.tsx`, layout | `database/core/`, time constants |
+| Activities | `features/activities/` and host activity surfaces | `database/activities/activityDB.ts`, feature constants |
+| Vineyard | `services/vineyard/`, Vineyard UI | vineyard/grape databases and constants |
+| Weather | `features/weather/`, Weather Center/Vineyard projections | company-scoped GameState fields |
+| Winery/inventory | `services/wine/`, Winery and Equipment | `database/activities/inventoryDB.ts`, `database/winery/` |
+| Structure/taste/score | `wineStructure/`, wine taste/score services | wine/taste constants |
+| Sales/contracts | `services/sales/`, Sales UI | sales/customer/contract databases |
+| Buy Market | market adapters, Buy Market UI, grape trading | `database/market/`, `database/winery/`, `database/sales/` |
+| Finance/founders | finance services, Finance UI, Founder Panel | transactions, founder field, finance constants |
+| Staff | `features/staff/`, Staff UI and activity staff seam | staff/team databases and staff constants |
+| Loans | `features/loanLender/`, finance UI injections | loan/lender databases and loan constants |
+| Research | `features/researchUpgrade/`, Research page/admin inspector | research unlock database/constants |
+| Prestige/achievements | prestige services; `features/achievements/` UI | prestige and achievement databases |
+| Player/company | `features/user/`, `features/company/`, Login/gateway/Profile/Settings | player, company, and preference databases |
+| Leaderboards | `features/leaderboards/`, leaderboard page/summaries | highscores database and atomic ranking migration |
 
-## Domain Ownership
+## Installed feature seams
 
-| Domain | Logic/features | UI | Persistence/configuration |
-|---|---|---|---|
-| Core state/tick | `src/lib/services/core/` | `src/App.tsx`, layout | `database/core/gamestateDB.ts`, time constants |
-| Activities | `src/lib/features/activities/` | activity panel, host pages, core tick | `database/activities/activityDB.ts`, activity constants |
-| Vineyard | `src/lib/services/vineyard/` | `Vineyard.tsx`, vineyard modals | `database/activities/vineyardDB.ts`, vineyard/grape constants |
-| Weather | `src/lib/features/weather/`, `constants/weatherConstants.ts` | `WeatherCenter.tsx`, Vineyard tooltips, Winepedia Weather | company-scoped weather fields in `GameState`/`gamestateDB.ts` |
-| Winery/inventory | `src/lib/services/wine/winery/`, `anchors/`, `features/` | `Winery.tsx`, Equipment, wine modals | `database/activities/inventoryDB.ts`, `database/winery/`, wine-feature constants |
-| Structure/taste/score | `src/lib/wineStructure/`, `services/wine/taste/`, `winescore/` | wine modal tabs and breakdowns | taste and wine-feature constants |
-| Orders/contracts | `services/sales/` | Sales page, order/contract tabs, assignment modal | customer/sales databases, contract constants |
-| Buy Market and grape trading | Buy Market, Grape Procurement, buyer/supplier, loyalty, sell, cooperative modules | Buy Market, sell, and Storage Vessel surfaces | `database/market/`, `database/winery/`, `database/sales/`, market/cooperative constants |
-| Forward pre-sales | `services/sales/forwardContractService.ts` | `ContractsTab.tsx` | `database/sales/contractDB.ts` |
-| Finance/founders | `services/finance/`, `features/staff/` | finance views, `FounderPanel.tsx` | transactions, staff founder field, finance/staff constants |
-| Staff | `features/staff/` | feature-owned Staff workspace; Activity staff surfaces consume the Staff UI seam | `database/core/staffDB.ts`, `database/core/teamDB.ts`, `staff.specialized_roles`, `staff.experience`, staff constants |
-| Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases, `loanCalculations.ts`, and loan constants |
-| Research | `features/researchUpgrade/`, research constants | `Research.tsx`, admin inspector | research unlock database and view services |
-| Prestige | `services/prestige/` | prestige UI | prestige-event database |
-| Achievements | `features/achievements/` | feature-owned achievement workspace | achievement database adapter |
-
-## Feature Seams
-
-| Feature | State |
+| Feature | Public responsibility |
 |---|---|
-| `loanLender` | Installed feature facade; `loanLenderFeature` owns loan/lender services, UI, activities, and public read/workflow hooks. Pure term/fee calculations live in `services/finance/loanCalculations.ts`; borrower quotes and payment summaries live in `services/finance/loanQuoteService.ts`, while repayment operations are isolated in `loanPaymentService.ts`. Lifecycle services propagate persistence failures rather than substituting stale credit, loan, or lender data. Direct service-to-database orchestration remains an intentional narrow-scope exception in the loan feature; UI does not import database adapters. |
-| `achievements` | Installed feature facade; `achievementsFeature` owns game-specific definitions, company-snapshot evaluation, company-keyed cadence, read models, and the achievement workspace. Core ticks, Research gates, and App routing use its public interface; database adapters and migrations enforce one current-shape unlock/reward per achievement scope so retries and overlapping checks are safe. Vineyard grape-tenure achievements are deferred pending persisted change history. |
-| `researchUpgrade` | Installed feature facade; `researchUpgradeFeature` owns gameplay research integration, selectors/view models, effects, and player UI rendering. Its named `adminIntegration` entry point owns the Admin-only inspector and commands. |
-| `admin` | Development-only compatible-Winemaker slice; `main.tsx` dynamically loads `adminFeature` and passes it explicitly into `App`. |
-| `boardShare` | Installed but intentionally inactive facade; `boardShareFeature` retains the isolated contract while public-company/share gameplay is deferred and is not wired into host behavior. |
-| `weather` | Always-on functional module; its barrel exports weather resolution, operation, market, vineyard, and presentation capabilities. |
-| `staff` | Installed feature facade; `staffFeature` owns feature-native staff/team records, recruitment/factory logic, teams, competency, wages/founders, presentation, and Staff UI. Persistence maps global state internally; every staff/team membership mutation uses a company-scoped atomic database operation to keep both membership representations consistent. Activities consume Staff through this one-way seam. |
-| `user` | Installed feature facade; `userFeature` owns optional player identity/session, profile, wallet, company-scoped preferences, and the Profile/Settings surfaces. Its explicit session-ending operation clears both authenticated and local-player selection. Companies may remain unowned and playable. |
-| `company` | Installed feature facade; `companyFeature.records` owns explicit company CRUD, feature-owned company records, portfolio read models, and owner-scoped aggregate statistics. `companyFeature.ui` owns the company gateway; App composes lender setup and active-company activation. Creation accepts an optional owner ID only. |
-| `leaderboards` | Installed feature facade; `leaderboardsFeature` owns feature-native record inputs/types, rankings/read models, maintenance actions, the leaderboard page, and Login’s leaderboard summary. Aggregate company scores are atomically constrained to one best value per company/type; historical wine and vineyard entries remain append-only, with `lowest_price` ordered ascending. |
+| `activitiesFeature` | Lifecycle, reads, work previews/calculators, ticks, setup, and activity UI. Activity-record persistence stays private to its database adapter. |
+| `staffFeature` | Staff/team records, recruitment, competency, wages/founders, presentation, and Staff UI. Activities consume its one-way public seam. |
+| `loanLenderFeature` | Lender setup, quote/workflow hooks, loan metrics/ticks, repayment, and finance overlays/tabs. |
+| `researchUpgradeFeature` | Research workflow, unlock checks, starting unlocks, permanent effects, Research page, and Admin inspector integration. |
+| `achievementsFeature` | Catalog, company-snapshot evaluation, cadence, read models, and achievement UI. |
+| `userFeature` | Optional player identity/session, profile, wallet, company-scoped preferences, and Profile/Settings UI. |
+| `companyFeature` | Company CRUD, owner-scoped portfolio/read models, starting-condition preview/application, company-activation lifecycle hooks, and company gateway UI. Unowned companies remain valid. |
+| `leaderboardsFeature` | Score recording, rankings/read models, maintenance, and leaderboard UI. |
+| `weather` | Always-on weather resolution, vineyard/market/operation projections, and presentation models. |
+| `admin` | Development-only host seam, dynamically loaded in Vite development. |
+| `boardShare` | Intentionally inactive contract; not wired into host behavior. |
 
-## Boundary Rules
+## Boundary rules
 
-- `*DB.ts` owns CRUD and row mapping; services own rules and orchestration.
-- UI/hooks do not import database modules directly; use service seams and shared hooks.
-- Admin-only destructive database adapters stay under `database/admin/` and are not re-exported from the general database barrel.
-- Prefer barrels such as `@/lib/constants`, `@/lib/services`, and `@/lib/database`.
-- Reusable market tuning belongs in `src/lib/constants/`; service-local constants and compatibility re-exports are not canonical.
-- Inventory persistence for market purchases, order fulfillment, and contract fulfillment routes through `inventoryService`.
-- Do not retain dead compatibility exports or add fallback aliases for renamed fields.
-- Staff primary skills remain category-derived. `specializedRoles` persists the six broad career roles and their across-skill role bonus; exact `task:<WorkCategory>` and `grape:<variety>` mastery are learned namespaced staff experience resolved by the activity work calculator and rendered by `staffPresentationService.ts`. Task XP exists for every implemented work category; grape XP is limited to validated grape-aware work. Sales gains task mastery only when a Sales work category exists.
+- `*DB.ts` owns Supabase CRUD and row mapping; services/features own rules and orchestration; React owns presentation and interaction.
+- Callers use feature/service barrels and public seams, not feature internals or direct database imports. UI/hooks do not import database modules.
+- Admin destructive adapters stay under `database/admin/` and are not exported through the general database barrel.
+- Shared market tuning belongs in `src/lib/constants/`; compatibility re-exports, wrappers, fallback aliases, and legacy schema support are not canonical.
+- Development-stage schema changes are clean cutovers: replace obsolete fields/tables and migrate all consumers together without backfills.
 
-## Current Status
+## Deferred scope
 
-- Weather is persisted weekly state/forecast plus shared bounded vineyard projection and grape-market context; the feature facade also supplies presentation models.
-- Buy Market persists generic offers and registers Grape Procurement and Storage Vessels adapters for purchase and lifecycle dispatch. All offer sources share displayed seller identity and a buyer-to-seller market relationship framework; adapters retain their own base-value, stock, and lifecycle rules. Storage Vessels has company-scoped quantity supplier stock plus globally listed canonical used assets. Used assets preserve vessel identity and history across ownership transfers, use deterministic date-window condition projection, and are bought/sold through atomic listing RPCs. Empty Vessel is a cancellable winery Maintenance activity that removes the selected vessel's filled volume, reduces the linked batch, and releases only that vessel on completion. Wine-production effects remain intentionally deferred.
-- Research gates cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Equipment and vineyard-technique tracks remain future work.
-- Founder economy is active and intentionally smaller than the archived public-company/share design; the isolated Board Share facade remains intentionally inactive and does not participate in host wiring.
-- Loan search builds offers from persisted lenders, current credit rating, assets, and economy phase. Accepted offers become activities, then active loans; seasonal processing handles payments, warnings, restructuring, and default. Board Share remains a deferred public-company reference only.
-- Completed implementation records live under `docs/superpowers/completed/`; active planning documents remain under `specs/` and `plans/`.
+Public-company/share gameplay, vessel-memory gameplay, generic player-to-player asset listings, advanced equipment/vineyard techniques, severe-weather actions, dedicated weather research/achievements, and persisted grape-change history for grape-tenure achievements are not active runtime features.
 
-## Test and Documentation Map
+## Documentation map
 
-| Area | Tests/docs |
+| Need | Document |
 |---|---|
-| Core/activity/finance | `tests/core/`, `tests/activity/`, `tests/finance/` |
-| Vineyard/weather | `tests/vineyard/`, `tests/weather/` |
-| Sales/contracts/markets | `tests/sales/` |
-| Wine/taste/aging | `tests/wine/` |
-| Research/prestige | `tests/research/`, `tests/prestige/`, `tests/user/` |
-| Current systems | `docs/AIdocs/AIDescriptions_coregame.md` |
-| Vocabulary/relationships | `CONTEXT.md`, `docs/WineSystem_VariableRelationshipMap.md` |
-| Weather implementation | `docs/superpowers/completed/2026-07-10-weather-module-redesign-design.md`, `2026-07-10-weather-module-redesign.md` |
-| Version history | `docs/versionlog.md` |
+| Vocabulary and formulas | `CONTEXT.md` |
+| Current behavior and deferred scope | `docs/AIdocs/AIDescriptions_coregame.md` |
+| Variable dependencies | `docs/WineSystem_VariableRelationshipMap.md` |
+| Historical plans | `docs/superpowers/completed/`, `docs/codexplans/completed/` |
+| Deferred designs | `docs/superpowers/deferred/`, `docs/codexplans/deferred/` |
+| Change history | `docs/versionlog.md` |

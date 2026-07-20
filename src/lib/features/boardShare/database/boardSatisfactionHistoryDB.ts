@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@/lib/database/core/supabase';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
