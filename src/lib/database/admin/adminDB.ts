@@ -45,7 +45,7 @@ export async function fullDatabaseReset(): Promise<void> {
 
   const tables = [
     'relationship_boosts', 'wine_orders', 'wine_batches', 'vineyards', 'activities',
-    'achievements', 'user_settings', 'highscores', 'prestige_events', 'transactions',
+    'achievements', 'highscores', 'prestige_events', 'transactions',
     'company_customers', 'notifications', 'companies', 'users', 'customers', 'wine_log'
   ];
   const errors: string[] = [];

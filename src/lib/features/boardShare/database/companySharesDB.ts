@@ -5,9 +5,9 @@
  * This table has a one-to-one relationship with companies.
  */
 
-import { supabase } from './supabase';
-import { Season, GameDate } from '../../types/types';
-import { toOptionalNumber, buildGameDate } from '../dbMapperUtils';
+import { supabase } from '@/lib/database/core/supabase';
+import { Season, GameDate } from '@/lib/types/types';
+import { toOptionalNumber, buildGameDate } from '@/lib/database/dbMapperUtils';
 
 const COMPANY_SHARES_TABLE = 'company_shares';
 
@@ -155,7 +155,7 @@ export async function getCompanyShares(companyId: string): Promise<CompanyShares
  */
 export async function createCompanyShares(companyId: string, sharesData: Partial<CompanySharesData>): Promise<{ success: boolean; error?: string }> {
   try {
-    const { getGameState } = await import('../../services/core/gameState');
+    const { getGameState } = await import('@/lib/services/core/gameState');
     const gameState = getGameState();
     const currentYear = gameState.currentYear || 2024;
     
@@ -261,7 +261,7 @@ export async function getYearlyShareOperations(companyId: string): Promise<{
       return { sharesIssuedThisYear: 0, sharesBoughtBackThisYear: 0 };
     }
 
-    const { getGameState } = await import('../../services/core/gameState');
+    const { getGameState } = await import('@/lib/services/core/gameState');
     const gameState = getGameState();
     const currentYear = gameState.currentYear || 2024;
 
@@ -299,7 +299,7 @@ export async function incrementYearlyShareOperations(
       return { success: false, error: 'Company shares not found' };
     }
 
-    const { getGameState } = await import('../../services/core/gameState');
+    const { getGameState } = await import('@/lib/services/core/gameState');
     const gameState = getGameState();
     const currentYear = gameState.currentYear || 2024;
 

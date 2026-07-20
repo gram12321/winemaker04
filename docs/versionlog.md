@@ -53,6 +53,7 @@ Use this structure for every new entry:
 ## Ordering
 - Newest entry goes at the top, below this guide.
 - Keep entries in reverse chronological order.
+- Versions through 0.062 are archived in `docs/versionlog_legacy.md`.
 
 ## Repository Info
 - **Owner:** gram12321
@@ -1538,68 +1539,5 @@ Use this structure for every new entry:
 
 ### Notes
 - Foundational grape suitability release; 0.064-0.066 continue UI/logic maturation on top of this base.
-
-## Version 0.062 - Finance Time Filters and Time Constants Centralization
-**Date:** 2025-11-08 | **Commit(s):** 8842b24 | **Stats:** 343 insertions(+), 96 deletions(-)
-
-### Summary
-- Added centralized time-period constants and propagated them through finance filters.
-- Improved finance and income/balance views for time-based analysis.
-- Updated loan/activity/tick utilities to align with shared time semantics.
-
-### Changes
-- **NEW FILE:** `src/lib/constants/timeConstants.ts` (14 lines) and `src/lib/constants/index.ts` (+1) - centralized time constants export.
-- `src/components/finance/FinanceView.tsx` (+209/-6), `src/components/finance/IncomeBalanceView.tsx` (+35/-20), `src/lib/services/finance/financeService.ts` (+26/-17) - finance time-filter updates.
-- `src/lib/services/finance/loanService.ts` (+11/-19), `src/lib/services/activity/workcalculators/bookkeepingWorkCalculator.ts` (+9/-7), `src/lib/services/core/gameTick.ts` (+6/-6), `src/lib/utils/utils.ts` (+17/-10), `src/components/layout/NotificationCenter.tsx` (+5/-6) - shared time behavior alignment.
-
-### Notes
-- Introduces a common time-language layer used by later finance and dashboard updates.
-
-## Version 0.061 - Quick Loan Workflow Introduction
-**Date:** 2025-11-08 | **Commit(s):** 8a0b957 | **Stats:** 231 insertions(+), 83 deletions(-)
-
-### Summary
-- Added a quick-loan flow across lender search, work calculators, and loan UI.
-- Updated loan/economy constants and lender services to support fast-loan options.
-- Applied minor schema/name-constant updates for consistency.
-
-### Changes
-- `src/lib/services/activity/activitymanagers/lenderSearchManager.ts` (+17/-16), `src/lib/services/activity/workcalculators/lenderSearchWorkCalculator.ts` (+46/-10), `src/lib/services/activity/workcalculators/takeLoanWorkCalculator.ts` (+18/-3) - quick-loan activity integration.
-- `src/lib/constants/loanConstants.ts` (+36/-12), `src/components/finance/LoansView.tsx` (+58/-3), `src/components/ui/modals/activitymodals/LenderSearchOptionsModal.tsx` (+4/-4) - quick-loan configuration and UI support.
-- `src/lib/services/finance/lenderService.ts` (+14/-6), `src/lib/services/finance/economyService.ts` (+4/-4), `src/lib/constants/economyConstants.ts` (+3/-3), `src/lib/constants/namesConstants.ts` (+9), `migrations/sync_vercel_schema.sql` (+1/-1) - supporting updates.
-
-### Notes
-- This release establishes fast-access debt tooling prior to later loan extensions/forced-loan mechanics.
-
-## Version 0.055 - Customer Generation Stabilization
-**Date:** 2025-11-08 | **Commit(s):** d1dc606 | **Stats:** 233 insertions(+), 131 deletions(-)
-
-### Summary
-- Refined customer generation behavior and improved customer-data presentation.
-- Updated related hooks/constants to support more stable customer outputs.
-
-### Changes
-- `src/lib/services/sales/createCustomer.ts` (+118/-109) - substantial customer generation logic rework.
-- `src/hooks/useCustomerData.ts` (+13/-3) and `src/components/pages/winepedia/CustomersTab.tsx` (+18/-8) - improved customer data access and display.
-- `src/lib/constants/constants.ts` (+11) - customer-related constant updates.
-
-### Notes
-- Focused customer-system correctness pass with moderate service churn.
-
----
-## Version 0.06 - Storyline Documentation Expansion
-**Date:** 2025-11-08 | **Commit(s):** 77eaf92f | **Stats:** 2,191 insertions(+), 9 deletions(-)
-
-### Summary
-- Added a large narrative documentation pack defining story background and family arcs.
-- Included reference screenshots and minor UI adjustments supporting documentation visibility.
-
-### Changes
-- **NEW FILE:** `docs/Story/STORY-BACKGROUND.md` (235 lines), **NEW FILE:** `docs/Story/The_De_Luca_Family_Italy.md` (368 lines), **NEW FILE:** `docs/Story/The_Latosha_Family_France.md` (546 lines), **NEW FILE:** `docs/Story/The_Mondavi_Family_US.md` (289 lines), **NEW FILE:** `docs/Story/The_Torres_Family_Spain.md` (293 lines), **NEW FILE:** `docs/Story/The_Weissburg_Family_Germany.md` (426 lines) - storyline corpus.
-- Added screenshots under `docs/screenshots/` including `Companyview.png`, `Loginpage.png`, `staff.png`, `vineyards.png`, and `winebalance.png`.
-- `src/components/ui/shadCN/sidebar.tsx` (+33/-8) and `src/components/ui/shadCN/tooltip.tsx` (+1/-1) - UI tweaks to support updated docs/navigation context.
-
-### Notes
-- Documentation-centric milestone with minimal gameplay code impact.
 
 For older versions see `docs/versionlog_legacy.md`.

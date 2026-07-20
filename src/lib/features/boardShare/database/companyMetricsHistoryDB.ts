@@ -1,8 +1,8 @@
-import { supabase } from './supabase';
-import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { getGameState } from '../../services/core/gameState';
-import { calculateAbsoluteWeeks } from '../../utils/utils';
-import { toOptionalNumber } from '../dbMapperUtils';
+import { supabase } from '@/lib/database/core/supabase';
+import { toOptionalNumber } from '@/lib/database/dbMapperUtils';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { getGameState } from '@/lib/services/core/gameState';
+import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 
 const COMPANY_METRICS_HISTORY_TABLE = 'company_metrics_history';
 
