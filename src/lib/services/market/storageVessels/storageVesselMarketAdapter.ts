@@ -1,4 +1,4 @@
-import { addTransaction, calculateCompanyValue } from '@/lib/services/finance/financeService';
+import { addTransaction, calculateCompanyValue, syncPersistedTransaction } from '@/lib/services/finance/financeService';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { getGameState } from '@/lib/services/core/gameState';
 import {
@@ -11,28 +11,33 @@ import {
   releaseBuyMarketOfferUnits,
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { GAME_INITIALIZATION, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_MAX_PRICE, STORAGE_VESSEL_MIN_PRICE, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER, STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
-import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
+import { calculateAsymmetricalMultiplier, deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
+import { GAME_INITIALIZATION, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
+import { getActiveStorageVesselMarketListings, purchaseUsedStorageVesselListing } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
 import {
-  getBuyGoodsSupplierPersistenceBonus,
-  getBuyGoodsSupplierRelationshipPriceMultiplier,
-  getBuyGoodsSupplierRelationships,
-  recordBuyGoodsSupplierPurchase,
-  type BuyGoodsSupplierRelationship,
-  type BuyGoodsSupplierRelationshipLevel,
-} from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
-import type { BuyMarketOfferRecord, BuyMarketPurchaseResult } from '@/lib/types/market';
-import type { StorageVessel, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
+  getBuyMarketCounterpartyKey,
+  getBuyMarketCounterpartyPersistenceBonus,
+  getBuyMarketCounterpartyPriceMultiplier,
+  getBuyMarketCounterpartyRelationships,
+  recordBuyMarketCounterpartyPurchaseForActiveCompany,
+  type BuyMarketCounterpartyRelationship,
+  type BuyMarketCounterpartyRelationshipLevel,
+} from '@/lib/services/market/buyMarketCounterpartyRelationshipService';
+import type { BuyMarketOfferRecord, BuyMarketOfferSource, BuyMarketPurchaseResult } from '@/lib/types/market';
+import type { StorageVessel, StorageVesselCleanliness, StorageVesselMarketListing, StorageVesselOfferPayload, StorageVesselOfferPriceSnapshot } from '@/lib/types/storageVessels';
+import { calculateUsedStorageVesselMarketValue, isUsedStorageVesselListingVisible, projectUsedStorageVesselCondition } from './usedStorageVesselMarketService';
+import { ensureGlobalStorageVesselSupplierListings } from './globalStorageVesselSupplierService';
+import { getStorageVesselNameBase } from './storageVesselNamingService';
 import { NotificationCategory, type Season } from '@/lib/types/types';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface StorageVesselMarketOffer {
+  kind: 'supplier' | 'used_listing';
+  source: BuyMarketOfferSource;
   id: string;
-  sellerId: string;
-  sellerName: string;
   availableUnits: number;
   basePricePerVessel: number;
   pricePerVessel: number;
@@ -42,9 +47,11 @@ export interface StorageVesselMarketOffer {
   expiresYear: number | null;
   expiresSeason: Season | null;
   expiresWeek: number | null;
-  supplierLoyalty?: BuyGoodsSupplierRelationship;
+  counterpartyRelationship?: BuyMarketCounterpartyRelationship;
   priceBreakdown: StorageVesselPriceBreakdown;
   payload: StorageVesselOfferPayload;
+  usedListing?: StorageVesselMarketListing;
+  listedVessel?: StorageVessel;
 }
 
 export interface StorageVesselPriceBreakdown extends BuyGoodsPriceBreakdown {
@@ -52,37 +59,56 @@ export interface StorageVesselPriceBreakdown extends BuyGoodsPriceBreakdown {
   qualityMultiplier: number;
   supplierBaseMultiplier: number;
   qualityScore: number;
+  cleanlinessMultiplier: number;
+  conditionMultiplier: number;
+  fillHistoryMultiplier: number;
+  ageYears: number;
+  ageMultiplier: number;
   capacityLitres: number;
   finalPricePerVessel: number;
 }
 
-export function getStorageVesselOfferRetentionChance(level: BuyGoodsSupplierRelationshipLevel): number {
-  return Math.min(1, STORAGE_VESSEL_OFFER_RETENTION_CHANCE + getBuyGoodsSupplierPersistenceBonus(level));
+export function getStorageVesselOfferRetentionChance(level: BuyMarketCounterpartyRelationshipLevel): number {
+  return Math.min(1, STORAGE_VESSEL_OFFER_RETENTION_CHANCE + getBuyMarketCounterpartyPersistenceBonus(level));
 }
 
 export function getStorageVesselPriceBreakdown(input: {
   capacityLitres: number;
+  productionYear: number;
+  currentYear: number;
   qualityScore: number;
+  cleanliness: StorageVesselCleanliness;
+  condition?: number;
+  fillHistory?: number;
   supplierBaseMultiplier: number;
   supplierRelationshipMultiplier?: number;
   companyPrestige?: number;
   effectivePricePerVessel?: number;
 }): StorageVesselPriceBreakdown {
   const capacityMultiplier = input.capacityLitres / STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES;
-  const qualityMultiplier = STORAGE_VESSEL_QUALITY_BASE_MULTIPLIER + input.qualityScore * STORAGE_VESSEL_QUALITY_SCORE_MULTIPLIER;
+  const ageYears = Math.max(0, input.currentYear - input.productionYear);
+  const ageMultiplier = STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER
+    + (1 - STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER) * Math.exp(-ageYears / STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS);
+  const qualityMultiplier = input.qualityScore * calculateAsymmetricalMultiplier(input.qualityScore);
+  const cleanlinessMultiplier = STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS[input.cleanliness];
+  const conditionMultiplier = input.condition ?? 1;
+  const fillHistoryMultiplier = 1 / (1 + (input.fillHistory ?? 0) * STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY);
   const genericBreakdown = getBuyGoodsPriceBreakdown({
     basePrice: STORAGE_VESSEL_BASE_PRICE,
-    itemMultiplier: capacityMultiplier * qualityMultiplier * input.supplierBaseMultiplier,
+    itemMultiplier: capacityMultiplier * qualityMultiplier * ageMultiplier * cleanlinessMultiplier * conditionMultiplier * fillHistoryMultiplier * input.supplierBaseMultiplier,
     supplierRelationshipMultiplier: input.supplierRelationshipMultiplier,
     companyPrestige: input.companyPrestige,
-    minimumPrice: STORAGE_VESSEL_MIN_PRICE,
-    maximumPrice: STORAGE_VESSEL_MAX_PRICE,
   });
 
   return {
     ...genericBreakdown,
     capacityMultiplier,
     qualityMultiplier,
+    cleanlinessMultiplier,
+    conditionMultiplier,
+    fillHistoryMultiplier,
+    ageYears,
+    ageMultiplier,
     supplierBaseMultiplier: input.supplierBaseMultiplier,
     qualityScore: input.qualityScore,
     capacityLitres: input.capacityLitres,
@@ -109,11 +135,14 @@ function isCurrentStorageVesselOffer(record: BuyMarketOfferRecord): record is Bu
     && isStorageVesselOfferPriceSnapshot(payload.priceSnapshot);
 }
 
-function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageVesselOfferPayload }, supplierLoyalty?: BuyGoodsSupplierRelationship): StorageVesselMarketOffer {
+function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageVesselOfferPayload }, counterpartyRelationship?: BuyMarketCounterpartyRelationship): StorageVesselMarketOffer {
   const payload = record.payload;
   const priceBreakdown = getStorageVesselPriceBreakdown({
     capacityLitres: payload.capacityLitres,
+    productionYear: payload.productionYear,
+    currentYear: getGameState().currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
     qualityScore: payload.qualityScore,
+    cleanliness: 'clean',
     supplierBaseMultiplier: payload.priceSnapshot.supplierBaseMultiplier,
     supplierRelationshipMultiplier: payload.priceSnapshot.supplierRelationshipMultiplier,
     companyPrestige: payload.priceSnapshot.companyPrestige,
@@ -121,9 +150,12 @@ function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageV
   });
 
   return {
+    kind: 'supplier',
+    source: {
+      kind: 'supplier_stock',
+      seller: { kind: 'supplier', id: record.sellerId, name: record.sellerName },
+    },
     id: record.offerId,
-    sellerId: record.sellerId,
-    sellerName: record.sellerName,
     availableUnits: record.availableUnits,
     basePricePerVessel: record.basePricePerUnit,
     pricePerVessel: record.effectivePricePerUnit,
@@ -133,9 +165,47 @@ function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageV
     expiresYear: record.expiresYear,
     expiresSeason: record.expiresSeason,
     expiresWeek: record.expiresWeek,
-    supplierLoyalty,
+    counterpartyRelationship,
     priceBreakdown,
     payload,
+  };
+}
+
+function toUsedStorageVesselOffer(listing: StorageVesselMarketListing, vessel: StorageVessel, date: { year: number; season: string; week: number }, counterpartyRelationship?: BuyMarketCounterpartyRelationship): StorageVesselMarketOffer {
+  const condition = projectUsedStorageVesselCondition(listing, vessel, date);
+  const basePrice = calculateUsedStorageVesselMarketValue(vessel, condition, date.year);
+  let source: BuyMarketOfferSource;
+  if (listing.sellerKind === 'company') {
+    const sellerCompanyId = listing.sellerCompanyId;
+    if (!sellerCompanyId) throw new Error(`Company listing ${listing.id} is missing seller company provenance.`);
+    source = {
+      kind: 'company_listing',
+      seller: { kind: 'company', id: sellerCompanyId, name: listing.sellerName, companyId: sellerCompanyId },
+    };
+  } else {
+    source = { kind: 'npc_used', seller: { kind: 'npc', id: listing.sellerCounterpartyId, name: listing.sellerName } };
+  }
+  const relationshipMultiplier = getBuyMarketCounterpartyPriceMultiplier(counterpartyRelationship?.level ?? 0);
+  const price = Number((basePrice * relationshipMultiplier).toFixed(2));
+  return {
+    kind: 'used_listing', source,
+    id: listing.id,
+    availableUnits: 1, basePricePerVessel: price, pricePerVessel: price,
+    createdYear: listing.listedYear, createdSeason: listing.listedSeason as Season, createdWeek: listing.listedWeek,
+    expiresYear: listing.retiredYear, expiresSeason: listing.retiredSeason as Season, expiresWeek: listing.retiredWeek,
+    priceBreakdown: getStorageVesselPriceBreakdown({
+      capacityLitres: vessel.capacityLitres, productionYear: vessel.productionYear, currentYear: date.year,
+      qualityScore: vessel.qualityScore, cleanliness: vessel.cleanliness, condition, fillHistory: vessel.fillHistory,
+      supplierBaseMultiplier: 1, supplierRelationshipMultiplier: relationshipMultiplier, companyPrestige: 0, effectivePricePerVessel: price,
+    }),
+    payload: {
+      vesselType: vessel.vesselType, material: vessel.material, qualityScore: vessel.qualityScore,
+      vesselName: vessel.vesselName, condition, fillHistory: vessel.fillHistory, cleanliness: vessel.cleanliness,
+      productionYear: vessel.productionYear, capacityLitres: vessel.capacityLitres,
+      priceSnapshot: { supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestige: 0 },
+    },
+    usedListing: listing, listedVessel: vessel,
+    counterpartyRelationship,
   };
 }
 
@@ -152,9 +222,9 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   if (currentOffers.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
 
   const previousOffers = currentOffers;
-  const relationships = await getBuyGoodsSupplierRelationships('storage_vessels', STORAGE_VESSEL_SUPPLIERS.map((supplier) => supplier.id));
+  const relationships = await getBuyMarketCounterpartyRelationships(STORAGE_VESSEL_SUPPLIERS.map((supplier) => ({ kind: 'supplier' as const, id: supplier.id, name: supplier.name })));
   const retainedOffers = previousOffers
-    .filter((offer) => offer.availableUnits > 0 && deterministicSeasonalVariation(`${offer.offerId}:${createdYear}:${createdSeason}:retention`, 0, 1) < getStorageVesselOfferRetentionChance(relationships[offer.sellerId]?.level ?? 0))
+    .filter((offer) => offer.availableUnits > 0 && deterministicSeasonalVariation(`${offer.offerId}:${createdYear}:${createdSeason}:retention`, 0, 1) < getStorageVesselOfferRetentionChance(relationships[`supplier:${offer.sellerId}`]?.level ?? 0))
     .slice(0, expectedOfferCount);
   const retainedIds = new Set(retainedOffers.map((offer) => offer.offerId));
   await Promise.all(retainedOffers.map((offer) => updateBuyMarketOffer(companyId, offer.offerId, {
@@ -167,23 +237,33 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   })));
 
   const companyValue = await calculateCompanyValue().catch(() => 0);
+  const generatedNameCounts = new Map<string, number>();
   const created = STORAGE_VESSEL_SUPPLIERS.flatMap((supplier) => STORAGE_VESSEL_SIZES_LITRES.map<BuyMarketOfferRecord>((capacityLitres) => {
-    const seed = `${state.currentYear}:${state.season}:${supplier.id}:${capacityLitres}`;
-    const qualityScore = Number(deterministicSeasonalVariation(`${seed}:quality`, 0.35, 0.95).toFixed(2));
-    const productionYear = (state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR) - Math.floor(deterministicSeasonalVariation(`${seed}:age`, 0, 12));
+    const seed = `${companyId}:${state.currentYear}:${state.season}:${supplier.id}:${capacityLitres}`;
+    const qualityScore = Number(deterministicSeasonalVariation(`${seed}:quality`, 0, 1).toFixed(2));
+    const ageSample = deterministicSeasonalVariation(`${seed}:age`, 0, 1);
+    // Cubic weighting makes younger casks the normal case while retaining an occasional old cask.
+    const ageYears = Math.floor(Math.pow(ageSample, 3) * (STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS + 1));
+    const productionYear = (state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR) - ageYears;
     const priceSnapshot = {
       supplierBaseMultiplier: supplier.basePriceMultiplier,
-      supplierRelationshipMultiplier: getBuyGoodsSupplierRelationshipPriceMultiplier(relationships[supplier.id]?.level ?? 0),
+      supplierRelationshipMultiplier: getBuyMarketCounterpartyPriceMultiplier(relationships[`supplier:${supplier.id}`]?.level ?? 0),
       companyPrestige: state.prestige ?? 0,
     };
     const priceBreakdown = getStorageVesselPriceBreakdown({
       capacityLitres,
+      productionYear,
+      currentYear: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
       qualityScore,
+      cleanliness: 'clean',
       ...priceSnapshot,
     });
+    const nameBase = getStorageVesselNameBase(`${companyId}:${supplier.id}:${productionYear}`, 'oak', capacityLitres);
+    const nameNumber = (generatedNameCounts.get(nameBase) ?? 0) + 1;
+    generatedNameCounts.set(nameBase, nameNumber);
     return {
       companyId,
-      offerId: `${STORAGE_VESSEL_OFFER_PREFIX}_${state.currentYear}_${state.season}_${supplier.id}_${capacityLitres}`,
+      offerId: `${STORAGE_VESSEL_OFFER_PREFIX}_${companyId}_${state.currentYear}_${state.season}_${supplier.id}_${capacityLitres}`,
       wareGroup: 'storage_vessels',
       sellerId: supplier.id, sellerName: supplier.name, originTag: 'seasonal_supplier', availableUnits: getBuyGoodsOfferAvailability(`${seed}:availability`, companyValue, state.prestige ?? 0, 1, 4),
       unit: 'vessel',
@@ -197,7 +277,11 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
       expiresYear: expires.year,
       expiresSeason: expires.season,
       expiresWeek: 1,
-      payload: { vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres, priceSnapshot },
+      payload: {
+        vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres, priceSnapshot,
+        vesselName: `${nameBase} #${nameNumber}`,
+        condition: 1, fillHistory: 0, cleanliness: 'clean',
+      },
     };
   }));
   const offersNeeded = Math.max(0, expectedOfferCount - retainedOffers.length);
@@ -210,10 +294,46 @@ export async function getStorageVesselMarketOffers(): Promise<StorageVesselMarke
   const companyId = getCurrentCompanyId();
   if (!companyId) return [];
   await ensureStorageVesselOffers(companyId);
-  const { data, error } = await getCompanyBuyMarketOffers(companyId, 'storage_vessels');
+  const state = getGameState();
+  await ensureGlobalStorageVesselSupplierListings({
+    year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
+    season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
+    week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+  });
+  const [{ data, error }, usedResult] = await Promise.all([getCompanyBuyMarketOffers(companyId, 'storage_vessels'), getActiveStorageVesselMarketListings()]);
   if (error) throw error;
-  const relationships = await getBuyGoodsSupplierRelationships('storage_vessels', data.map((offer) => offer.sellerId));
-  return data.filter((offer): offer is BuyMarketOfferRecord & { payload: StorageVesselOfferPayload } => offer.availableUnits > 0 && isCurrentStorageVesselOffer(offer)).map((offer) => toStorageVesselOffer(offer, relationships[offer.sellerId]));
+  if (usedResult.error) throw usedResult.error;
+  const date = { year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR, season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON, week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK };
+  const sourceRows = usedResult.data.map(({ listing }) => listing.sellerKind === 'company'
+    ? { kind: 'company' as const, id: listing.sellerCompanyId ?? '', companyId: listing.sellerCompanyId ?? '', name: listing.sellerName }
+    : { kind: 'npc' as const, id: listing.sellerCounterpartyId, name: listing.sellerName });
+  const relationships = await getBuyMarketCounterpartyRelationships([
+    ...data.map((offer) => ({ kind: 'supplier' as const, id: offer.sellerId, name: offer.sellerName })),
+    ...sourceRows.filter((source) => source.id),
+  ]);
+  const supplierOffers = data.filter((offer): offer is BuyMarketOfferRecord & { payload: StorageVesselOfferPayload } => offer.availableUnits > 0 && isCurrentStorageVesselOffer(offer)).map((offer) => toStorageVesselOffer(offer, relationships[`supplier:${offer.sellerId}`]));
+  const usedOffers = usedResult.data
+    .filter(({ listing }) => isUsedStorageVesselListingVisible(listing, date))
+    .map(({ listing, vessel }) => {
+      const source = listing.sellerKind === 'company' ? { kind: 'company' as const, id: listing.sellerCompanyId ?? '' } : { kind: 'npc' as const, id: listing.sellerCounterpartyId };
+      return toUsedStorageVesselOffer(listing, vessel, date, source.id ? relationships[getBuyMarketCounterpartyKey(source)] : undefined);
+    });
+  return [...supplierOffers, ...usedOffers];
+}
+
+export async function purchaseUsedStorageVesselOffer(offer: StorageVesselMarketOffer): Promise<BuyMarketPurchaseResult> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId || offer.kind !== 'used_listing' || !offer.usedListing) return { success: false, error: 'Used vessel listing not found.' };
+  const state = getGameState();
+  if ((state.money ?? 0) < offer.pricePerVessel) return { success: false, error: 'Insufficient funds.' };
+  const result = await purchaseUsedStorageVesselListing({
+    companyId, listingId: offer.usedListing.id,
+    year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR, season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON, week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+  });
+  if (result.error || !result.data?.transaction) return { success: false, error: 'This vessel is no longer available.' };
+  await syncPersistedTransaction(result.data.transaction);
+  triggerTopicUpdate('storage_vessels');
+  return { success: true };
 }
 
 export async function purchaseStorageVesselOffer(offerId: string, quantity: number): Promise<BuyMarketPurchaseResult> {
@@ -221,7 +341,10 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
   if (!companyId) return { success: false, error: 'No active company selected.' };
   const safeQuantity = Math.max(1, Math.round(quantity));
   const { data: offer, error } = await getCompanyBuyMarketOffer(companyId, offerId);
-  if (error || !offer || offer.wareGroup !== 'storage_vessels') return { success: false, error: 'Storage Vessel offer not found.' };
+  if (error || !offer || offer.wareGroup !== 'storage_vessels') {
+    const usedOffer = (await getStorageVesselMarketOffers()).find((candidate) => candidate.id === offerId && candidate.kind === 'used_listing');
+    return usedOffer ? purchaseUsedStorageVesselOffer(usedOffer) : { success: false, error: 'Storage Vessel offer not found.' };
+  }
   if (safeQuantity > offer.availableUnits) return { success: false, error: `Requested quantity exceeds available vessels (${offer.availableUnits}).` };
   const payload = offer.payload as unknown as StorageVesselOfferPayload;
 
@@ -234,6 +357,15 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON,
     year: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
   };
+  const existingVesselsResult = await getCompanyStorageVessels(companyId);
+  if (existingVesselsResult.error) return { success: false, error: 'Could not determine the next vessel name.' };
+  const vesselNameBase = getStorageVesselNameBase(`${companyId}:${offer.sellerId}:${payload.productionYear}`, payload.material, payload.capacityLitres);
+  const existingNameCount = existingVesselsResult.data.filter((vessel) =>
+    vessel.vesselName?.startsWith(`${vesselNameBase} #`)
+    && vessel.productionYear === payload.productionYear
+    && vessel.material === payload.material
+    && vessel.capacityLitres <= 500 === (payload.capacityLitres <= 500)
+  ).length;
   const { claimed, error: claimError } = await claimBuyMarketOfferUnits(companyId, offer.offerId, safeQuantity);
   if (claimError || !claimed) {
     return { success: false, error: 'Offer availability or funds changed. Please reopen the market.' };
@@ -254,17 +386,22 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     return { success: false, error: 'Insufficient funds. Please reopen the market and try again.' };
   }
 
-  const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, () => ({
+  const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, (_, index) => ({
     id: uuidv4(),
-    companyId,
+    vesselName: `${vesselNameBase} #${existingNameCount + index + 1}`,
+    ownerKind: 'company',
+    ownerCompanyId: companyId,
     vesselType: payload.vesselType,
     material: payload.material,
     qualityScore: payload.qualityScore,
+    condition: 1,
+    fillHistory: 0,
     productionYear: payload.productionYear,
     capacityLitres: payload.capacityLitres,
     acquisitionPrice: offer.effectivePricePerUnit,
     sourceOfferId: offer.offerId,
     operationalStatus: 'operational',
+    cleanliness: 'clean',
     occupancy: 'available',
     purchasedYear: date.year,
     purchasedSeason: date.season,
@@ -277,7 +414,7 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
   }
 
   try {
-    await recordBuyGoodsSupplierPurchase('storage_vessels', offer.sellerId, offer.sellerName, safeQuantity, totalCost);
+    await recordBuyMarketCounterpartyPurchaseForActiveCompany({ kind: 'supplier', id: offer.sellerId, name: offer.sellerName }, safeQuantity, totalCost);
     await notificationService.addMessage(
       `Purchased ${safeQuantity} storage vessel${safeQuantity === 1 ? '' : 's'} from ${offer.sellerName} for ${formatNumber(totalCost, { currency: true, decimals: 0 })}.`,
       'storageVesselMarketAdapter.purchaseStorageVesselOffer',
@@ -295,4 +432,25 @@ export async function refreshStorageVesselMarket(): Promise<void> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return;
   await ensureStorageVesselOffers(companyId);
+}
+
+/**
+ * Admin-only market reset for the active company. Supplier relationships and
+ * purchased inventory remain intact; only persisted storage vessel listings refresh.
+ */
+export async function recreateStorageVesselMarketOffers(): Promise<void> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId) throw new Error('No active company selected.');
+
+  const { data, error } = await getCompanyBuyMarketOffers(companyId, 'storage_vessels');
+  if (error) throw error;
+
+  const deletionResults = await Promise.all(
+    data.map((offer) => deleteBuyMarketOffer(companyId, offer.offerId)),
+  );
+  const deletionError = deletionResults.find((result) => result.error)?.error;
+  if (deletionError) throw deletionError;
+
+  await ensureStorageVesselOffers(companyId);
+  triggerTopicUpdate('storage_vessels');
 }

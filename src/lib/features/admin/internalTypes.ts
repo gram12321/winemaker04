@@ -16,6 +16,8 @@ export interface AdminDatabaseOps {
   recreateCustomers(): Promise<void>;
   clearAllAchievements(): Promise<void>;
   fullDatabaseReset(): Promise<void>;
+  clearGlobalMarket(): Promise<void>;
+  clearGlobalMarketGoods(goods: 'grapes' | 'storage_vessels'): Promise<void>;
 }
 
 export interface AdminCheatOps {
@@ -30,6 +32,7 @@ export interface AdminCheatOps {
   generateTestBottlePresaleContract(): Promise<{ success: boolean; message: string }>;
   generateTestForwardPresaleContract(): Promise<{ success: boolean; message: string }>;
   recreateBuyGrapeMarketOffers(): Promise<void>;
+  recreateStorageVesselMarketOffers(): Promise<void>;
 }
 
 export interface AdminStaffXpOps {

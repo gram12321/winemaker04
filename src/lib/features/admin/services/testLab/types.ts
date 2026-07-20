@@ -7,6 +7,7 @@ export type TestLabScenarioGroup =
   | 'Vineyard Lifecycle'
   | 'Winery Flow'
   | 'Sales Flow'
+  | 'Market Maintenance'
   | 'Finance Flow'
   | 'Research and Staff'
   | 'Achievements and Wine Log';

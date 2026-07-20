@@ -1,4 +1,4 @@
-import { completeEmptyStorageVessel, getCompanyStorageAllocationPlans, getCompanyStorageAllocations, getCompanyStorageVessels } from '@/lib/database/winery/storageVesselsDB';
+import { completeCleanStorageVessel, completeEmptyStorageVessel, getCompanyStorageAllocationPlans, getCompanyStorageAllocations, getCompanyStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { activitiesFeature } from '@/lib/features/activities';
 import { getGameState } from '@/lib/services/core/gameState';
 import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan } from '@/lib/types/storageVessels';
@@ -9,6 +9,7 @@ import { getAllWineBatches } from './inventoryService';
 import { getStorageVesselDisplayName } from './storageVesselService';
 
 const EMPTY_STORAGE_VESSEL_ACTIVITY_TYPE = 'empty_storage_vessel';
+const CLEAN_STORAGE_VESSEL_ACTIVITY_TYPE = 'clean_storage_vessel';
 
 function refreshStorageVesselViews(): void {
   triggerTopicUpdate('storage_vessels');
@@ -40,6 +41,15 @@ export function isStorageVesselEmptyingInProgress(vesselId: string): boolean {
   );
 }
 
+export function isStorageVesselCleaningInProgress(vesselId: string): boolean {
+  return (getGameState().activities ?? []).some((activity) =>
+    (activity.status === 'active' || activity.status === 'paused')
+    && activity.category === WorkCategory.MAINTENANCE
+    && activity.params.type === CLEAN_STORAGE_VESSEL_ACTIVITY_TYPE
+    && activity.params.vesselId === vesselId
+  );
+}
+
 /** Production remains paused while any vessel containing this batch is being emptied. */
 export function isBatchEmptyingInProgress(batchId: string): boolean {
   return (getGameState().activities ?? []).some((activity) =>
@@ -48,6 +58,62 @@ export function isBatchEmptyingInProgress(batchId: string): boolean {
     && activity.params.type === EMPTY_STORAGE_VESSEL_ACTIVITY_TYPE
     && activity.params.batchId === batchId
   );
+}
+
+export interface CleanStorageVesselResult {
+  success: boolean;
+  error?: string;
+  vesselName?: string;
+}
+
+async function resolveVessel(vesselId: string): Promise<{ vessel?: StorageVessel; error?: string }> {
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return { error: 'No active company selected.' };
+  const result = await getCompanyStorageVessels(companyId);
+  if (result.error) return { error: 'Could not load the vessel records. Please try again.' };
+  const vessel = result.data.find((candidate) => candidate.id === vesselId);
+  return vessel ? { vessel } : { error: 'The selected vessel no longer belongs to this company.' };
+}
+
+export async function startCleanStorageVesselActivity(vesselId: string): Promise<CleanStorageVesselResult> {
+  const resolved = await resolveVessel(vesselId);
+  if (!resolved.vessel) return { success: false, error: resolved.error };
+  const vessel = resolved.vessel;
+  const vesselName = getStorageVesselDisplayName(vessel);
+  if (vessel.operationalStatus !== 'operational') return { success: false, error: `${vesselName} is ${vessel.operationalStatus} and cannot be cleaned.` };
+  if (vessel.occupancy !== 'available') return { success: false, error: `${vesselName} must be empty before it can be cleaned.` };
+  if (vessel.cleanliness !== 'dirty') return { success: false, error: `${vesselName} is already clean.` };
+  if (isStorageVesselCleaningInProgress(vesselId) || isStorageVesselEmptyingInProgress(vesselId)) {
+    return { success: false, error: `${vesselName} already has a vessel maintenance activity in progress.` };
+  }
+
+  const work = activitiesFeature.work.calculateCleanStorageVessel(vessel.capacityLitres);
+  const activityResult = await activitiesFeature.lifecycle.createWithResult({
+    category: WorkCategory.MAINTENANCE,
+    title: `Clean Vessel - ${vesselName}`,
+    targetId: vessel.id,
+    totalWork: work.totalWork,
+    activityDetails: `Clean ${vesselName} for reuse`,
+    params: { type: CLEAN_STORAGE_VESSEL_ACTIVITY_TYPE, vesselId: vessel.id, targetName: vesselName },
+    isCancellable: true,
+  });
+  return activityResult.activityId
+    ? { success: true, vesselName }
+    : { success: false, error: activityResult.reason ?? 'Could not start the Clean Vessel activity.' };
+}
+
+export async function completeCleanStorageVesselActivity(activity: Activity): Promise<CleanStorageVesselResult> {
+  const vesselId = typeof activity.params.vesselId === 'string' ? activity.params.vesselId : null;
+  if (!vesselId) return { success: false, error: 'This Clean Vessel activity has incomplete vessel details.' };
+  const resolved = await resolveVessel(vesselId);
+  if (!resolved.vessel) return { success: false, error: resolved.error };
+  const vessel = resolved.vessel;
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return { success: false, error: 'No active company selected.' };
+  const completed = await completeCleanStorageVessel({ companyId, vesselId });
+  if (completed.error || !completed.completed) return { success: false, error: 'Could not persist the cleaned vessel state.' };
+  refreshStorageVesselViews();
+  return { success: true, vesselName: getStorageVesselDisplayName(vessel) };
 }
 
 /**

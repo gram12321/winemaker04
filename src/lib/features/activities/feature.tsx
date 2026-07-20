@@ -8,7 +8,7 @@ import { calculateHarvestWork } from './services/workcalculators/harvestingWorkC
 import { calculateLandSearchWork } from './services/workcalculators/landSearchWorkCalculator';
 import { calculateLenderSearchCost, calculateLenderSearchWork } from './services/workcalculators/lenderSearchWorkCalculator';
 import { calculateResearchCost, calculateResearchWork } from './services/workcalculators/researchWorkCalculator';
-import { calculateEmptyStorageVesselWork } from './services/workcalculators/storageVesselMaintenanceWorkCalculator';
+import { calculateCleanStorageVesselWork, calculateEmptyStorageVesselWork } from './services/workcalculators/storageVesselMaintenanceWorkCalculator';
 import { calculateTakeLoanWork } from './services/workcalculators/takeLoanWorkCalculator';
 import { DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO, getClearingTask, getTaskTypeDisplayName, isStaffSpecializationCategory, getStaffSpecializationDisplayName } from './constants/activityConstants';
 
@@ -64,6 +64,7 @@ export const activitiesFeature: ActivitiesFeature = {
     calculateLenderSearchCost,
     calculateResearch: calculateResearchWork,
     calculateResearchCost,
+    calculateCleanStorageVessel: calculateCleanStorageVesselWork,
     calculateEmptyStorageVessel: calculateEmptyStorageVesselWork,
     calculateTakeLoan: calculateTakeLoanWork,
   },

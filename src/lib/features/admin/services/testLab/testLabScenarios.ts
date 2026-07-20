@@ -198,6 +198,33 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     defaultParams: { companyName: 'Admin Test Lab Company' }
   },
   {
+    id: 'market.recreate-grape-offers',
+    title: 'Recreate Bulk Grape Offers',
+    group: 'Market Maintenance',
+    description: 'Regenerates active-company supplier offers without changing inventory or supplier loyalty.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'market.recreate-storage-vessel-offers',
+    title: 'Recreate Storage Vessel Offers',
+    group: 'Market Maintenance',
+    description: 'Regenerates active-company storage vessel offers without changing inventory or supplier loyalty.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'research.inspect-all',
+    title: 'Inspect All Research',
+    group: 'Research and Staff',
+    description: 'Opens the research inspector with prestige and prerequisite gates bypassed.',
+    mutatesData: false,
+    params: [],
+    defaultParams: {}
+  },
+  {
     id: 'finance.set-company-money',
     title: 'Set Company Money',
     group: 'Finance Flow',

@@ -4,7 +4,7 @@ import { Button, DialogFooter } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from './MarketOfferTable';
 import { MarketQuickBuyRowAction } from './MarketQuickBuyRowAction';
-import { BuyGoodsSupplierTrustPanel, getBuyGoodsSupplierTrustColor } from './BuyGoodsSupplierTrustPanel';
+import { BuyMarketCounterpartyPanel, getBuyMarketCounterpartyTrustColor } from './BuyMarketCounterpartyPanel';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
@@ -12,7 +12,7 @@ import {
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
 import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
-import { getBuyGoodsSupplierTrustPreview, type BuyGoodsSupplierRelationshipLevel } from '@/lib/services/market/buyGoods/buyGoodsSupplierRelationshipService';
+import { getBuyMarketRelationshipPreview, type BuyMarketCounterpartyRelationshipLevel } from '@/lib/services/market/buyMarketCounterpartyRelationshipService';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 import { getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
@@ -23,11 +23,13 @@ import type { WeatherState } from '@/lib/types/types';
 import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { getAvailableStorageVessels, initializeHarvestVolumeLitres } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import type { StorageVessel } from '@/lib/types/storageVessels';
+import type { BuyMarketSourceFilter } from '@/lib/types/market';
 
 type SortDirection = 'asc' | 'desc' | null;
 
 interface GrapeMarketPanelProps {
   onClose: () => void;
+  sourceFilter?: BuyMarketSourceFilter;
 }
 
 function getSeasonVolatilityIcon(season?: string): string {
@@ -121,7 +123,7 @@ function getPriceDriverSummary(priceBreakdown: ReturnType<typeof getBuyOfferPric
       * priceBreakdown.buyerSensitivityMultiplier,
     'market conditions'
   );
-  classify(priceBreakdown.supplierRelationshipMultiplier, 'supplier relationship');
+  classify(priceBreakdown.supplierRelationshipMultiplier, 'market relationship');
   classify(priceBreakdown.companyPrestigeMultiplier, 'company reputation');
   classify(priceBreakdown.statePremiumMultiplier, 'processing stage');
 
@@ -144,7 +146,7 @@ const PriceCalculationTooltip: React.FC<{
             <span>Wine potential</span><span className="text-right">×{breakdown.previewValueMultiplier.toFixed(2)}</span>
             <span>Season × economy × cycle</span><span className="text-right">×{(breakdown.seasonPriceMultiplier * breakdown.economyPriceMultiplier * breakdown.yearCyclePriceMultiplier).toFixed(2)}</span>
             <span>Volatility × sensitivity</span><span className="text-right">×{(breakdown.volatilityPriceMultiplier * breakdown.buyerSensitivityMultiplier).toFixed(2)}</span>
-            <span>Supplier relationship</span><span className="text-right">×{breakdown.supplierRelationshipMultiplier.toFixed(2)}</span>
+            <span>Market relationship</span><span className="text-right">×{breakdown.supplierRelationshipMultiplier.toFixed(2)}</span>
             <span>Company reputation</span><span className="text-right">×{breakdown.companyPrestigeMultiplier.toFixed(2)}</span>
             <span>Processing stage</span><span className="text-right">×{breakdown.statePremiumMultiplier.toFixed(2)}</span>
             <span>Market spread</span><span className="text-right">×{breakdown.marketSpreadMultiplier.toFixed(2)}</span>
@@ -160,7 +162,7 @@ const PriceCalculationTooltip: React.FC<{
   );
 };
 
-export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) => {
+export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sourceFilter = 'all' }) => {
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorByOfferId, setErrorByOfferId] = useState<Record<string, string>>({});
@@ -180,7 +182,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
     setLoading(true);
     try {
       const nextOffers = await getBuyGrapeMarketOffers();
-      setOffers(nextOffers);
+      setOffers(sourceFilter === 'global_supplier' ? [] : nextOffers);
       const vessels = await getAvailableStorageVessels();
       setAvailableVessels(vessels);
       setSelectedVesselIds([]);
@@ -189,7 +191,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sourceFilter]);
 
   React.useEffect(() => { void loadOffers(); }, [loadOffers]);
 
@@ -316,7 +318,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
 
   const trustPreview = useMemo(() => {
     if (!selectedOffer || selectedPurchaseKg <= 0) return null;
-    return getBuyGoodsSupplierTrustPreview(selectedOffer.supplierLoyalty, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
+    return getBuyMarketRelationshipPreview(selectedOffer.supplierLoyalty, selectedOffer.effectivePricePerKg * selectedPurchaseKg, companyValue, currentYear);
   }, [companyValue, currentYear, selectedOffer, selectedPurchaseKg]);
 
   const displayedOffers = useMemo(() => {
@@ -384,11 +386,11 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
               <span className="rounded border border-gray-700 px-2 py-0.5 text-[10px] text-cyan-200">{offer.weeksOnMarket}w</span>
             </UnifiedTooltip>
             <UnifiedTooltip
-              title="Supplier Trust Level"
-              content={<span className="text-xs leading-snug">Persistent trust with this supplier can improve relationship pricing and listing persistence over time.</span>}
+              title="Market Relationship"
+              content={<span className="text-xs leading-snug">A relationship with this seller can improve pricing and, for local supplier stock, listing persistence over time.</span>}
             >
-              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getBuyGoodsSupplierTrustColor((offer.supplierLoyalty?.level ?? 0) as BuyGoodsSupplierRelationshipLevel)}`}>
-                Trust {offer.supplierLoyalty?.level ?? 0}
+              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getBuyMarketCounterpartyTrustColor((offer.supplierLoyalty?.level ?? 0) as BuyMarketCounterpartyRelationshipLevel)}`}>
+                Relationship {offer.supplierLoyalty?.level ?? 0}
               </span>
             </UnifiedTooltip>
           </div>
@@ -506,8 +508,8 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
               </div>
             )}
 
-            <BuyGoodsSupplierTrustPanel
-              supplierName={selectedOffer?.supplierName}
+            <BuyMarketCounterpartyPanel
+              counterpartyName={selectedOffer?.supplierName}
               relationship={selectedOffer?.supplierLoyalty ?? null}
               companyValue={companyValue}
               currentYear={currentYear}
@@ -536,7 +538,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
                     <div className="mt-3 text-xs">
                       <UnifiedTooltip
                         title="What affects bulk price?"
-                        content={<span className="text-xs leading-snug">Wine potential, market conditions, supplier relationship, and processing stage can move the final price. Winepedia explains the usual direction of each factor without exposing the formula.</span>}
+                        content={<span className="text-xs leading-snug">Wine potential, market conditions, your relationship with the seller, and processing stage can move the final price. Winepedia explains the usual direction of each factor without exposing the formula.</span>}
                       >
                         <div className="inline-flex items-center gap-1 text-gray-400">
                           <span>Price drivers</span>
@@ -552,7 +554,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose }) =
 
                 {trustPreview && (
                   <div className="mt-2 border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-cyan-300">
-                    Trust preview: +{trustPreview.appliedPoints.toLocaleString()} points this purchase
+                    Relationship preview: +{trustPreview.appliedPoints.toLocaleString()} points this purchase
                     {trustPreview.cappedPoints > 0 ? ` (${trustPreview.rawPoints.toLocaleString()} raw, ${trustPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}
                   </div>
                 )}

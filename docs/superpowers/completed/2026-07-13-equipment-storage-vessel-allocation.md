@@ -1,6 +1,6 @@
 # Equipment and Cellar Vessel Allocation Plan
 
-**Status:** Design ready for implementation
+**Status:** Implemented. Rechecked on 2026-07-17; this document is retained as a historical implementation record.
 
 **Goal:** Make storage vessels a required, capacity-limited part of production. Every non-bottled `WineBatch` must have an active Cellar Vessel allocation before it can be created or processed. Bottled batches require no vessel and release their allocation. Add an Equipment page that can later aggregate machinery without flattening different equipment families into one generic persistence shape.
 
@@ -42,14 +42,14 @@ The plan is created before a harvest activity or market batch exists. This permi
 
 Retain `storage_vessels` as the physical-asset table. Replace its overloaded `state` field with an equipment-condition field:
 
-- `operational_status`: `operational | maintenance | retired`
+- `operational_status`: `operational | maintenance`
 
 The player-visible occupancy label is computed from allocation plans, not stored on the vessel:
 
 - **Available:** operational vessel with no reserved or active allocation.
 - **Reserved:** selected for an unfinished harvest activity.
 - **In use:** assigned to an active unbottled batch.
-- **Maintenance / Retired:** unavailable regardless of allocation capacity.
+- **Maintenance:** unavailable regardless of allocation capacity.
 
 Capacity, material, and vessel type are immutable after purchase. Acquisition price and source offer remain provenance fields.
 

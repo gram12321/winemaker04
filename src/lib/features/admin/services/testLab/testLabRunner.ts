@@ -171,6 +171,47 @@ async function runSalesOrdersScenario(
   };
 }
 
+async function runMarketMaintenanceScenario(
+  runId: string,
+  scenarioId: string,
+  warnings: string[],
+  dependencies: TestLabRunnerDependencies
+): Promise<TestLabScenarioResult> {
+  if (scenarioId === 'market.recreate-grape-offers') {
+    await dependencies.operations.recreateBuyGrapeMarketOffers();
+  } else {
+    await dependencies.operations.recreateStorageVesselMarketOffers();
+  }
+
+  return {
+    runId,
+    scenarioId,
+    status: 'passed',
+    summary: scenarioId === 'market.recreate-grape-offers'
+      ? 'Recreated bulk grape offers for the active company'
+      : 'Recreated storage vessel offers for the active company',
+    assertions: [{ name: 'Market offers recreated', passed: true }],
+    createdEntities: [],
+    warnings
+  };
+}
+
+function runResearchInspectionScenario(
+  runId: string,
+  scenarioId: string,
+  warnings: string[]
+): TestLabScenarioResult {
+  return {
+    runId,
+    scenarioId,
+    status: 'passed',
+    summary: 'Research inspector opened with gates bypassed',
+    assertions: [{ name: 'Research inspector available', passed: true }],
+    createdEntities: [],
+    warnings
+  };
+}
+
 async function runSalesContractScenario(
   runId: string,
   scenarioId: string,
@@ -415,6 +456,17 @@ export function createTestLabRunner(dependencies: TestLabRunnerDependencies) {
 
     if (scenario.id === 'regression.full-suite') {
       return await runRegressionScenario(runId, scenario.id, params, warnings, dependencies);
+    }
+
+    if (
+      scenario.id === 'market.recreate-grape-offers' ||
+      scenario.id === 'market.recreate-storage-vessel-offers'
+    ) {
+      return await runMarketMaintenanceScenario(runId, scenario.id, warnings, dependencies);
+    }
+
+    if (scenario.id === 'research.inspect-all') {
+      return runResearchInspectionScenario(runId, scenario.id, warnings);
     }
 
     if (scenario.id === 'sales.generate-orders') {

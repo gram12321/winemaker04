@@ -22,3 +22,19 @@ export function calculateEmptyStorageVesselWork(volumeLitres: number): StorageVe
     ],
   };
 }
+
+/** Calculate cellar work required to clean a vessel before it can be reused. */
+export function calculateCleanStorageVesselWork(capacityLitres: number): StorageVesselMaintenanceWorkEstimate {
+  const safeCapacityLitres = Math.max(1, capacityLitres);
+  const rate = TASK_RATES[WorkCategory.MAINTENANCE];
+  const initialWork = INITIAL_WORK[WorkCategory.MAINTENANCE];
+
+  return {
+    totalWork: calculateTotalWork(safeCapacityLitres, { rate, initialWork }),
+    factors: [
+      { label: 'Vessel capacity', value: safeCapacityLitres, unit: 'L', isPrimary: true },
+      { label: 'Cleaning rate', value: rate, unit: 'L/week' },
+      { label: 'Cellar preparation', value: initialWork, unit: 'work units' },
+    ],
+  };
+}

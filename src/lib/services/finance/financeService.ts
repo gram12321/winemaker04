@@ -35,7 +35,7 @@ export interface FinancialData {
 const transactionsCacheByCompany = new Map<string, Transaction[]>();
 const transactionsLoadPromiseByCompany = new Map<string, Promise<Transaction[]>>();
 
-interface PersistedTransactionRow {
+export interface PersistedTransactionRow {
   id: string;
   week: number;
   season: Season;

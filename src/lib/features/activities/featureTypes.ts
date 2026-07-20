@@ -69,6 +69,7 @@ export interface ActivitiesFeature {
     calculateLenderSearchCost: typeof import('./services/workcalculators/lenderSearchWorkCalculator').calculateLenderSearchCost;
     calculateResearch: typeof import('./services/workcalculators/researchWorkCalculator').calculateResearchWork;
     calculateResearchCost: typeof import('./services/workcalculators/researchWorkCalculator').calculateResearchCost;
+    calculateCleanStorageVessel: typeof import('./services/workcalculators/storageVesselMaintenanceWorkCalculator').calculateCleanStorageVesselWork;
     calculateEmptyStorageVessel: typeof import('./services/workcalculators/storageVesselMaintenanceWorkCalculator').calculateEmptyStorageVesselWork;
     calculateTakeLoan: typeof import('./services/workcalculators/takeLoanWorkCalculator').calculateTakeLoanWork;
   };

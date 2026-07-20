@@ -6,8 +6,8 @@ export interface BuyGoodsPriceInput extends Partial<BuyGoodsPriceQuoteInput> {
   itemMultiplier?: number;
   marketMultiplier?: number;
   spreadMultiplier?: number;
-  minimumPrice: number;
-  maximumPrice: number;
+  minimumPrice?: number;
+  maximumPrice?: number;
 }
 
 export interface BuyGoodsPriceBreakdown {
@@ -64,8 +64,8 @@ export function getBuyGoodsPriceBreakdown(input: BuyGoodsPriceInput): BuyGoodsPr
     companyPrestigeMultiplier,
     spreadMultiplier,
     unclampedPrice,
-    minimumPrice: input.minimumPrice,
-    maximumPrice: input.maximumPrice,
-    finalPrice: clamp(unclampedPrice, input.minimumPrice, input.maximumPrice),
+    minimumPrice: input.minimumPrice ?? 0,
+    maximumPrice: input.maximumPrice ?? Number.POSITIVE_INFINITY,
+    finalPrice: clamp(unclampedPrice, input.minimumPrice ?? 0, input.maximumPrice ?? Number.POSITIVE_INFINITY),
   };
 }

@@ -5,15 +5,20 @@ const TABLE = 'storage_vessels';
 
 interface StorageVesselRow {
   id: string;
-  company_id: string;
+  vessel_name: string | null;
+  owner_kind: StorageVessel['ownerKind'];
+  owner_company_id: string | null;
   vessel_type: StorageVessel['vesselType'];
   material: StorageVessel['material'];
   quality_score: number;
+  condition: number;
+  fill_history: number;
   production_year: number;
   capacity_litres: number;
   acquisition_price: number;
   source_offer_id: string;
   operational_status: StorageVessel['operationalStatus'];
+  cleanliness: StorageVessel['cleanliness'];
   purchased_year: number;
   purchased_season: string;
   purchased_week: number;
@@ -22,15 +27,20 @@ interface StorageVesselRow {
 function fromRow(row: StorageVesselRow): StorageVessel {
   return {
     id: row.id,
-    companyId: row.company_id,
+    vesselName: row.vessel_name ?? undefined,
+    ownerKind: row.owner_kind,
+    ownerCompanyId: row.owner_company_id ?? undefined,
     vesselType: row.vessel_type,
     material: row.material,
     qualityScore: row.quality_score,
+    condition: row.condition,
+    fillHistory: row.fill_history,
     productionYear: row.production_year,
     capacityLitres: row.capacity_litres,
     acquisitionPrice: row.acquisition_price,
     sourceOfferId: row.source_offer_id,
     operationalStatus: row.operational_status,
+    cleanliness: row.cleanliness,
     occupancy: 'available',
     purchasedYear: row.purchased_year,
     purchasedSeason: row.purchased_season,
@@ -41,15 +51,20 @@ function fromRow(row: StorageVesselRow): StorageVessel {
 function toRow(vessel: StorageVessel): StorageVesselRow {
   return {
     id: vessel.id,
-    company_id: vessel.companyId,
+    vessel_name: vessel.vesselName ?? null,
+    owner_kind: vessel.ownerKind,
+    owner_company_id: vessel.ownerCompanyId ?? null,
     vessel_type: vessel.vesselType,
     material: vessel.material,
     quality_score: vessel.qualityScore,
+    condition: vessel.condition,
+    fill_history: vessel.fillHistory,
     production_year: vessel.productionYear,
     capacity_litres: vessel.capacityLitres,
     acquisition_price: vessel.acquisitionPrice,
     source_offer_id: vessel.sourceOfferId,
     operational_status: vessel.operationalStatus,
+    cleanliness: vessel.cleanliness,
     purchased_year: vessel.purchasedYear,
     purchased_season: vessel.purchasedSeason,
     purchased_week: vessel.purchasedWeek,
@@ -134,7 +149,7 @@ function occupancyForVessel(
 
 export async function getCompanyStorageVessels(companyId: string): Promise<{ data: StorageVessel[]; error: unknown }> {
   const [{ data, error }, plansResult, allocationsResult] = await Promise.all([
-    supabase.from(TABLE).select('*').eq('company_id', companyId).order('purchased_year').order('purchased_week'),
+    supabase.from(TABLE).select('*').eq('owner_kind', 'company').eq('owner_company_id', companyId).order('purchased_year').order('purchased_week'),
     getCompanyStorageAllocationPlans(companyId),
     getCompanyStorageAllocations(companyId),
   ]);
@@ -160,7 +175,7 @@ export async function insertStorageVessels(vessels: StorageVessel[]) {
 
 export async function deleteStorageVessels(companyId: string, vesselIds: string[]) {
   if (vesselIds.length === 0) return { error: null };
-  return supabase.from(TABLE).delete().eq('company_id', companyId).in('id', vesselIds);
+  return supabase.from(TABLE).delete().eq('owner_kind', 'company').eq('owner_company_id', companyId).in('id', vesselIds);
 }
 
 export async function getCompanyStorageAllocationPlans(companyId: string): Promise<{ data: StorageVesselAllocationPlan[]; error: unknown }> {
@@ -238,9 +253,11 @@ export async function updateStorageVesselAllocationFill(companyId: string, planI
     .order('created_at');
   if (error) return { data: null, error };
   let remaining = Math.max(0, filledLitres);
+  const filledVesselIds: string[] = [];
   const rows = (data ?? []) as unknown as AllocationRow[];
   for (const row of rows) {
     const fill = Math.min(row.assigned_capacity_litres, remaining);
+    if (fill > 0) filledVesselIds.push(row.vessel_id);
     const result = await supabase
       .from('storage_vessel_allocations')
       .update({ filled_litres: fill })
@@ -248,6 +265,17 @@ export async function updateStorageVesselAllocationFill(companyId: string, planI
       .eq('id', row.id);
     if (result.error) return { data: null, error: result.error };
     remaining -= fill;
+  }
+  if (filledLitres > 0) {
+    if (filledVesselIds.length > 0) {
+      const dirtyResult = await supabase
+        .from(TABLE)
+        .update({ cleanliness: 'dirty' })
+        .eq('owner_kind', 'company')
+        .eq('owner_company_id', companyId)
+        .in('id', filledVesselIds);
+      if (dirtyResult.error) return { data: null, error: dirtyResult.error };
+    }
   }
   return { data: rows.length, error: null };
 }
@@ -304,6 +332,14 @@ export async function completeEmptyStorageVessel(input: {
     p_released_year: input.releasedYear,
     p_released_season: input.releasedSeason,
     p_released_week: input.releasedWeek,
+  });
+  return { completed: Boolean(data), error };
+}
+
+export async function completeCleanStorageVessel(input: { companyId: string; vesselId: string }) {
+  const { data, error } = await supabase.rpc('complete_clean_storage_vessel', {
+    p_company_id: input.companyId,
+    p_vessel_id: input.vesselId,
   });
   return { completed: Boolean(data), error };
 }

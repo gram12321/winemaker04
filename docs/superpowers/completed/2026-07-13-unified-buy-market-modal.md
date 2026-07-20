@@ -1,5 +1,7 @@
 # Unified Buy Market Modal Implementation Plan
 
+**Status:** Implemented. Rechecked on 2026-07-17; this document is retained as a historical implementation record.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the separate grape and storage-vessel dialogs with one Buy Market dialog driven by registered market-domain adapters.

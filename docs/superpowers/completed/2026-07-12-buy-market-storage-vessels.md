@@ -1,6 +1,6 @@
 # Buy Market and Storage Vessels Implementation Plan
 
-Status: Active pending mainline implementation. Code-checked on 2026-07-14: current `main` still uses the grape-specific buy-market persistence/service path and has no Storage Vessel runtime. A separate development branch contains later storage-market work, but it is not part of this mainline review.
+Status: Implemented. Rechecked on 2026-07-17: `main` contains the generic Buy Market, Grape Procurement and Storage Vessels adapters, individual vessel ownership, and the shared modal described here. This checklist is retained as a historical implementation record.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

@@ -1,7 +1,8 @@
 import React from 'react';
 import {
   getStoredVineyards,
-  recreateBuyGrapeMarketOffers
+  recreateBuyGrapeMarketOffers,
+  recreateStorageVesselMarketOffers
 } from '@/lib/services';
 import { activitiesFeature } from '@/lib/features/activities';
 import { userFeature } from '@/lib/features/user';
@@ -16,6 +17,8 @@ import {
   adminClearAllCompanies,
   adminClearAllCompaniesAndUsers,
   adminClearAllHighscores,
+  adminClearGlobalMarket,
+  adminClearGlobalMarketGoods,
   adminClearAllUsers,
   adminClearCompanyValueHighscores,
   adminClearCompanyValuePerWeekHighscores,
@@ -64,7 +67,9 @@ const database: AdminDatabaseOps = {
   clearAllCompaniesAndUsers: adminClearAllCompaniesAndUsers,
   recreateCustomers: adminRecreateCustomers,
   clearAllAchievements: adminClearAllAchievements,
-  fullDatabaseReset: adminFullDatabaseReset
+  fullDatabaseReset: adminFullDatabaseReset,
+  clearGlobalMarket: adminClearGlobalMarket,
+  clearGlobalMarketGoods: adminClearGlobalMarketGoods,
 };
 
 const cheats: AdminCheatOps = {
@@ -78,7 +83,8 @@ const cheats: AdminCheatOps = {
   generateTestContract: adminGenerateTestContract,
   generateTestBottlePresaleContract: adminGenerateTestBottlePresaleContract,
   generateTestForwardPresaleContract: adminGenerateTestForwardPresaleContract,
-  recreateBuyGrapeMarketOffers
+  recreateBuyGrapeMarketOffers,
+  recreateStorageVesselMarketOffers
 };
 
 const testLabOperations = { ...cheats, setStaffXP: adminSetStaffXP };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui';
 import { BUY_MARKET_DOMAINS } from '@/lib/services/market/buyMarketDomainRegistry';
-import type { BuyMarketWareGroup } from '@/lib/types/market';
+import type { BuyMarketSourceFilter, BuyMarketWareGroup } from '@/lib/types/market';
 import { GrapeMarketPanel } from './GrapeMarketPanel';
 import { StorageVesselMarketPanel } from './StorageVesselMarketPanel';
 
@@ -11,16 +11,20 @@ interface BuyMarketModalProps {
   initialMarket?: BuyMarketWareGroup;
 }
 
-const MARKET_PANELS: Record<BuyMarketWareGroup, React.ComponentType<{ onClose: () => void }>> = {
+const MARKET_PANELS: Record<BuyMarketWareGroup, React.ComponentType<{ onClose: () => void; sourceFilter: BuyMarketSourceFilter }>> = {
   grapes: GrapeMarketPanel,
   storage_vessels: StorageVesselMarketPanel,
 };
 
 const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose, initialMarket = 'grapes' }) => {
   const [activeDomain, setActiveDomain] = useState<BuyMarketWareGroup>(initialMarket);
+  const [sourceFilter, setSourceFilter] = useState<BuyMarketSourceFilter>('all');
 
   useEffect(() => {
-    if (isOpen) setActiveDomain(initialMarket);
+    if (isOpen) {
+      setActiveDomain(initialMarket);
+      setSourceFilter('all');
+    }
   }, [initialMarket, isOpen]);
 
   const ActivePanel = MARKET_PANELS[activeDomain];
@@ -44,7 +48,24 @@ const BuyMarketModal: React.FC<BuyMarketModalProps> = ({ isOpen, onClose, initia
         </Button>)}
       </div>
 
-      <ActivePanel key={activeDomain} onClose={onClose} />
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-700 pb-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Market source</span>
+        {([
+          ['all', 'All sources'],
+          ['local_supplier', 'Local supplier'],
+          ['global_supplier', 'Global suppliers'],
+        ] as const).map(([filter, label]) => <Button
+          key={filter}
+          size="sm"
+          variant={sourceFilter === filter ? 'default' : 'outline'}
+          className={sourceFilter === filter ? 'bg-cyan-700 hover:bg-cyan-600' : 'border-gray-600 bg-gray-800 text-white hover:bg-gray-700 hover:text-white'}
+          onClick={() => setSourceFilter(filter)}
+        >
+          {label}
+        </Button>)}
+      </div>
+
+      <ActivePanel key={`${activeDomain}:${sourceFilter}`} onClose={onClose} sourceFilter={sourceFilter} />
     </DialogContent>
   </Dialog>;
 };
