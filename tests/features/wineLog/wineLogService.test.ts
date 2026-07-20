@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WineBatch } from '@/lib/types/types';
+import type { Vineyard, WineBatch, WineLogEntry } from '@/lib/types/types';
 import { NEUTRAL_WINE_ANCHORS } from '@/lib/services/wine/anchors/wineAnchorService';
 
 vi.mock('@/lib/utils/companyUtils', () => ({
@@ -29,7 +29,7 @@ vi.mock('@/lib/database', () => ({
 }));
 
 const { insertWineLogEntry } = await import('@/lib/database');
-const { recordBottledWine } = await import('@/lib/features/wineLog/services/wineLogService');
+const { recordBottledWine, calculateAllVineyardAnalytics } = await import('@/lib/features/wineLog/services/wineLogService');
 
 const mockedInsertWineLogEntry = vi.mocked(insertWineLogEntry);
 const mockedSubmitWineHighscores = leaderboardMocks.submitWineHighscores;
@@ -104,5 +104,37 @@ describe('recordBottledWine', () => {
         wineScore: 0.75
       })
     );
+  });
+});
+
+describe('calculateAllVineyardAnalytics', () => {
+  it('shares rankings across producing vineyards', () => {
+    const vineyard = (id: string, hectares: number) => ({ id, hectares } as Vineyard);
+    const entry = (vineyardId: string, score: number, price: number): WineLogEntry => ({
+      id: `${vineyardId}-${score}`,
+      vineyardId,
+      vineyardName: vineyardId,
+      grape: 'Pinot Noir',
+      vintage: 2026,
+      quantity: 100,
+      tasteQualityIndex: score,
+      landValueModifier: 0.5,
+      structureIndex: score,
+      wineScore: score,
+      characteristics: {} as WineLogEntry['characteristics'],
+      estimatedPrice: price,
+      harvestDate: { week: 1, season: 'Fall', year: 2026 },
+      bottledDate: { week: 8, season: 'Winter', year: 2026 },
+    });
+    const vineyards = [vineyard('a', 1), vineyard('b', 1)];
+    const groups = {
+      a: [entry('a', 0.6, 20)],
+      b: [entry('b', 0.8, 40)],
+    };
+
+    const analytics = calculateAllVineyardAnalytics(vineyards, groups, []);
+
+    expect(analytics.a).toMatchObject({ scoreRanking: 2, priceRanking: 2, roiRanking: 2, totalVineyards: 2 });
+    expect(analytics.b).toMatchObject({ scoreRanking: 1, priceRanking: 1, roiRanking: 1, totalVineyards: 2 });
   });
 });

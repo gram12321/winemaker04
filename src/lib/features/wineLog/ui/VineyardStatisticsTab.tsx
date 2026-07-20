@@ -1,10 +1,10 @@
 import React from 'react';
-import { WineLogEntry, WineBatch, Vineyard } from '@/lib/types/types';
+import type { WineLogEntry, WineBatch, Vineyard } from '@/lib/types/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from '@/components/ui';
 import { Wine, TrendingUp, Award, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
 import { getColorClass, formatNumber, formatPercent, getQualityCategory } from '@/lib/utils/utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
-import { calculateVineyardAnalytics } from '../services/wineLogService';
+import { calculateAllVineyardAnalytics } from '../services/wineLogService';
 
 interface VineyardStatisticsTabProps {
   vineyards: Vineyard[];
@@ -17,6 +17,11 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
   vineyardGroups,
   allBatches
 }) => {
+  const analyticsByVineyard = React.useMemo(
+    () => calculateAllVineyardAnalytics(vineyards, vineyardGroups, allBatches),
+    [vineyards, vineyardGroups, allBatches],
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {vineyards.map((vineyard) => {
@@ -25,14 +30,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
         
         if (!hasProduction) return null;
 
-        // Calculate all analytics using service layer
-        const analytics = calculateVineyardAnalytics(
-          vineyard.id,
-          vineyardEntries,
-          vineyards,
-          vineyardGroups,
-          allBatches
-        );
+        const analytics = analyticsByVineyard[vineyard.id];
 
         return (
           <Card key={vineyard.id}>

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { getAllVineyards, getAllWineBatches } from '@/lib/services';
 import { getWineLogEntries } from '../services/wineLogService';
-import { WineLogEntry, WineBatch } from '@/lib/types/types';
+import type { WineLogEntry, WineBatch } from '@/lib/types/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineModal } from '@/components/ui';
 import { Wine, Award, BarChart3 } from 'lucide-react';
 import { getQualityCategory, getColorClass, formatNumber } from '@/lib/utils/utils';
@@ -10,14 +10,14 @@ import { CompanyProps } from '@/lib/types/UItypes';
 import ProductionHistoryTab from './ProductionHistoryTab';
 import VineyardStatisticsTab from './VineyardStatisticsTab';
 
-interface WineLogProps extends CompanyProps {
-  // Inherits currentCompany from CompanyProps
-}
+const PAGE_SIZE = 20;
 
-export function WineLog({ currentCompany }: WineLogProps) {
+const batchLookupKey = (batch: Pick<WineBatch, 'vineyardId' | 'grape' | 'harvestStartDate'>) =>
+  `${batch.vineyardId}:${batch.grape}:${batch.harvestStartDate.year}`;
+
+export function WineLog({ currentCompany }: CompanyProps) {
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
   const [page, setPage] = useState<number>(1);
-  const pageSize = 20;
   
   // Wine modal state
   const [wineModalOpen, setWineModalOpen] = useState(false);
@@ -40,25 +40,30 @@ export function WineLog({ currentCompany }: WineLogProps) {
   );
 
   const paginatedWineLog = React.useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredWineLog.slice(start, start + pageSize);
-  }, [filteredWineLog, page, pageSize]);
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredWineLog.slice(start, start + PAGE_SIZE);
+  }, [filteredWineLog, page]);
 
   React.useEffect(() => {
     setPage(1);
   }, [selectedVineyard]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredWineLog.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredWineLog.length / PAGE_SIZE));
+
+  const currentBatchByWine = React.useMemo(() => {
+    const batches = new Map<string, WineBatch>();
+    allBatches.forEach(batch => {
+      const key = batchLookupKey(batch);
+      if (!batches.has(key)) batches.set(key, batch);
+    });
+    return batches;
+  }, [allBatches]);
 
   
   // Find corresponding wine batch for a log entry (if still exists)
   const findCorrespondingBatch = useCallback((entry: WineLogEntry): WineBatch | undefined => {
-    return allBatches.find(batch => 
-      batch.vineyardId === entry.vineyardId &&
-      batch.grape === entry.grape &&
-      batch.harvestStartDate.year === entry.vintage
-    );
-  }, [allBatches]);
+    return currentBatchByWine.get(`${entry.vineyardId}:${entry.grape}:${entry.vintage}`);
+  }, [currentBatchByWine]);
   
   // Handle opening wine modal
   const handleWineDetailsClick = useCallback((entry: WineLogEntry) => {
@@ -232,7 +237,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
             selectedVineyard={selectedVineyard}
             vineyards={vineyards}
             page={page}
-            pageSize={pageSize}
+            pageSize={PAGE_SIZE}
             totalPages={totalPages}
             setPage={setPage}
             findCorrespondingBatch={findCorrespondingBatch}
