@@ -6,7 +6,6 @@ import Winery from './components/pages/Winery';
 import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
 import { ResearchPage } from './components/pages/Research';
-import { StaffPage } from './components/pages/Staff';
 import type { AdminFeature } from '@/lib/features/admin';
 import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia.tsx';
@@ -26,6 +25,7 @@ import { companyFeature, type CompanyCreateResult } from '@/lib/features/company
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { achievementsFeature } from '@/lib/features/achievements';
 import { userFeature } from '@/lib/features/user';
+import { staffFeature } from '@/lib/features/staff';
 import { Analytics } from '@vercel/analytics/react';
 
 interface AppProps {
@@ -183,7 +183,7 @@ function App({ adminFeature }: AppProps) {
       case 'research':
         return <ResearchPage />;
       case 'staff':
-        return <StaffPage title="Staff Management" />;
+        return staffFeature.ui.renderWorkspace({ title: 'Staff Management', activity: activitiesFeature });
       case 'profile':
         return userFeature.ui.renderProfilePage({
           currentCompany,

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types/types';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { formatNumber, getFlagIcon, getColorClass, setModalMinimized } from '@/lib/utils';
-import { getWageColorClass } from '@/lib/services';
-import { Button, Badge, StaffSkillBarsList, WarningModal } from '@/components/ui';
+import { staffFeature } from '@/lib/features/staff';
+import { Button, Badge, WarningModal } from '@/components/ui';
 import { startHiringProcess, clearPendingCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
 import { X, Minimize2 } from 'lucide-react';
 
@@ -222,7 +222,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                   {/* Skills */}
                   <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                     <h4 className="text-sm font-medium text-white mb-4">Skills</h4>
-                    <StaffSkillBarsList staff={selectedCandidate} />
+                    {staffFeature.ui.renderSkillBars({ staff: selectedCandidate })}
                     <p className="text-xs text-gray-400 mt-3">
                       Skills are randomly generated based on the skill level. Higher skill level means better overall skills.
                     </p>
@@ -232,7 +232,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                   <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                     <h4 className="text-sm font-medium text-white mb-4">Weekly Wage</h4>
                     <div className="bg-green-600 rounded-lg p-4 text-center">
-                      <div className={`text-3xl font-bold ${getWageColorClass(selectedCandidate.wage, 'weekly')}`}>
+                      <div className={`text-3xl font-bold ${staffFeature.wages.getColorClass(selectedCandidate.wage, 'weekly')}`}>
                         {formatNumber(selectedCandidate.wage, { currency: true })}
                       </div>
                       <div className="text-sm text-green-100 mt-2">

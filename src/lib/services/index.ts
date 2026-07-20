@@ -5,15 +5,11 @@ export * from './core/gameTick';
 export * from './core/startingConditionsService';
 
 // User services
-export * from './user/staffService';
-export * from './user/staffPresentationService';
-export * from './user/teamService';
 export * from './user/wineLogService';
 
 // Finance services
 export * from './finance/economyService';
 export * from './finance/financeService';
-export * from './finance/wageService';
 
 
 // Vineyard services

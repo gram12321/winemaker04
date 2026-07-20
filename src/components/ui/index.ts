@@ -26,7 +26,6 @@ export * from './components/landValueModifierBar';
 export * from './components/StructureIndexBreakdown';
 export * from './components/landValueModifierBreakdown';
 export * from './components/CharacteristicSlider';
-export * from './components/StaffSkillBar';
 export * from './components/FeatureDisplay';
 export * from './components/VineyardStatusBadge';
 export * from './components/WineTasteProfilePanel';
@@ -44,7 +43,6 @@ export * from './modals/UImodals/StartingConditionsModal';
 export { default as WineModal } from './modals/UImodals/wineModal';
 export { default as SellGrapesModal } from './modals/activitymodals/SellGrapesModal';
 export { default as BuyMarketModal } from './market/BuyMarketModal';
-export { default as StaffModal } from './modals/UImodals/StaffModal';
 export { default as VineyardModal } from './modals/UImodals/vineyardModal';
 export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
 

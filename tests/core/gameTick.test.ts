@@ -106,6 +106,16 @@ vi.mock('@/lib/features/activities', () => ({
   },
 }));
 
+vi.mock('@/lib/features/staff', () => ({
+  staffFeature: {
+    records: { getAll: mocks.getAllStaff },
+    wages: {
+      processSeasonal: mocks.processSeasonalWages,
+      processFounderDistributions: mocks.processYearlyFounderDistributions,
+    },
+  },
+}));
+
 vi.mock('@/lib/services', () => ({
   getGameState: mocks.getGameState,
   updateGameState: mocks.updateGameState,

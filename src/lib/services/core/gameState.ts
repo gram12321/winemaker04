@@ -7,8 +7,7 @@ import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyVa
 import { companyFeature } from '@/lib/features/company';
 import { notifyCompanyActivated } from './companyLifecycle';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
-import { initializeStaffSystem } from '../user/staffService';
-import { initializeTeamsSystem } from '../user/teamService';
+import { staffFeature } from '@/lib/features/staff';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { initializeEconomyPhase } from '../finance/economyService';
 import { resolveSeasonalWeatherForecast, resolveWeatherWeek } from '@/lib/features/weather';
@@ -285,17 +284,12 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   
   // Initialize staff system for this company
   try {
-    await initializeStaffSystem();
+    await staffFeature.setup.initialize();
   } catch (error) {
     console.error('Failed to initialize staff system:', error);
   }
   
   // Initialize teams system for this company
-  try {
-    await initializeTeamsSystem();
-  } catch (error) {
-    console.error('Failed to initialize teams system:', error);
-  }
   
   // Trigger a final game update to ensure all components are synchronized
   triggerGameUpdate();

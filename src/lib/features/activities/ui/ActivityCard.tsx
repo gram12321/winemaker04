@@ -8,7 +8,8 @@ import { StaffAssignmentModal } from '@/lib/features/activities/ui/modals/StaffA
 import { formatNumber } from '@/lib/utils/utils';
 import { getSkillColor } from '@/lib/utils/colorMapping';
 import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
-import { getTeamForCategory } from '@/lib/services';
+import { staffFeature } from '@/lib/features/staff';
+import { useGameState } from '@/hooks/useGameState';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -45,6 +46,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   dragListeners
 }) => {
   const [showStaffModal, setShowStaffModal] = useState(false);
+  const { teams = [] } = useGameState();
   
   const categoryInfo = WORK_CATEGORY_INFO[activity.category];
   const isPaused = activity.status === 'paused';
@@ -60,7 +62,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   const assignedStaffCount = Array.isArray(assignedStaffIds) ? assignedStaffIds.length : 0;
   
   // Get the team that auto-assigns to this activity
-  const defaultTeam = getTeamForCategory(activity.category);
+  const defaultTeam = staffFeature.teams.getForCategory(teams, activity.category);
   const teamMemberCount = defaultTeam?.memberIds.length || 0;
 
   return (

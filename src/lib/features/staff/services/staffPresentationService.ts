@@ -1,5 +1,4 @@
-import type { Staff } from '@/lib/types/types';
-import { activitiesFeature } from '@/lib/features/activities';
+import { WorkCategory, type Staff } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
 
 export interface StaffExperienceDisplayItem {
@@ -21,9 +20,15 @@ function formatExperienceLabel(value: string): string {
 }
 
 function formatTaskMasteryLabel(value: string): string {
-  return activitiesFeature.catalog.isStaffSpecializationCategory(value)
-    ? activitiesFeature.catalog.getStaffSpecializationDisplayName(value)
-    : value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, character => character.toUpperCase());
+  if (!Object.values(WorkCategory).includes(value as WorkCategory)) {
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, character => character.toUpperCase());
+  }
+
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, character => character.toUpperCase())
+    .replace('And', '&');
 }
 
 /** Converts namespaced persisted XP into display-ready, normalized models. */

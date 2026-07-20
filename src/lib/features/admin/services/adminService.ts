@@ -10,7 +10,7 @@ import { userFeature } from '@/lib/features/user';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 import { companyFeature } from '@/lib/features/company';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
-import { awardExperience, getAllStaff } from '@/lib/services/user/staffService';
+import { staffFeature } from '@/lib/features/staff';
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
 
@@ -26,7 +26,7 @@ export async function adminSetStaffXP(
   amount: number
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const allStaff = await getAllStaff();
+    const allStaff = await staffFeature.records.getAll();
     const staff = allStaff.find(s => s.id === staffId);
 
     if (!staff) {
@@ -40,7 +40,7 @@ export async function adminSetStaffXP(
     const difference = amount - currentXP;
 
     // Use awardExperience to set the XP (by awarding the difference)
-    await awardExperience(staffId, difference, [category]);
+    await staffFeature.competency.awardExperience(staffId, difference, [category]);
 
     return {
       success: true,

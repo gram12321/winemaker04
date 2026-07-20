@@ -39,7 +39,7 @@ flowchart LR
 | Markets | Wine/grape state, economy, weather, loyalty, research | Orders, contracts, grape prices, Buy Market offers, purchases, revenue |
 | Storage vessels | Buy Market cask suppliers, allocation plans, Empty Vessel Maintenance activities | Individually owned cellar assets from rotating supplier offers, with capacity and normalized quality; Empty Vessel uses the dedicated Maintenance staff skill/team, removes the selected allocation's filled volume, and releases only that vessel; future explicit winery/vineyard effect inputs |
 | Progression | Sales, scores, assets, research | Prestige, achievements, highscores, gates; aggregate company boards retain one atomic best entry while wine/vineyard boards preserve historical bottling records |
-| Staff competency | Category-derived primary skill and broad-skill XP; persisted career role; learned exact task mastery; learned grape mastery | Activity work allocation, staff previews, role wage premium |
+| Staff competency | `staffFeature`: category-derived primary skill and broad-skill XP; persisted career role; learned exact task mastery; learned grape mastery | Activity work allocation, staff previews, role wage premium |
 
 ## Invariants
 

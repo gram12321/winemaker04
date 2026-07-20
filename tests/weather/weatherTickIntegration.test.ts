@@ -29,8 +29,9 @@ vi.mock('@/lib/services/prestige/prestigeService', () => ({
   updateCompanyValuePrestige: vi.fn(async () => undefined),
 }));
 vi.mock('@/lib/features/company', () => ({ companyFeature: { records: { update: vi.fn(async () => undefined) } } }));
-vi.mock('@/lib/services/user/staffService', () => ({ initializeStaffSystem: vi.fn(async () => undefined) }));
-vi.mock('@/lib/services/user/teamService', () => ({ initializeTeamsSystem: vi.fn(async () => undefined) }));
+vi.mock('@/lib/features/staff', () => ({
+  staffFeature: { setup: { initialize: vi.fn(async () => undefined) } }
+}));
 vi.mock('@/lib/services/finance/economyService', () => ({ initializeEconomyPhase: vi.fn(() => 'Stable') }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerGameUpdate: vi.fn() }));
 

@@ -19,7 +19,7 @@ export type UnlockType =
       | 'total_vineyard_hectares'  // Unlocks higher total owned vineyard hectares cap
       | 'vineyard_count'           // Unlocks higher total vineyard count cap
       | 'fermentation_technology'   // Unlocks a fermentation technology/method (enforce in FermentationOptionsModal)
-      | 'staff_limit'              // Unlocks higher staff headcount cap (enforced in HireStaffModal)
+      | 'staff_limit'              // Unlocks higher staff headcount cap (enforced by Staff recruitment workflows)
       | 'wine_feature'             // Unlocks a wine feature capability (enforce in wine feature activation)
       | 'contract_type'            // Unlocks customer contract types (enforced in contract generation)
       | 'grape_buyer_slots'        // Adds seasonal grape buyer slots in market generation

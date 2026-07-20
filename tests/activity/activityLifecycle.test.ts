@@ -160,8 +160,15 @@ vi.mock('@/lib/services/core/gameState', () => ({
   getGameState: mocks.getGameState
 }));
 
-vi.mock('@/lib/services/user/staffService', () => ({
-  awardExperience: mocks.awardExperience
+vi.mock('@/lib/features/staff', () => ({
+  staffFeature: {
+    teams: { getForCategory: mocks.getTeamForCategory },
+    competency: {
+      awardExperience: mocks.awardExperience,
+      calculateEffectiveSkill: (baseSkill: number) => baseSkill,
+    },
+    wages: { getDistinctRoleSkillGroupCount: () => 0 },
+  },
 }));
 
 vi.mock('@/hooks/useGameUpdates', () => ({

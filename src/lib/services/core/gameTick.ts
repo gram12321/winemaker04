@@ -1,5 +1,6 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, processYearlyFounderDistributions, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, processWeeklyFeatureRisks, processWeeklyFermentation, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { staffFeature } from '@/lib/features/staff';
 import { activitiesFeature } from '@/lib/features/activities';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
@@ -177,8 +178,8 @@ const onNewYear = async (_previousYear: number, _newYear: number): Promise<void>
 
   // Process Founder Return distributions for the year that just ended
   try {
-    const staff = await getAllStaff();
-    await processYearlyFounderDistributions(staff, _previousYear);
+    const staff = await staffFeature.records.getAll();
+    await staffFeature.wages.processFounderDistributions(staff, _previousYear);
   } catch (error) {
     console.error('Error processing yearly founder distributions:', error);
   }
@@ -312,8 +313,8 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     // Process wages synchronously if we need to capture the notification
     if (suppressWageNotification) {
       try {
-        const staff = await getAllStaff();
-        wageMessage = await processSeasonalWages(staff, true);
+        const staff = await staffFeature.records.getAll();
+        wageMessage = await staffFeature.wages.processSeasonal(staff, true);
       } catch (error) {
         console.warn('Error during seasonal wage processing:', error);
       }
@@ -321,8 +322,8 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       weeklyTasks.push(
         (async () => {
           try {
-            const staff = await getAllStaff();
-            await processSeasonalWages(staff, false);
+            const staff = await staffFeature.records.getAll();
+            await staffFeature.wages.processSeasonal(staff, false);
           } catch (error) {
             console.warn('Error during seasonal wage processing:', error);
           }

@@ -6,11 +6,12 @@ import { Activity, Staff } from '@/lib/types/types';
 import { calculateActivityStaffWorkPreview, getActivityStaffWorkContext, type ActivityStaffWorkContext } from '../../services/activityWorkPreviewService';
 import { getRelevantSkillKey, getRelevantSkillName, getStaffContributionBreakdown } from '../../services/workcalculators/workCalculator';
 import { activitiesFeature } from '@/lib/features/activities';
-import { getTeamForCategory, notificationService } from '@/lib/services';
+import { notificationService } from '@/lib/services';
+import { staffFeature } from '@/lib/features/staff';
 import { NotificationCategory } from '@/lib/types/types';
 import { formatNumber, getFlagIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
-import { Button, StaffSkillBarsList } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useGameState } from '@/hooks/useGameState';
 
 interface StaffAssignmentModalProps {
@@ -113,17 +114,13 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   const relevantSkillKey = getRelevantSkillKey(activity.category);
 
   // Get the team that auto-assigns to this activity
-  const defaultTeam = getTeamForCategory(activity.category);
+  const defaultTeam = staffFeature.teams.getForCategory(gameState.teams || [], activity.category);
   const teamMemberCount = defaultTeam?.memberIds.length || 0;
 
   // Render skill bars for a staff member (reusable list component)
   const renderSkillBars = (staff: Staff) => (
     <div className="w-full sm:w-60">
-      <StaffSkillBarsList
-        staff={staff}
-        relevantSkill={relevantSkillKey}
-        taskCountMap={staffTaskCounts}
-      />
+      {staffFeature.ui.renderSkillBars({ staff, relevantSkill: relevantSkillKey, taskCountMap: staffTaskCounts })}
     </div>
   );
 

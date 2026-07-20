@@ -34,7 +34,7 @@ vi.mock('@/components/pages/Winery', () => ({ default: () => createElement('div'
 vi.mock('@/components/pages/Sales', () => ({ default: () => createElement('div', null, 'Sales') }));
 vi.mock('@/components/pages/Finance', () => ({ default: () => createElement('div', null, 'Finance') }));
 vi.mock('@/components/pages/Research', () => ({ ResearchPage: () => createElement('div', null, 'Research') }));
-vi.mock('@/components/pages/Staff', () => ({ StaffPage: () => createElement('div', null, 'Staff') }));
+vi.mock('@/lib/features/staff', () => ({ staffFeature: { ui: { renderWorkspace: () => createElement('div', null, 'Staff') } } }));
 vi.mock('@/components/pages/Profile', () => ({ Profile: () => createElement('div', null, 'Profile') }));
 vi.mock('@/components/pages/Settings', () => ({ Settings: () => createElement('div', null, 'Settings') }));
 vi.mock('@/components/pages/WineLog', () => ({ WineLog: () => createElement('div', null, 'Wine Log') }));
@@ -64,6 +64,12 @@ vi.mock('@/lib/features/achievements', () => ({
       renderAchievementsPage: () => createElement('div', null, 'Achievements')
     }
   }
+}));
+vi.mock('@/lib/features/activities', () => ({
+  activitiesFeature: {
+    setup: { initialize: vi.fn(async () => undefined) },
+    ui: { renderActivityPanel: () => null },
+  },
 }));
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 

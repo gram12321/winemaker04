@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { calculateWage } from '@/lib/services/finance/wageService';
+import { staffFeature } from '@/lib/features/staff';
 import { type StaffSkills } from '@/lib/types/types';
+
+const calculateWage = staffFeature.wages.calculate;
 
 const baseSkills: StaffSkills = {
   field: 0.5,

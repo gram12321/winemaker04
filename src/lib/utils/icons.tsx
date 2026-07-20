@@ -2,7 +2,7 @@ import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
-import { activitiesFeature } from '@/lib/features/activities';
+import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { cn, getCharacteristicDisplayName, getStoryImageSrc } from './utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
@@ -236,7 +236,7 @@ export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
 
 // Activity Icon
 const getActivityIconFile = (category: WorkCategory): string => {
-  return activitiesFeature.catalog.workCategoryInfo[category].icon;
+  return WORK_CATEGORY_INFO[category].icon;
 };
 
 interface ActivityIconProps {
@@ -280,7 +280,7 @@ export const ActivityIcon: React.FC<ActivityIconProps> = ({
     return iconElement;
   }
 
-  const tooltipContent = tooltip === true ? activitiesFeature.catalog.workCategoryInfo[category].displayName : tooltip;
+  const tooltipContent = tooltip === true ? WORK_CATEGORY_INFO[category].displayName : tooltip;
 
   return (
     <UnifiedTooltip

@@ -2,20 +2,22 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getColorClass } from '@/lib/utils';
-import { getWageColorClass, getAllTeams, getStaffExperiencePresentation } from '@/lib/services';
-import { activitiesFeature } from '@/lib/features/activities';
+import { staffFeature } from '@/lib/features/staff';
+import type { StaffActivityAdapter } from '../featureTypes';
 import { getSkillLevelInfo, SPECIALIZED_ROLES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
-import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
-import { useGameState, useGameStateWithData } from '@/hooks';
+import { Button, Badge } from '@/components/ui';
+import { StaffSkillBarsList } from './StaffSkillBar';
+import { useGameState, useGameStateWithData } from '@/hooks/useGameState';
 
 interface StaffModalProps extends DialogProps {
   staff: Staff | null;
+  activityApi: StaffActivityAdapter;
   onFire?: (staffId: string) => void;
 }
 
-const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire }) => {
+const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activityApi, onFire }) => {
   const gameState = useGameState();
-  const activities = useGameStateWithData(activitiesFeature.reads.getAll, []);
+  const activities = useGameStateWithData(activityApi.reads.getAll, []);
   const allStaffMembers = gameState.staff ?? [];
   const { activeAssignments, staffTaskCounts } = useMemo(() => {
     const counts = new Map<string, number>();
@@ -45,8 +47,8 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
     void Promise.all(activeAssignments.map(async activity => {
       const assignedIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaffMembers.filter(member => assignedIds.includes(member.id));
-      const context = await activitiesFeature.work.getContext(activity, activities, gameState, assignedIds);
-      const preview = activitiesFeature.work.getPreview(activity, assignedStaff, context);
+      const context = await activityApi.work.getContext(activity, activities, gameState, assignedIds);
+      const preview = activityApi.work.getPreview(activity, assignedStaff, context);
       return [activity.id, {
         teamWorkPerWeek: preview.workPerWeek,
         personalWorkPerWeek: preview.allocation.contributions.get(staff?.id || '') || 0,
@@ -63,8 +65,8 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
   if (!isOpen || !staff) return null;
 
   const skillInfo = getSkillLevelInfo(staff.skillLevel);
-  const experiencePresentation = getStaffExperiencePresentation(staff);
-  const allTeams = getAllTeams();
+  const experiencePresentation = staffFeature.presentation.getExperience(staff);
+  const allTeams = gameState.teams || [];
 
   const handleFire = () => {
     if (onFire && confirm(`Are you sure you want to fire ${staff.name}?`)) {
@@ -145,15 +147,15 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Weekly Wage:</span>
-                  <span className={`font - medium ${getWageColorClass(staff.wage, 'weekly')} `}>{formatNumber(staff.wage, { currency: true })}</span>
+                  <span className={`font - medium ${staffFeature.wages.getColorClass(staff.wage, 'weekly')} `}>{formatNumber(staff.wage, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Seasonal Wage ({WEEKS_PER_SEASON} weeks):</span>
-                  <span className={`font - medium ${getWageColorClass(staff.wage * WEEKS_PER_SEASON, 'seasonal')} `}>{formatNumber(staff.wage * WEEKS_PER_SEASON, { currency: true })}</span>
+                  <span className={`font - medium ${staffFeature.wages.getColorClass(staff.wage * WEEKS_PER_SEASON, 'seasonal')} `}>{formatNumber(staff.wage * WEEKS_PER_SEASON, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Annual Wage ({WEEKS_PER_YEAR} weeks):</span>
-                  <span className={`font - medium ${getWageColorClass(staff.wage * WEEKS_PER_YEAR, 'annual')} `}>{formatNumber(staff.wage * WEEKS_PER_YEAR, { currency: true })}</span>
+                  <span className={`font - medium ${staffFeature.wages.getColorClass(staff.wage * WEEKS_PER_YEAR, 'annual')} `}>{formatNumber(staff.wage * WEEKS_PER_YEAR, { currency: true })}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 mt-3">
@@ -276,7 +278,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
               {activeAssignments.length > 0 ? (
                 <div className="space-y-3">
                   {activeAssignments.map(activity => {
-                    const categoryInfo = activitiesFeature.catalog.workCategoryInfo[activity.category];
+                    const categoryInfo = activityApi.catalog.workCategoryInfo[activity.category];
                     const assignmentProgress = activity.totalWork > 0
                       ? Math.min(100, Math.round((activity.completedWork / activity.totalWork) * 100))
                       : 0;

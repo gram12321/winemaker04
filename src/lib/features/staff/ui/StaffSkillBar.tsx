@@ -1,8 +1,8 @@
 import React from 'react';
 import type { Staff } from '@/lib/types/types';
 import { getSkillColor, formatNumber, getColorClass } from '@/lib/utils';
-import { calculateEffectiveSkill } from '@/lib/services/user/staffSkillService';
-import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
+import { calculateEffectiveSkill } from '../services/competencyService';
+import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 
 interface StaffSkillBarProps {
   label: string;

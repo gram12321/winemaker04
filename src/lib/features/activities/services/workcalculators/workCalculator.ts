@@ -1,7 +1,7 @@
 import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { Staff, StaffSkills, WorkCategory } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
-import { calculateEffectiveSkill } from '@/lib/services/user/staffSkillService';
+import { staffFeature } from '@/lib/features/staff';
 import { getGrapeWorkContext } from '../activityWorkContext';
 import {
   MAX_TASK_MASTERY_BONUS,
@@ -155,7 +155,7 @@ export function calculateIndividualStaffContribution(
   const rawXP = staff.experience?.[`skill:${relevantSkill}`] || 0;
 
   // Calculate effective skill with XP
-  const skillWithXP = calculateEffectiveSkill(skillValue, rawXP);
+  const skillWithXP = staffFeature.competency.calculateEffectiveSkill(skillValue, rawXP);
 
   const { specializationBonus } = getStaffContributionBreakdown(staff, category, grapeVariety);
   const effectiveSkill = skillWithXP * (1 + specializationBonus);

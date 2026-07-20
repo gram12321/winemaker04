@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory, WorkCategory } from '@/lib/types/types';
-import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, getTeamForCategory, handlePartialPlanting, handlePartialHarvesting } from '@/lib/services';
+import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, handlePartialPlanting, handlePartialHarvesting } from '@/lib/services';
 import { completeLandSearch } from './landSearchManager';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity, getActivitiesByTarget } from '@/lib/database/activities/activityDB';
 import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
-import { awardExperience } from '@/lib/services/user/staffService';
+import { staffFeature } from '@/lib/features/staff';
 import { WORK_CATEGORY_INFO } from '@/lib/features/activities/constants/activityConstants';
 import { calculateAppliedStaffWorkAllocation } from '../workcalculators/workCalculator';
 import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
@@ -270,7 +270,7 @@ export async function createActivityWithResult(options: ActivityCreationOptions)
 
     // Auto-assign staff from matching team if no staff already assigned
     if (!activity.params.assignedStaffIds || activity.params.assignedStaffIds.length === 0) {
-      const matchingTeam = getTeamForCategory(options.category);
+      const matchingTeam = staffFeature.teams.getForCategory(getGameState().teams || [], options.category);
       if (matchingTeam && matchingTeam.memberIds.length > 0) {
         activity.params.assignedStaffIds = matchingTeam.memberIds;
       }
@@ -572,7 +572,7 @@ export async function progressActivities(): Promise<void> {
         if (workContext.grapeVariety) xpCategories.push(`grape:${workContext.grapeVariety}`);
 
         for (const [staffId, appliedWork] of appliedAllocation.contributions) {
-          await awardExperience(staffId, appliedWork, xpCategories);
+          await staffFeature.competency.awardExperience(staffId, appliedWork, xpCategories);
         }
       }
 

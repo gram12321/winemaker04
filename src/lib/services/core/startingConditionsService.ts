@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanConfig } from '@/lib/constants/startingConditions';
-import { createStaff, addStaff } from '../user/staffService';
+import { staffFeature } from '@/lib/features/staff';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
 import { TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
@@ -242,17 +242,19 @@ export async function applyStartingConditions(
     // 5. Create starting staff
     const createdStaff: Staff[] = [];
     for (const staffConfig of condition.staff) {
-      const staff = createStaff(
+      const gameState = getGameState();
+      const staff = staffFeature.records.create(
         staffConfig.firstName,
         staffConfig.lastName,
         staffConfig.skillLevel,
-        staffConfig.nationality as any, // Nationality type
+        staffConfig.nationality as import('@/lib/types/types').Nationality,
+        { week: gameState.week || 1, season: gameState.season || 'Spring', year: gameState.currentYear || 2025 },
         undefined,
         staffConfig.isFounder ?? false,
         staffConfig.specializedRoles,
       );
 
-      const addedStaff = await addStaff(staff);
+      const addedStaff = await staffFeature.records.add(staff);
       if (addedStaff) {
         createdStaff.push(addedStaff);
 

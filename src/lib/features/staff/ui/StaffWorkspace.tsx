@@ -2,25 +2,28 @@
 // Main page for viewing and managing staff members
 
 import React, { useMemo, useState } from 'react';
-import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam, getWageColorClass, getStaffExperiencePresentation } from '@/lib/services';
-import { activitiesFeature } from '@/lib/features/activities';
+import { staffFeature } from '@/lib/features/staff';
+import type { StaffActivityAdapter } from '../featureTypes';
 import type { Staff } from '@/lib/types/types';
 import { formatNumber, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
-import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffModal, StaffSkillBarsList } from '@/components/ui';
+import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input } from '@/components/ui';
+import StaffModal from './StaffModal';
+import { StaffSkillBarsList } from './StaffSkillBar';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
 import { WorkCategory } from '@/lib/types/types';
-import { useGameState, useGameStateWithData } from '@/hooks';
+import { useGameState, useGameStateWithData } from '@/hooks/useGameState';
 
 interface StaffPageProps {
   title: string;
+  activity: StaffActivityAdapter;
 }
 
 /**
  * Staff Management Page
  * Displays all staff members with their skills, wages, and management options
  */
-export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
+export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -44,7 +47,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   });
 
   const { staff: gameStaff, teams: gameTeams } = useGameState();
-  const activities = useGameStateWithData(activitiesFeature.reads.getAll, []);
+  const activities = useGameStateWithData(activity.reads.getAll, []);
   const allStaff = gameStaff || [];
   const allTeams = gameTeams || [];
   const totalWages = allStaff.reduce((sum, staff) => sum + staff.wage, 0);
@@ -78,7 +81,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   // Note: Staff search results are now handled globally by GlobalSearchResultsDisplay
 
   const handleFireStaff = async (staffId: string) => {
-    await removeStaff(staffId);
+    await staffFeature.records.remove(staffId);
   };
 
   const handleStaffCardClick = (staff: Staff) => {
@@ -94,7 +97,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
 
   const handleAssignToTeam = async (teamId: string) => {
     if (staffForTeamAssignment) {
-      await assignStaffToTeam(staffForTeamAssignment.id, teamId);
+      await staffFeature.teams.assign(staffForTeamAssignment.id, teamId);
       setShowTeamAssignmentDialog(false);
       setStaffForTeamAssignment(null);
     }
@@ -102,7 +105,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
 
   const handleRemoveFromTeam = async (teamId: string) => {
     if (staffForTeamAssignment) {
-      await removeStaffFromTeam(staffForTeamAssignment.id, teamId);
+      await staffFeature.teams.removeMember(staffForTeamAssignment.id, teamId);
       setShowTeamAssignmentDialog(false);
       setStaffForTeamAssignment(null);
     }
@@ -123,14 +126,14 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     if (!newTeamData.name.trim()) return;
 
     try {
-      const newTeam = createTeam(
+      const newTeam = staffFeature.teams.create(
         newTeamData.name.trim(),
         newTeamData.description.trim(),
         newTeamData.defaultTaskTypes,
         newTeamData.icon
       );
 
-      await addTeam(newTeam);
+      await staffFeature.teams.add(newTeam);
       setIsCreatingNewTeam(false);
       setNewTeamData({
         name: '',
@@ -175,7 +178,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       [editingField]: tempValue
     };
 
-    await updateTeam(updatedTeam);
+    await staffFeature.teams.update(updatedTeam);
     setEditingField(null);
     setTempValue('');
   };
@@ -216,7 +219,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   const handleDeleteTeam = async (teamId: string) => {
     const team = allTeams.find(t => t.id === teamId);
     if (team && window.confirm(`Are you sure you want to delete the team "${team.name}"? All staff members will be unassigned from this team.`)) {
-      await removeTeam(teamId);
+      await staffFeature.teams.remove(teamId);
       if (selectedTeamFilter === teamId) {
         setSelectedTeamFilter('all');
       }
@@ -433,7 +436,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                             onClick={() => handleTaskTypeSelect(taskType)}
                             disabled={newTeamData.defaultTaskTypes.includes(taskType)}
                           >
-                            {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)}
+                            {activity.catalog.getTaskTypeDisplayName(taskType)}
                           </Button>
                         );
                       })}
@@ -449,7 +452,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                     className="text-xs cursor-pointer hover:bg-red-100"
                     onClick={() => handleTaskTypeRemove(taskType)}
                   >
-                    {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)} ×
+                    {activity.catalog.getTaskTypeDisplayName(taskType)} ×
                   </Badge>
                 ))}
               </div>
@@ -604,12 +607,12 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                                         ...team,
                                         defaultTaskTypes: [...team.defaultTaskTypes, taskType]
                                       };
-                                      await updateTeam(updatedTeam);
+                                      await staffFeature.teams.update(updatedTeam);
                                     }
                                   }}
                                   disabled={team.defaultTaskTypes.includes(taskType)}
                                 >
-                                  {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)}
+                                  {activity.catalog.getTaskTypeDisplayName(taskType)}
                                 </Button>
                               );
                             })}
@@ -628,10 +631,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                               ...team,
                               defaultTaskTypes: team.defaultTaskTypes.filter(t => t !== taskType)
                             };
-                            await updateTeam(updatedTeam);
+                            await staffFeature.teams.update(updatedTeam);
                           }}
                         >
-                    {activitiesFeature.catalog.getTaskTypeDisplayName(taskType)} ×
+                    {activity.catalog.getTaskTypeDisplayName(taskType)} ×
                         </Badge>
                       ))}
                     </div>
@@ -701,7 +704,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
               const skillInfo = getSkillLevelInfo(staff.skillLevel);
               const assignedTaskCount = staffTaskCounts.get(staff.id) ?? 0;
               const taskLabel = totalActiveTasks === 1 ? 'task' : 'tasks';
-              const experiencePresentation = getStaffExperiencePresentation(staff);
+              const experiencePresentation = staffFeature.presentation.getExperience(staff);
 
               return (
                 <div
@@ -774,7 +777,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <div className="flex items-center gap-4 text-xs text-gray-600">
                       <div>
-                        <span className="font-medium">Wage:</span> <span className={getWageColorClass(staff.wage, 'weekly')}>{formatNumber(staff.wage, { currency: true })}/wk</span>
+                        <span className="font-medium">Wage:</span> <span className={staffFeature.wages.getColorClass(staff.wage, 'weekly')}>{formatNumber(staff.wage, { currency: true })}/wk</span>
                       </div>
                     </div>
 
@@ -881,7 +884,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       </Dialog>
 
       {/* Staff Search Options Modal */}
-      {activitiesFeature.ui.renderStaffSearchOptions({
+      {activity.ui.renderStaffSearchOptions({
         isOpen: showSearchModal,
         onClose: () => setShowSearchModal(false),
         onSearchStarted: () => {
@@ -890,7 +893,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       })}
 
       {/* Staff Search Results Modal */}
-      {activitiesFeature.ui.renderStaffSearchResults({
+      {activity.ui.renderStaffSearchResults({
         isOpen: showResultsModal,
         onClose: () => {
           setShowResultsModal(false);
@@ -907,6 +910,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           setSelectedStaff(null);
         }}
         staff={selectedStaff}
+        activityApi={activity}
         onFire={handleFireStaff}
       />
     </div>

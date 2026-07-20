@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkCategory, type Staff, type StaffTeam } from '@/lib/types/types';
+import { staffFeature } from '@/lib/features/staff';
 
 const mocks = vi.hoisted(() => {
   let state: any = {};
@@ -54,7 +55,7 @@ vi.mock('@/lib/database/core/staffDB', () => ({
   deleteStaffFromDb: mocks.deleteStaffFromDb
 }));
 
-vi.mock('@/lib/services', () => ({
+vi.mock('@/lib/services/core/notificationService', () => ({
   notificationService: { addMessage: mocks.notificationAddMessage }
 }));
 
@@ -110,29 +111,24 @@ describe('staff and team workflow', () => {
   });
 
   it('maps default task categories to the configured team', async () => {
-    const { getTeamForCategory } = await import('@/lib/services/user/teamService');
-
-    expect(getTeamForCategory(WorkCategory.FERMENTATION)).toEqual(expect.objectContaining({
+    expect(staffFeature.teams.getForCategory(mocks.getState().teams, WorkCategory.FERMENTATION)).toEqual(expect.objectContaining({
       id: 'team-1',
       name: 'Winery Team'
     }));
   });
 
   it('creates a dedicated default Maintenance Team task class', async () => {
-    const { getDefaultTeams, getTeamForCategory } = await import('@/lib/services/user/teamService');
-    const defaultTeams = getDefaultTeams();
+    const defaultTeams = await staffFeature.teams.getDefault();
 
     expect(defaultTeams.find((candidate) => candidate.name === 'Maintenance Team')).toMatchObject({
       defaultTaskTypes: ['maintenance'],
     });
     mocks.setState({ ...mocks.getState(), teams: defaultTeams });
-    expect(getTeamForCategory(WorkCategory.MAINTENANCE)).toMatchObject({ name: 'Maintenance Team' });
+    expect(staffFeature.teams.getForCategory(mocks.getState().teams, WorkCategory.MAINTENANCE)).toMatchObject({ name: 'Maintenance Team' });
   });
 
   it('assigns and removes staff from a team in both game state and persistence', async () => {
-    const { assignStaffToTeam, removeStaffFromTeam } = await import('@/lib/services/user/teamService');
-
-    await expect(assignStaffToTeam('staff-1', 'team-1')).resolves.toBe(true);
+    await expect(staffFeature.teams.assign('staff-1', 'team-1')).resolves.toBe(true);
     expect(mocks.getState().staff[0].teamIds).toEqual(['team-1']);
     expect(mocks.getState().teams[0].memberIds).toEqual(['staff-1']);
     expect(mocks.saveStaffToDb).toHaveBeenCalledWith(expect.objectContaining({
@@ -144,24 +140,22 @@ describe('staff and team workflow', () => {
       memberIds: ['staff-1']
     }));
 
-    await expect(removeStaffFromTeam('staff-1', 'team-1')).resolves.toBe(true);
+    await expect(staffFeature.teams.removeMember('staff-1', 'team-1')).resolves.toBe(true);
     expect(mocks.getState().staff[0].teamIds).toEqual([]);
     expect(mocks.getState().teams[0].memberIds).toEqual([]);
   });
 
   it('awards experience by category, increases effective skill, and recalculates only primary-skill wage growth', async () => {
-    const { awardExperience } = await import('@/lib/services/user/staffService');
-    const { calculateEffectiveSkill } = await import('@/lib/services/user/staffSkillService');
+    const { calculateEffectiveSkill } = staffFeature.competency;
 
     expect(calculateEffectiveSkill(0.5, 0)).toBe(0.5);
     expect(calculateEffectiveSkill(0.5, 100000)).toBeGreaterThan(0.5);
     expect(calculateEffectiveSkill(0.5, 100000)).toBeLessThanOrEqual(1);
 
-    const { calculateWage } = await import('@/lib/services/finance/wageService');
-    const startingWage = calculateWage(mocks.getState().staff[0].skills, mocks.getState().staff[0].specializedRoles);
-    await awardExperience('staff-1', 100000, ['skill:winery']);
+    const startingWage = staffFeature.wages.calculate(mocks.getState().staff[0].skills, mocks.getState().staff[0].specializedRoles);
+    await staffFeature.competency.awardExperience('staff-1', 100000, ['skill:winery']);
     const primarySkillWage = mocks.getState().staff[0].wage;
-    await awardExperience('staff-1', 100000, ['grape:Pinot Noir']);
+    await staffFeature.competency.awardExperience('staff-1', 100000, ['grape:Pinot Noir']);
 
     expect(mocks.getState().staff[0].experience).toEqual({
       'skill:winery': 100000,

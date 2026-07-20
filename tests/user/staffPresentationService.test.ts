@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Staff } from '@/lib/types/types';
-import { getStaffExperiencePresentation } from '@/lib/services/user/staffPresentationService';
+import { staffFeature } from '@/lib/features/staff';
 
 const staff = (experience: Record<string, number>): Staff => ({
   id: 'staff-1',
@@ -25,7 +25,7 @@ const staff = (experience: Record<string, number>): Staff => ({
 
 describe('staff experience presentation', () => {
   it('uses activity display names for learned task mastery', () => {
-    expect(getStaffExperiencePresentation(staff({
+    expect(staffFeature.presentation.getExperience(staff({
       'task:HARVESTING': 20,
       'task:STAFF_SEARCH': 7,
     })).taskMastery.map(item => item.label)).toEqual(['Harvesting', 'Staff Search']);

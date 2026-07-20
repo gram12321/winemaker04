@@ -7,7 +7,7 @@ import {
   calculateSearchPreview,
   type StaffSearchOptions
 } from '@/lib/features/activities/services/workcalculators/staffSearchWorkCalculator';
-import { createStaff } from '@/lib/services/user/staffService';
+import { staffFeature } from '@/lib/features/staff';
 import { generateStaffCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
 import { type Staff, type SpecializedRole } from '@/lib/types/types';
 
@@ -39,7 +39,10 @@ describe('staff search calculations', () => {
   });
 
   it('carries selected broad roles into generated search candidates', () => {
-    const candidates = generateStaffCandidates({ ...baseSearchOptions, numberOfCandidates: 2, specializedRoles: ['field'] as SpecializedRole[] });
+    const candidates = generateStaffCandidates(
+      { ...baseSearchOptions, numberOfCandidates: 2, specializedRoles: ['field'] as SpecializedRole[] },
+      { week: 1, season: 'Spring', year: 2026 },
+    );
 
     expect(candidates).toHaveLength(2);
     expect(candidates.every(candidate => candidate.specializedRoles.includes('field'))).toBe(true);
@@ -68,7 +71,7 @@ describe('staff search calculations', () => {
     };
 
     const candidate = (overrides: Partial<Staff> = {}): Staff => ({
-      ...createStaff('Test', 'Staff', 0.5, 'United States'),
+      ...staffFeature.records.create('Test', 'Staff', 0.5, 'United States', { week: 1, season: 'Spring', year: 2026 }),
       skills: fixedSkills,
       ...overrides
     });

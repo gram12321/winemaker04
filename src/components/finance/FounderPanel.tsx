@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from '../ui';
 import { formatNumber } from '@/lib/utils';
-import { getAllStaff, buyoutFounder, calculateCompanyValue } from '@/lib/services';
+import { calculateCompanyValue } from '@/lib/services';
+import { staffFeature } from '@/lib/features/staff';
 import { useGameStateWithData } from '@/hooks';
 import { Crown, AlertCircle } from 'lucide-react';
 import { FOUNDER_PROFIT_SHARE_PER_FOUNDER_PERCENT, FOUNDER_BUYOUT_PERCENT_OF_ASSETS, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
@@ -11,7 +12,7 @@ export function FounderPanel() {
   const [error, setError] = useState<string | null>(null);
   const [companyValue, setCompanyValue] = useState<number>(0);
 
-  const staff = useGameStateWithData(() => getAllStaff(), []);
+  const staff = useGameStateWithData(() => staffFeature.records.getAll(), []);
   const founders = staff.filter(s => s.isFounder === true);
 
   // Refresh company value for buyout cost display
@@ -32,7 +33,7 @@ export function FounderPanel() {
   async function handleBuyout(staffId: string) {
     setBuyingOut(staffId);
     setError(null);
-    const result = await buyoutFounder(staffId);
+    const result = await staffFeature.founders.buyout(staffId);
     setBuyingOut(null);
     if (result) setError(result);
   }

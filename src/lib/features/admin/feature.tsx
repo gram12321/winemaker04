@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  getAllStaff,
   getStoredVineyards,
   recreateBuyGrapeMarketOffers
 } from '@/lib/services';
 import { activitiesFeature } from '@/lib/features/activities';
 import { userFeature } from '@/lib/features/user';
+import { staffFeature } from '@/lib/features/staff';
 import { researchUpgradeAdminIntegration } from '@/lib/features/researchUpgrade/adminIntegration';
 import type { AdminFeature } from './featureTypes';
 import type { AdminCheatOps, AdminDashboardDependencies, AdminDatabaseOps, AdminTestLab } from './internalTypes';
@@ -87,7 +87,7 @@ const testLab: AdminTestLab = {
   async loadDynamicOptions() {
     const [vineyards, staffMembers, activities] = await Promise.all([
       getStoredVineyards().catch(() => []),
-      getAllStaff().catch(() => []),
+      staffFeature.records.getAll().catch(() => []),
       activitiesFeature.reads.getAll().catch(() => [])
     ]);
     return { vineyards, staff: staffMembers, activities };

@@ -12,6 +12,14 @@ export const BASE_WEEKLY_WAGE = 500;
 // Skill wage multiplier - how much extra wage per skill point
 export const SKILL_WAGE_MULTIPLIER = 1000;
 
+export const STAFF_DEFAULT_WORKFORCE = 50;
+export const STAFF_RANDOM_SKILL_RANGE = 0.6;
+export const STAFF_SKILL_LEVEL_WEIGHT = 0.4;
+export const STAFF_SPECIALIZED_SKILL_BONUS_BASE = 0.2;
+export const STAFF_SPECIALIZED_SKILL_BONUS_SCALE = 0.2;
+export const STAFF_SPECIALIZED_SKILL_FLOOR_BASE = 0.35;
+export const STAFF_SPECIALIZED_SKILL_FLOOR_SCALE = 0.3;
+
 // ===== FOUNDER ECONOMY CONSTANTS =====
 
 // Percentage of yearly net profit each active founder receives as a Founder Return
