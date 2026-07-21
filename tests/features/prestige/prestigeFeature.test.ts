@@ -19,5 +19,6 @@ describe('prestigeFeature public seam', () => {
 
     expect(prestigeFeature).not.toHaveProperty('ledger');
     expect(prestigeFeature).not.toHaveProperty('decay');
+    expect(prestigeFeature.lifecycle).not.toHaveProperty('initializeVineyards');
   });
 });

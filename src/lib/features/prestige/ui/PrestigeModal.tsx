@@ -33,7 +33,7 @@ import {
   ChevronRight,
   FlaskConical,
 } from 'lucide-react';
-import { DialogProps } from '@/lib/types/UItypes';
+import type { PrestigeModalInput } from '../featureTypes';
 
 // Type definitions for calculation data
 type CompanyValueCalculationData = {
@@ -86,54 +86,102 @@ type CalculationData =
   | WineFeatureCalculationData
   | { [key: string]: any; type: string }; // Fallback for dynamic data
 
+const WineFilterTabs = ({
+  wines,
+  selectedWine,
+  onSelect,
+}: {
+  wines: ConsolidatedWineFeatureEvent[];
+  selectedWine: string;
+  onSelect: (wineKey: string) => void;
+}) => (
+  <div className="flex flex-wrap gap-2">
+    <button
+      onClick={() => onSelect('all')}
+      className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
+        selectedWine === 'all'
+          ? 'bg-purple-600 text-white'
+          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      }`}
+    >
+      All Wines
+    </button>
+    {[...wines]
+      .sort((a, b) =>
+        `${a.vineyardName} - ${a.grape} (${a.vintage})`.localeCompare(
+          `${b.vineyardName} - ${b.grape} (${b.vintage})`,
+        ),
+      )
+      .map((wine) => {
+        const wineKey = `${wine.vineyardName}_${wine.grape}_${wine.vintage}`;
+        return (
+          <button
+            key={wineKey}
+            onClick={() => onSelect(wineKey)}
+            className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
+              selectedWine === wineKey
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {wine.vineyardName} - {wine.grape} ({wine.vintage})
+          </button>
+        );
+      })}
+  </div>
+);
+
+const VineyardFilterTabs = ({
+  vineyards,
+  selectedVineyard,
+  onSelect,
+}: {
+  vineyards: PrestigeModalInput['vineyards'];
+  selectedVineyard: string;
+  onSelect: (vineyardId: string) => void;
+}) => (
+  <div className="flex flex-wrap gap-2">
+    <button
+      onClick={() => onSelect('all')}
+      className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
+        selectedVineyard === 'all'
+          ? 'bg-green-600 text-white'
+          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      }`}
+    >
+      All Vineyards
+    </button>
+    {[...vineyards]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((vineyard) => (
+        <button
+          key={vineyard.id}
+          onClick={() => onSelect(vineyard.id)}
+          className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
+            selectedVineyard === vineyard.id
+              ? 'bg-green-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          {vineyard.name}
+        </button>
+      ))}
+  </div>
+);
+
 /**
  * Prestige Modal
  * Modal for displaying detailed prestige breakdown and sources
  */
-interface PrestigeModalProps extends DialogProps {
-  totalPrestige: number;
-  eventBreakdown?: PrestigeEvent[];
-  companyPrestige?: number;
-  vineyardPrestige?: number;
-  vineyards?: Array<{
-    id: string;
-    name: string;
-    prestige: number;
-    events: PrestigeEvent[];
-  }>;
-}
-
-const PrestigeModal: React.FC<PrestigeModalProps> = ({
+const PrestigeModal: React.FC<PrestigeModalInput> = ({
   isOpen,
   onClose,
   totalPrestige,
-  eventBreakdown: rawEventBreakdown,
-  companyPrestige = 0,
-  vineyardPrestige = 0,
-  vineyards: rawVineyards = [],
+  eventBreakdown,
+  companyPrestige,
+  vineyardPrestige,
+  vineyards,
 }) => {
-  const eventBreakdown = Array.isArray(rawEventBreakdown)
-    ? rawEventBreakdown.filter((event): event is PrestigeEvent =>
-        Boolean(event && typeof event.type === 'string'),
-      )
-    : [];
-
-  const vineyards = Array.isArray(rawVineyards)
-    ? rawVineyards
-        .filter(
-          (vineyard): vineyard is NonNullable<typeof rawVineyards>[number] =>
-            Boolean(vineyard && typeof vineyard.id === 'string'),
-        )
-        .map((vineyard) => ({
-          ...vineyard,
-          events: Array.isArray(vineyard.events)
-            ? vineyard.events.filter((event): event is PrestigeEvent =>
-                Boolean(event && typeof event.type === 'string'),
-              )
-            : [],
-        }))
-    : [];
-
   // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
   const [selectedWine, setSelectedWine] = useState<string>('all');
@@ -1465,44 +1513,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           )}
                         </CardTitle>
 
-                        {/* Wine Filter Tabs */}
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => setSelectedWine('all')}
-                            className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                              selectedWine === 'all'
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            All Wines
-                          </button>
-                          {consolidatedCompanyWineFeatures
-                            .sort((a, b) =>
-                              `${a.vineyardName} - ${a.grape} (${a.vintage})`.localeCompare(
-                                `${b.vineyardName} - ${b.grape} (${b.vintage})`,
-                              ),
-                            )
-                            .map((wine) => (
-                              <button
-                                key={`${wine.vineyardName}_${wine.grape}_${wine.vintage}`}
-                                onClick={() =>
-                                  setSelectedWine(
-                                    `${wine.vineyardName}_${wine.grape}_${wine.vintage}`,
-                                  )
-                                }
-                                className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                                  selectedWine ===
-                                  `${wine.vineyardName}_${wine.grape}_${wine.vintage}`
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
-                              >
-                                {wine.vineyardName} - {wine.grape} (
-                                {wine.vintage})
-                              </button>
-                            ))}
-                        </div>
+                        <WineFilterTabs
+                          wines={consolidatedCompanyWineFeatures}
+                          selectedWine={selectedWine}
+                          onSelect={setSelectedWine}
+                        />
                       </div>
                     </CardHeader>
                     {!isSectionCollapsed('all_wines_summary') && (
@@ -1631,44 +1646,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           )}
                         </CardTitle>
 
-                        {/* Wine Filter Tabs */}
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => setSelectedWine('all')}
-                            className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                              selectedWine === 'all'
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            All Wines
-                          </button>
-                          {consolidatedCompanyWineFeatures
-                            .sort((a, b) =>
-                              `${a.vineyardName} - ${a.grape} (${a.vintage})`.localeCompare(
-                                `${b.vineyardName} - ${b.grape} (${b.vintage})`,
-                              ),
-                            )
-                            .map((wine) => (
-                              <button
-                                key={`${wine.vineyardName}_${wine.grape}_${wine.vintage}`}
-                                onClick={() =>
-                                  setSelectedWine(
-                                    `${wine.vineyardName}_${wine.grape}_${wine.vintage}`,
-                                  )
-                                }
-                                className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                                  selectedWine ===
-                                  `${wine.vineyardName}_${wine.grape}_${wine.vintage}`
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
-                              >
-                                {wine.vineyardName} - {wine.grape} (
-                                {wine.vintage})
-                              </button>
-                            ))}
-                        </div>
+                        <WineFilterTabs
+                          wines={consolidatedCompanyWineFeatures}
+                          selectedWine={selectedWine}
+                          onSelect={setSelectedWine}
+                        />
                       </div>
                     </CardHeader>
                     {!isSectionCollapsed(`wine_${selectedWine}`) && (
@@ -1839,35 +1821,12 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                       )}
                     </CardTitle>
 
-                    {/* Vineyard Filter Tabs */}
                     {vineyards.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setSelectedVineyard('all')}
-                          className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                            selectedVineyard === 'all'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
-                        >
-                          All Vineyards
-                        </button>
-                        {vineyards
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map((vineyard) => (
-                            <button
-                              key={vineyard.id}
-                              onClick={() => setSelectedVineyard(vineyard.id)}
-                              className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                                selectedVineyard === vineyard.id
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                            >
-                              {vineyard.name}
-                            </button>
-                          ))}
-                      </div>
+                      <VineyardFilterTabs
+                        vineyards={vineyards}
+                        selectedVineyard={selectedVineyard}
+                        onSelect={setSelectedVineyard}
+                      />
                     )}
                   </div>
                 </CardHeader>
@@ -1994,35 +1953,12 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                       )}
                     </CardTitle>
 
-                    {/* Vineyard Filter Tabs */}
                     {vineyards.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setSelectedVineyard('all')}
-                          className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                            selectedVineyard === 'all'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
-                        >
-                          All Vineyards
-                        </button>
-                        {vineyards
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map((vineyard) => (
-                            <button
-                              key={vineyard.id}
-                              onClick={() => setSelectedVineyard(vineyard.id)}
-                              className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                                selectedVineyard === vineyard.id
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                            >
-                              {vineyard.name}
-                            </button>
-                          ))}
-                      </div>
+                      <VineyardFilterTabs
+                        vineyards={vineyards}
+                        selectedVineyard={selectedVineyard}
+                        onSelect={setSelectedVineyard}
+                      />
                     )}
                   </div>
                 </CardHeader>

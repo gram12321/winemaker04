@@ -56,7 +56,7 @@ export function usePrestigeUpdates() {
         } else if (currentCompanyValue !== lastCompanyValueRef.current) {
 
           // Update company value prestige with logarithmic scaling
-          await prestigeFeature.lifecycle.updateCompanyValue(currentCompanyValue);
+          await prestigeFeature.lifecycle.updateCompanyValue();
 
           lastCompanyValueRef.current = currentCompanyValue;
 

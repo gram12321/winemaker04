@@ -210,6 +210,20 @@ describe('prestige service', () => {
     expect(mocks.loadWineBatches).toHaveBeenCalledWith('company-1');
   });
 
+  it('refreshes company-value prestige from persisted financial data without a caller value', async () => {
+    const { updateCompanyValuePrestige } = await import('@/lib/features/prestige/services/prestigeService');
+
+    await updateCompanyValuePrestige();
+
+    expect(mocks.calculateCompanyValue).toHaveBeenCalledWith('company-1');
+    expect(mocks.upsertPrestigeEventBySource).toHaveBeenCalledWith(
+      'company_finance',
+      'company_net_worth',
+      expect.objectContaining({ amount_base: 0 }),
+      'company-1',
+    );
+  });
+
   it('aggregates company-level wine feature events as company prestige and vineyard-level feature events as vineyard prestige', async () => {
     mocks.setEvents([
       prestigeEvent({

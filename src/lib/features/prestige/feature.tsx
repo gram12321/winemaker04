@@ -10,7 +10,6 @@ import {
   addVineyardSalePrestigeEvent,
   calculateCurrentPrestige,
   calculateVineyardPrestigeFromEvents,
-  createBaseVineyardPrestigeEvents,
   getBaseVineyardPrestige,
   getEventDisplayData,
   getVineyardPrestigeBreakdown,
@@ -32,7 +31,6 @@ const PrestigeModal = lazy(() => import('./ui/PrestigeModal'));
 export const prestigeFeature: PrestigeFeature = {
   lifecycle: {
     initialize: initializeBasePrestigeEvents,
-    initializeVineyards: createBaseVineyardPrestigeEvents,
     updateCompanyValue: updateCompanyValuePrestige,
     updateVineyard: updateBaseVineyardPrestigeEvent,
     updateCellarCollection: updateCellarCollectionPrestige,

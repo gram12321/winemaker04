@@ -93,7 +93,7 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
   
   // Update base prestige events if money changed
   if (updates.money !== undefined && updates.money !== oldMoney) {
-    await prestigeFeature.lifecycle.updateCompanyValue(updates.money);
+    await prestigeFeature.lifecycle.updateCompanyValue();
     prestigeCache = null; // clear cached total after base prestige changes
   }
   
@@ -176,7 +176,7 @@ export const syncPersistedMoney = async (money: number, moneyVersion?: number): 
 
   if (money !== oldMoney) {
     try {
-      await prestigeFeature.lifecycle.updateCompanyValue(money);
+      await prestigeFeature.lifecycle.updateCompanyValue();
     } catch (error) {
       console.error('Failed to update company-value prestige:', error);
     }
@@ -275,7 +275,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   try {
     await initializePrestigeSystem();
     // Ensure company value prestige is updated with current money
-      await prestigeFeature.lifecycle.updateCompanyValue(company.money);
+      await prestigeFeature.lifecycle.updateCompanyValue();
     prestigeCache = null;
   } catch (error) {
     console.error('Failed to initialize prestige system:', error);

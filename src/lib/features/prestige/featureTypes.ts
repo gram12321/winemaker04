@@ -102,8 +102,7 @@ export interface StartingConditionPrestigeInput {
 export interface PrestigeFeature {
   lifecycle: {
     initialize(): Promise<void>;
-    initializeVineyards(): Promise<void>;
-    updateCompanyValue(money: number): Promise<void>;
+    updateCompanyValue(): Promise<void>;
     updateVineyard(vineyardId: string): Promise<void>;
     updateCellarCollection(): Promise<void>;
     decayOneWeek(): Promise<void>;

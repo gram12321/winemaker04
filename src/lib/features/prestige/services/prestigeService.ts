@@ -74,6 +74,24 @@ export function calculateCompanyValuePrestige(
   return Math.log((companyValue || 0) / Math.max(1, maxLandValue) + 1);
 }
 
+async function syncCompanyValuePrestige(companyId: string): Promise<void> {
+  const maxLandValue = getMaxLandValue();
+  const companyValue = await calculateCompanyValue(companyId);
+  const companyValuePrestige = calculateCompanyValuePrestige(companyValue, maxLandValue);
+
+  await updateBasePrestigeEvent(
+    'company_finance',
+    'company_net_worth',
+    companyValuePrestige,
+    {
+      companyNetWorth: companyValue,
+      maxLandValue,
+      prestigeBase01: companyValuePrestige,
+    },
+    companyId,
+  );
+}
+
 function isVineyardPrestigeEvent(event: PrestigeEvent): boolean {
   if (event.type === 'wine_feature') {
     const metadata: any = event.metadata ?? {};
@@ -90,32 +108,11 @@ function isVineyardPrestigeEvent(event: PrestigeEvent): boolean {
 
 export async function initializeBasePrestigeEvents(): Promise<void> {
   const companyId = getCurrentCompanyId();
-  const maxLandValue = getMaxLandValue();
-
-  // Calculate company value using centralized function
-  const companyValue = await calculateCompanyValue(companyId);
-
-  const companyValuePrestige = calculateCompanyValuePrestige(
-    companyValue,
-    maxLandValue,
-  );
-
-  await updateBasePrestigeEvent(
-    'company_finance',
-    'company_net_worth',
-    companyValuePrestige,
-    {
-      companyNetWorth: companyValue,
-      maxLandValue: maxLandValue,
-      prestigeBase01: companyValuePrestige,
-    },
-    companyId,
-  );
-
+  await syncCompanyValuePrestige(companyId);
   await createBaseVineyardPrestigeEvents(companyId);
 }
 
-export async function createBaseVineyardPrestigeEvents(
+async function createBaseVineyardPrestigeEvents(
   companyId = getCurrentCompanyId(),
 ): Promise<void> {
   try {
@@ -152,7 +149,7 @@ function calculateDensityPrestigeModifier(density: number): number {
   return Math.max(0.5, Math.min(1.5, modifier));
 }
 
-export function computeVineyardPrestigeFactors(
+function computeVineyardPrestigeFactors(
   vineyard: Vineyard,
 ): VineyardPrestigeFactors {
   const grapeSuitability = calculateGrapeSuitabilityContribution(
@@ -319,15 +316,6 @@ export async function calculateCurrentPrestige(): Promise<{
 }> {
   const companyId = getCurrentCompanyId();
   const events = await listPrestigeEventsForUI(companyId);
-  if (!events) {
-    return {
-      totalPrestige: 1,
-      companyPrestige: 1,
-      vineyardPrestige: 0,
-      eventBreakdown: [],
-      vineyards: [],
-    };
-  }
 
   const eventBreakdown = events.map((event) => ({
     ...event,
@@ -450,7 +438,7 @@ export async function getBaseVineyardPrestige(
   );
 }
 
-export async function updateBasePrestigeEvent(
+async function updateBasePrestigeEvent(
   type:
     'company_finance' | 'vineyard_age' | 'vineyard_land' | 'cellar_collection',
   sourceId: string,
@@ -470,37 +458,16 @@ export async function updateBasePrestigeEvent(
   triggerGameUpdate();
 }
 
-export async function updateCompanyValuePrestige(
-  _money: number,
-): Promise<void> {
+export async function updateCompanyValuePrestige(): Promise<void> {
   const companyId = getCurrentCompanyId();
   try {
-    const maxLandValue = getMaxLandValue();
-
-    // Calculate company value using centralized function
-    const companyValue = await calculateCompanyValue(companyId);
-
-    const companyValuePrestige = calculateCompanyValuePrestige(
-      companyValue,
-      maxLandValue,
-    );
-    await updateBasePrestigeEvent(
-      'company_finance',
-      'company_net_worth',
-      companyValuePrestige,
-      {
-        companyNetWorth: companyValue,
-        maxLandValue: maxLandValue,
-        prestigeBase01: companyValuePrestige,
-      },
-      companyId,
-    );
+    await syncCompanyValuePrestige(companyId);
   } catch (error) {
     console.error('Failed to update company value prestige:', error);
   }
 }
 
-export async function createVineyardFactorPrestigeEvents(
+async function createVineyardFactorPrestigeEvents(
   vineyard: any,
   companyId = getCurrentCompanyId(),
 ): Promise<void> {
