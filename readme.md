@@ -16,6 +16,7 @@ npm run build
 Use the smallest useful check. The commands above are available checks, not a requirement to run the full suite after every edit.
 
 - **During implementation:** inspect affected code and run a focused test file or suite only when behavior changes. Do not repeatedly run `npm test`, `npm run build`, typechecks, or the same successful command without a relevant code change.
+- **Standalone TypeScript checks:** do not run `npx tsc --noEmit` immediately before `npm run build`; the build already runs the root TypeScript check plus the Node/server checks and Vite bundling. Use standalone `tsc` only to diagnose a TypeScript/import issue or when specifically requested.
 - **Documentation-only work:** skip tests and builds; run `git diff --check` before handoff.
 - **Individual isolated worktrees:** run focused validation once near handoff. Run the full suite only when the change is cross-cutting, changes shared runtime/schema/build configuration, or the user asks for it.
 - **Integration gate:** a designated integrator runs `npm test`, `npm run build`, and `git diff --check` once on the consolidated merge candidate immediately before human review or merge. Do not repeat a successful full gate unless the candidate changes.
