@@ -117,7 +117,7 @@ When dispatching a subagent, include the selected skill path, exact task scope, 
 - Human owns git commits by default.
 - No AI git commit unless the user explicitly requests it.
 - Do not start `npm run dev` unless explicitly asked.
-- Do not run `npm run build` by default; use only when asked or when change risk justifies it.
+- Follow the Validation Policy in `readme.md`; do not run `npm run build` by default. Use focused checks during implementation and reserve the full suite/build for the integration gate, explicitly requested work, or justified cross-cutting changes.
 - After major updates, ask whether `readme.md` should be updated.
 - Do not run test, `ESLint`, or `typecheck` or  `npm test` and `git diff --check` after every change. Only use when delivering a finished feature. Use only for complex chanes or when user explicitly requests it.
 - For schema changes, update SQL under `migrations/` after validating intended DB changes.
@@ -134,8 +134,8 @@ When dispatching a subagent, include the selected skill path, exact task scope, 
 | Wine services | `src/lib/services/wine/` |
 | Structure index | `src/lib/wineStructure/` |
 | Sales services | `src/lib/services/sales/` |
-| Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
-| Activity services | `src/lib/services/activity/` |
+| Finance services | `src/lib/services/finance/`, `src/lib/features/loanLender/` |
+| Activities feature | `src/lib/features/activities/` |
 | Database layer | `src/lib/database/` |
 | Game constants | `src/lib/constants/` |
 | Wine feature constants | `src/lib/constants/wineFeatures/` |
@@ -180,14 +180,11 @@ After implementation:
 - Update `docs/WineSystem_VariableRelationshipMap.md` when variable relationships change.
 - Keep `readme.md` concise.
 
-## Completion Sanitary Gate (Required)
+## Completion Sanitary Gate
 
-Before claiming a task is done, run a sanitation sweep through a subagent.
+Before claiming meaningful code work is done, run a proportional sanitation sweep. Do it locally by default; use a subagent only when the user explicitly requests delegation and the workflow permits it.
 
-Default sweep path:
-
-1. Spawn an `Explore` subagent for a repo scan.
-2. Check and report these violations:
+Check and report these violations:
 	- Service or business functions inside UI files (not allowed): `src/components/`, `src/components/pages/`, and UI-only modules.
 	- CRUD or direct data persistence logic outside `src/lib/database/` (not allowed).
 	- Tunable gameplay numbers hardcoded in services or UI when they should live in `src/lib/constants/`.
@@ -195,39 +192,16 @@ Default sweep path:
 	  - Imports should use project barrel paths where available.
 	  - Exports should use `index.ts` barrel exports.
 	  - Prefer wildcard barrel exports when safe and appropriate for the module.
-3. Apply fixes immediately or document explicit exceptions.
-4. Run verification checks before completion claims.
+- Apply fixes immediately or document explicit exceptions.
+- Run only the validation checks required by the README policy.
 
-This gate is mandatory for meaningful code changes.
+## Version Log Ownership
 
-## Version Log Sync Gate (Frequent)
+`docs/versionlog.md` belongs to the human/release workflow:
 
-Frequently check whether new commits are missing entries in `docs/versionlog.md`, and always check before release-style completion claims.
-
-Versionlog ownership rules:
-
-1. `docs/versionlog.md` is updated by a dedicated versionlog subagent only.
-2. Do not let implementation agents write or append versionlog entries as part of routine feature completion.
-3. Versionlog updates happen only after commit(s) exist.
-4. Commits are created by the human by default; AI must not commit unless explicitly requested.
-
-Default versionlog path:
-
-1. Spawn an `Explore` subagent to compare recent commits with current `docs/versionlog.md` coverage.
-2. If missing entries exist, update `docs/versionlog.md`.
-3. Follow the rules at the top of `docs/versionlog.md` strictly:
-	- Use MCP GitHub evidence tools (`mcp_github_list_commits`, `mcp_github_get_commit` with diffs).
-	- Group related commits into one logical version entry when appropriate.
-	- Keep claims tied to verified diffs.
-4. If no meaningful unlogged commits exist, state that explicitly.
+- Do not edit it during routine implementation or docs work.
+- Update it only after human-created commits, using the required entry format and release workflow.
 
 ## Verification Minimum
 
-Use the smallest useful set for the change:
-
-```bash
-npm test
-git diff --check
-```
-
-For docs passes, also search for stale names across `docs`, `readme.md`, `CONTEXT.md`, `src`, and `tests`.
+Use the smallest useful check from the README Validation Policy. For docs passes, search for stale names across `docs`, `readme.md`, `CONTEXT.md`, `src`, and `tests`, then run `git diff --check`; do not run tests or builds unless the task changes runtime behavior.

@@ -10,7 +10,7 @@ import { getCompanyFinancialSnapshot } from '@/lib/services/finance/financeServi
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { getWineProductionSummary, loadWineLogByVineyard } from '@/lib/database/core/wineLogDB';
+import { wineLogFeature } from '@/lib/features/wineLog';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { notificationService } from '@/lib/services/core/notificationService';
@@ -198,7 +198,7 @@ async function buildAchievementContext(
   const [financialSnapshot, salesSummary, productionSummary] = await Promise.all([
     getCompanyFinancialSnapshot(companyId, gameState),
     getSalesSummary(companyId),
-    getWineProductionSummary(companyId)
+    wineLogFeature.records.getProductionSummary(companyId)
   ]);
   const { financialData, companyValue, transactions } = financialSnapshot;
   
@@ -230,7 +230,7 @@ async function buildAchievementContext(
   // Load wine log entries for quality/structure index/price tracking
   const wineLogEntriesByVineyard = await Promise.all(vineyards.map(async (vineyard) => {
     try {
-      return await loadWineLogByVineyard(vineyard.id, companyId);
+      return await wineLogFeature.records.getVineyardHistory(vineyard.id, companyId);
     } catch (error) {
       console.warn(`Failed to load wine log for vineyard ${vineyard.id}:`, error);
       return [];

@@ -101,9 +101,13 @@ vi.mock('@/lib/database/activities/inventoryDB', () => ({
   loadWineBatches: mocks.loadWineBatches,
 }));
 
-vi.mock('@/lib/database/core/wineLogDB', () => ({
-  loadWineLogByVineyard: mocks.loadWineLogByVineyard,
-  getWineProductionSummary: mocks.getWineProductionSummary,
+vi.mock('@/lib/features/wineLog', () => ({
+  wineLogFeature: {
+    records: {
+      getVineyardHistory: mocks.loadWineLogByVineyard,
+      getProductionSummary: mocks.getWineProductionSummary,
+    },
+  },
 }));
 
 vi.mock('@/lib/services/finance/financeService', () => ({

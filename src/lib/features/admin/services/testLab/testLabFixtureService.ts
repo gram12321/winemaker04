@@ -9,7 +9,7 @@ import { createWineBatchFromHarvest, getAllWineBatches, updateInventoryBatch } f
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { startFermentationActivity, processWeeklyFermentation, bottleWine } from '@/lib/services/wine/winery/fermentationManager';
 import { activitiesFeature } from '@/lib/features/activities';
-import { loadWineLogByVineyard } from '@/lib/database';
+import { wineLogFeature } from '@/lib/features/wineLog';
 import type { CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import type { FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
@@ -510,7 +510,7 @@ export async function createBottledWine(
   const batch = askingPrice > 0
     ? await getBatchById(result.batch.id)
     : adjustedBottledBatch;
-  const wineLogEntries = await loadWineLogByVineyard(result.vineyard.id);
+  const wineLogEntries = await wineLogFeature.records.getVineyardHistory(result.vineyard.id);
   const wineLogEntry = wineLogEntries.find(entry =>
     entry.vineyardId === result.vineyard.id &&
     entry.grape === batch.grape &&

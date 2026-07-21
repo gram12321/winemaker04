@@ -4,7 +4,7 @@ We have a comprehensive winery management game built with React/Vite/TypeScript 
 
 ## Project Summary
 
-This is a single-player, turn-based winery management game. The player manages vineyards, harvests grapes, produces wine, sells bottles and contracts, manages staff and finance, builds prestige, and competes through achievements/highscores.
+This is a single-player, turn-based winery management game. The player manages vineyards, harvests grapes, produces wine, sells bottles and contracts, manages staff and finance, builds prestige, and competes through achievements and leaderboards.
 
 Core simulation logic should live in services; React components should stay focused on presentation and interaction.
 
@@ -42,7 +42,7 @@ For taste, structure, or contracts work, also read:
 - **Board/share status:** public-company/share-market docs are historical implementation and reintroduction references; current mainline retains deferred board/share scaffolding and an intentionally inactive `boardShare` feature facade.
 - **Staff/activity:** staff management, founders, teams, recruitment, wages, assignment, work calculators, activity progression.
 - **Research:** active research page with effects/footprint/catalog tabs, enforced gates, starting research, grape/fermentation/staff/vineyard/contract/grape-buyer unlocks, and permanent vineyard-health effect aggregation.
-- **Player interface:** company switching, profile, Winepedia, achievements, highscores, settings, notifications, admin tools.
+- **Player interface:** company switching, profile, Winepedia, achievements, leaderboards, settings, notifications, admin tools.
 - **Prestige:** company and vineyard prestige events, decay, customer relationship effects.
 
 The automated suite currently has no known failing expectations. Live database smoke tests are opt-in and require a reachable, isolated Supabase environment; the default Vitest run uses database seams mocked at the unit boundary.
@@ -60,7 +60,7 @@ Keep detailed status updates in `docs/AIdocs/AIDescriptions_coregame.md` and fil
 | Wine services | `src/lib/services/wine/` |
 | Structure index | `src/lib/wineStructure/` |
 | Sales services | `src/lib/services/sales/` |
-| Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
+| Finance services | `src/lib/services/finance/`, `src/lib/features/loanLender/` |
 | Activities feature | `src/lib/features/activities/` |
 | Database layer | `src/lib/database/` |
 | Game constants | `src/lib/constants/` |
@@ -80,6 +80,8 @@ For substantial work, use the workflow above in order: clarify and plan first, c
 - Database parsing only accepts current compact wine anchor keys; do not add old data-shape support unless explicitly requested.
 
 ## Useful Commands
+
+Follow the Validation Policy in `readme.md`. These are available commands, not default per-edit commands: use focused checks during implementation and reserve the full suite/build for the integration gate or explicitly requested/cross-cutting work.
 
 ```bash
 npm test

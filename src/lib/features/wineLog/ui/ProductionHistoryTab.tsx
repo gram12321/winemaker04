@@ -1,15 +1,15 @@
 import React from 'react';
-import { WineLogEntry, WineBatch } from '@/lib/types/types';
-import { SimpleCard, Badge, Button } from '../../ui';
+import type { Vineyard, WineBatch, WineLogEntry } from '@/lib/types/types';
+import { SimpleCard, Badge, Button } from '@/components/ui';
 import { Wine } from 'lucide-react';
 import { formatNumber, formatGameDate, formatPercent } from '@/lib/utils/utils';
-import { UnifiedTooltip } from '../../ui/shadCN/tooltip';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
 interface ProductionHistoryTabProps {
   paginatedWineLog: WineLogEntry[];
   filteredWineLog: WineLogEntry[];
   selectedVineyard: string;
-  vineyards: any[];
+  vineyards: Vineyard[];
   page: number;
   pageSize: number;
   totalPages: number;

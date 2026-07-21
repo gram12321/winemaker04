@@ -1,16 +1,24 @@
 import { v4 as uuidv4 } from 'uuid';
-import { WineBatch, WineLogEntry } from '../../types/types';
-import { getCurrentCompanyId } from '../../utils/companyUtils';
+import type { Vineyard, WineBatch, WineLogEntry } from '@/lib/types/types';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
-import { getGameState, getCurrentCompany } from '../core/gameState';
-import { insertWineLogEntry, loadWineLog, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
-import { calculateWineScore, getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
+import { getGameState, getCurrentCompany } from '@/lib/services/core/gameState';
+import {
+  getWineProductionSummary as loadWineProductionSummary,
+  insertWineLogEntry,
+  loadWineLog,
+  loadWineLogByVineyard,
+  type WineLogData,
+} from '@/lib/database';
+import { calculateWineScore, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 const getEntryTasteQualityIndex = (entry: Pick<WineLogEntry, 'tasteQualityIndex'>): number =>
   entry.tasteQualityIndex;
 
 const getEntryWineScore = (entry: Pick<WineLogEntry, 'wineScore' | 'tasteQualityIndex' | 'structureIndex'>): number =>
   entry.wineScore ?? ((getEntryTasteQualityIndex(entry) + entry.structureIndex) / 2);
+
+const AGED_WINE_THRESHOLD_WEEKS = 156;
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -98,27 +106,18 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
 /**
  * Get wine log entries for a specific vineyard
  */
-export async function getVineyardWineHistory(vineyardId: string): Promise<WineLogEntry[]> {
-  return await loadWineLogByVineyard(vineyardId);
+export async function getVineyardWineHistory(vineyardId: string, companyId?: string): Promise<WineLogEntry[]> {
+  return await loadWineLogByVineyard(vineyardId, companyId);
 }
 
 export async function getWineLogEntries(): Promise<WineLogEntry[]> {
   return await loadWineLog();
 }
 
-
-/**
- * Calculate statistics for a vineyard based on its wine log
- */
-export interface VineyardStats {
-  totalBottles: number;
-  totalVintages: number;
-  averageQuality: number;
-  averageStructureIndex: number;
-  averagePrice: number;
-  bestVintage?: { year: number; quality: number };
-  mostRecentVintage?: WineLogEntry;
+export async function getWineProductionSummary(companyId?: string) {
+  return loadWineProductionSummary(companyId);
 }
+
 
 /**
  * Update vineyard productivity highscore based on total production
@@ -147,41 +146,6 @@ async function updateVineyardProductivityHighscore(vineyardId: string, vineyardN
     console.error('Failed to update vineyard productivity highscore:', error);
     // Don't throw - this is a background operation
   }
-}
-
-export async function calculateVineyardStats(vineyardId: string): Promise<VineyardStats> {
-  const history = await getVineyardWineHistory(vineyardId);
-  
-  if (history.length === 0) {
-    return {
-      totalBottles: 0,
-      totalVintages: 0,
-      averageQuality: 0,
-      averageStructureIndex: 0,
-      averagePrice: 0
-    };
-  }
-
-  const totalBottles = history.reduce((sum, entry) => sum + entry.quantity, 0);
-  const averageQuality = history.reduce((sum, entry) => sum + getEntryTasteQualityIndex(entry), 0) / history.length;
-  const averageStructureIndex = history.reduce((sum, entry) => sum + entry.structureIndex, 0) / history.length;
-  const averagePrice = history.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / history.length;
-  
-  const bestVintage = history.reduce((best, entry) => 
-    !best || getEntryTasteQualityIndex(entry) > best.quality ? { year: entry.vintage, quality: getEntryTasteQualityIndex(entry) } : best
-  , null as { year: number; quality: number } | null);
-
-  const mostRecentVintage = history[0]; // Already sorted by bottled date descending
-
-  return {
-    totalBottles,
-    totalVintages: history.length,
-    averageQuality,
-    averageStructureIndex,
-    averagePrice,
-    bestVintage: bestVintage || undefined,
-    mostRecentVintage
-  };
 }
 
 /**
@@ -235,15 +199,52 @@ export interface VineyardAnalytics {
   };
 }
 
+export interface VineyardAnalyticsInput {
+  vineyardId: string;
+  vineyardEntries: WineLogEntry[];
+  allVineyards: Vineyard[];
+  allWineLogGroups: Record<string, WineLogEntry[]>;
+  allBatches: WineBatch[];
+}
+
+interface VineyardRankings {
+  scoreRanking: Map<string, number>;
+  priceRanking: Map<string, number>;
+  roiRanking: Map<string, number>;
+  totalVineyards: number;
+}
+
+function buildVineyardRankings(vineyards: Vineyard[], wineLogGroups: Record<string, WineLogEntry[]>): VineyardRankings {
+  const producingVineyards = vineyards.filter(vineyard => (wineLogGroups[vineyard.id] || []).length > 0);
+  const averages = producingVineyards.map(vineyard => {
+    const entries = wineLogGroups[vineyard.id] || [];
+    return {
+      id: vineyard.id,
+      avgWineScore: entries.reduce((sum, entry) => sum + getEntryWineScore(entry), 0) / entries.length,
+      avgPrice: entries.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / entries.length,
+      revenuePerHa: entries.reduce((sum, entry) => sum + entry.quantity * entry.estimatedPrice, 0) / (vineyard.hectares || 1),
+    };
+  });
+
+  const rank = (field: 'avgWineScore' | 'avgPrice' | 'revenuePerHa') => {
+    const sorted = [...averages].sort((a, b) => b[field] - a[field]);
+    return new Map(sorted.map((vineyard, index) => [vineyard.id, index + 1]));
+  };
+
+  return {
+    scoreRanking: rank('avgWineScore'),
+    priceRanking: rank('avgPrice'),
+    roiRanking: rank('revenuePerHa'),
+    totalVineyards: producingVineyards.length,
+  };
+}
+
 /**
  * Calculate comprehensive analytics for a vineyard
  */
 export function calculateVineyardAnalytics(
-  vineyardId: string,
-  vineyardEntries: WineLogEntry[],
-  allVineyards: any[],
-  allWineLogGroups: Record<string, WineLogEntry[]>,
-  allBatches: WineBatch[]
+  { vineyardId, vineyardEntries, allVineyards, allWineLogGroups, allBatches }: VineyardAnalyticsInput,
+  rankings = buildVineyardRankings(allVineyards, allWineLogGroups),
 ): VineyardAnalytics {
   // Production metrics
   const totalBottles = vineyardEntries.reduce((sum, entry) => sum + entry.quantity, 0);
@@ -270,26 +271,6 @@ export function calculateVineyardAnalytics(
     const bestScore = best ? getEntryWineScore(best) : 0;
     return !best || entryScore > bestScore ? entry : best;
   });
-  
-  // Rankings among all producing vineyards
-  const producingVineyards = allVineyards.filter(v => (allWineLogGroups[v.id] || []).length > 0);
-  const vineyardAvgs = producingVineyards.map(v => {
-    const entries = allWineLogGroups[v.id] || [];
-    return {
-      id: v.id,
-      avgWineScore: entries.reduce((sum, e) => sum + getEntryWineScore(e), 0) / entries.length,
-      avgPrice: entries.reduce((sum, e) => sum + e.estimatedPrice, 0) / entries.length,
-      revenuePerHa: entries.reduce((sum, e) => sum + (e.quantity * e.estimatedPrice), 0) / (v.hectares || 1)
-    };
-  });
-  
-  const scoreRanked = [...vineyardAvgs].sort((a, b) => b.avgWineScore - a.avgWineScore);
-  const priceRanked = [...vineyardAvgs].sort((a, b) => b.avgPrice - a.avgPrice);
-  const roiRanked = [...vineyardAvgs].sort((a, b) => b.revenuePerHa - a.revenuePerHa);
-  
-  const scoreRanking = scoreRanked.findIndex(v => v.id === vineyardId) + 1;
-  const priceRanking = priceRanked.findIndex(v => v.id === vineyardId) + 1;
-  const roiRanking = roiRanked.findIndex(v => v.id === vineyardId) + 1;
   
   // Wine score trend (first half vs second half)
   const midpoint = Math.floor(vineyardEntries.length / 2);
@@ -356,7 +337,7 @@ export function calculateVineyardAnalytics(
     batch.vineyardId === vineyardId &&
     batch.state === 'bottled' &&
     batch.quantity > 0 &&
-    (batch.agingProgress || 0) >= 156 // 3+ years
+    (batch.agingProgress || 0) >= AGED_WINE_THRESHOLD_WEEKS
   );
   
   const avgAgingQuality = agedWinesFromVineyard.length > 0
@@ -374,10 +355,10 @@ export function calculateVineyardAnalytics(
     consistencyScore,
     scoreTrend,
     bestWine,
-    scoreRanking,
-    priceRanking,
-    roiRanking,
-    totalVineyards: producingVineyards.length,
+    scoreRanking: rankings.scoreRanking.get(vineyardId) || 0,
+    priceRanking: rankings.priceRanking.get(vineyardId) || 0,
+    roiRanking: rankings.roiRanking.get(vineyardId) || 0,
+    totalVineyards: rankings.totalVineyards,
     yearlyScores,
     grapePerformance,
     featureStats,
@@ -386,5 +367,28 @@ export function calculateVineyardAnalytics(
       avgQuality: avgAgingQuality
     }
   };
+}
+
+export function calculateAllVineyardAnalytics(
+  vineyards: Vineyard[],
+  allWineLogGroups: Record<string, WineLogEntry[]>,
+  allBatches: WineBatch[],
+): Record<string, VineyardAnalytics> {
+  const rankings = buildVineyardRankings(vineyards, allWineLogGroups);
+
+  return Object.fromEntries(
+    vineyards
+      .filter(vineyard => (allWineLogGroups[vineyard.id] || []).length > 0)
+      .map(vineyard => [
+        vineyard.id,
+        calculateVineyardAnalytics({
+          vineyardId: vineyard.id,
+          vineyardEntries: allWineLogGroups[vineyard.id],
+          allVineyards: vineyards,
+          allWineLogGroups,
+          allBatches,
+        }, rankings),
+      ]),
+  );
 }
 

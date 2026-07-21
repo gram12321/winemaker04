@@ -11,6 +11,18 @@ npm test
 npm run build
 ```
 
+## Validation Policy
+
+Use the smallest useful check. The commands above are available checks, not a requirement to run the full suite after every edit.
+
+- **During implementation:** inspect affected code and run a focused test file or suite only when behavior changes. Do not repeatedly run `npm test`, `npm run build`, typechecks, or the same successful command without a relevant code change.
+- **Standalone TypeScript checks:** do not run `npx tsc --noEmit` immediately before `npm run build`; the build already runs the root TypeScript check plus the Node/server checks and Vite bundling. Use standalone `tsc` only to diagnose a TypeScript/import issue or when specifically requested.
+- **Documentation-only work:** skip tests and builds; run `git diff --check` before handoff.
+- **Individual isolated worktrees:** run focused validation once near handoff. Run the full suite only when the change is cross-cutting, changes shared runtime/schema/build configuration, or the user asks for it.
+- **Integration gate:** a designated integrator runs `npm test`, `npm run build`, and `git diff --check` once on the consolidated merge candidate immediately before human review or merge. Do not repeat a successful full gate unless the candidate changes.
+- **After a failure:** reproduce with the narrowest relevant check, fix it, rerun that check, then rerun the full gate only if the candidate is at the integration gate.
+- **Handoff:** report exactly which checks ran and their results; never imply that an unrun check passed.
+
 ## Codebase Map
 
 | Area | Location |
@@ -27,7 +39,7 @@ npm run build
 
 | Pattern | Features | Public interface | Lifecycle |
 |---|---|---|---|
-| Installed feature facade | `activities`, `achievements`, `company`, `leaderboards`, `loanLender`, `researchUpgrade`, `staff`, `user`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
+| Installed feature facade | `activities`, `achievements`, `company`, `leaderboards`, `loanLender`, `researchUpgrade`, `staff`, `user`, `boardShare`, `wineLog` | one static feature value plus public types | assembled once; no opt-out or configuration |
 | Development-only feature | `admin` | host type passed to `App` | dynamically loaded in Vite development only |
 | Always-on functional module | `weather` | stable function/type barrel | required application capability |
 
@@ -69,4 +81,4 @@ The dev-only Admin Dashboard exposes automated Vitest runs and Gameflow Lab fixt
 
 ## Agent Workflow
 
-Use `skills/winemaker-game/SKILL.md` as the repository router. For substantial work, read the entry docs above, use the relevant planning/worktree/subagent skills, and verify before claiming completion. Keep `docs/versionlog.md` in reverse chronological order using its required entry format.
+Use `skills/winemaker-game/SKILL.md` as the repository router. For substantial work, read the entry docs above, use the relevant planning/worktree/subagent skills, and follow the Validation Policy rather than repeating broad checks. Keep `docs/versionlog.md` in reverse chronological order using its required entry format.
