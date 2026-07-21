@@ -1,6 +1,6 @@
 # Global Asset Market and Used Storage Vessels
 
-**Status:** Approved clean-cutover design. This replaces the three prior overlapping used-vessel/P2P market notes.
+**Status:** Completed for the initial global used-vessel market delivery. This replaces the three prior overlapping used-vessel/P2P market notes; generic player-to-player listings remain a future extension described below.
 
 ## Goal
 

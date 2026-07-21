@@ -1,5 +1,7 @@
 # Storage Vessel Cleaning Implementation Plan
 
+Status: Completed. Cleanliness persistence, dirty-on-fill behavior, cancellable cleaning activities, Equipment actions, and atomic completion are implemented and verified.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make a vessel that has held wine dirty and unavailable for further allocation until a cancellable Cleaning Vessel maintenance activity completes.

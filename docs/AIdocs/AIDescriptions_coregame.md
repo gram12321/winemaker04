@@ -1,41 +1,43 @@
 # Core Game Mechanics
 
-Last code-verified: 2026-07-16
+Last code-verified: 2026-07-20
+This is the concise behavior/status guide. Use `CONTEXT.md` for rules and vocabulary, and `docs/PROJECT_INFO.md` for ownership and boundaries.
 
-Current implementation orientation for agents and maintainers. `CONTEXT.md` is authoritative for vocabulary; `docs/PROJECT_INFO.md` for ownership; code and tests for final behavior.
+## Runtime and player surfaces
 
-## Architecture and Persistence
+- `processGameTick()` advances activities, orders/contracts, forward contracts, vines, prestige, economy/weather, and seasonal finance hooks. Supabase stores company-scoped game state and domain records.
+- Main surfaces are Login, Company Overview, Vineyard, Winery, Equipment, Sales, Finance, Research, Staff, Weather Center, Wine Log, Winepedia, Achievements, Leaderboards, Profile, Settings, and the development-only Admin Dashboard.
+- Winepedia is the technical reference. Admin Test Systems runs the shared Vitest suite and Gameflow Lab fixtures; the Admin feature is loopback-gated and loaded only in Vite development.
 
-- React/Vite/TypeScript/Tailwind/ShadCN frontend with Supabase persistence and company-scoped state.
-- Weekly progression runs through `processGameTick()` in `src/lib/services/core/gameTick.ts`.
-- Services/features own rules, calculations, validation, and orchestration. `src/lib/database/` owns CRUD/mapping. Components own presentation and interaction.
-- Feature modules use installed static facades for `achievements`, `loanLender`, `researchUpgrade`, and intentionally inactive `boardShare`; development-only `admin` is loaded explicitly by bootstrap; `weather` is an always-on functional barrel. Public-company/share gameplay remains deferred and `boardShare` is not wired into host behavior.
-- Core persistence areas cover game state, staff, activities, inventory, customers/orders, contracts, grape markets, forward contracts, research, loans, prestige, achievements, and highscores.
+## Implemented behavior
 
-## Player Surfaces
+### Vineyard, weather, and production
 
-Main pages: Login, Company Overview, Vineyard, Winery, Sales, Finance, Research, Staff, Weather Center, Wine Log, Winepedia, Achievements, Highscores, Profile, Settings, and dev-only Admin Dashboard. The Admin feature has a two-function host seam, is composed in its development-only feature module, and is dynamically loaded only in Vite development mode.
+- Weather persists weekly state/intensity, seasonal pattern/confidence, and next-week forecast. It supplies bounded vineyard progression, operation impacts, and market context; severe events, mitigation, weather research, and weather achievements are deferred.
+- Wine progresses through grapes, must, wine, and bottled states via crushing, fermentation, aging, features, oxidation, and bottle lifecycle effects. Bottling creates immutable historical snapshots while cellar values can evolve.
+- Contracts validate taste/structure/site/origin/grape requirements. Forward contracts cover bottled wine, grapes, `must_ready`, and `must_fermenting`.
 
-Winepedia provides technical reference tabs for grapes, customers, economy, markets, weather, winemaking, quality, yield, and scoring. Admin Test Systems separates the shared Vitest suite from Gameflow Lab fixture tools.
+### Markets and storage
 
-## Implemented Systems
+- Sell-side grape buyers remain independent from the generic Buy Market. Buy Market combines Grape Procurement with new quantity-based and globally listed used Storage Vessel sources; offers have displayed sellers and buyer-to-seller relationship pricing.
+- Used vessels preserve asset identity, ownership history, material, age, condition, fills, and cleanliness. Condition/value are projected for the viewer's game date and purchase/sell-back use atomic listing commands.
+- Wine contact marks vessels dirty, but cleanliness is warning-only and dirty operational vessels remain allocatable. Empty Vessel and Clean Vessel are cancellable Maintenance activities; emptying changes only the selected vessel's volume and releases only that vessel.
 
-### Time, Weather, and Vineyard
+### Finance and progression
 
-- Weekly tick advances activities, orders/contracts, forward contracts, vines, prestige decay, economy/weather, and seasonal/yearly finance hooks.
-- `src/lib/features/activities/` owns activity lifecycle, work calculators/previews, activity ticks, and activity UI behind `activitiesFeature`; host systems use only its public facade.
-- Weather state, intensity, seasonal pattern/confidence, and next-week forecast persist in company-scoped `GameState`.
-- `src/lib/features/weather/` resolves weather and supplies shared vineyard projection, market context, planting/harvesting operation impacts, and presentation models.
-- Vineyard weather is a bounded modifier of normal health/ripeness progression, including planting progress, research health-decay multiplier, aspect, altitude, suitability, and soil response. It does not directly modify yield, harvest anchors, or wine score.
-- Weather Center is operational; Vineyard shows site-aware forecast explanations; Winepedia contains formulas/matrices. Severe events, mitigation, weather research, and weather achievements are deferred.
+- Finance statements, cash flow, loans/lenders, staff/team work, founders, prestige, achievements, and leaderboards are active. Founder returns, buyout, loan payments, warnings, restructuring, and defaults are persisted workflows.
+- Staff use category-derived primary skills, six innate broad roles, exact task mastery, and bounded grape mastery. Work previews and ticks share one calculator; XP is awarded only from persisted applied work.
+- `companyFeature.records` owns explicit company records and owner-scoped portfolio statistics; `companyFeature.setup` owns starting-condition preview/application; `companyFeature.lifecycle` exposes the company-activation hook seam; and `companyFeature.ui` owns the company gateway. Core game state remains the host for active-company session orchestration.
+- Research activity and unlock gates are active for grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. The current permanent effect reduces vineyard-health decay. Companies may be owned or unowned and remain playable.
 
-### Wine, Structure, and Taste
+## Deferred or partial
 
-- Wine progresses through grapes, must, wine, and bottled states using crushing, fermentation, aging, features, and bottle lifecycle effects.
-- Compact `WineAnchorValues` represent hidden identity. Structure has six channels and `structureIndex`; taste has 14 families and `tasteQualityIndex`; descriptors are display-only.
-- Current `wineScore = (tasteQualityIndex + structureIndex) / 2`. Bottling snapshots are immutable historical inputs for Wine Log, highscores, and achievements; current cellar values may evolve.
+- Public-company/share gameplay and the `boardShare` host integration.
+- Vessel-memory gameplay and generic player-to-player asset listings.
+- Equipment and vineyard-technique research tracks, dedicated weather research/achievements, severe-weather actions, broad bottle-market demand simulation, customer taste matching, descriptor-level scoring, and persisted grape-change history for grape-tenure achievements.
+- Research `benefits` copy may be aspirational; `unlocks` and `permanentEffects` define runtime behavior.
 
-### Sales and Grape Markets
+## File map
 
 - Customer generation, orders, relationships, partial fulfillment, contracts, expiration, and rejection are implemented.
 - Contract checks distinguish taste quality, structure, site/origin, grape identity, and characteristic requirements.
@@ -68,7 +70,7 @@ Winepedia provides technical reference tabs for grapes, customers, economy, mark
 
 ## Main File Map
 
-| Area | Locations |
+| Area | Primary locations |
 |---|---|
 | Core/tick | `src/lib/services/core/` |
 | Activities | `src/lib/features/activities/`, `src/lib/database/activities/activityDB.ts` |

@@ -18,13 +18,10 @@ export interface Company {
   createdAt: Date;
   updatedAt: Date;
   startingCountry?: string; // Starting country for companies using new starting conditions system
-  // Note: Share-related data is stored in company_shares table
-  // Use getCompanyShares() from companySharesDB to access share data
 }
 
 /**
  * Map database row to Company
- * Reads share data from company_shares table
  */
 async function mapCompanyFromDB(dbCompany: any): Promise<Company> {
   // Core company fields
@@ -43,9 +40,6 @@ async function mapCompanyFromDB(dbCompany: any): Promise<Company> {
     updatedAt: new Date(dbCompany.updated_at),
     startingCountry: toOptionalString(dbCompany.starting_country)
   };
-
-  // Share data is stored separately in company_shares table
-  // Access via getCompanyShares() when needed
 
   return company;
 }
@@ -67,8 +61,6 @@ export interface CompanyData {
   prestige: number;
   last_played?: string;
   starting_country?: string;
-  // Note: Share-related fields are now in company_shares table
-  // Use createCompanyShares() and updateCompanyShares() for share data
 }
 
 export const insertCompany = async (companyData: CompanyData): Promise<{ success: boolean; data?: any; error?: string }> => {
