@@ -39,7 +39,7 @@ Use the smallest useful check. The commands above are available checks, not a re
 
 | Pattern | Features | Public interface | Lifecycle |
 |---|---|---|---|
-| Installed feature facade | `activities`, `achievements`, `company`, `leaderboards`, `loanLender`, `researchUpgrade`, `staff`, `user`, `boardShare` | one static feature value plus public types | assembled once; no opt-out or configuration |
+| Installed feature facade | `activities`, `achievements`, `company`, `leaderboards`, `loanLender`, `researchUpgrade`, `staff`, `user`, `boardShare`, `wineLog` | one static feature value plus public types | assembled once; no opt-out or configuration |
 | Development-only feature | `admin` | host type passed to `App` | dynamically loaded in Vite development only |
 | Always-on functional module | `weather` | stable function/type barrel | required application capability |
 

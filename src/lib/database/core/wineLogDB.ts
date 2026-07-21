@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { WineLogEntry, GrapeVariety } from '../../types/types';
+import type { GrapeVariety, WineCharacteristics, WineLogEntry } from '../../types/types';
 import { buildGameDate } from '../dbMapperUtils';
 
 const WINE_LOG_TABLE = 'wine_log';
@@ -22,7 +22,7 @@ export interface WineLogData {
   land_value_modifier?: number;
   structure_index: number;
   wine_score: number;
-  characteristics: any;
+  characteristics: WineCharacteristics;
   estimated_price: number;
   harvest_week: number;
   harvest_season: string;

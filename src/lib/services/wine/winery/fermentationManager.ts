@@ -1,7 +1,7 @@
 import { WineBatch } from '../../../types/types';
 import { bottleStorageBackedWineBatch, loadWineBatches, bulkUpdateWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
-import { recordBottledWine } from '../../user/wineLogService';
+import { wineLogFeature } from '@/lib/features/wineLog';
 import { processEventTrigger } from '../features/featureService';
 import { activitiesFeature } from '@/lib/features/activities';
 import { WorkCategory } from '@/lib/types/types';
@@ -115,7 +115,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       const bottledBatch = updatedBatches.find(b => b.id === batchId);
 
       if (bottledBatch && bottledBatch.state === 'bottled') {
-        await recordBottledWine(bottledBatch);
+        await wineLogFeature.records.recordBottledWine(bottledBatch);
 
         // Trigger bottling event for wine features (e.g., bottle aging)
         const batchWithEventFeatures = await processEventTrigger(bottledBatch, 'bottling', {});
