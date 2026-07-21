@@ -1,2 +1,10 @@
 export { prestigeFeature } from './feature';
-export type { PrestigeFeature, PrestigeModalInput, PrestigeSummary } from './featureTypes';
+export type {
+  PrestigeEventDisplayData,
+  PrestigeEventDisplayInput,
+  PrestigeFeature,
+  PrestigeModalInput,
+  PrestigeSummary,
+  VineyardPrestigeBreakdown,
+  VineyardPrestigeBreakdownEvent,
+} from './featureTypes';

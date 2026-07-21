@@ -9,6 +9,7 @@ import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getStoredVineyards, getRegionalPriceRange } from '@/lib/services';
 import { prestigeFeature } from '@/lib/features/prestige';
+import type { VineyardPrestigeBreakdown } from '@/lib/features/prestige';
 import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface LandValueModifierFactorsBreakdownProps {
@@ -25,7 +26,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
   showFactorDetails = true
 }) => {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [prestigeBreakdown, setPrestigeBreakdown] = useState<any>(null);
+  const [prestigeBreakdown, setPrestigeBreakdown] = useState<VineyardPrestigeBreakdown | null>(null);
   const [wineBatchVineyard, setWineBatchVineyard] = useState<Vineyard | null>(null);
 
   // Load prestige breakdown data
@@ -643,20 +644,9 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
                               <div className="mt-2 space-y-1">
                                 <div className="text-xs text-purple-700 font-medium">Vineyard Prestige</div>
                                 <div className="rounded border border-purple-200 bg-purple-50/50">
-                                  {vineyardData.events.map((event: any, idx: number) => {
+                                  {vineyardData.events.map((event, idx) => {
                                     try {
-                                      const titleBase = prestigeFeature.reads.getEventDisplayData({
-                                        id: event.id ?? `${idx}`,
-                                        type: event.type,
-                                        amount: event.amount,
-                                        timestamp: Date.now(),
-                                        decayRate: event.decayRate,
-                                        description: event.description,
-                                        sourceId: event.sourceId,
-                                        originalAmount: event.originalAmount,
-                                        currentAmount: event.currentAmount,
-                                        metadata: event.metadata
-                                      } as any).titleBase;
+                                      const titleBase = prestigeFeature.reads.getEventDisplayData(event).titleBase;
                                       return (
                                         <div key={idx} className={`px-2 py-0.5 text-xs text-purple-800 flex items-center justify-between ${idx !== vineyardData.events.length - 1 ? 'border-b border-purple-200' : ''}`}>
                                           <span className="truncate mr-2" title={event.description}>{titleBase}</span>

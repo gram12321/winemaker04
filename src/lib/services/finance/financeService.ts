@@ -184,10 +184,10 @@ export const onCompanyActivated = (companyId: string): void => {
 companyFeature.lifecycle.registerActivationHook(onCompanyActivated);
 
 // Calculate company value (total assets - total liabilities)
-export const calculateCompanyValue = async (): Promise<number> => {
+export const calculateCompanyValue = async (companyId?: string): Promise<number> => {
   try {
-    const financialData = await calculateFinancialData('year');
-    const totalOutstandingLoans = await loanLenderFeature.metrics.calculateTotalOutstandingLoans();
+    const financialData = await calculateFinancialData('year', { companyId });
+    const totalOutstandingLoans = await loanLenderFeature.metrics.calculateTotalOutstandingLoans(companyId);
     return financialData.totalAssets - totalOutstandingLoans;
   } catch (error) {
     console.error('Error calculating company value:', error);

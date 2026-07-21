@@ -15,6 +15,36 @@ export interface PrestigeModalInput extends PrestigeSummary {
   onClose: () => void;
 }
 
+export interface PrestigeEventDisplayInput {
+  type: string;
+  amount: number;
+  description?: string;
+  metadata?: PrestigeEvent['metadata'];
+}
+
+export interface PrestigeEventDisplayData {
+  title: string;
+  titleBase: string;
+  amountText?: string;
+  calc?: string;
+  displayInfo?: string;
+  calculationData?: {
+    type: 'company_value' | 'vineyard_land' | 'vineyard_age' | 'wine_feature';
+    [key: string]: unknown;
+  };
+}
+
+export interface VineyardPrestigeBreakdownEvent extends PrestigeEventDisplayInput {
+  decayRate: number;
+  originalAmount: number;
+  currentAmount: number;
+}
+
+export type VineyardPrestigeBreakdown = Record<string, {
+  totalPrestige: number;
+  events: VineyardPrestigeBreakdownEvent[];
+}>;
+
 export interface PrestigeEventContext {
   customerName?: string;
   order?: WineOrder;
@@ -82,15 +112,8 @@ export interface PrestigeFeature {
     calculateCurrent(): Promise<PrestigeSummary>;
     calculateVineyard(vineyardId: string): Promise<number>;
     getBaseVineyard(vineyardId: string): Promise<number>;
-    getBreakdown(): Promise<Record<string, unknown>>;
-    getEventDisplayData(event: PrestigeEvent): {
-      title: string;
-      titleBase: string;
-      amountText?: string;
-      calc?: string;
-      displayInfo?: string;
-      calculationData?: { type: 'company_value' | 'vineyard_land' | 'vineyard_age' | 'wine_feature'; [key: string]: unknown };
-    };
+    getBreakdown(): Promise<VineyardPrestigeBreakdown>;
+    getEventDisplayData(event: PrestigeEventDisplayInput): PrestigeEventDisplayData;
   };
   events: {
     addSale(saleValue: number, customerName: string, wineName: string, quantity?: number): Promise<void>;

@@ -18,9 +18,12 @@ import type {
   AchievementPrestigeInput,
   ContractOutcomePrestigeInput,
   FinancePrestigePenaltyInput,
+  PrestigeEventDisplayData,
+  PrestigeEventDisplayInput,
   PrestigeEventContext,
   StartingConditionPrestigeInput,
   VineyardAchievementPrestigeInput,
+  VineyardPrestigeBreakdown,
 } from '../featureTypes';
 import {
   upsertPrestigeEventBySource,
@@ -90,7 +93,7 @@ export async function initializeBasePrestigeEvents(): Promise<void> {
   const maxLandValue = getMaxLandValue();
 
   // Calculate company value using centralized function
-  const companyValue = await calculateCompanyValue();
+  const companyValue = await calculateCompanyValue(companyId);
 
   const companyValuePrestige = calculateCompanyValuePrestige(
     companyValue,
@@ -116,7 +119,7 @@ export async function createBaseVineyardPrestigeEvents(
   companyId = getCurrentCompanyId(),
 ): Promise<void> {
   try {
-    const vineyards = await loadVineyards();
+    const vineyards = await loadVineyards(companyId);
     await Promise.all(
       vineyards.map((vineyard) => createVineyardFactorPrestigeEvents(vineyard, companyId)),
     );
@@ -343,7 +346,7 @@ export async function calculateCurrentPrestige(): Promise<{
 
   const totalPrestige = companyPrestige + vineyardPrestige;
 
-  const vineyards = await loadVineyards();
+  const vineyards = await loadVineyards(companyId);
   const vineyardEvents = eventBreakdown.filter(
     (event) => event.category === 'vineyard',
   );
@@ -475,7 +478,7 @@ export async function updateCompanyValuePrestige(
     const maxLandValue = getMaxLandValue();
 
     // Calculate company value using centralized function
-    const companyValue = await calculateCompanyValue();
+    const companyValue = await calculateCompanyValue(companyId);
 
     const companyValuePrestige = calculateCompanyValuePrestige(
       companyValue,
@@ -556,7 +559,7 @@ export async function updateBaseVineyardPrestigeEvent(
 ): Promise<void> {
   const companyId = getCurrentCompanyId();
   try {
-    const vineyards = await loadVineyards();
+    const vineyards = await loadVineyards(companyId);
     const vineyard = vineyards.find((v) => v.id === vineyardId);
 
     if (!vineyard) {
@@ -584,7 +587,7 @@ export async function updateCellarCollectionPrestige(): Promise<void> {
   try {
     const { loadWineBatches } =
       await import('@/lib/database/activities/inventoryDB');
-    const allBatches = await loadWineBatches();
+    const allBatches = await loadWineBatches(companyId);
 
     // Filter aged wines (5+ years, bottled, not oxidized, still in inventory)
     const agedWines = allBatches.filter((batch) => {
@@ -945,20 +948,7 @@ export async function recordAdminPrestigeAdjustment(amount: number): Promise<voi
   triggerGameUpdate();
 }
 
-export async function getVineyardPrestigeBreakdown(): Promise<{
-  [vineyardId: string]: {
-    totalPrestige: number;
-    events: Array<{
-      type: string;
-      amount: number;
-      description: string;
-      decayRate: number;
-      originalAmount: number;
-      currentAmount: number;
-      metadata?: PrestigeEvent['metadata'];
-    }>;
-  };
-}> {
+export async function getVineyardPrestigeBreakdown(): Promise<VineyardPrestigeBreakdown> {
   const companyId = getCurrentCompanyId();
   try {
     const events = await listPrestigeEvents(companyId);
@@ -974,7 +964,7 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
         event.source_id !== null && vineyardEventTypes.includes(event.type),
     );
 
-    const breakdown: { [vineyardId: string]: any } = {};
+    const breakdown: VineyardPrestigeBreakdown = {};
 
     for (const event of vineyardEvents) {
       let vineyardId = event.source_id!;
@@ -1139,17 +1129,7 @@ export function consolidateWineFeatureEvents(
   return consolidated.sort((a, b) => b.totalAmount - a.totalAmount);
 }
 
-export function getEventDisplayData(event: PrestigeEvent): {
-  title: string;
-  titleBase: string;
-  amountText?: string;
-  calc?: string;
-  displayInfo?: string;
-  calculationData?: {
-    type: 'company_value' | 'vineyard_land' | 'vineyard_age' | 'wine_feature';
-    [key: string]: any;
-  };
-} {
+export function getEventDisplayData(event: PrestigeEventDisplayInput): PrestigeEventDisplayData {
   const fallbackTitleBase =
     event.type === 'achievement'
       ? 'Achievement'

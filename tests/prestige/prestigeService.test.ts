@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => {
     insertPrestigeEvent: vi.fn(async () => undefined),
     insertPrestigeEventIfAbsentBySource: vi.fn(async () => true),
     loadVineyards: vi.fn(async () => vineyards),
+    loadWineBatches: vi.fn(async () => []),
     saveVineyard: vi.fn(async (vineyard: Vineyard) => {
       vineyards = vineyards.map(candidate => candidate.id === vineyard.id ? vineyard : candidate);
       return true;
@@ -40,6 +41,14 @@ vi.mock('@/lib/features/prestige/database/prestigeEventsDB', () => ({
 vi.mock('@/lib/database/activities/vineyardDB', () => ({
   loadVineyards: mocks.loadVineyards,
   saveVineyard: mocks.saveVineyard
+}));
+
+vi.mock('@/lib/database/activities/inventoryDB', () => ({
+  loadWineBatches: mocks.loadWineBatches,
+}));
+
+vi.mock('@/lib/utils/companyUtils', () => ({
+  getCurrentCompanyId: () => 'company-1',
 }));
 
 vi.mock('@/lib/services/core/gameState', () => ({
@@ -182,6 +191,23 @@ describe('prestige service', () => {
     const { calculateCompanyValuePrestige } = await import('@/lib/features/prestige/services/prestigeService');
 
     expect(calculateCompanyValuePrestige(1000000, 1000000)).toBeCloseTo(Math.log(2));
+  });
+
+  it('keeps related reads and calculations in the captured company scope', async () => {
+    const {
+      calculateCurrentPrestige,
+      initializeBasePrestigeEvents,
+      updateCellarCollectionPrestige,
+    } = await import('@/lib/features/prestige/services/prestigeService');
+
+    await calculateCurrentPrestige();
+    await initializeBasePrestigeEvents();
+    await updateCellarCollectionPrestige();
+
+    expect(mocks.listPrestigeEventsForUI).toHaveBeenCalledWith('company-1');
+    expect(mocks.loadVineyards).toHaveBeenCalledWith('company-1');
+    expect(mocks.calculateCompanyValue).toHaveBeenCalledWith('company-1');
+    expect(mocks.loadWineBatches).toHaveBeenCalledWith('company-1');
   });
 
   it('aggregates company-level wine feature events as company prestige and vineyard-level feature events as vineyard prestige', async () => {
