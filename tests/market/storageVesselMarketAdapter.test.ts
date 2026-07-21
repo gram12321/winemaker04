@@ -64,7 +64,7 @@ const offer = {
   createdYear: 2026, createdSeason: 'Spring' as const, createdWeek: 1,
   lastRefreshedYear: 2026, lastRefreshedSeason: 'Spring' as const, lastRefreshedWeek: 1,
   expiresYear: null, expiresSeason: null, expiresWeek: null,
-  payload: { vesselType: 'cask', material: 'oak', qualityScore: 0.78, productionYear: 2024, capacityLitres: 225 },
+  payload: { catalogueId: 'oak_cask_250', vesselType: 'cask', material: 'oak', qualityScore: 0.78, productionYear: 2024, capacityLitres: 250 },
 };
 
 describe('Storage Vessel market adapter', () => {
@@ -80,7 +80,7 @@ describe('Storage Vessel market adapter', () => {
     expect(mocks.claimBuyMarketOfferUnits).toHaveBeenCalledWith('company-1', offer.offerId, 2);
     expect(mocks.addTransaction).toHaveBeenCalledWith(-1900, expect.any(String), 'Supplies', false, 'company-1', true);
     expect(mocks.insertStorageVessels).toHaveBeenCalledWith(expect.arrayContaining([
-      expect.objectContaining({ ownerKind: 'company', ownerCompanyId: 'company-1', capacityLitres: 225, operationalStatus: 'operational' }),
+      expect.objectContaining({ ownerKind: 'company', ownerCompanyId: 'company-1', capacityLitres: 250, catalogueId: 'oak_cask_250', operationalStatus: 'operational' }),
     ]));
     expect(mocks.triggerTopicUpdate).toHaveBeenCalledWith('storage_vessels');
   });
@@ -110,7 +110,7 @@ describe('Storage Vessel market adapter', () => {
       id: 'listing-1', availableUnits: 1, basePricePerVessel: 900, pricePerVessel: 900,
       createdYear: 2026, createdSeason: 'Spring', createdWeek: 1, expiresYear: 2027, expiresSeason: 'Spring', expiresWeek: 1,
       priceBreakdown: {} as any,
-      payload: { vesselType: 'cask', material: 'oak', qualityScore: 0.7, condition: 0.8, fillHistory: 3, cleanliness: 'dirty', productionYear: 2020, capacityLitres: 500, priceSnapshot: { supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestige: 0 } },
+      payload: { catalogueId: 'oak_cask_500', vesselType: 'cask', material: 'oak', qualityScore: 0.7, condition: 0.8, fillHistory: 3, cleanliness: 'dirty', productionYear: 2020, capacityLitres: 500, priceSnapshot: { supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestige: 0 } },
       usedListing: { id: 'listing-1', vesselId: 'vessel-1', sellerKind: 'company', sellerCounterpartyId: 'company-2', sellerCompanyId: 'company-2', sellerName: 'Nordic Cellar Craft', origin: 'player_sellback', status: 'active', evolutionSeed: 'seed', startingCondition: 0.8, listedYear: 2026, listedSeason: 'Spring', listedWeek: 1, retiredYear: 2027, retiredSeason: 'Spring', retiredWeek: 1 },
     });
 
@@ -229,6 +229,7 @@ describe('Storage Vessel market adapter', () => {
       expiresSeason: 'Summer',
       expiresWeek: 1,
       payload: {
+        catalogueId: 'oak_cask_500',
         vesselType: 'cask',
         material: 'oak',
         qualityScore: 0.75,
@@ -275,7 +276,7 @@ describe('Storage Vessel market adapter', () => {
 
     expect(mocks.deleteBuyMarketOffer).toHaveBeenCalledWith('company-1', offer.offerId);
     expect(mocks.upsertBuyMarketOffers).toHaveBeenCalledOnce();
-    expect(offers).toHaveLength(9);
+    expect(offers).toHaveLength(54);
     expect(offers[0]).toMatchObject({ source: { kind: 'supplier_stock', seller: { id: 'cooperage_duval' } }, payload: { priceSnapshot: expect.any(Object) } });
     expect(offers[0].priceBreakdown.finalPricePerVessel).toBe(offers[0].pricePerVessel);
   });

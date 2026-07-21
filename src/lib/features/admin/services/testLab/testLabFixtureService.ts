@@ -406,6 +406,7 @@ export async function createGrapeBatch(
   const vesselId = uuidv4();
   const inserted = await insertStorageVessels([{
     id: vesselId,
+    catalogueId: 'stainless_steel_tank_2500',
     ownerKind: 'company',
     ownerCompanyId: result.company.id,
     vesselType: 'container',

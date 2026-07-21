@@ -5,6 +5,7 @@ const TABLE = 'storage_vessels';
 
 interface StorageVesselRow {
   id: string;
+  catalogue_id: StorageVessel['catalogueId'];
   vessel_name: string | null;
   owner_kind: StorageVessel['ownerKind'];
   owner_company_id: string | null;
@@ -27,6 +28,7 @@ interface StorageVesselRow {
 function fromRow(row: StorageVesselRow): StorageVessel {
   return {
     id: row.id,
+    catalogueId: row.catalogue_id,
     vesselName: row.vessel_name ?? undefined,
     ownerKind: row.owner_kind,
     ownerCompanyId: row.owner_company_id ?? undefined,
@@ -51,6 +53,7 @@ function fromRow(row: StorageVesselRow): StorageVessel {
 function toRow(vessel: StorageVessel): StorageVesselRow {
   return {
     id: vessel.id,
+    catalogue_id: vessel.catalogueId,
     vessel_name: vessel.vesselName ?? null,
     owner_kind: vessel.ownerKind,
     owner_company_id: vessel.ownerCompanyId ?? null,

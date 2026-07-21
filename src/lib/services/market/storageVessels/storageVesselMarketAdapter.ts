@@ -12,7 +12,7 @@ import {
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAsymmetricalMultiplier, deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { GAME_INITIALIZATION, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { GAME_INITIALIZATION, getStorageVesselCatalogueEntry, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CATALOGUE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
 import { getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getActiveStorageVesselMarketListings, purchaseUsedStorageVesselListing } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
@@ -56,6 +56,7 @@ export interface StorageVesselMarketOffer {
 
 export interface StorageVesselPriceBreakdown extends BuyGoodsPriceBreakdown {
   capacityMultiplier: number;
+  materialMultiplier: number;
   qualityMultiplier: number;
   supplierBaseMultiplier: number;
   qualityScore: number;
@@ -65,6 +66,7 @@ export interface StorageVesselPriceBreakdown extends BuyGoodsPriceBreakdown {
   ageYears: number;
   ageMultiplier: number;
   capacityLitres: number;
+  catalogueId: StorageVesselOfferPayload['catalogueId'];
   finalPricePerVessel: number;
 }
 
@@ -74,6 +76,7 @@ export function getStorageVesselOfferRetentionChance(level: BuyMarketCounterpart
 
 export function getStorageVesselPriceBreakdown(input: {
   capacityLitres: number;
+  catalogueId?: StorageVesselOfferPayload['catalogueId'];
   productionYear: number;
   currentYear: number;
   qualityScore: number;
@@ -86,6 +89,7 @@ export function getStorageVesselPriceBreakdown(input: {
   effectivePricePerVessel?: number;
 }): StorageVesselPriceBreakdown {
   const capacityMultiplier = input.capacityLitres / STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES;
+  const materialMultiplier = input.catalogueId ? getStorageVesselCatalogueEntry(input.catalogueId).materialPriceMultiplier : 1;
   const ageYears = Math.max(0, input.currentYear - input.productionYear);
   const ageMultiplier = STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER
     + (1 - STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER) * Math.exp(-ageYears / STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS);
@@ -95,7 +99,7 @@ export function getStorageVesselPriceBreakdown(input: {
   const fillHistoryMultiplier = 1 / (1 + (input.fillHistory ?? 0) * STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY);
   const genericBreakdown = getBuyGoodsPriceBreakdown({
     basePrice: STORAGE_VESSEL_BASE_PRICE,
-    itemMultiplier: capacityMultiplier * qualityMultiplier * ageMultiplier * cleanlinessMultiplier * conditionMultiplier * fillHistoryMultiplier * input.supplierBaseMultiplier,
+    itemMultiplier: capacityMultiplier * materialMultiplier * qualityMultiplier * ageMultiplier * cleanlinessMultiplier * conditionMultiplier * fillHistoryMultiplier * input.supplierBaseMultiplier,
     supplierRelationshipMultiplier: input.supplierRelationshipMultiplier,
     companyPrestige: input.companyPrestige,
   });
@@ -103,6 +107,7 @@ export function getStorageVesselPriceBreakdown(input: {
   return {
     ...genericBreakdown,
     capacityMultiplier,
+    materialMultiplier,
     qualityMultiplier,
     cleanlinessMultiplier,
     conditionMultiplier,
@@ -112,6 +117,7 @@ export function getStorageVesselPriceBreakdown(input: {
     supplierBaseMultiplier: input.supplierBaseMultiplier,
     qualityScore: input.qualityScore,
     capacityLitres: input.capacityLitres,
+    catalogueId: input.catalogueId ?? 'stainless_steel_tank_500',
     finalPricePerVessel: input.effectivePricePerVessel ?? genericBreakdown.finalPrice,
   };
 }
@@ -127,8 +133,11 @@ function isStorageVesselOfferPriceSnapshot(value: unknown): value is StorageVess
 function isCurrentStorageVesselOffer(record: BuyMarketOfferRecord): record is BuyMarketOfferRecord & { payload: StorageVesselOfferPayload } {
   if (!STORAGE_VESSEL_SUPPLIERS.some((supplier) => supplier.id === record.sellerId) || record.originTag !== 'seasonal_supplier') return false;
   const payload = record.payload as Partial<StorageVesselOfferPayload>;
-  return payload.vesselType === 'cask'
-    && payload.material === 'oak'
+  return typeof payload.catalogueId === 'string'
+    && Boolean(getStorageVesselCatalogueEntry(payload.catalogueId))
+    && getStorageVesselCatalogueEntry(payload.catalogueId).vesselType === payload.vesselType
+    && getStorageVesselCatalogueEntry(payload.catalogueId).material === payload.material
+    && getStorageVesselCatalogueEntry(payload.catalogueId).capacityLitres === payload.capacityLitres
     && typeof payload.qualityScore === 'number'
     && typeof payload.productionYear === 'number'
     && typeof payload.capacityLitres === 'number'
@@ -139,6 +148,7 @@ function toStorageVesselOffer(record: BuyMarketOfferRecord & { payload: StorageV
   const payload = record.payload;
   const priceBreakdown = getStorageVesselPriceBreakdown({
     capacityLitres: payload.capacityLitres,
+    catalogueId: payload.catalogueId,
     productionYear: payload.productionYear,
     currentYear: getGameState().currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
     qualityScore: payload.qualityScore,
@@ -194,14 +204,14 @@ function toUsedStorageVesselOffer(listing: StorageVesselMarketListing, vessel: S
     createdYear: listing.listedYear, createdSeason: listing.listedSeason as Season, createdWeek: listing.listedWeek,
     expiresYear: listing.retiredYear, expiresSeason: listing.retiredSeason as Season, expiresWeek: listing.retiredWeek,
     priceBreakdown: getStorageVesselPriceBreakdown({
-      capacityLitres: vessel.capacityLitres, productionYear: vessel.productionYear, currentYear: date.year,
+      capacityLitres: vessel.capacityLitres, catalogueId: vessel.catalogueId, productionYear: vessel.productionYear, currentYear: date.year,
       qualityScore: vessel.qualityScore, cleanliness: vessel.cleanliness, condition, fillHistory: vessel.fillHistory,
       supplierBaseMultiplier: 1, supplierRelationshipMultiplier: relationshipMultiplier, companyPrestige: 0, effectivePricePerVessel: price,
     }),
     payload: {
       vesselType: vessel.vesselType, material: vessel.material, qualityScore: vessel.qualityScore,
       vesselName: vessel.vesselName, condition, fillHistory: vessel.fillHistory, cleanliness: vessel.cleanliness,
-      productionYear: vessel.productionYear, capacityLitres: vessel.capacityLitres,
+      catalogueId: vessel.catalogueId, productionYear: vessel.productionYear, capacityLitres: vessel.capacityLitres,
       priceSnapshot: { supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestige: 0 },
     },
     usedListing: listing, listedVessel: vessel,
@@ -218,7 +228,7 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   const createdYear = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
   const createdSeason = state.season ?? GAME_INITIALIZATION.STARTING_SEASON;
   const expires = getNextSeasonDate(createdSeason, createdYear);
-  const expectedOfferCount = STORAGE_VESSEL_SUPPLIERS.length * STORAGE_VESSEL_SIZES_LITRES.length;
+  const expectedOfferCount = STORAGE_VESSEL_SUPPLIERS.length * STORAGE_VESSEL_CATALOGUE.length;
   if (currentOffers.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
 
   const previousOffers = currentOffers;
@@ -238,8 +248,9 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
 
   const companyValue = await calculateCompanyValue().catch(() => 0);
   const generatedNameCounts = new Map<string, number>();
-  const created = STORAGE_VESSEL_SUPPLIERS.flatMap((supplier) => STORAGE_VESSEL_SIZES_LITRES.map<BuyMarketOfferRecord>((capacityLitres) => {
-    const seed = `${companyId}:${state.currentYear}:${state.season}:${supplier.id}:${capacityLitres}`;
+  const created = STORAGE_VESSEL_SUPPLIERS.flatMap((supplier) => STORAGE_VESSEL_CATALOGUE.map<BuyMarketOfferRecord>((catalogue) => {
+    const { id: catalogueId, vesselType, material, capacityLitres } = catalogue;
+    const seed = `${companyId}:${state.currentYear}:${state.season}:${supplier.id}:${catalogueId}`;
     const qualityScore = Number(deterministicSeasonalVariation(`${seed}:quality`, 0, 1).toFixed(2));
     const ageSample = deterministicSeasonalVariation(`${seed}:age`, 0, 1);
     // Cubic weighting makes younger casks the normal case while retaining an occasional old cask.
@@ -252,13 +263,14 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
     };
     const priceBreakdown = getStorageVesselPriceBreakdown({
       capacityLitres,
+      catalogueId,
       productionYear,
       currentYear: state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR,
       qualityScore,
       cleanliness: 'clean',
       ...priceSnapshot,
     });
-    const nameBase = getStorageVesselNameBase(`${companyId}:${supplier.id}:${productionYear}`, 'oak', capacityLitres);
+    const nameBase = getStorageVesselNameBase(`${companyId}:${supplier.id}:${productionYear}:${catalogueId}`, material, capacityLitres);
     const nameNumber = (generatedNameCounts.get(nameBase) ?? 0) + 1;
     generatedNameCounts.set(nameBase, nameNumber);
     return {
@@ -267,7 +279,7 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
       wareGroup: 'storage_vessels',
       sellerId: supplier.id, sellerName: supplier.name, originTag: 'seasonal_supplier', availableUnits: getBuyGoodsOfferAvailability(`${seed}:availability`, companyValue, state.prestige ?? 0, 1, 4),
       unit: 'vessel',
-      basePricePerUnit: STORAGE_VESSEL_BASE_PRICE * (capacityLitres / STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES), effectivePricePerUnit: Number(priceBreakdown.finalPrice.toFixed(2)), isPersistent: false,
+      basePricePerUnit: STORAGE_VESSEL_BASE_PRICE * (capacityLitres / STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES) * catalogue.materialPriceMultiplier, effectivePricePerUnit: Number(priceBreakdown.finalPrice.toFixed(2)), isPersistent: false,
       createdYear,
       createdSeason,
       createdWeek: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,
@@ -278,7 +290,7 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
       expiresSeason: expires.season,
       expiresWeek: 1,
       payload: {
-        vesselType: 'cask', material: 'oak', qualityScore, productionYear, capacityLitres, priceSnapshot,
+        catalogueId, vesselType, material, qualityScore, productionYear, capacityLitres, priceSnapshot,
         vesselName: `${nameBase} #${nameNumber}`,
         condition: 1, fillHistory: 0, cleanliness: 'clean',
       },
@@ -391,6 +403,7 @@ export async function purchaseStorageVesselOffer(offerId: string, quantity: numb
     vesselName: `${vesselNameBase} #${existingNameCount + index + 1}`,
     ownerKind: 'company',
     ownerCompanyId: companyId,
+    catalogueId: payload.catalogueId,
     vesselType: payload.vesselType,
     material: payload.material,
     qualityScore: payload.qualityScore,

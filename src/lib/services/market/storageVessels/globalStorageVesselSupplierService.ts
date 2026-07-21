@@ -9,6 +9,7 @@ import {
   STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_MIN,
   STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_RANGE,
 } from '@/lib/constants';
+import { STORAGE_VESSEL_CATALOGUE } from '@/lib/constants';
 import { ensureNpcUsedStorageVesselListings, type NpcStorageVesselListingInput } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { ensureGlobalMarketSupplierListings, registerGlobalMarketSupplierAdapter, type GlobalMarketSupplierAdapter, type GlobalMarketSupplierDate } from '@/lib/services/market/globalMarketSupplierService';
 import { getStorageVesselNameBase } from './storageVesselNamingService';
@@ -19,12 +20,16 @@ const globalStorageVesselSupplierAdapter: GlobalMarketSupplierAdapter<NpcStorage
   generateListings(date) {
     const nameCounts = new Map<string, number>();
     return STORAGE_VESSEL_USED_MARKET_NPC_PROFILES.map((profile) => {
-      const generationKey = `npc-used:${date.year}:${date.season}:${profile.material}`;
+      const catalogue = STORAGE_VESSEL_CATALOGUE.find((entry) => entry.material === profile.material && entry.capacityLitres === profile.capacityLitres);
+      if (!catalogue) throw new Error(`No storage vessel catalogue entry for ${profile.material}/${profile.capacityLitres}`);
+      const generationKey = `npc-used:${date.year}:${date.season}:${catalogue.id}`;
       const nameBase = getStorageVesselNameBase(generationKey, profile.material, profile.capacityLitres);
       const nameSequence = (nameCounts.get(nameBase) ?? 0) + 1;
       nameCounts.set(nameBase, nameSequence);
       return {
         generationKey,
+        catalogueId: catalogue.id,
+        vesselType: catalogue.vesselType,
         sellerCounterpartyId: `npc:${profile.sellerId}`,
         sellerName: profile.sellerName,
         vesselName: `${nameBase} #${nameSequence}`,

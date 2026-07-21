@@ -7,6 +7,7 @@ import {
   STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY,
   STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES,
   STORAGE_VESSEL_USED_MARKET_CONDITION_DECAY_PER_WEEK,
+  getStorageVesselCatalogueEntry,
 } from '@/lib/constants';
 import { isBuyMarketDateInWindow, toBuyMarketAbsoluteWeek, type BuyMarketGameDate } from '@/lib/services/market/buyMarketDate';
 import type { StorageVessel, StorageVesselMarketListing } from '@/lib/types/storageVessels';
@@ -43,6 +44,7 @@ export function calculateUsedStorageVesselMarketValue(vessel: StorageVessel, con
   const price = STORAGE_VESSEL_BASE_PRICE
     * (vessel.capacityLitres / STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES)
     * qualityMultiplier * ageMultiplier * condition * fillMultiplier
-    * STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS[vessel.cleanliness];
+    * STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS[vessel.cleanliness]
+    * getStorageVesselCatalogueEntry(vessel.catalogueId).materialPriceMultiplier;
   return Math.max(0, Number(price.toFixed(2)));
 }

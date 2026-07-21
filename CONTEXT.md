@@ -49,3 +49,7 @@ This is the stable vocabulary and rules snapshot. Use `docs/PROJECT_INFO.md` for
 - Structure, Taste Quality, and land value are separate concepts.
 - Weather and research modify explicit inputs or access rules, not hidden score side effects.
 - Development-stage schema changes are clean cutovers: update consumers to renamed types/functions and do not add compatibility aliases, wrappers, backfills, or legacy-table support.
+
+### Storage vessel rollout 1
+
+Storage vessels now use a canonical catalogue (`catalogueId`) for legal type/material/capacity combinations. Supplier and global used-market offers are generated from that catalogue; material multipliers affect market pricing only in this rollout. Wine-contact effects remain deferred.

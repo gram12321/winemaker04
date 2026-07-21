@@ -1541,3 +1541,7 @@ Use this structure for every new entry:
 - Foundational grape suitability release; 0.064-0.066 continue UI/logic maturation on top of this base.
 
 For older versions see `docs/versionlog_legacy.md`.
+
+## 2026-07-21
+
+- Implemented storage vessel catalogue rollout 1 with legal type/material/size combinations, material-aware supplier and used-market pricing, and catalogue-backed NPC generation.

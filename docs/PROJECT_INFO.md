@@ -90,3 +90,5 @@ Public-company/share gameplay, vessel-memory gameplay, generic player-to-player 
 | Historical plans | `docs/superpowers/completed/`, `docs/codexplans/completed/` |
 | Deferred designs | `docs/superpowers/deferred/`, `docs/codexplans/deferred/` |
 | Change history | `docs/versionlog.md` |
+
+Storage vessel market rollout 1 is catalogue-driven: every vessel and offer carries a legal catalogue identity, and material-specific multipliers are applied consistently to new, used, and NPC-generated pricing.
