@@ -7,7 +7,6 @@ import {
   releaseStorageVesselPlan,
   releaseStorageVesselAllocation,
   reserveStorageVesselPlan,
-  updateStorageVesselAllocationFill,
 } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
@@ -120,9 +119,7 @@ export async function activateStoragePlanForBatch(planId: string, batchId: strin
   const companyId = getCurrentCompanyId();
   if (!companyId) return false;
   const activated = await activateStorageVesselPlan(companyId, planId, batchId, volumeLitres, currentGameDate());
-  if (activated.error || !activated.data) return false;
-  const filled = await updateStorageVesselAllocationFill(companyId, planId, volumeLitres);
-  return !filled.error;
+  return !activated.error && Boolean(activated.data);
 }
 
 export async function canStoragePlanHoldVolume(planId: string, volumeLitres: number): Promise<boolean> {

@@ -1,5 +1,5 @@
 import { supabase } from '../core/supabase';
-import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan, StorageVesselOccupancy } from '@/lib/types/storageVessels';
+import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan, StorageVesselOccupancy, StorageVesselUseLedgerEntry } from '@/lib/types/storageVessels';
 
 const TABLE = 'storage_vessels';
 
@@ -197,6 +197,18 @@ export async function getCompanyStorageAllocations(companyId: string): Promise<{
   return { data: ((data ?? []) as unknown as AllocationRow[]).map(fromAllocationRow), error };
 }
 
+export async function getCompanyStorageVesselUseLedger(companyId: string): Promise<{ data: StorageVesselUseLedgerEntry[]; error: unknown }> {
+  const { data, error } = await supabase.from('storage_vessel_use_ledger').select('*, storage_vessels!inner(owner_company_id)').eq('storage_vessels.owner_company_id', companyId).order('used_year').order('used_week');
+  return {
+    data: ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id), vesselId: String(row.vessel_id), allocationPlanId: String(row.allocation_plan_id), wineBatchId: String(row.wine_batch_id),
+      batchStateAtFirstUse: row.batch_state_at_first_use as StorageVesselUseLedgerEntry['batchStateAtFirstUse'], initialFilledLitres: Number(row.initial_filled_litres),
+      usedYear: Number(row.used_year), usedSeason: String(row.used_season), usedWeek: Number(row.used_week),
+    })),
+    error,
+  };
+}
+
 export async function reserveStorageVesselPlan(input: {
   companyId: string;
   requiredLitres: number;
@@ -228,21 +240,10 @@ export async function addStorageVesselPlanAllocations(companyId: string, planId:
 }
 
 export async function activateStorageVesselPlan(companyId: string, planId: string, batchId: string, volumeLitres: number, date: { year: number; season: string; week: number }) {
-  const { data, error } = await supabase
-    .from('storage_vessel_allocation_plans')
-    .update({
-      wine_batch_id: batchId,
-      status: 'active',
-      required_litres: volumeLitres,
-      activated_year: date.year,
-      activated_season: date.season,
-      activated_week: date.week,
-    })
-    .eq('company_id', companyId)
-    .eq('id', planId)
-    .eq('status', 'reserved')
-    .select('*')
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('activate_storage_vessel_plan_for_batch', {
+    p_company_id: companyId, p_plan_id: planId, p_batch_id: batchId, p_volume_litres: volumeLitres,
+    p_year: date.year, p_season: date.season, p_week: date.week,
+  });
   return { data: data ? fromPlanRow(data as unknown as AllocationPlanRow) : null, error };
 }
 

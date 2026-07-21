@@ -57,6 +57,20 @@ export interface StorageVesselAllocation {
   releasedAt?: string;
 }
 
+export interface StorageVesselUseLedgerEntry {
+  id: string;
+  vesselId: string;
+  allocationPlanId: string;
+  wineBatchId: string;
+  batchStateAtFirstUse: StorageVesselBatchState;
+  initialFilledLitres: number;
+  usedYear: number;
+  usedSeason: string;
+  usedWeek: number;
+}
+
+export type StorageVesselBatchState = 'grapes' | 'must_ready' | 'must_fermenting' | 'bottled';
+
 export interface StorageVessel {
   id: string;
   catalogueId: StorageVesselCatalogueId;

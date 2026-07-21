@@ -105,7 +105,9 @@ No files were changed.
 
 ## Proposed implementation plan: Rollout 1 — legal vessel catalogue and material-aware market pricing
 
-**Status:** Planned, not executed. This is deliberately limited to the first rollout item from the research above. It establishes which vessel assets can exist and how their market value differs by material. It does **not** add vessel contact, wine-quality, work, cleanliness-risk, condition-wear, repair, or memory mechanics.
+**Status:** Completed 2026-07-21. This rollout was deliberately limited to the first research item: it established legal vessel assets and material-aware market value, without adding vessel contact, wine-quality, work, cleanliness-risk, condition-wear, repair, or memory mechanics.
+
+**Completion note:** The shipped implementation introduced the eighteen typed catalogue entries and `catalogueId` on vessels/offers, applied material multipliers to supplier and used-market prices, corrected NPC used-market type generation, migrated existing assets, and updated the market UI/tests. The local supplier implementation currently exposes the full eighteen-entry catalogue to each supplier (54 possible seasonal supplier offers), rather than applying the proposed supplier-family restriction below. That availability split remains a tuning decision for a later market pass.
 
 ### Goal
 
@@ -252,3 +254,124 @@ The seasonal supplier market therefore has eighteen legal offers, one for each c
 - NPC used generation preserves one material-specific listing per season and no longer serialises steel, concrete, ceramic, or plastic as a `cask`.
 - The material multiplier is visible and affects both new and used market value, while existing supplier relationship, quality, age, condition, fill-history, and cleanliness terms continue to work.
 - No wine batch score, price, taste, structure, anchor, work, cleanliness-risk, condition-wear, repair, or vessel-memory rule changes in this rollout.
+
+---
+
+## Proposed implementation plan: Rollout 2 — vessel-use ledger and fill-history integrity
+
+**Status:** Implemented 2026-07-21; pending live Supabase migration/integration validation. This is deliberately the second rollout item only: record a batch’s first physical use of a vessel and make `fillHistory` trustworthy. It does **not** yet apply material effects to anchors, taste, structure, quality, price, work, condition, cleanliness risk, repair, or vessel memory.
+
+**Implementation note:** The implementation adds a reset-only vessel-use ledger and routes first-use recording through harvest activation, appended harvest volume, and grape-market purchase allocation fills. Crushing and fermentation remain the existing batch mutation lifecycle. The migration has not been executed against a live database in this coding pass.
+
+### Goal
+
+Create an immutable, queryable vessel-use ledger whenever a storage allocation first receives a positive volume of a wine batch. Each vessel increments `fillHistory` exactly once for that use. The record must remain after partial emptying, full emptying, allocation release, resale, and later batch changes, so later mechanics can use real provenance rather than reconstructing it from mutable allocation rows.
+
+`fillHistory` means **completed first-use events**, not litres transferred, weeks stored, or the number of UI actions. Filling the same allocation in several writes must create one event. Filling two different vessels for the same batch creates two events. A vessel used again for a later allocation creates another event.
+
+This is an extension of the existing storage-allocation lifecycle, not a second fermentation or wine-batch lifecycle. Harvest storage currently fills a plan while the batch is in `grapes`; crushing and fermentation later mutate that same batch in place. Rollout 2 records the physical allocation event only. Future sensory mechanics must use the existing batch state and fermentation lifecycle, rather than starting a parallel vessel process.
+
+### Domain decision
+
+Add a `storage_vessel_use_ledger` relation with one row per first-positive-fill use. Its canonical identity is the allocation context: `storage_vessel_id` + `allocation_plan_id` (and a unique constraint on that pair). Store the linked `wine_batch_id`, the batch state at first fill, initial filled litres, and game date. Normal gameplay must write it atomically with the allocation fill.
+
+The allocation remains the operational state: it can be released or have `filled_litres` reset to zero. The ledger is provenance: it is never deleted as part of emptying or releasing. `StorageVessel.fillHistory` is the fast, denormalized count; the ledger is the source of truth for normal gameplay. Because this is development-stage work, schema changes may reset the database; no legacy backfill or data-repair path is required.
+
+### Non-goals and guardrails
+
+- Do not create a wine feature, sensory-contact profile, anchor delta, score change, or bottle-price bonus in this rollout.
+- Do not increment history merely because capacity is reserved, a plan is activated, or a vessel is marked dirty. Positive wine entry is the trigger.
+- Do not derive a new `fillHistory` from current allocations in the UI. Existing allocations are mutable and lose history when emptied.
+- Do not use wall-clock timestamps for gameplay meaning. Store current game year/season/week; a technical `created_at` may remain for audit only.
+- Do not add a vessel activity, fermentation loop, or second batch state. The existing crushing and fermentation activities remain the only stage-transition mechanisms.
+- Preserve the current allocation distribution rule: fill is assigned across the plan's allocations in order. The ledger observes that result; it does not change allocation selection.
+
+### File-level execution plan
+
+#### Task 1: Introduce the durable contact-ledger contract
+
+**Files:**
+
+- Modify: `src/lib/types/storageVessels.ts`
+- Modify: `src/lib/database/winery/storageVesselsDB.ts`
+- Create: one migration under `migrations/`
+- Test: a focused storage-vessel database/service contract test
+
+- [ ] Define `StorageVesselUseLedgerEntry` with ID, vessel ID, allocation plan ID, wine batch ID, batch state at first fill, initially filled litres, and game date fields.
+- [ ] Add `storage_vessel_use_ledger` with foreign keys to `storage_vessels`, `storage_vessel_allocation_plans`, and `wine_batches`; use the project’s normal development reset policy rather than legacy-data accommodation.
+- [ ] Add a unique constraint on `(vessel_id, allocation_plan_id)` and indexes for `vessel_id` and `wine_batch_id`.
+- [ ] Add typed mapper/read helpers for ledger rows. Keep broad history queries out of the initial Equipment UI unless a small existing detail surface can show them without new UI scope.
+- [ ] Seed no historic rows and implement no backfill/reconciliation command. Reset the development database when the migration is applied.
+
+#### Task 2: Make every allocation volume-increase path record first use atomically
+
+**Files:**
+
+- Modify: `src/lib/database/winery/storageVesselsDB.ts`
+- Modify: `src/lib/services/wine/winery/storageVesselAllocationService.ts`
+- Modify: `src/lib/services/wine/winery/inventoryService.ts`
+- Modify: `src/lib/database/activities/inventoryDB.ts`
+- Modify: the storage allocation, harvest-append, and grape-market purchase RPC definitions under `migrations/`
+- Test: `tests/wine/storageVesselAllocationService.test.ts` or the existing allocation test location
+
+- [ ] Update all current allocation fill routes—not just `activateStoragePlanForBatch()`—to use the same first-use rule: new harvest activation, market-source batch creation, `append_storage_backed_harvest_batch`, and the atomic grape-market purchase command that creates and fills an active plan.
+- [ ] In each atomic command, lock the plan, allocations, and vessels; distribute the requested volume; insert first-use ledger rows; increment affected vessels’ `fill_history`; and mark affected vessels dirty.
+- [ ] Reject an already-active/mismatched plan where applicable, mismatched company or batch ownership, released allocations, non-positive volume, and over-capacity requests before any mutation.
+- [ ] Insert each ledger row with `ON CONFLICT (vessel_id, allocation_plan_id) DO NOTHING`; increment `fill_history` only when that insert actually occurred. This makes retries safe.
+- [ ] Record `initial_filled_litres` as the actual positive allocation volume, not the whole batch volume and not the vessel’s theoretical capacity.
+- [ ] Record the batch state at first use. In the normal harvest path this is `grapes`; this is provenance only and must not itself apply a wine effect.
+- [ ] Return the affected allocation/vessel IDs or a compact success result so the existing topic refresh remains accurate.
+- [ ] Retire or narrow every generic allocation-fill helper so no caller can bypass ledger creation. If a helper remains for an internal use case, it must delegate to an atomic command and require batch/date context.
+
+#### Task 3: Preserve provenance through emptying and partial emptying
+
+**Files:**
+
+- Modify: `src/lib/services/wine/winery/storageVesselMaintenanceService.ts` only if the RPC contract changes
+- Modify: relevant emptying/release RPC definitions under `migrations/`
+- Test: `tests/wine/storageVesselMaintenanceService.test.ts`
+
+- [ ] Keep `completeEmptyStorageVessel()` responsible only for wine quantity, allocation release, and vessel availability/cleaning state; it must never delete, rewrite, or decrement contact-ledger rows or `fill_history`.
+- [ ] Verify that emptying one allocation from a multi-vessel plan leaves the other allocations and their vessel-use provenance intact.
+- [ ] Verify that partially emptying a vessel does not create a second history event when the plan continues, and that later completion does not create one either.
+- [ ] Preserve the current resale behavior: a sold vessel retains its accumulated `fillHistory` and ledger provenance as part of its physical identity.
+
+#### Task 4: Reset-only migration, fixtures, and architecture record
+
+**Files:**
+
+- Create: rollout migration under `migrations/`
+- Modify: `src/lib/features/admin/services/testLab/testLabFixtureService.ts`
+- Modify: relevant test fixtures
+- Modify: `CONTEXT.md`, `docs/PROJECT_INFO.md`, `docs/WineSystem_VariableRelationshipMap.md`, `docs/versionlog.md`
+
+- [ ] Treat this as a reset-only development migration: no historical ledger generation, aggregate history preservation, compatibility fallback, or reconciliation feature.
+- [ ] Update Test Lab fixtures so any harvest-ready vessel path exercises the atomic first-use command rather than directly assigning history.
+- [ ] Document that fill history and vessel-use provenance are active equipment data, while vessel sensory behaviour remains deferred to rollout 3 and will use the existing batch/fermentation state.
+
+#### Task 5: Verify idempotency and lifecycle correctness
+
+- [ ] Unit test: activating/filling one plan with one vessel creates one ledger row, records the batch’s current state, increments `fillHistory` from `n` to `n + 1`, and dirties that vessel.
+- [ ] Unit test: a retry of the same atomic command neither creates a second row nor increments history again.
+- [ ] Unit test: a plan split across multiple vessels creates one contact per positively filled vessel, excluding allocations with zero actual fill.
+- [ ] Unit test: reserved but never filled capacity creates no contact and no history increment.
+- [ ] Unit test: partial and full emptying retain ledger rows and history count.
+- [ ] Unit test: a later plan using the same vessel creates a new ledger event and increments history once.
+- [ ] Unit test: appending harvest volume to an already active batch preserves the existing first-use event and does not increment history again for allocations that were already positive.
+- [ ] Unit test: every market-source/atomic purchase fill route creates the same ledger and history result as the harvest route.
+- [ ] Run focused checks:
+
+  ```powershell
+  npx vitest run tests/wine/storageVesselAllocationService.test.ts tests/wine/storageVesselMaintenanceService.test.ts tests/market/usedStorageVesselMarketService.test.ts
+  npx tsc --noEmit
+  git diff --check
+  ```
+
+### Acceptance criteria
+
+- A positive first fill creates exactly one durable vessel-use record for each affected vessel/allocation pair.
+- `fillHistory` increments exactly once per durable first-use record and never on reserve, retry, empty, release, or sale.
+- Vessel-use records carry the real batch, its state at first fill, plan, actual initial volume, and game date needed by later vessel-contact mechanics.
+- Partial emptying and later lifecycle transitions cannot erase or duplicate provenance.
+- All allocation-fill routes write first-use, history, and dirty state atomically; a client interruption cannot leave an allocation filled without its matching history event.
+- No wine sensory, scoring, pricing, feature, work, condition, cleanliness-risk, repair, or vessel-memory mechanics change in rollout 2.
