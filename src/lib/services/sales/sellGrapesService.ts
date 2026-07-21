@@ -6,7 +6,7 @@ import { syncPersistedTransaction } from '../finance/financeService';
 import { getInventoryBatchById } from '../wine/winery/inventoryService';
 import { sellStorageBackedWineBatch } from '@/lib/database/activities/inventoryDB';
 import { listGrapeBatchOnGlobalMarket } from '@/lib/database/market/globalGrapeMarketListingsDB';
-import { getGlobalGrapeMarketBaseValue, getGlobalGrapeMarketSellbackPayout } from '@/lib/services/market/grapes/globalGrapeMarketService';
+import { getGlobalGrapeMarketBasePricePerKg, getGlobalGrapeMarketSellbackPayout } from '@/lib/services/market/grapes/globalGrapeMarketPricingService';
 import { companyFeature } from '@/lib/features/company';
 import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
@@ -27,8 +27,6 @@ import { recordBuyerSale } from '@/lib/services';
 import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';
 import { GrapeVariety } from '../../types/types';
 import { formatNumber } from '../../utils/utils';
-
-export { getGlobalGrapeMarketSellbackPayout } from '@/lib/services/market/grapes/globalGrapeMarketService';
 
 // ===== TYPES =====
 
@@ -53,7 +51,7 @@ export interface GrapeBuyer {
   buyerCategory?: 'bulk' | 'seasonal' | 'cooperative';
   originTag?: 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
   originReason?: string;
-  dealStyle?: 'spot' | 'quality_bonus' | 'volume_bonus' | 'relationship_bonus';
+  dealStyle?: 'spot' | 'quality_bonus' | 'volume_bonus' | 'relationship_bonus' | 'global_settlement';
   demandFactors?: {
     volatilitySeason?: Season;
     volatilityEconomyPhase?: EconomyPhase;
@@ -133,14 +131,14 @@ function getFavoriteGrapeBonusMultiplier(buyer: GrapeBuyer, batch: WineBatch): n
 const BULK_FALLBACK_BUYER: GrapeBuyer = {
   id: 'bulk_buyer',
   name: 'Bulk Grape Merchant',
-  description: 'A generic merchant buying grapes for blended bulk production. Available everywhere, no minimums.',
+  description: 'A global-market settlement service. It pays a 70% advance, then lists the lot globally under your winery.',
   priceMultiplier: 1.0,
   marketSensitivityMultiplier: 1.0,
   floorPricePerKg: 0,
   buyerCategory: 'bulk',
   originTag: 'Country special',
-  originReason: 'Always available fallback buyer for immediate liquidity.',
-  dealStyle: 'spot',
+  originReason: 'NPC-guaranteed advance into the global market. The lot keeps your winery as its market-facing seller.',
+  dealStyle: 'global_settlement',
 };
 
 export async function getAvailableBuyers(startingCountry?: string): Promise<GrapeBuyer[]> {
@@ -212,6 +210,13 @@ export async function sellGrapes(
   }
   if (batch.quantity <= 0) return { success: false, revenue: 0, error: 'No grapes to sell' };
   const quantityKg = Math.max(1, Math.min(batch.quantity, Math.round(quantityKgOverride ?? batch.quantity)));
+
+  // The Bulk Grape Merchant is the global-market settlement route. Unlike
+  // specialist seasonal buyers, it has no local cap, loyalty, or private quote.
+  if (buyer.id === 'bulk_buyer') {
+    const listed = await listGrapesOnGlobalMarket(batchId, quantityKg);
+    return { success: listed.success, revenue: listed.payout, error: listed.error };
+  }
 
   const gameState = getGameState();
   const prestige = gameState.prestige ?? 0;
@@ -317,6 +322,7 @@ export async function listGrapesOnGlobalMarket(
     return { success: false, payout: 0, error: 'Batch is not in a sellable state.' };
   }
   const quantityKg = Math.max(1, Math.min(batch.quantity, Math.round(quantityKgOverride ?? batch.quantity)));
+
   const companyId = getCurrentCompanyId();
   if (!companyId) return { success: false, payout: 0, error: 'No active company selected.' };
   const company = await companyFeature.records.get(companyId).catch(() => null);
@@ -326,7 +332,7 @@ export async function listGrapesOnGlobalMarket(
     quantity: quantityKg,
     volumeLitres: batch.volumeLitres === undefined ? undefined : Number((batch.volumeLitres * quantityKg / batch.quantity).toFixed(3)),
   };
-  const basePricePerKg = getGlobalGrapeMarketBaseValue(snapshot);
+  const basePricePerKg = getGlobalGrapeMarketBasePricePerKg();
   const payout = getGlobalGrapeMarketSellbackPayout(snapshot, quantityKg);
   const listed = await listGrapeBatchOnGlobalMarket({
     companyId,
@@ -336,7 +342,7 @@ export async function listGrapesOnGlobalMarket(
     payout,
     batchSnapshot: snapshot,
     basePricePerKg,
-    qualityScore: Math.max(0.16, Math.min(1, (batch.structureIndex + batch.tasteQualityIndex) / 2)),
+    qualityScore: Math.max(0.16, Math.min(1, calculateWineScore(snapshot))),
     week: state.week ?? 1,
     season: (state.season ?? 'Spring') as Season,
     year: state.currentYear ?? 1,

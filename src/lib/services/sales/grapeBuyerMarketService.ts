@@ -772,11 +772,6 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
   const row = await ensureBulkBuyer(companyId, country, currentYear, currentSeason);
   if (!row) return null;
 
-  const [companyValue, limitResearchMultiplier, multiplierResearchBonus] = await Promise.all([
-    calculateCompanyValue(),
-    getBuyerLimitMultiplierFromResearch(),
-    getBuyerMultiplierBonusFromResearch(),
-  ]);
   const demandComponents = getDemandFactorComponents(
     companyId,
     currentYear,
@@ -784,53 +779,26 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     economyPhase,
     weather
   );
-  const volatilitySensitivity = getBuyerVolatilitySensitivity('bulk', 'spot', 'Country special');
-  const effectiveSeasonLimitKg = Math.max(
-    200,
-    Math.round(
-      computeScaledSeasonLimit(row.base_season_limit_kg, companyValue)
-      * demandComponents.seasonLimitMultiplier
-      * demandComponents.economyLimitMultiplier
-      * demandComponents.yearCycleLimitMultiplier
-      * demandComponents.volatilityLimitMultiplier
-      * volatilitySensitivity.limit
-      * limitResearchMultiplier
-    )
-  );
-  const soldThisSeasonKg = Math.max(0, row.sold_this_season_kg || 0);
-  const priceMultiplier = Number((
-    row.base_multiplier
-    * computeCompanyValuePriceMultiplier(companyValue)
-    * demandComponents.seasonPriceMultiplier
-    * demandComponents.economyPriceMultiplier
-    * demandComponents.yearCyclePriceMultiplier
-    * demandComponents.volatilityPriceMultiplier
-    * volatilitySensitivity.price
-    * (1 + multiplierResearchBonus)
-  ).toFixed(2));
-
-  const loyalty = await getBuyerLoyalty(BULK_BUYER_ID);
-  const relationshipMultiplier = getBuyerRelationshipPriceMultiplier((loyalty?.level ?? 0) as BuyerLoyaltyLevel);
-
+  const volatilitySensitivity = getBuyerVolatilitySensitivity('bulk', 'global_settlement', 'Country special');
   return {
     id: BULK_BUYER_ID,
     name: 'Bulk Grape Merchant',
-    description: row.description || 'A generic merchant buying grapes for blended bulk production. Available everywhere, no minimums.',
-    priceMultiplier,
+    description: 'A global-market settlement service. It pays a 70% advance, then lists the lot globally under your winery.',
+    priceMultiplier: 1,
     floorPricePerKg: 0,
     exclusiveCountry: row.country,
     multiplierRangeMin: 1.0,
     multiplierRangeMax: 1.0,
     baseSeasonLimitKg: row.base_season_limit_kg,
-    effectiveSeasonLimitKg,
-    soldThisSeasonKg,
-    remainingSeasonLimitKg: Math.max(0, effectiveSeasonLimitKg - soldThisSeasonKg),
-    relationshipMultiplier,
+    effectiveSeasonLimitKg: undefined,
+    soldThisSeasonKg: undefined,
+    remainingSeasonLimitKg: undefined,
+    relationshipMultiplier: 1,
     favoriteGrapes: [],
     buyerCategory: 'bulk',
     originTag: 'Country special',
-    originReason: 'Always available bulk channel for immediate liquidity.',
-    dealStyle: 'spot',
+    originReason: 'NPC-guaranteed advance into the global market. The lot keeps your winery as its market-facing seller.',
+    dealStyle: 'global_settlement',
     demandFactors: {
       ...demandComponents,
       volatilityBuyerPriceSensitivityMultiplier: volatilitySensitivity.price,

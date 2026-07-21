@@ -2,8 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { deleteStorageVessels, getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState, getCurrentCompany } from '@/lib/services/core/gameState';
-import { GAME_INITIALIZATION } from '@/lib/constants';
-import { STORAGE_VESSEL_USED_MARKET_SELLBACK_MULTIPLIER } from '@/lib/constants';
+import { GAME_INITIALIZATION, GLOBAL_MARKET_IMMEDIATE_PAYOUT_MULTIPLIER } from '@/lib/constants';
 import { sellStorageVesselToMarket } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { calculateUsedStorageVesselMarketValue } from '@/lib/services/market/storageVessels/usedStorageVesselMarketService';
 import { activitiesFeature } from '@/lib/features/activities';
@@ -77,7 +76,7 @@ export async function sellOwnedStorageVesselToMarket(vessel: StorageVessel, acti
   if (!eligibility.eligible) return { success: false, error: eligibility.reasons.join(' ') };
   const state = getGameState();
   const year = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
-  const payout = Number((calculateUsedStorageVesselMarketValue(vessel, vessel.condition, year) * STORAGE_VESSEL_USED_MARKET_SELLBACK_MULTIPLIER).toFixed(2));
+  const payout = Number((calculateUsedStorageVesselMarketValue(vessel, vessel.condition, year) * GLOBAL_MARKET_IMMEDIATE_PAYOUT_MULTIPLIER).toFixed(2));
   const { data, error } = await sellStorageVesselToMarket({
     companyId, companyName: getCurrentCompany()?.name ?? 'Unknown Winery', vesselId: vessel.id, payout, year,
     season: state.season ?? GAME_INITIALIZATION.STARTING_SEASON, week: state.week ?? GAME_INITIALIZATION.STARTING_WEEK,

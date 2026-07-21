@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_BUY_MARKET_DEMAND_FACTORS, GLOBAL_GRAPE_MARKET_BASE_PRICE_PER_KG, GLOBAL_GRAPE_MARKET_IMMEDIATE_PAYOUT_RATE, GLOBAL_GRAPE_MARKET_PRICE_QUALITY_LINEAR_BASE, GLOBAL_GRAPE_MARKET_PRICE_QUALITY_LINEAR_SCALE, GLOBAL_GRAPE_MARKET_PRICE_QUALITY_MIN_MULTIPLIER, GLOBAL_GRAPE_MARKET_QUALITY_FLOOR, STATE_PREMIUMS, type BuyMarketDemandFactors } from '@/lib/constants';
+import { DEFAULT_BUY_MARKET_DEMAND_FACTORS, type BuyMarketDemandFactors } from '@/lib/constants';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
 import { calculateCompanyValue, syncPersistedTransaction } from '@/lib/services/finance/financeService';
@@ -13,6 +13,7 @@ import type { GlobalGrapeMarketListing } from '@/lib/types/market';
 import type { Season, WineBatch } from '@/lib/types/types';
 import { projectGlobalGrapeLot } from './globalGrapeMarketLifecycleService';
 import { ensureGlobalGrapeSupplierListings } from './globalGrapeMarketSupplierService';
+import { getGlobalGrapeMarketPricePerKg } from './globalGrapeMarketPricingService';
 
 function now() {
   const state = getGameState();
@@ -36,11 +37,6 @@ function priceSnapshot(multiplier: number) {
   };
 }
 
-function pricePerKg(listing: GlobalGrapeMarketListing, quality: number, relationshipMultiplier: number): number {
-  const qualityMultiplier = Math.max(GLOBAL_GRAPE_MARKET_PRICE_QUALITY_MIN_MULTIPLIER, quality * (GLOBAL_GRAPE_MARKET_PRICE_QUALITY_LINEAR_BASE + quality * GLOBAL_GRAPE_MARKET_PRICE_QUALITY_LINEAR_SCALE));
-  return Number((listing.basePricePerKg * qualityMultiplier * STATE_PREMIUMS[listing.batchState] * relationshipMultiplier).toFixed(2));
-}
-
 function toOffer(listing: GlobalGrapeMarketListing, relationship: Awaited<ReturnType<typeof getBuyMarketCounterpartyRelationships>>[string] | undefined): BuyGrapeMarketOffer | null {
   const date = now();
   const projection = projectGlobalGrapeLot({
@@ -52,7 +48,7 @@ function toOffer(listing: GlobalGrapeMarketListing, relationship: Awaited<Return
   }, { year: listing.createdYear, season: listing.createdSeason, week: listing.createdWeek }, date);
   if (!projection.visible || listing.availableKg <= 0) return null;
   const multiplier = getBuyMarketCounterpartyPriceMultiplier(relationship?.level ?? 0);
-  const effectivePricePerKg = pricePerKg(listing, projection.qualityScore, multiplier);
+  const effectivePricePerKg = Number((getGlobalGrapeMarketPricePerKg(listing.basePricePerKg, listing.batchState, projection.qualityScore) * multiplier).toFixed(2));
   return {
     id: listing.id,
     supplierId: listing.seller.id,
@@ -114,14 +110,4 @@ export async function purchaseGlobalGrapeOffer(offerId: string, quantityKg: numb
   if (purchase.error || !purchase.data?.transaction) return { success: false, error: 'Listing availability, vessel capacity, or funds changed. Please reopen the market.' };
   await syncPersistedTransaction(purchase.data.transaction);
   return { success: true };
-}
-
-export function getGlobalGrapeMarketBaseValue(batch: WineBatch): number {
-  const stateMultiplier = STATE_PREMIUMS[batch.state as keyof typeof STATE_PREMIUMS] ?? 1;
-  const quality = Math.max(GLOBAL_GRAPE_MARKET_QUALITY_FLOOR, Math.min(1, (batch.structureIndex + batch.tasteQualityIndex) / 2));
-  return Number((GLOBAL_GRAPE_MARKET_BASE_PRICE_PER_KG * quality * stateMultiplier).toFixed(2));
-}
-
-export function getGlobalGrapeMarketSellbackPayout(batch: WineBatch, quantityKg: number): number {
-  return Number((getGlobalGrapeMarketBaseValue(batch) * Math.max(1, Math.round(quantityKg)) * GLOBAL_GRAPE_MARKET_IMMEDIATE_PAYOUT_RATE).toFixed(2));
 }

@@ -4,6 +4,7 @@ import { ensureNpcGlobalGrapeMarketListings, type NpcGlobalGrapeListingInput } f
 import { buildMarketPreviewBatch } from '@/lib/services/wine/winery/inventoryService';
 import { ensureGlobalMarketSupplierListings, registerGlobalMarketSupplierAdapter, type GlobalMarketSupplierAdapter, type GlobalMarketSupplierDate } from '@/lib/services/market/globalMarketSupplierService';
 import type { MarketBatchProvenanceSnapshot } from '@/lib/types/types';
+import { getGlobalGrapeMarketBasePricePerKg } from './globalGrapeMarketPricingService';
 
 function provenance(seed: string, quality: number): MarketBatchProvenanceSnapshot {
   return {
@@ -31,7 +32,7 @@ const globalGrapeSupplierAdapter: GlobalMarketSupplierAdapter<NpcGlobalGrapeList
           ? { state, crushingOptions: MARKET_CRUSHING_PROFILE_BY_COLOR[color], featureLifecycleWeeks: 1 }
           : { state, crushingOptions: MARKET_CRUSHING_PROFILE_BY_COLOR[color], fermentationOptions: MARKET_FERMENTATION_PROFILE_BY_COLOR[color], fermentationProgress: Math.round(deterministicSeasonalVariation(`${seed}:fermentation`, 20, 65)), fermentationWeeksApplied: 1, featureLifecycleWeeks: 1 },
       });
-      return { evolutionSeed: seed, sellerCounterpartyId: 'npc:continental-grape-exchange', sellerName: 'Continental Grape Exchange', availableKg: snapshot.quantity, basePricePerKg: 3, qualityScore: quality, batchState: state, grapeVariety: grape as any, batchSnapshot: snapshot };
+      return { evolutionSeed: seed, sellerCounterpartyId: 'npc:continental-grape-exchange', sellerName: 'Continental Grape Exchange', availableKg: snapshot.quantity, basePricePerKg: getGlobalGrapeMarketBasePricePerKg(), qualityScore: quality, batchState: state, grapeVariety: grape as any, batchSnapshot: snapshot };
     }));
   },
   async persistListings(date, listings) {

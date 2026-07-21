@@ -11,10 +11,10 @@ import {
   getAvailableBuyers,
   calculateGrapeSalePrice,
   getGrapeBuyerMarketIndex,
-  getGlobalGrapeMarketSellbackPayout,
-  listGrapesOnGlobalMarket,
   sellGrapes,
 } from '@/lib/services/sales/sellGrapesService';
+import { getGlobalGrapeMarketPublicPricePerKg, getGlobalGrapeMarketSellbackPayout } from '@/lib/services/market/grapes/globalGrapeMarketPricingService';
+import { calculateWineScore } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import {
   CooperativeMembership,
   getCooperativeMembership,
@@ -260,6 +260,14 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     return calculateGrapeSalePrice(batch, buyer, prestige, floorOverride, 1);
   }, [batch, membership, prestige]);
 
+  const getBuyerPayoutPerKg = useCallback((buyer: GrapeBuyer) => {
+    if (!batch) return 0;
+    if (buyer.id === 'bulk_buyer') {
+      return getGlobalGrapeMarketSellbackPayout(batch, 1);
+    }
+    return getBuyerPriceBreakdown(buyer)?.finalPricePerKg ?? 0;
+  }, [batch, getBuyerPriceBreakdown]);
+
   const getBuyerTrustLevel = useCallback((buyer: GrapeBuyer) => {
     return Math.max(0, buyerLoyaltyById[buyer.id]?.level ?? 0);
   }, [buyerLoyaltyById]);
@@ -273,8 +281,8 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     if (!sortDirection) return filtered;
 
     const sorted = [...filtered].sort((left, right) => {
-      const leftPrice = getBuyerPriceBreakdown(left)?.finalPricePerKg ?? 0;
-      const rightPrice = getBuyerPriceBreakdown(right)?.finalPricePerKg ?? 0;
+      const leftPrice = getBuyerPayoutPerKg(left);
+      const rightPrice = getBuyerPayoutPerKg(right);
       const leftTrust = getBuyerTrustLevel(left);
       const rightTrust = getBuyerTrustLevel(right);
       const leftCaps = left.remainingSeasonLimitKg ?? Number.MAX_SAFE_INTEGER;
@@ -314,7 +322,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     });
 
     return sorted;
-  }, [batch, buyers, grapeFilter, getBuyerPriceBreakdown, getBuyerTrustLevel, sortDirection, sortKey]);
+  }, [batch, buyers, grapeFilter, getBuyerPayoutPerKg, getBuyerTrustLevel, sortDirection, sortKey]);
 
   useEffect(() => {
     if (filteredAndSortedBuyers.length === 0) {
@@ -356,7 +364,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   }, [getSalePercentageForBuyer, selectedBuyer]);
   const maxSelectableKg = useMemo(() => {
     if (!batch) return 0;
-    if (!selectedBuyer || selectedBuyer.remainingSeasonLimitKg === undefined) return batch.quantity;
+    if (selectedBuyer?.id === 'bulk_buyer' || !selectedBuyer || selectedBuyer.remainingSeasonLimitKg === undefined) return batch.quantity;
     return Math.max(0, Math.min(batch.quantity, selectedBuyer.remainingSeasonLimitKg));
   }, [batch, selectedBuyer]);
 
@@ -369,7 +377,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   }, [selectedQuantityKg, maxSelectableKg]);
 
   const loyaltyPreview = useMemo(() => {
-    if (!selectedBuyer || selectedQuantityKg <= 0) return null;
+    if (!selectedBuyer || selectedBuyer.id === 'bulk_buyer' || selectedQuantityKg <= 0) return null;
     const consecutiveYears = Math.max(1, buyerLoyalty?.consecutiveYears ?? 1);
     const yearPoints = Math.max(0, buyerLoyalty?.yearLoyaltyPoints ?? 0);
     const preview = estimateBuyerLoyaltyPointGain(selectedQuantityKg, consecutiveYears, yearPoints, companyValue);
@@ -384,7 +392,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   }, [selectedBuyer, selectedQuantityKg, buyerLoyalty, companyValue]);
 
   const pricing: GrapeSalePricing | null = useMemo(() => {
-    if (!batch || !selectedBuyer) return null;
+    if (!batch || !selectedBuyer || selectedBuyer.id === 'bulk_buyer') return null;
     const prestige = getGameState().prestige ?? 0;
     // For the cooperative, use the membership-aware floor price
     let floorOverride: number | undefined;
@@ -412,24 +420,13 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     }
   };
 
-  const handleGlobalListing = async () => {
-    if (!batch || selectedQuantityKg <= 0) return;
-    setIsSelling(true);
-    try {
-      const result = await listGrapesOnGlobalMarket(batch.id, selectedQuantityKg);
-      if (result.success) onClose();
-      else console.error('Global grape listing failed:', result.error);
-    } finally {
-      setIsSelling(false);
-    }
-  };
-
   const globalListingPayout = useMemo(
     () => batch && selectedQuantityKg > 0 ? getGlobalGrapeMarketSellbackPayout(batch, selectedQuantityKg) : 0,
     [batch, selectedQuantityKg],
   );
 
-  const qualityPercent = pricing ? Math.round(pricing.wineScore * 100) : 0;
+  const isBulkSettlement = selectedBuyer?.id === 'bulk_buyer';
+  const qualityPercent = pricing ? Math.round(pricing.wineScore * 100) : batch ? Math.round(calculateWineScore(batch) * 100) : 0;
   const volatilitySeason = selectedBuyer?.demandFactors?.volatilitySeason;
   const seasonIcon = getSeasonVolatilityIcon(volatilitySeason);
   const volatilityEconomyPhase = selectedBuyer?.demandFactors?.volatilityEconomyPhase;
@@ -465,11 +462,15 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             <div className="space-y-1">
               <div className="font-medium text-white leading-tight">{buyer.name}</div>
               <div className="flex flex-wrap gap-1.5">
-                <UnifiedTooltip title="Trust Badge" content={<span className="text-xs leading-snug">Relationship trust with this buyer. Higher trust improves sale opportunities and caps over time.</span>}>
-                  <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getLoyaltyColor(trustLevel as BuyerLoyaltyLevel)}`}>
-                    Trust {trustLevel}
-                  </span>
-                </UnifiedTooltip>
+                {buyer.id === 'bulk_buyer' ? (
+                  <span className="rounded border border-cyan-800 bg-cyan-950/40 px-2 py-0.5 text-[10px] text-cyan-200">GLOBAL SETTLEMENT</span>
+                ) : (
+                  <UnifiedTooltip title="Trust Badge" content={<span className="text-xs leading-snug">Relationship trust with this buyer. Higher trust improves sale opportunities and caps over time.</span>}>
+                    <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getLoyaltyColor(trustLevel as BuyerLoyaltyLevel)}`}>
+                      Trust {trustLevel}
+                    </span>
+                  </UnifiedTooltip>
+                )}
                 {topBadgeLabel && (
                   <UnifiedTooltip
                     title="Buyer Context"
@@ -546,6 +547,13 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
         sortable: true,
         className: 'w-[14%] min-w-[135px] text-right',
         render: (buyer) => {
+          if (buyer.id === 'bulk_buyer') {
+            return (
+              <div className="text-[11px] text-cyan-200">
+                Global market quote — season and economy apply equally to every seller.
+              </div>
+            );
+          }
           return (
             <div className="space-y-0.5 text-[11px]">
               <div className="text-gray-400">{buyer.demandFactors?.volatilityEconomyPhase ?? 'Economy'} / {buyer.demandFactors?.volatilityWeatherState ?? 'Weather'}</div>
@@ -559,8 +567,8 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
         sortable: true,
         className: 'w-[11%] min-w-[105px] text-right text-amber-300',
         render: (buyer) => {
-          const rowPricing = getBuyerPriceBreakdown(buyer);
-          return rowPricing ? formatNumber(rowPricing.finalPricePerKg, { currency: true, decimals: 2 }) : '—';
+          const price = getBuyerPayoutPerKg(buyer);
+          return price > 0 ? formatNumber(price, { currency: true, decimals: 2 }) : '—';
         },
       },
       {
@@ -569,6 +577,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
         sortable: true,
         className: 'w-[14%] min-w-[150px] text-right',
         render: (buyer) => {
+          if (buyer.id === 'bulk_buyer') {
+            return <div className="text-[11px] text-cyan-200">No cap<br />No relationship terms</div>;
+          }
           const loyaltyForBuyer = buyerLoyaltyById[buyer.id] ?? null;
           const buyerYearlyCap = getBuyerYearlyLoyaltyCap(Math.max(1, loyaltyForBuyer?.consecutiveYears ?? 1), companyValue);
 
@@ -588,7 +599,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
         className: 'w-[20%] min-w-[160px] text-right',
         render: (buyer) => {
           const buyerQuantity = getSalePercentageForBuyer(buyer);
-          const buyerMaxSelectableKg = Math.max(0, Math.min(batch.quantity, buyer.remainingSeasonLimitKg ?? batch.quantity));
+          const buyerMaxSelectableKg = buyer.id === 'bulk_buyer'
+            ? batch.quantity
+            : Math.max(0, Math.min(batch.quantity, buyer.remainingSeasonLimitKg ?? batch.quantity));
           const buyerMaxSelectablePercent = Math.max(1, Math.min(100, Math.floor((buyerMaxSelectableKg / batch.quantity) * 100)));
 
           return (
@@ -617,7 +630,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
         },
       },
     ];
-  }, [batch, buyerLoyaltyById, companyValue, getBuyerPriceBreakdown, getBuyerTrustLevel, getSalePercentageForBuyer, qualityPercent]);
+  }, [batch, buyerLoyaltyById, companyValue, getBuyerPayoutPerKg, getBuyerTrustLevel, getSalePercentageForBuyer, qualityPercent]);
 
   if (!batch) return null;
 
@@ -633,7 +646,12 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
-            {selectedBuyer?.demandFactors ? (
+            {isBulkSettlement ? (
+              <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-xs text-cyan-100">
+                <div className="font-medium">Global market settlement</div>
+                <div className="mt-1 text-gray-300">The Bulk Grape Merchant pays a 70% advance, then lists this lot globally under your winery. The public value uses the global season and economy only.</div>
+              </div>
+            ) : selectedBuyer?.demandFactors ? (
               <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="text-cyan-200 font-medium">Market outlook</span>
@@ -669,14 +687,30 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             )}
 
             <div className="space-y-3">
-              <BuyerLoyaltyPanel buyer={selectedBuyer} loyalty={buyerLoyalty} companyValue={companyValue} />
+              {!isBulkSettlement && <BuyerLoyaltyPanel buyer={selectedBuyer} loyalty={buyerLoyalty} companyValue={companyValue} />}
               {selectedBuyer?.id === 'winzergenossenschaft' && (
                 <CooperativeMembershipPanel membership={membership} isSelected={true} />
               )}
             </div>
 
             <div className="space-y-3">
-              {pricing && (
+              {isBulkSettlement ? (
+                <div className="bg-gray-800 rounded p-3 space-y-3 text-sm border border-cyan-800/70">
+                  <div className="flex items-center justify-between">
+                    <p className="text-cyan-200 font-medium uppercase tracking-wide text-xs">Global market settlement</p>
+                    <span className="text-xs text-gray-400">Bulk Grape Merchant</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Public value per kg</span><span>{formatNumber(getGlobalGrapeMarketPublicPricePerKg(batch), { currency: true, decimals: 2 })}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Immediate advance</span><span>70%</span></div>
+                    <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Listing quantity</span><span>{selectedQuantityKg.toLocaleString()} kg</span></div>
+                  </div>
+                  <div className="flex justify-between font-bold text-amber-400 text-base border-t border-gray-600 pt-2">
+                    <span>Immediate payout</span>
+                    <span>{formatNumber(globalListingPayout, { currency: true, decimals: 0 })}</span>
+                  </div>
+                </div>
+              ) : pricing && (
                 <div className="bg-gray-800 rounded p-3 space-y-3 text-sm border border-gray-700/70">
                   <div className="flex items-center justify-between">
                     <p className="text-gray-400 font-medium uppercase tracking-wide text-xs">Price Summary</p>
@@ -760,19 +794,13 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             Cancel
           </Button>
           <Button
-            onClick={handleGlobalListing}
-            disabled={isSelling || selectedQuantityKg <= 0}
-            variant="outline"
-            className="border-cyan-600 text-cyan-200 hover:bg-cyan-950/50"
-          >
-            {isSelling ? 'Listing…' : `List globally for ${formatNumber(globalListingPayout, { currency: true, decimals: 0 })}`}
-          </Button>
-          <Button
             onClick={handleSell}
-            disabled={isSelling || !selectedBuyer || !pricing || exceedsBuyerCap || selectedQuantityKg <= 0}
+            disabled={isSelling || !selectedBuyer || (!isBulkSettlement && !pricing) || exceedsBuyerCap || selectedQuantityKg <= 0}
             className="bg-amber-600 hover:bg-amber-500 text-white"
           >
-            {isSelling ? 'Selling…' : `Sell for ${pricing ? formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 }) : '—'}`}
+            {isSelling ? 'Selling…' : isBulkSettlement
+              ? `Settle for ${formatNumber(globalListingPayout, { currency: true, decimals: 0 })} and list globally`
+              : `Sell for ${pricing ? formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 }) : '—'}`}
           </Button>
         </DialogFooter>
       </DialogContent>

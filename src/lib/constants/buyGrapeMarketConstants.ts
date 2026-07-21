@@ -53,7 +53,6 @@ export const GLOBAL_GRAPE_MARKET_MAX_WEEKS: Record<BuyOfferBatchState, number> =
   must_ready: 10,
   must_fermenting: 8,
 };
-export const GLOBAL_GRAPE_MARKET_IMMEDIATE_PAYOUT_RATE = 0.7;
 export const GLOBAL_GRAPE_MARKET_BASE_PRICE_PER_KG = 3;
 export const GLOBAL_GRAPE_MARKET_QUALITY_FLOOR = 0.16;
 export const GLOBAL_GRAPE_MARKET_PRICE_QUALITY_MIN_MULTIPLIER = 0.2;
