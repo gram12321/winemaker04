@@ -59,7 +59,7 @@ This is the concise behavior/status guide. Use `CONTEXT.md` for rules and vocabu
 - `workCalculator.ts` supplies the one staff-work allocation used by previews and ticks. The tick awards broad-skill, task, and eligible grape XP only from persisted applied work, so final-tick, weather, storage, and assignment changes cannot over-credit staff. The old `specializations` and interim `task_specializations` columns have been removed; only `specialized_roles` and the existing experience map persist this model.
 - `staffFeature` at `src/lib/features/staff/` owns feature-native staff/team records, competency, recruitment, wages/founders, presentation, and the Staff workspace. Its eager facade is pure; core, Finance, and Activities invoke runtime workflows through it. Staff/team membership assignment, removal, and deletion each use a company-scoped atomic database operation so both denormalized membership lists remain consistent. Activities consume Staff’s team-selection, candidate creation, and competency operations without a reverse Staff → Activities import.
 - Founders have zero wages, receive yearly positive-profit returns, and can be bought out into salaried staff.
-- Prestige is derived from the `prestige_events` ledger with permanent and decaying sources; it feeds pricing, land value, gates, achievements, and UI.
+- `prestigeFeature` owns the company-scoped `prestige_events` ledger, permanent/decaying event calculations, weekly decay, intent-level event commands, and the lazy Prestige modal. Host systems use lifecycle, reads, events, calculations, and UI namespaces; they never construct ledger rows or import Prestige persistence.
 - Research projects use work profiles and prestige/prerequisite/company-value/buyer-loyalty/achievement gates. Active unlocks cover grapes, fermentation, staff/vineyard caps, contracts, and grape-buyer progression. Current permanent effect: vineyard health-decay multiplier.
 
 ## Deferred or Partial Areas
@@ -81,5 +81,5 @@ This is the concise behavior/status guide. Use `CONTEXT.md` for rules and vocabu
 | Sales/markets | `src/lib/services/sales/`, sales pages/modals, `src/lib/database/sales/` |
 | Finance/loans/founders | `src/lib/services/finance/`, `src/lib/features/loanLender/`, `src/components/finance/` |
 | Research | `src/lib/features/researchUpgrade/`, `src/lib/constants/researchConstants.ts`, `src/components/pages/Research.tsx` |
-| Prestige/progression | `src/lib/services/prestige/`, `src/lib/features/achievements/`, highscore services/databases |
+| Prestige/progression | `src/lib/features/prestige/`, `src/lib/features/achievements/`, highscore services/databases |
 | Tests | `tests/` |

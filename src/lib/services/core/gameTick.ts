@@ -1,6 +1,7 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, processWeeklyFeatureRisks, processWeeklyFermentation, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, processWeeklyFeatureRisks, processWeeklyFermentation, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
 import { staffFeature } from '@/lib/features/staff';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { activitiesFeature } from '@/lib/features/activities';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
@@ -284,7 +285,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     // Update cellar collection prestige (permanent event recalculation)
     (async () => {
       try {
-        await updateCellarCollectionPrestige();
+        await prestigeFeature.lifecycle.updateCellarCollection();
       } catch (error) {
         console.warn('Error during cellar collection prestige update:', error);
       }

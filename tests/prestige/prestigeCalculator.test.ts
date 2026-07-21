@@ -6,7 +6,7 @@ import {
   calculateVineyardManifestationPrestige,
   calculateVineyardSalePrestige,
   softCapSigned
-} from '@/lib/services/prestige/prestigeCalculator';
+} from '@/lib/features/prestige/services/prestigeCalculator';
 
 describe('prestige calculator', () => {
   it('scales regular sale prestige with sale size and company assets while respecting the cap', () => {

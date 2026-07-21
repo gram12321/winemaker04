@@ -8,7 +8,7 @@ import {
 } from '../../vineyard/vineyardValueCalc';
 import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
-import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getFeatureImpacts } from '../features/featureService';
 import { combineOvergrowthYears } from '@/lib/services/vineyard/overgrowthUtils';
 import { getTasteQualityIndex } from './wineScoreCalculation';
@@ -95,7 +95,7 @@ function calculateDensityQualityPenalty(density: number): number {
 
 export function calculateLandValueModifier(vineyard: Vineyard): number {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue || 50000);
-  const boundedVineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
+  const boundedVineyardPrestige = prestigeFeature.calculations.boundedVineyardFactor(vineyard).boundedFactor;
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
   const densityPenalty = calculateDensityQualityPenalty(vineyard.density || 0);
   
@@ -129,7 +129,7 @@ export function getVineyardLandValueModifierFactors(vineyard: Vineyard): {
   landValueModifierScore: number;
 } {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue );
-  const vineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
+  const vineyardPrestige = prestigeFeature.calculations.boundedVineyardFactor(vineyard).boundedFactor;
 
   const countryData = REGION_PRESTIGE_RANKINGS[vineyard.country as keyof typeof REGION_PRESTIGE_RANKINGS];
   const rawPrestige = countryData?.[vineyard.region as keyof typeof countryData] ?? 0.5;

@@ -6,8 +6,8 @@ import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, Dropd
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
-import { PrestigeModal } from '@/components/ui';
-import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
+import { getCurrentCompany } from '@/lib/services';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { createWeatherWeekContext, getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
 
   const handlePrestigeClick = async () => {
     try {
-      const prestigeInfo = await calculateCurrentPrestige();
+      const prestigeInfo = await prestigeFeature.reads.calculateCurrent();
       setPrestigeData({
         totalPrestige: prestigeInfo.totalPrestige,
         eventBreakdown: prestigeInfo.eventBreakdown,
@@ -506,15 +506,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
       }
       
       {/* Prestige Breakdown Modal */}
-      <PrestigeModal
-        isOpen={prestigeModalOpen}
-        onClose={() => setPrestigeModalOpen(false)}
-        totalPrestige={prestigeData.totalPrestige}
-        eventBreakdown={prestigeData.eventBreakdown}
-        companyPrestige={prestigeData.companyPrestige}
-        vineyardPrestige={prestigeData.vineyardPrestige}
-        vineyards={prestigeData.vineyards}
-      />
+      {prestigeModalOpen && prestigeFeature.ui.renderModal({
+        isOpen: prestigeModalOpen,
+        onClose: () => setPrestigeModalOpen(false),
+        totalPrestige: prestigeData.totalPrestige,
+        eventBreakdown: prestigeData.eventBreakdown,
+        companyPrestige: prestigeData.companyPrestige,
+        vineyardPrestige: prestigeData.vineyardPrestige,
+        vineyards: prestigeData.vineyards,
+      })}
     </>
   );
 };

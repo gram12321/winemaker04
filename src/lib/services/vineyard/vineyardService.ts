@@ -5,7 +5,7 @@ import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardNam
 import { saveVineyard, loadVineyards } from '../../database/activities/vineyardDB';
 import { deleteVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
@@ -129,10 +129,10 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
 
   // Ensure base vineyard prestige events exist immediately upon creation
   try {
-    await updateBaseVineyardPrestigeEvent(vineyard.id);
+    await prestigeFeature.lifecycle.updateVineyard(vineyard.id);
 
     // Calculate prestige for this specific vineyard only (more efficient than full recalculation)
-    const vineyardPrestige = await calculateVineyardPrestigeFromEvents(vineyard.id);
+    const vineyardPrestige = await prestigeFeature.reads.calculateVineyard(vineyard.id);
 
     // Update the vineyard with the calculated prestige
     const updatedVineyard = { ...vineyard, vineyardPrestige };
@@ -260,10 +260,10 @@ export async function completePlanting(vineyardId: string, targetDensity: number
   // Add achievement prestige event for planting (uses base vineyard prestige as multiplier)
   try {
     // Ensure base vineyard prestige events exist/are up to date first
-    await updateBaseVineyardPrestigeEvent(vineyardId);
+    await prestigeFeature.lifecycle.updateVineyard(vineyardId);
     // Then read the base prestige as multiplier
-    const basePrestige = await getBaseVineyardPrestige(vineyardId);
-    await addVineyardAchievementPrestigeEvent(
+    const basePrestige = await prestigeFeature.reads.getBaseVineyard(vineyardId);
+    await prestigeFeature.events.addVineyardAchievement(
       'planting',
       vineyardId,
       basePrestige
@@ -280,7 +280,7 @@ export async function completePlanting(vineyardId: string, targetDensity: number
 export async function getAllVineyards(): Promise<Vineyard[]> {
   try {
     // First, ensure prestige calculations are up to date
-    await calculateCurrentPrestige();
+      await prestigeFeature.reads.calculateCurrent();
 
     // Then load the vineyards (which should now have updated prestige values)
     return await loadVineyards();
@@ -376,7 +376,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
 
     // Ensure base vineyard prestige events exist immediately upon creation
     try {
-      await updateBaseVineyardPrestigeEvent(vineyard.id);
+      await prestigeFeature.lifecycle.updateVineyard(vineyard.id);
     } catch (error) {
       console.error('Failed to initialize base vineyard prestige on purchase:', error);
     }

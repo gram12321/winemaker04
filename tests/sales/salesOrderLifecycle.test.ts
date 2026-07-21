@@ -53,11 +53,11 @@ vi.mock('@/lib/services/sales/relationshipService', () => ({
   createRelationshipBoost: mocks.createRelationshipBoost
 }));
 
-vi.mock('@/lib/services/prestige/prestigeService', () => ({
-  addSalePrestigeEvent: mocks.addSalePrestigeEvent,
-  addVineyardSalePrestigeEvent: mocks.addVineyardSalePrestigeEvent,
-  getBaseVineyardPrestige: mocks.getBaseVineyardPrestige,
-  addFeaturePrestigeEvent: mocks.addFeaturePrestigeEvent
+vi.mock('@/lib/features/prestige', () => ({
+  prestigeFeature: {
+    events: { addSale: mocks.addSalePrestigeEvent, addVineyardSale: mocks.addVineyardSalePrestigeEvent, addFeature: mocks.addFeaturePrestigeEvent },
+    reads: { getBaseVineyard: mocks.getBaseVineyardPrestige },
+  }
 }));
 
 vi.mock('@/lib/services/core/gameState', () => ({

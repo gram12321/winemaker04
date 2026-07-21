@@ -5,7 +5,7 @@ import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from '../sales/relationshipService';
-import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige, addFeaturePrestigeEvent } from '../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getCurrentPrestige } from '../core/gameState';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
@@ -98,10 +98,10 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     
     // Create vineyard-specific prestige event for the sale
     if (wineBatch.vineyardId) {
-      const basePermanentPrestige = await getBaseVineyardPrestige(wineBatch.vineyardId);
+      const basePermanentPrestige = await prestigeFeature.reads.getBaseVineyard(wineBatch.vineyardId);
       const vineyardPrestigeFactor = Math.max(0.1, basePermanentPrestige);
       
-      await addVineyardSalePrestigeEvent(
+      await prestigeFeature.events.addVineyardSale(
         fulfillableValue,
         order.customerName,
         order.wineName,
@@ -111,7 +111,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
       );
         } else {
           // Fallback to company-level prestige event if no vineyard ID
-          await addSalePrestigeEvent(
+          await prestigeFeature.events.addSale(
             fulfillableValue,
             order.customerName,
             order.wineName,
@@ -155,7 +155,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
         const config = configs.find(c => c.id === feature.id);
         if (config?.effects.prestige?.onSale) {
           // Pass full context for dynamic prestige calculation
-          await addFeaturePrestigeEvent(wineBatch, config, 'sale', {
+          await prestigeFeature.events.addFeature(wineBatch, config, 'sale', {
             customerName: order.customerName,
             order: featurePrestigeOrder,
             vineyard,

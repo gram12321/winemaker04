@@ -111,9 +111,11 @@ vi.mock('@/lib/services/core/gameState', () => ({
 
 vi.mock('@/lib/utils/companyUtils', () => ({ getCurrentCompanyId: () => 'company-1' }));
 
-vi.mock('@/lib/services/prestige/prestigeService', () => ({
-  calculateCurrentPrestige: mocks.calculateCurrentPrestige,
-  BoundedVineyardPrestigeFactor: () => ({ boundedFactor: 1 })
+vi.mock('@/lib/features/prestige', () => ({
+  prestigeFeature: {
+    reads: { calculateCurrent: mocks.calculateCurrentPrestige },
+    calculations: { boundedVineyardFactor: () => ({ boundedFactor: 1 }) },
+  }
 }));
 
 vi.mock('@/lib/services/wine/features/featureService', () => ({

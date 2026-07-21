@@ -6,7 +6,7 @@ import {
   calculateFeatureSalePrestigeWithReputation,
   calculateSalePrestigeWithAssets,
   calculateVineyardSalePrestige
-} from '@/lib/services/prestige/prestigeCalculator';
+} from '@/lib/features/prestige/services/prestigeCalculator';
 
 const MAX_LAND_VALUE_BENCHMARK = 1_000_000;
 

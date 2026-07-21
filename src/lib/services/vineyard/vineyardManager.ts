@@ -466,8 +466,8 @@ export async function updateVineyardAges(): Promise<void> {
         
         await saveVineyard(updatedVineyard);
         try {
-          const { updateBaseVineyardPrestigeEvent } = await import('../prestige/prestigeService');
-          await updateBaseVineyardPrestigeEvent(vineyard.id);
+          const { prestigeFeature } = await import('@/lib/features/prestige');
+          await prestigeFeature.lifecycle.updateVineyard(vineyard.id);
         } catch (error) {
           console.error('Failed to update prestige after annual vine aging:', error);
         }
@@ -778,8 +778,8 @@ export async function handlePartialPlanting(
       
       // Update prestige events to reflect new density (affects prestige calculations)
       try {
-        const { updateBaseVineyardPrestigeEvent } = await import('../prestige/prestigeService');
-        await updateBaseVineyardPrestigeEvent(vineyard.id);
+          const { prestigeFeature } = await import('@/lib/features/prestige');
+          await prestigeFeature.lifecycle.updateVineyard(vineyard.id);
       } catch (error) {
         console.error('Failed to update prestige during partial planting:', error);
       }

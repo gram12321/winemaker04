@@ -7,7 +7,8 @@ import { FactorCard } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
-import { BoundedVineyardPrestigeFactor, getEventDisplayData, getStoredVineyards, getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
+import { getStoredVineyards, getRegionalPriceRange } from '@/lib/services';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface LandValueModifierFactorsBreakdownProps {
@@ -31,7 +32,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
   useEffect(() => {
     const targetVineyard = vineyard || wineBatchVineyard;
     if (targetVineyard && showFactorDetails) {
-      getVineyardPrestigeBreakdown().then((breakdown) => {
+      prestigeFeature.reads.getBreakdown().then((breakdown) => {
         setPrestigeBreakdown(breakdown);
       }).catch((error) => {
         console.error('Failed to load prestige breakdown:', error);
@@ -610,7 +611,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
                             <div className="mt-3 pt-3 border-t border-purple-200">
                               {(() => {
                                 const tv = vineyard || (wineBatchVineyard as Vineyard);
-                                const b = BoundedVineyardPrestigeFactor(tv);
+                                      const b = prestigeFeature.calculations.boundedVineyardFactor(tv);
 
                                 return (
                                   <div className="text-xs space-y-2">
@@ -644,7 +645,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
                                 <div className="rounded border border-purple-200 bg-purple-50/50">
                                   {vineyardData.events.map((event: any, idx: number) => {
                                     try {
-                                      const titleBase = getEventDisplayData({
+                                      const titleBase = prestigeFeature.reads.getEventDisplayData({
                                         id: event.id ?? `${idx}`,
                                         type: event.type,
                                         amount: event.amount,

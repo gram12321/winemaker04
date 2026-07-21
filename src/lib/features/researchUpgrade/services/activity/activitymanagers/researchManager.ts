@@ -4,7 +4,7 @@ import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { activitiesFeature } from '@/lib/features/activities';
 import { getResearchProject, RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
-import { addResearchPrestigeEvent } from '@/lib/services/prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { researchUpgradeFeature } from '../../..';
@@ -135,7 +135,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
 
             // Grant prestige reward
             if (project.prestigeReward && project.prestigeReward > 0) {
-                  await addResearchPrestigeEvent(project.title, resolvedProjectId, project.prestigeReward);
+                  await prestigeFeature.events.addResearch(project.title, resolvedProjectId, project.prestigeReward);
             }
 
             // Build completion message

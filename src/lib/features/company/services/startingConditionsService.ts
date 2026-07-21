@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { FIRST_COMPANY_PLAYER_BALANCE_SEED, FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION, STARTING_CONDITIONS, type StartingCondition, type StartingCountry, type StartingLoanConfig } from '@/lib/constants/startingConditions';
 import { staffFeature } from '@/lib/features/staff';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
@@ -7,7 +6,7 @@ import { TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { formatNumber, getStoryImageSrc } from '@/lib/utils';
 import { addTransaction } from '@/lib/services/finance/financeService';
 import { companyFeature } from '@/lib/features/company';
-import { upsertPrestigeEventBySource } from '@/lib/database/customers/prestigeEventsDB';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getGameState } from '@/lib/services/core/gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
@@ -249,28 +248,17 @@ export async function applyStartingConditions(
     
     if (condition.startingPrestige) {
       try {
-        const gameState = getGameState();
-        const createdWeek = calculateAbsoluteWeeks(
-          gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
-          gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON,
-          gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR
-        );
-
         const prestigeConfig = condition.startingPrestige;
         // Starting conditions may be retried after a partial setup failure. Keep
         // their prestige grant to one stable row instead of attempting a second
         // insert for the same company and country.
-        await upsertPrestigeEventBySource(prestigeConfig.type ?? 'company_story', `starting_conditions:${condition.id}`, {
-          id: uuidv4(),
-          amount_base: prestigeConfig.amount,
-          created_game_week: createdWeek,
-          decay_rate: prestigeConfig.decayRate ?? 0.98,
+        await prestigeFeature.events.recordStartingCondition({
+          conditionId: condition.id,
+          type: prestigeConfig.type ?? 'company_story',
+          amount: prestigeConfig.amount,
+          decayRate: prestigeConfig.decayRate ?? 0.98,
           description: prestigeConfig.description ?? 'Vineyard Legacy Prestige',
-          payload: {
-            event: 'starting_conditions',
-            country: condition.id,
-            ...(prestigeConfig.payload ?? {})
-          }
+          payload: prestigeConfig.payload,
         });
       } catch (prestigeError) {
         console.error('Error creating starting prestige event:', prestigeError);

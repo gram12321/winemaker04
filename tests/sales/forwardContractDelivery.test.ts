@@ -22,7 +22,7 @@ vi.mock('@/lib/services/finance/financeService', () => ({
 vi.mock('@/lib/services/core/gameState', () => ({ getGameState: () => ({ week: 4, season: 'Fall', currentYear: 2026 }), getCurrentPrestige: () => 0 }));
 vi.mock('@/lib/utils/companyUtils', () => ({ getCurrentCompanyId: () => 'company-1' }));
 vi.mock('@/lib/services/sales/sellGrapesService', () => ({ getAvailableBuyers: vi.fn(async () => []) }));
-vi.mock('@/lib/services/prestige/prestigeService', () => ({ addContractOutcomePrestigeEvent: mocks.addContractOutcomePrestigeEvent }));
+vi.mock('@/lib/features/prestige', () => ({ prestigeFeature: { events: { addContractOutcome: mocks.addContractOutcomePrestigeEvent } } }));
 vi.mock('@/lib/services/sales/grapeBuyerLoyaltyService', () => ({ recordBuyerSale: mocks.recordBuyerSale }));
 vi.mock('@/lib/services/core/notificationService', () => ({ notificationService: { addMessage: mocks.addMessage } }));
 vi.mock('@/hooks/useGameUpdates', () => ({ triggerGameUpdate: vi.fn(), triggerTopicUpdate: vi.fn() }));

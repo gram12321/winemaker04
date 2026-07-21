@@ -19,7 +19,7 @@ vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: () => 'company-1',
 }));
 
-import { insertPrestigeEventIfAbsentBySource } from '@/lib/database/customers/prestigeEventsDB';
+import { insertPrestigeEventIfAbsentBySource } from '@/lib/features/prestige/database/prestigeEventsDB';
 
 describe('prestige event persistence', () => {
   beforeEach(() => {
@@ -41,8 +41,22 @@ describe('prestige event persistence', () => {
       decay_rate: 0,
       source_id: 'achievement:first_sale',
       payload: { event: 'achievement_unlock', achievementId: 'first_sale' },
-    })).resolves.toBe(true);
+    }, 'company-1')).resolves.toBe(true);
 
     expect(mocks.insert).toHaveBeenCalledWith([expect.objectContaining({ company_id: 'company-1' })]);
+  });
+
+  it('uses the supplied company instead of resolving the active company', async () => {
+    await insertPrestigeEventIfAbsentBySource({
+      id: 'event-2',
+      type: 'achievement',
+      amount_base: 1,
+      created_game_week: 1,
+      decay_rate: 0,
+      source_id: 'achievement:second_sale',
+      payload: { event: 'achievement_unlock', achievementId: 'second_sale' },
+    }, 'company-2');
+
+    expect(mocks.insert).toHaveBeenCalledWith([expect.objectContaining({ company_id: 'company-2' })]);
   });
 });
