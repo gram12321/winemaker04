@@ -426,7 +426,7 @@ export async function createGrapeBatch(
     purchasedWeek: harvestDate.week,
   }]);
   if (inserted.error) throw inserted.error;
-  const plan = await createStorageAllocationPlan({ requiredLitres: numberParam(params, 'quantityKg', 1200) * 0.5, vesselIds: [vesselId] });
+  const plan = await createStorageAllocationPlan({ requiredLitres: numberParam(params, 'quantityKg', 1200) * 0.5, vesselId });
   if (!plan.planId) throw new Error(plan.error || 'Could not reserve test-lab storage vessel.');
   const batch = await createWineBatchFromHarvest(
     result.vineyard.id,

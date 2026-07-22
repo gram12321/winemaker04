@@ -375,3 +375,314 @@ The allocation remains the operational state: it can be released or have `filled
 - Partial emptying and later lifecycle transitions cannot erase or duplicate provenance.
 - All allocation-fill routes write first-use, history, and dirty state atomically; a client interruption cannot leave an allocation filled without its matching history event.
 - No wine sensory, scoring, pricing, feature, work, condition, cleanliness-risk, repair, or vessel-memory mechanics change in rollout 2.
+
+---
+
+## Superseded draft: Rollout 3 — one vessel per wine batch, then bounded vessel effects
+
+**Status:** Superseded 2026-07-22. The one-batch/one-vessel correction remains valid, but the proposed `woodContactState`, material target calculations, anchor effects, grape compatibility, feature, and price behaviour have been postponed for a later rollout. The current plan follows below.
+
+### Non-negotiable batch topology
+
+One non-bottled `WineBatch` occupies exactly one storage vessel at a time. The canonical path remains `WineBatch.storagePlanId` → one active allocation → one vessel; no second direct vessel ID is introduced.
+
+A harvest may use several vessels over several game ticks, but each vessel starts or continues its own batch:
+
+- Harvest into the same vessel again: use the existing batch for that vessel and merge compatible harvested volume through `combineWineBatches()`.
+- Harvest into a different vessel: create a new batch with its own plan/allocation and batch number, for example `Barbera Helena 2026 #2` rather than adding a second allocation to `#1`.
+- Once crushing, fermentation, or vessel effects mutate one batch, it naturally diverges from every other batch. Batches must never be re-merged after process mutation.
+
+This correction means the multi-allocation portions of the rollout 2 plan and implementation are transitional only. Rollout 3 phase 1 removes that topology before any vessel effect is enabled.
+
+### Scope and sequence
+
+Rollout 3 is intentionally split into five independently shippable pieces. Pieces 1 and 2 are framework/schema work with no sensory, score, price, or feature behaviour. Pieces 3 through 5 introduce behaviour in controlled layers.
+
+| Piece | Purpose | Game behaviour change? |
+|---|---|---|
+| 3.1 Core batch/vessel framework | Enforce one batch / one active vessel and expose pure contact context | Yes, only the required batch-splitting and allocation-topology correction; no wine-effect change |
+| 3.2 Anchor model | Add the source-specific anchor and effect contracts | No; defaults are inert and no consumer reads them yet |
+| 3.3 True material behaviour | Apply bounded material, condition, quality, cleanliness, fill-history, and size effects during fermentation | Yes; anchors/taste/structure can change indirectly as specified below |
+| 3.4 Grape compatibility | Make grape traits alter risk and player guidance | Yes; risk changes, but no hard gate or direct style bonus |
+| 3.5 Features and price | Turn severe risk into the existing oxidation feature and let existing score/price paths react | Yes, threshold risk and indirect price effects only |
+
+## 3.1 Core — one batch / one vessel framework
+
+### Goal
+
+Make the storage plan a single-vessel ownership record for an active WineBatch, then provide a pure, read-only vessel-contact context. This phase deliberately creates no anchor deltas, characteristics changes, score changes, Wine Features, work changes, or price changes.
+
+The topology correction cannot be completely behaviour-neutral: selecting a second vessel for a later harvest must create a second batch rather than silently mixing it into the first batch. That is the only intended gameplay change in this phase.
+
+### Exact data and lifecycle changes
+
+- `storage_vessel_allocation_plans` may have **one** allocation. Add a database uniqueness constraint on `plan_id` in `storage_vessel_allocations`, then retire APIs that add capacity/vessels to an existing plan.
+- An active plan has exactly one `wine_batch_id`, one allocation, and one positive `filled_litres` value equal to the batch’s `volumeLitres`.
+- `reserveStorageVesselPlan()` accepts exactly one vessel ID. `addStorageVesselCapacity()` is removed or made to reject all calls; it cannot create a second allocation.
+- Harvest activity UI/workflow chooses one vessel/plan per activity. A later harvest tick can target the same planned batch only when its plan points to the same vessel and the batch is still `grapes`.
+- `createWineBatchFromHarvest()` continues to call `combineWineBatches()` only for that same planned batch and same plan/vessel. A different selected vessel creates a fresh batch ID and batch number.
+- Market grape purchase likewise creates one batch and one vessel plan; it cannot accept a vessel array.
+- Emptying a vessel no longer redistributes a remaining batch across sibling allocations. A batch with one vessel is emptied/released as one unit. Future transfer/racking mechanics can create a new vessel-use event, but are explicitly out of scope here.
+- `storage_vessel_use_ledger` records one first-use event per batch/plan/vessel. Its unique key may become `(wine_batch_id, vessel_id)` or retain the equivalent plan/vessel identity once the one-allocation invariant is database-enforced.
+
+### Pure contact context
+
+Add `storageVesselEffectService` with a pure `resolveStorageVesselContactContext(batch, plan, allocation, vessel)` function. It returns identity and raw inputs only:
+
+```ts
+{
+  vesselId, catalogueId, vesselType, material, capacityLitres,
+  qualityScore, condition, cleanliness, fillHistory,
+  filledLitres, batchVolumeLitres,
+  batchState, isActive,
+}
+```
+
+There is no material weighting because a batch has one vessel. There is no mutation, anchor write, feature creation, market-price effect, or UI score prediction in 3.1.
+
+### Files and verification
+
+- Modify allocation schema/RPCs, `storageVesselAllocationService`, harvest and grape-market purchase paths, emptying flow, and vessel-selection UI.
+- Add tests proving same-vessel harvest ticks merge, different-vessel ticks create distinct batches, and no plan can contain two allocations.
+- Add regression tests proving crushing one batch does not mutate its sibling batch from the same harvest.
+
+## 3.2 Anchor model — inert source-specific framework
+
+### Answer: framework or game behaviour?
+
+This is **framework only** if and only if the new anchor defaults to `0`, no process writes it, and taste/structure/price consumers do not read it until 3.3. Adding an anchor field by itself should not change a saved or newly created wine.
+
+### Exact changes
+
+Add `woodContactState: number` to `WineAnchorValues`, defaults, strict persistence/parser rules, preview-state builders, anchor snapshots, and anchor-effect typing.
+
+`woodContactState` has one job: it represents bounded active wood contact from oak or chestnut vessels. It is not generic maturity, terroir, extraction, fermentation quality, body, or a direct price multiplier.
+
+Do **not** add an anchor for concrete, ceramic, steel, or plastic in this piece. They have no positive sensory model yet. Continue using existing `oxidationPressure` only as the destination for future risk; do not write it in 3.2.
+
+Add typed but inert contracts:
+
+```ts
+StorageVesselContactProfile
+StorageVesselAnchorDelta { woodContactState: number; oxidationPressure: number }
+StorageVesselRiskProfile
+```
+
+All 3.2 resolver outputs are zero. `wineTasteProfileService`, structure ranges, score, feature service, work calculations, and pricing remain unchanged.
+
+### Verification
+
+- A batch with the new default anchor serialises/deserialises correctly.
+- Existing harvest/crush/ferment snapshots are unchanged with `woodContactState = 0`.
+- Taste quality, structure, score, features, and estimated price are byte-for-byte unchanged by 3.2 fixtures.
+
+## 3.3 True material behaviour — bounded fermentation effects
+
+### Integration point
+
+Run the pure resolver once per `must_fermenting` batch inside the existing `processWeeklyFermentation()` loop, after `applyWeeklyFermentationContactToWineAnchors()` and before the existing structure/taste recomputation. It writes only the existing batch’s anchors and breakdown. It does not create an activity, a second tick loop, or a ledger row.
+
+The rollout 2 vessel-use ledger remains physical provenance only. Weekly contact is represented by the batch’s persisted anchors; it is not a growing event ledger.
+
+### Shared calculations
+
+All material profiles use these bounded inputs:
+
+| Input | Calculation | Destination |
+|---|---|---|
+| `sizeContactFactor` | `clamp(sqrt(500 / capacityLitres), 0.55, 1.35)` | Multiplies wood-contact target only |
+| `freshnessFactor` | Wood only: `1 / (1 + 0.25 * max(0, fillHistory - 1))` | Reduces oak/chestnut target; no effect on inert materials |
+| `craftControl` | `0.65 + 0.35 * qualityScore` | Reduces unwanted risk; does not increase positive wood target |
+| `integrity` | `clamp(condition, 0, 1)` | Reduces wood target below sound condition and raises risk below sound condition |
+| `cleanlinessRisk` | `0` clean; `0.06` dirty | Adds to risk ceiling only |
+| `woodContactState` update | Move toward material target by 12% of remaining distance per fermentation tick | Bounded at its material target; never an unlimited additive delta |
+| `oxidationPressure` update | Raise only toward a vessel-risk ceiling by 8% of remaining distance | Never lowers existing oxidation pressure and never grows unbounded |
+
+The contact resolver must use `max(0, fillHistory - 1)` so a new vessel’s first use has full fresh-material potential despite rollout 2 incrementing its history on first fill.
+
+### Exact material outputs
+
+| Material | `woodContactState` target | `oxidationPressure` risk ceiling | Other anchor/ledger/structure effects |
+|---|---:|---:|---|
+| Oak | `0.28 * sizeContactFactor * freshnessFactor * integrity` | `0.04 + 0.18 * (1 - integrity) + cleanlinessRisk` | No direct structure delta; no ledger write; taste mapping arrives below |
+| Chestnut | `0.24 * sizeContactFactor * freshnessFactor * integrity` | `0.06 + 0.24 * (1 - integrity) + cleanlinessRisk` | No direct structure delta; higher risk sensitivity than oak |
+| Stainless steel | `0` | `0.01 * (1 - integrity) + cleanlinessRisk` | Neutral baseline; no positive anchor delta |
+| Concrete | `0` | `0.03 + 0.12 * (1 - integrity) + cleanlinessRisk` | Neutral in this rollout; do not modify `maturationState`, `terroirExpression`, `leesState`, or structure directly |
+| Ceramic | `0` | `0.04 + 0.16 * (1 - integrity) + cleanlinessRisk` | Neutral in this rollout; do not modify `maturationState`, `terroirExpression`, `leesState`, or structure directly |
+| Plastic | `0` | `0.08 + 0.20 * (1 - integrity) + cleanlinessRisk` | No positive anchor delta; budget capacity carries a controlled stability trade-off |
+
+`craftControl` reduces only the risk portion above the material’s sound/clean baseline: `riskCeiling = baselineRisk + (rawRisk - baselineRisk) * (1 - 0.35 * qualityScore)`. It does not make a high-quality oak vessel taste more woody, nor does it make a low-quality steel tank create wood character.
+
+### Taste and structure consequences
+
+- Add `woodContactState * 0.28` to the existing oak/wood flavour family and `woodContactState * 0.10` to spice/toast descriptors in `wineTasteProfileService`.
+- Do **not** add it to `maturationState`, `terroirExpression`, `extractionState`, `leesState`, or `processFootprint`.
+- Do **not** directly write `structureIndex`; the existing structure calculation recomputes from its normal characteristics and anchor-adjusted ranges. Thus 3.3 may change taste quality through the wood family and may change score only through existing taste/structure calculation, never through a hidden vessel score bonus.
+- Append one readable anchor-breakdown entry per tick, for example `Vessel contact (Oak cask): wood contact +0.014; oxidation risk +0.003`.
+
+## 3.4 Grape compatibility — risk sensitivity and advice
+
+There is no compatibility gate and no aggregate `calculateGrapeDifficulty()` input.
+
+| Grape parameter | Exact change | Does not change |
+|---|---|---|
+| `proneToOxidation` | Multiplies only the vessel-derived risk above baseline by `1 + 0.75 * proneToOxidation` | Wood target, capacity, material legality, generic grape quality |
+| `fragile` | Multiplies only dirty/poor-integrity risk by `1 + 0.25 * fragile` | Wood target, fermentation method, direct work cost in this rollout |
+| Existing anchors | Read only for explanation: a high existing `oxidationPressure` raises the warning severity | No hidden compatibility score or forced vessel selection |
+
+Add a preview explanation to vessel selection and the Wine modal, for example: `High oxidation sensitivity: this dirty, worn chestnut cask raises stability risk.` The preview reports the profile inputs and risk ceiling; it does not promise a score or price outcome.
+
+## 3.5 Features and price — threshold consequences only
+
+### Features
+
+Normal oak/chestnut contact never creates an “oak vessel” Wine Feature. Concrete, ceramic, steel, and plastic likewise receive no positive feature.
+
+After the 3.3/3.4 risk calculation, evaluate only the existing `oxidation` feature:
+
+- Below `oxidationPressure = 0.72`: no feature creation; the anchor and its breakdown remain the player-facing risk signal.
+- At or above `0.72`: send one explicit `storage_vessel_exposure` context through the existing feature/event service.
+- The event may create or raise the existing `oxidation` feature, with initial severity `clamp((oxidationPressure - 0.72) / 0.28, 0, 0.45)`.
+- Re-evaluate only when severity can increase materially; do not append duplicate feature instances every week.
+
+This uses existing oxidation semantics. A later sanitation/contamination rollout may add a distinct feature only after its rules and player remedies exist.
+
+### Price
+
+There is no direct material, quality, condition, fill-history, capacity, wood-contact, or compatibility price multiplier.
+
+Price changes only through existing consumers:
+
+1. `woodContactState` changes the existing taste profile in 3.3.
+2. `oxidationPressure`, and only at the threshold the existing `oxidation` feature, affect existing taste/score/lifecycle semantics.
+3. Existing score and feature pricing logic recalculates estimated price/cellar value as it already does.
+
+No vessel choice grants a hidden “barrel-aged premium.”
+
+### Tests and documentation
+
+- One-vessel topology: same-vessel harvest merge; different-vessel batch split; no multi-allocation plan; no sibling redistribution on emptying.
+- Framework inertness: 3.2 produces no snapshot/taste/score/price change.
+- Material tests: oak/chestnut saturate and fade by fill history; steel is neutral; concrete/ceramic do not alter wood, terroir, lees, or structure anchors; plastic has no benefit.
+- Risk tests: condition, cleanliness, quality, `proneToOxidation`, and `fragile` change only the specified risk ceiling.
+- Feature tests: oxidation appears once at threshold and uses existing feature semantics; no normal vessel feature appears.
+- Price tests: no direct vessel multiplier exists; any observed price movement follows current score/feature paths.
+- Update `CONTEXT.md`, `docs/PROJECT_INFO.md`, `docs/WineSystem_VariableRelationshipMap.md`, `docs/AIdocs/AIDescriptions_coregame.md`, and `docs/versionlog.md` after each shipped piece.
+
+---
+
+## Current implementation plan: Rollout 3 — minimum one-batch/one-vessel framework
+
+**Status:** 3.1 implemented 2026-07-22; reset-only Supabase migration pending application. The remaining inert storage-context seam is deferred. This rollout corrects physical batch topology and establishes an inert, read-only storage context for future work. It deliberately makes no vessel integration into anchors, structure, taste, Wine Features, work, condition risk, or wine price.
+
+### Goal
+
+Make one active WineBatch occupy one and only one storage vessel. A later harvest into a different vessel becomes a different batch; a later harvest into the same eligible vessel continues the existing pre-process batch through the existing merge function.
+
+The framework must expose the vessel currently holding a batch without deciding what that vessel means for the wine. Rollout #4 will decide and implement the first material/quality/condition/cleanliness effects after a separate design pass.
+
+### Explicit non-goals
+
+- Do not add `woodContactState`, another vessel anchor, material targets, or a shared material-effect formula.
+- Do not change `WineAnchorValues`, anchor persistence, taste descriptors, characteristics, structure calculation, score, estimated price, cellar value, work, or Wine Features.
+- Do not make `material`, `qualityScore`, `condition`, `cleanliness`, `fillHistory`, production year, or capacity change a wine batch in this rollout.
+- Do not create a weekly vessel tick, a vessel activity, or any additional lifecycle alongside crushing and fermentation.
+- Do not add a direct `vesselId` duplicate to WineBatch. Retain the canonical path: `WineBatch.storagePlanId` → one allocation → one vessel.
+
+### Required batch topology
+
+| Situation | Required outcome |
+|---|---|
+| First harvest tick into Vessel A | Create Batch #1, Plan A, Allocation A, Vessel A. |
+| Later harvest tick into Vessel A while Batch #1 is still `grapes` | Merge compatible harvest data into Batch #1 through `combineWineBatches()`. |
+| Harvest tick into Vessel B | Create Batch #2 with its own plan/allocation; never add Vessel B to Batch #1. |
+| Batch #1 has started crushing or fermentation | It cannot receive more harvest volume or merge with another batch. |
+| Emptying/releasing a batch’s vessel | Release that batch/plan as a unit. Do not redistribute the remaining batch into sibling allocations because sibling allocations cannot exist. |
+
+This is the one intentional gameplay correction. A player who harvests into two vessels receives two batches that can later diverge through their chosen crushing and fermentation processes. No vessel-derived wine effect is applied yet.
+
+### Task 1: Enforce one allocation per plan in the database
+
+**Files:**
+
+- Create: reset-only migration under `migrations/`
+- Modify: relevant allocation, harvest-append, emptying, and grape-market purchase RPC definitions
+- Modify: `src/lib/database/winery/storageVesselsDB.ts`
+
+- [ ] Add a unique constraint on `storage_vessel_allocations.plan_id`; a plan therefore cannot contain a second vessel.
+- [ ] Change reservation and purchase RPC input from a vessel array to exactly one vessel ID. Reject zero, multiple, released, unavailable, or over-capacity selections atomically.
+- [ ] Retire `addStorageVesselCapacity()` and any RPC that can append an allocation to an existing plan.
+- [ ] Simplify fill, append-harvest, empty, bottle, sale, and release commands to operate on the single allocation. Remove redistribution queries that assumed sibling allocations.
+- [ ] Keep the reset-only development policy: reset database data rather than backfilling or preserving incompatible multi-allocation plans.
+
+### Task 2: Split harvest batches by selected vessel
+
+**Files:**
+
+- Modify: `src/lib/services/wine/winery/inventoryService.ts`
+- Modify: harvest activity creation/completion services and vessel-selection UI
+- Modify: `src/lib/services/wine/winery/storageVesselAllocationService.ts`
+- Test: winery lifecycle and harvest activity tests
+
+- [ ] Make one harvest activity/plan select one vessel.
+- [ ] Permit `plannedBatchId` only when it refers to a `grapes` batch whose active plan resolves to that same selected vessel.
+- [ ] Keep `combineWineBatches()` only on that same-vessel/same-batch continuation path.
+- [ ] For a different selected vessel, omit `plannedBatchId` and create a new batch number automatically.
+- [ ] Block additional harvest volume once the selected batch has left `grapes`; do not attempt a post-crush merge.
+- [ ] Ensure market grape purchases follow the same single-batch/single-vessel rule.
+
+### Task 3: Provide an inert batch-storage context seam
+
+**Files:**
+
+- Create: `src/lib/services/wine/winery/storageVesselBatchContextService.ts` or the project’s equivalent owning module
+- Modify: `src/lib/database/winery/storageVesselsDB.ts`
+- Modify: `src/lib/types/storageVessels.ts`
+- Test: focused batch-storage context tests
+
+Define a read-only `StorageVesselBatchContext` containing only persisted facts:
+
+```ts
+{
+  batchId, batchState, planId, allocationId,
+  vesselId, catalogueId, vesselType, material, capacityLitres,
+  qualityScore, condition, cleanliness, fillHistory,
+  filledLitres, batchVolumeLitres,
+}
+```
+
+- [ ] Add one resolver that validates the one-plan/one-allocation invariant and returns this context for a batch.
+- [ ] Return `null` or a typed invariant error for bottled batches, missing plans, released allocations, or invalid topology; do not silently choose one vessel from multiple rows.
+- [ ] Allow Equipment and Wine UI to show the linked vessel identity and factual state only if a suitable surface already exists. Do not show a quality forecast, compatibility label, or wine-effect explanation.
+- [ ] Do not calculate a contact profile, deltas, targets, risk ceiling, or material modifier here. This is a stable data boundary for rollout #4, not a gameplay service.
+
+### Task 4: Align the vessel-use ledger
+
+**Files:**
+
+- Modify: the rollout 2 ledger migration/RPCs as required before applying migrations to the reset database
+- Modify: `src/lib/database/winery/storageVesselsDB.ts`
+- Test: storage vessel allocation/ledger tests
+
+- [ ] Keep one first-use ledger row per physical batch/vessel use and one `fillHistory` increment per row.
+- [ ] Validate that the ledger’s batch, plan, allocation, and vessel all resolve to the one-vessel topology.
+- [ ] Do not write weekly ledger events, effect progress, anchor data, risk, or sensory data to the ledger.
+- [ ] Confirm that a new batch created for Vessel B receives its own first-use row while a same-vessel continuation of Batch #1 does not duplicate its row.
+
+### Task 5: Verification and handoff to rollout #4
+
+- [ ] Test same-vessel harvest continuation merges only the eligible `grapes` batch.
+- [ ] Test different-vessel harvest creates a second batch with a distinct plan, allocation, vessel, and first-use ledger row.
+- [ ] Test database/RPC rejection of a second allocation on a plan.
+- [ ] Test crushing or fermenting one batch cannot mutate, merge, release, or reassign its sibling batch.
+- [ ] Test all existing wine anchors, characteristics, structure, taste, score, features, and price remain unchanged for equivalent one-vessel fixtures.
+- [ ] Run focused winery lifecycle, storage allocation, harvest activity, grape-market purchase, and maintenance tests; apply and verify the reset-only migration through Supabase before handoff.
+
+### Acceptance criteria
+
+- A non-bottled WineBatch has exactly one active storage allocation and therefore one vessel.
+- Harvesting into another vessel creates a new wine batch; same-vessel pre-process harvest continues only its own batch.
+- The vessel-use ledger and `fillHistory` remain correct under the one-vessel topology.
+- `StorageVesselBatchContext` exposes facts but has no interpretation or wine-effect output.
+- No material, quality, condition, cleanliness, fill-history, capacity, anchor, structure, taste, feature, work, score, or price mechanic changes.
+- Rollout #4 can consume the context seam without revisiting batch identity or physical storage topology.

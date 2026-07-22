@@ -38,7 +38,7 @@ function getPriceDriverSummary(priceBreakdown: StorageVesselPriceBreakdown): { i
 
   classify(priceBreakdown.capacityMultiplier, 'vessel size');
   classify(priceBreakdown.qualityMultiplier, 'vessel quality');
-  classify(priceBreakdown.materialMultiplier, 'material');
+  classify(priceBreakdown.materialMultiplier ?? 1, 'material');
   classify(priceBreakdown.ageMultiplier, 'vessel age');
   classify(priceBreakdown.supplierBaseMultiplier, 'supplier terms');
   classify(priceBreakdown.conditionMultiplier, 'vessel condition');
@@ -63,7 +63,7 @@ const PriceCalculationTooltip: React.FC<{
           <span>Base price ({STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES} L)</span><span className="text-right">{formatNumber(breakdown.basePrice, { currency: true, decimals: 0 })}</span>
           <span>Vessel size</span><span className="text-right">x{breakdown.capacityMultiplier.toFixed(2)}</span>
           <span>Vessel quality ({Math.round(breakdown.qualityScore * 100)}%)</span><span className="text-right">x{breakdown.qualityMultiplier.toFixed(2)}</span>
-          <span>Material</span><span className="text-right">x{breakdown.materialMultiplier.toFixed(2)}</span>
+          <span>Material</span><span className="text-right">x{(breakdown.materialMultiplier ?? 1).toFixed(2)}</span>
           <span>Vessel age ({breakdown.ageYears} years)</span><span className="text-right">x{breakdown.ageMultiplier.toFixed(2)}</span>
           <span>Cleanliness</span><span className="text-right">x{breakdown.cleanlinessMultiplier.toFixed(2)}</span>
           <span>Condition</span><span className="text-right">x{breakdown.conditionMultiplier.toFixed(2)}</span>

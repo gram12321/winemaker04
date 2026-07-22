@@ -180,8 +180,8 @@ describe('Buy Market panels', () => {
       await flushPromises();
     });
     await act(async () => {
-      const vessel = container.querySelector('input[type="checkbox"]');
-      if (!vessel) throw new Error('Expected a storage vessel checkbox.');
+      const vessel = container.querySelector('input[type="radio"]');
+      if (!vessel) throw new Error('Expected a storage vessel option.');
       (vessel as HTMLInputElement).click();
       await flushPromises();
     });
@@ -224,8 +224,8 @@ describe('Buy Market panels', () => {
       await flushPromises();
     });
     await act(async () => {
-      const vessel = container.querySelector('input[type="checkbox"]');
-      if (!vessel) throw new Error('Expected a storage vessel checkbox.');
+      const vessel = container.querySelector('input[type="radio"]');
+      if (!vessel) throw new Error('Expected a storage vessel option.');
       (vessel as HTMLInputElement).click();
       await flushPromises();
     });

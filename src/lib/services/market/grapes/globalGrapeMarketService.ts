@@ -95,7 +95,7 @@ export async function purchaseGlobalGrapeOffer(offerId: string, quantityKg: numb
   const offer = (await getGlobalGrapeMarketOffers()).find((candidate) => candidate.id === offerId);
   if (!offer) return { success: false, error: 'Global listing is no longer available.' };
   const quantity = Math.max(1, Math.min(offer.availableKg, Math.round(quantityKg)));
-  if (storageVesselIds.length === 0) return { success: false, error: 'Select enough Storage Vessel capacity before purchasing this batch.' };
+  if (storageVesselIds.length !== 1) return { success: false, error: 'Select exactly one Storage Vessel for this batch.' };
   const state = getGameState();
   const cost = Number((offer.effectivePricePerKg * quantity).toFixed(2));
   if ((state.money ?? 0) < cost) return { success: false, error: 'Insufficient funds.' };

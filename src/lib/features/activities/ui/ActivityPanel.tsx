@@ -8,7 +8,8 @@ import { useGameStateWithData } from '@/hooks/useGameState';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { addStorageVesselCapacity, getAvailableStorageVessels } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import { createStorageAllocationPlan, getAvailableStorageVessels } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import { v4 as uuidv4 } from 'uuid';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 
 type PanelState = 'hidden' | 'minimized' | 'full';
@@ -31,16 +32,14 @@ export const ActivityPanel: React.FC = () => {
   const [activityProgresses, setActivityProgresses] = useState<Record<string, { progress: number; timeRemaining: string }>>({});
   const [capacityActivity, setCapacityActivity] = useState<Activity | null>(null);
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
-  const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
+  const [selectedVesselId, setSelectedVesselId] = useState<string | null>(null);
   const [addingCapacity, setAddingCapacity] = useState(false);
-  const [capacityAdded, setCapacityAdded] = useState(false);
   const [capacityError, setCapacityError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!capacityActivity) return;
     void getAvailableStorageVessels().then(setAvailableVessels).catch(() => setAvailableVessels([]));
-    setSelectedVesselIds([]);
-    setCapacityAdded(false);
+    setSelectedVesselId(null);
     setCapacityError(null);
   }, [capacityActivity]);
 
@@ -117,21 +116,23 @@ export const ActivityPanel: React.FC = () => {
   };
 
   const handleAddCapacity = async () => {
-    if (!capacityActivity?.params.storagePlanId || (!capacityAdded && selectedVesselIds.length === 0)) return;
+    if (!capacityActivity || !selectedVesselId) return;
     setAddingCapacity(true);
     setCapacityError(null);
     try {
-      if (!capacityAdded) {
-        const result = await addStorageVesselCapacity(capacityActivity.params.storagePlanId, selectedVesselIds);
-        if (!result.success) {
-          setCapacityError(result.error ?? 'Could not add Storage Vessel capacity.');
-          return;
-        }
-        setCapacityAdded(true);
+      const vessel = availableVessels.find((candidate) => candidate.id === selectedVesselId);
+      if (!vessel) return;
+      const result = await createStorageAllocationPlan({ requiredLitres: vessel.capacityLitres, vesselId: vessel.id, activityId: capacityActivity.id });
+      if (!result.planId) {
+        setCapacityError(result.error ?? 'Could not reserve the selected Storage Vessel.');
+        return;
       }
-      const resumed = await activitiesFeature.lifecycle.resume(capacityActivity.id);
+      const updated = await activitiesFeature.lifecycle.update(capacityActivity.id, {
+        params: { ...capacityActivity.params, storagePlanId: result.planId, outputBatchId: uuidv4(), storageCapacityBlocked: false },
+      });
+      const resumed = updated && await activitiesFeature.lifecycle.resume(capacityActivity.id);
       if (!resumed) {
-        setCapacityError('Capacity was added, but the activity could not be resumed. Retry resume without adding more vessels.');
+        setCapacityError('A new batch vessel was reserved, but the activity could not be resumed.');
         return;
       }
       setCapacityActivity(null);
@@ -393,14 +394,14 @@ export const ActivityPanel: React.FC = () => {
       {capacityActivity && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">Add Storage Capacity</h2>
-            <p className="mt-1 text-sm text-gray-600">This harvest paused because its selected vessels are full. Choose additional vessels, then resume the activity.</p>
+            <h2 className="text-lg font-semibold text-gray-900">Choose Next Harvest Vessel</h2>
+            <p className="mt-1 text-sm text-gray-600">This vessel is full. Choose one new vessel; resumed harvesting creates a separate wine batch.</p>
             <div className="mt-4 space-y-2">
-              {!capacityAdded && availableVessels.length === 0 && <p className="text-sm text-red-600">No available Storage Vessels. Buy equipment before resuming.</p>}
-              {!capacityAdded && availableVessels.map((vessel) => <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 p-2 text-sm"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+              {availableVessels.length === 0 && <p className="text-sm text-red-600">No available Storage Vessels. Buy equipment before resuming.</p>}
+              {availableVessels.map((vessel) => <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 p-2 text-sm"><input type="radio" name="next-harvest-vessel" checked={selectedVesselId === vessel.id} onChange={() => setSelectedVesselId(vessel.id)} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
             </div>
             {capacityError && <p className="mt-3 text-sm text-red-600">{capacityError}</p>}
-            <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity}>Cancel</Button><Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || (!capacityAdded && selectedVesselIds.length === 0)} className="bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Updating…' : capacityAdded ? 'Retry resume' : 'Add capacity and resume'}</Button></div>
+            <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity}>Cancel</Button><Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || !selectedVesselId} className="bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Updating…' : 'Start next batch and resume'}</Button></div>
           </div>
         </div>
       )}

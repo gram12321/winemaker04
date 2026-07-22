@@ -212,7 +212,7 @@ export async function getCompanyStorageVesselUseLedger(companyId: string): Promi
 export async function reserveStorageVesselPlan(input: {
   companyId: string;
   requiredLitres: number;
-  vesselIds: string[];
+  vesselId: string;
   activityId?: string;
   createdYear: number;
   createdSeason: string;
@@ -221,7 +221,7 @@ export async function reserveStorageVesselPlan(input: {
   const { data, error } = await supabase.rpc('reserve_storage_vessel_plan', {
     p_company_id: input.companyId,
     p_required_litres: input.requiredLitres,
-    p_vessel_ids: input.vesselIds,
+    p_vessel_ids: [input.vesselId],
     p_activity_id: input.activityId ?? null,
     p_created_year: input.createdYear,
     p_created_season: input.createdSeason,

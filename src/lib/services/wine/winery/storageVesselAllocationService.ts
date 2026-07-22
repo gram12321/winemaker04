@@ -1,11 +1,9 @@
 import {
-  addStorageVesselPlanAllocations,
   activateStorageVesselPlan,
   getCompanyStorageAllocationPlans,
   getCompanyStorageAllocations,
   getCompanyStorageVessels,
   releaseStorageVesselPlan,
-  releaseStorageVesselAllocation,
   reserveStorageVesselPlan,
 } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -72,7 +70,7 @@ export async function getStorageCapacitySummary(): Promise<StorageCapacitySummar
 
 export async function createStorageAllocationPlan(input: {
   requiredLitres: number;
-  vesselIds: string[];
+  vesselId: string;
   activityId?: string;
 }): Promise<{ planId: string | null; error?: string }> {
   const companyId = getCurrentCompanyId();
@@ -82,7 +80,7 @@ export async function createStorageAllocationPlan(input: {
     const result = await reserveStorageVesselPlan({
       companyId,
       requiredLitres: input.requiredLitres,
-      vesselIds: input.vesselIds,
+      vesselId: input.vesselId,
       activityId: input.activityId,
       createdYear: date.year,
       createdSeason: date.season,
@@ -94,25 +92,6 @@ export async function createStorageAllocationPlan(input: {
     console.error('Failed to create Storage Vessel allocation plan:', error);
     return { planId: null, error: 'Could not reserve Storage Vessel capacity.' };
   }
-}
-
-export async function addStorageVesselCapacity(planId: string, vesselIds: string[]): Promise<{ success: boolean; error?: string }> {
-  const companyId = getCurrentCompanyId();
-  if (!companyId) return { success: false, error: 'No active company selected.' };
-  const result = await addStorageVesselPlanAllocations(companyId, planId, vesselIds);
-  if (result.error || !result.added) return { success: false, error: 'Selected Storage Vessels are unavailable.' };
-  return { success: true };
-}
-
-/** Roll back capacity added to an active plan before any wine has entered those vessels. */
-export async function releaseUnusedStorageVesselCapacity(planId: string, vesselIds: string[]): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  if (!companyId) return false;
-  const results = await Promise.all(vesselIds.map(async (vesselId) => {
-    const result = await releaseStorageVesselAllocation(companyId, planId, vesselId);
-    return !result.error;
-  }));
-  return results.every(Boolean);
 }
 
 export async function activateStoragePlanForBatch(planId: string, batchId: string, volumeLitres: number): Promise<boolean> {

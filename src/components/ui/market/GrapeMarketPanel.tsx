@@ -175,7 +175,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
   const [companyValue, setCompanyValue] = useState(0);
   const [purchaseQuantityByOfferId, setPurchaseQuantityByOfferId] = useState<Record<string, number>>({});
   const [availableVessels, setAvailableVessels] = useState<StorageVessel[]>([]);
-  const [selectedVesselIds, setSelectedVesselIds] = useState<string[]>([]);
+  const [selectedVesselId, setSelectedVesselId] = useState<string | null>(null);
   const currentYear = getGameState().currentYear ?? 0;
 
   const loadOffers = useCallback(async () => {
@@ -185,7 +185,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
       setOffers(nextOffers);
       const vessels = await getAvailableStorageVessels();
       setAvailableVessels(vessels);
-      setSelectedVesselIds([]);
+      setSelectedVesselId(null);
       const computedCompanyValue = await calculateCompanyValue().catch(() => 0);
       setCompanyValue(computedCompanyValue);
     } finally {
@@ -308,9 +308,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
     return getOfferQuantity(selectedOffer);
   }, [getOfferQuantity, selectedOffer]);
 
-  const selectedVesselCapacity = useMemo(() => availableVessels
-    .filter((vessel) => selectedVesselIds.includes(vessel.id))
-    .reduce((total, vessel) => total + vessel.capacityLitres, 0), [availableVessels, selectedVesselIds]);
+  const selectedVesselCapacity = useMemo(() => availableVessels.find((vessel) => vessel.id === selectedVesselId)?.capacityLitres ?? 0, [availableVessels, selectedVesselId]);
   const requiredStorageLitres = initializeHarvestVolumeLitres(selectedPurchaseKg);
 
   const trustPreview = useMemo(() => {
@@ -620,7 +618,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
               <div className="mt-2 flex justify-between text-xs"><span>Selected capacity</span><span className={selectedVesselCapacity >= requiredStorageLitres ? 'text-green-300' : 'text-red-300'}>{selectedVesselCapacity.toLocaleString()} L / {requiredStorageLitres.toLocaleString()} L</span></div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {availableVessels.length === 0 && <div className="text-red-300">Buy a Storage Vessel before purchasing grapes.</div>}
-                {availableVessels.map((vessel) => <label key={vessel.id} className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/50 p-2 text-xs"><input type="checkbox" checked={selectedVesselIds.includes(vessel.id)} onChange={(event) => setSelectedVesselIds((current) => event.target.checked ? [...current, vessel.id] : current.filter((id) => id !== vessel.id))} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+                {availableVessels.map((vessel) => <label key={vessel.id} className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/50 p-2 text-xs"><input type="radio" name="grape-market-vessel" checked={selectedVesselId === vessel.id} onChange={() => setSelectedVesselId(vessel.id)} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
               </div>
             </div>
           )}
@@ -639,7 +637,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
             onClick={() => {
               if (!selectedOffer) return;
               const safeQty = Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg));
-              void handleBuy(selectedOffer.id, safeQty, selectedVesselIds);
+              if (selectedVesselId) void handleBuy(selectedOffer.id, safeQty, [selectedVesselId]);
             }}
             disabled={loading || !selectedOffer || !priceBreakdown || selectedVesselCapacity < requiredStorageLitres}
             className="bg-amber-600 hover:bg-amber-500 text-white"
