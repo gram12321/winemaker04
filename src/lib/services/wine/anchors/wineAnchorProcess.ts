@@ -157,12 +157,17 @@ export function applyFeatureLayerAnchors(batch: WineBatch, anchors: WineAnchorVa
     ])
   );
 
-  const terroirExpression = clamp01(
-    weightedMean([
-      { value: anchors.terroirExpression, weight: 0.82 },
-      { value: terroirSeverity, weight: 0.18 }
-    ])
-  );
+  // A generic feature pass must not dilute the harvest-derived site signal.
+  // Only an active, non-zero Terroir Expression feature is allowed to alter it.
+  const terroirExpression =
+    terroirSeverity > 0
+      ? clamp01(
+          weightedMean([
+            { value: anchors.terroirExpression, weight: 0.82 },
+            { value: terroirSeverity, weight: 0.18 }
+          ])
+        )
+      : anchors.terroirExpression;
 
   const processFootprint = clamp01(
     weightedMean([
