@@ -1,4 +1,4 @@
-import { WineBatch, WineCharacteristics, CustomerType, Vineyard, WineBatchState } from '../../../types/types';
+import { WineBatch, WineCharacteristics, CustomerType, Vineyard, WineBatchState, WineAnchorId } from '../../../types/types';
 import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, AccumulationConfig, TriggeredConfig } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from './constants/commonFeaturesUtil';
 import { isActionAvailable } from '../winery/wineryService';
@@ -67,17 +67,28 @@ export interface FeatureRiskDisplayData {
   nextAction?: string;
 }
 
-function buildFeatureLayerAnchorEffectDescription(
+const FEATURE_IDS_BY_ANCHOR: Partial<Record<WineAnchorId, readonly string[]>> = {
+  oxidationPressure: ['oxidation'],
+  maturationState: ['bottle_aging'],
+  terroirExpression: ['terroir']
+};
+
+export function getFeatureLayerAnchorEffectDescription(
+  anchor: WineAnchorId,
   presentFeatures: WineFeature[],
-  configs: FeatureConfig[],
-  totalFeatureSlots: number
+  configs: FeatureConfig[]
 ): string {
-  const activeNames = presentFeatures
-    .map((feature) => configs.find((config) => config.id === feature.id)?.name || feature.id)
-    .slice(0, 5);
-  const listed = activeNames.length > 0 ? activeNames.join(', ') : 'none';
-  const overflow = presentFeatures.length > activeNames.length ? ` +${presentFeatures.length - activeNames.length} more` : '';
-  return `Feature layer (${listed}${overflow}; active ${presentFeatures.length}/${Math.max(totalFeatureSlots, 0)})`;
+  const activeFeatures = presentFeatures.filter((feature) => feature.severity > 0);
+  const relevantFeatures =
+    anchor === 'processFootprint'
+      ? activeFeatures
+      : activeFeatures.filter((feature) => FEATURE_IDS_BY_ANCHOR[anchor]?.includes(feature.id));
+
+  const names = [...new Set(
+    relevantFeatures.map((feature) => configs.find((config) => config.id === feature.id)?.name || feature.id)
+  )];
+
+  return names.length > 0 ? `Feature layer (${names.join(', ')})` : 'Feature layer';
 }
 
 // ===== FEATURE CREATION & INITIALIZATION =====
@@ -439,16 +450,11 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
 
   const anchorsBeforeFeatureLayer = resolveWineAnchors(batch.wineAnchors);
   let wineAnchors = applyFeatureLayerAnchors(batch, anchorsBeforeFeatureLayer);
-  const featureLayerDescription = buildFeatureLayerAnchorEffectDescription(
-    presentFeatures,
-    configs,
-    batch.features?.length || 0
-  );
-  const featureLayerAnchorEffects = diffAnchorEffects(
-    anchorsBeforeFeatureLayer,
-    wineAnchors,
-    featureLayerDescription
-  );
+  const featureLayerAnchorEffects = diffAnchorEffects(anchorsBeforeFeatureLayer, wineAnchors, 'Feature layer')
+    .map((effect) => ({
+      ...effect,
+      description: getFeatureLayerAnchorEffectDescription(effect.anchor, presentFeatures, configs)
+    }));
 
   const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
   const structureIndexResult = calculateStructureIndex(
@@ -738,13 +744,17 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
       const vineyardFeature = vineyard?.pendingFeatures?.find((f: any) => f.id === config.id);
       const feature = vineyardFeature || existingFeature;
       
-      const currentRisk = feature?.risk || 0;
+      const accumulatedRisk = feature?.risk || 0;
+      // Vineyard previews represent grapes; winery previews use the actual batch state.
+      const riskBatch = batch ?? ({ state: 'grapes' } as WineBatch);
+      const currentRisk = calculateEffectiveAccumulationRisk(riskBatch, config, accumulatedRisk);
       
       return {
         featureId: config.id,
         featureName: config.name,
         icon: config.icon,
         currentRisk,
+        accumulatedRisk,
         newRisk: currentRisk,
         riskIncrease: 0,
         isPresent: feature?.isPresent || false,
@@ -1314,6 +1324,19 @@ function resolveStateMultiplier(
   return 1.0;
 }
 
+/** Convert stored accumulated exposure into its current state-adjusted risk. */
+export function calculateEffectiveAccumulationRisk(
+  batch: WineBatch,
+  config: FeatureConfig,
+  accumulatedRisk: number
+): number {
+  if (config.behavior !== 'accumulation') return Math.max(0, Math.min(1, accumulatedRisk));
+
+  const behaviorConfig = config.behaviorConfig as AccumulationConfig;
+  const multipliers = behaviorConfig.manifestationMultipliers ?? behaviorConfig.stateMultipliers;
+  return Math.max(0, Math.min(1, accumulatedRisk * resolveStateMultiplier(multipliers, batch)));
+}
+
 function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature: WineFeature): number {
   if (config.behavior !== 'accumulation') return 0;
   
@@ -1402,18 +1425,7 @@ export function simulateMarketFeatureLifecycle(batch: WineBatch, weeks: number):
 
 function checkManifestation(batch: WineBatch, config: FeatureConfig, risk: number): boolean {
   if (risk <= 0) return false;
-  
-  let effectiveRisk = risk;
-  
-  if (config.behavior === 'accumulation') {
-    const behaviorConfig = config.behaviorConfig as AccumulationConfig;
-    const manifestationMultipliers = behaviorConfig.manifestationMultipliers ?? behaviorConfig.stateMultipliers;
-    const stateMultiplier = resolveStateMultiplier(manifestationMultipliers, batch);
-    
-    effectiveRisk = risk * stateMultiplier;
-  }
-  
-  const clampedRisk = Math.max(0, Math.min(1, effectiveRisk));
+  const clampedRisk = calculateEffectiveAccumulationRisk(batch, config, risk);
   // At 100% risk, always manifest (deterministic)
   return clampedRisk >= 1.0 || Math.random() < clampedRisk;
 }
@@ -1516,8 +1528,10 @@ async function processTimeBased(
       }
     }
     
-    if (!isPresent && shouldWarnAboutRisk(config, previousRisk, newRisk)) {
-      await sendRiskWarning(batch, config, newRisk);
+    const previousEffectiveRisk = calculateEffectiveAccumulationRisk(batch, config, previousRisk);
+    const effectiveRisk = calculateEffectiveAccumulationRisk(batch, config, newRisk);
+    if (!isPresent && shouldWarnAboutRisk(config, previousEffectiveRisk, effectiveRisk)) {
+      await sendRiskWarning(batch, config, effectiveRisk);
     }
     
     return updateFeatureInArray(features, {
@@ -1750,8 +1764,8 @@ function getContextInfo(risk: FeatureRiskInfo, context: FeatureRiskContext): str
       case 'oxidation':
         const fragile = batch.fragile || 0;
         const proneToOxidation = batch.proneToOxidation || 0;
-        const currentRisk = risk.currentRisk || 0;
-        return `(Current: ${(currentRisk * 100).toFixed(1)}%, Fragile: ${Math.round(fragile * 100)}%, Prone: ${Math.round(proneToOxidation * 100)}%)`;
+        const exposure = risk.accumulatedRisk ?? risk.currentRisk ?? 0;
+        return `(Exposure: ${(exposure * 100).toFixed(1)}%, State-adjusted risk: ${((risk.currentRisk || 0) * 100).toFixed(1)}%, Fragile: ${Math.round(fragile * 100)}%, Prone: ${Math.round(proneToOxidation * 100)}%)`;
       
       case 'volatile_acidity':
         const proneToOxidationVA = batch.proneToOxidation || 0;
@@ -1779,8 +1793,9 @@ export function calculateWeeklyRiskIncrease(batch: WineBatch | undefined, featur
   const baseRate = behaviorConfig.baseRate || 0;
   const stateMultiplier = resolveStateMultiplier(behaviorConfig.stateMultipliers, batch);
   
+  const accumulatedRisk = feature.accumulatedRisk ?? feature.currentRisk ?? 0;
   const compoundMultiplier = behaviorConfig.compound 
-    ? (1 + (feature.currentRisk || 0))
+    ? (1 + accumulatedRisk)
     : 1.0;
   
   let featureMultiplier = 1.0;

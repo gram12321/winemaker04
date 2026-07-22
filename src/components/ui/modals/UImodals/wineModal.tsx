@@ -194,9 +194,29 @@ export const WineModal: React.FC<WineModalProps> = ({
     };
     return map[key] || formatFlavorFamilyLabel(key);
   };
-  const formatAnchorEffectDescription = (description: string): string => {
+  const formatAnchorEffectDescription = (description: string, anchor: string): string => {
     if (description === 'Harvest identity (combined)') return 'Harvest anchor blend (multiple harvest additions)';
     if (description === 'Harvest identity') return 'Harvest anchor snapshot (single harvest)';
+
+    const featureLayerMatch = description.match(/^Feature layer \((.*?)(?:; active \d+\/\d+)?\)$/);
+    if (featureLayerMatch) {
+      const names = featureLayerMatch[1]
+        .replace(/ \+\d+ more$/, '')
+        .split(', ')
+        .filter((name) => name && name !== 'none');
+      const relevantNamesByAnchor: Record<string, readonly string[] | undefined> = {
+        oxidationPressure: ['Oxidation'],
+        maturationState: ['Bottle Aging'],
+        terroirExpression: ['Terroir Expression']
+      };
+      const relevantNames =
+        anchor === 'processFootprint'
+          ? names
+          : names.filter((name) => relevantNamesByAnchor[anchor]?.includes(name));
+
+      return relevantNames.length > 0 ? `Feature layer (${relevantNames.join(', ')})` : 'Feature layer';
+    }
+
     return description;
   };
   const structureImpactOrder: Array<keyof WineBatch['characteristics']> = [
@@ -219,7 +239,7 @@ export const WineModal: React.FC<WineModalProps> = ({
             existing.count += 1;
           } else {
             acc.push({
-              description: formatAnchorEffectDescription(effect.description),
+              description: formatAnchorEffectDescription(effect.description, anchorKey),
               modifier: effect.modifier,
               count: 1
             });
@@ -708,7 +728,6 @@ export const WineModal: React.FC<WineModalProps> = ({
                                       title={effect.description}
                                     >
                                       {effect.description}
-                                      {effect.count > 1 && <span className="text-muted-foreground"> ({effect.count}x)</span>}
                                     </div>
                                     <div className={`font-mono tabular-nums ${getDeltaTextClass(effect.modifier)}`}>
                                       {formatSigned(effect.modifier)}
