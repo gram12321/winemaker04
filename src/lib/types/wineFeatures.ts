@@ -308,6 +308,8 @@ export interface FeatureRiskInfo {
   featureName: string;
   icon: string;
   currentRisk: number;
+  /** Raw accumulated exposure before applying the current state's risk modifier. */
+  accumulatedRisk?: number;
   newRisk: number;
   riskIncrease: number;
   isPresent: boolean;

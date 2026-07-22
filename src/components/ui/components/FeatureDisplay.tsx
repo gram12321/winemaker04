@@ -19,7 +19,7 @@ import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { UnifiedTooltip, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
-import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction, getFeatureDisplaySeverity } from '@/lib/services/wine/features/featureService';
+import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction, getFeatureDisplaySeverity, calculateEffectiveAccumulationRisk } from '@/lib/services/wine/features/featureService';
 import { getAllFeatureConfigs } from '@/lib/services/wine/features/constants/commonFeaturesUtil';
 
 interface FeatureDisplayProps {
@@ -447,7 +447,8 @@ interface RiskFeatureItemProps {
 }
 
 function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureItemProps) {
-  const risk = feature.risk || 0;
+  const accumulatedRisk = feature.risk || 0;
+  const risk = calculateEffectiveAccumulationRisk(batch, config, accumulatedRisk);
   const riskPercent = formatNumber(risk * 100, { smartDecimals: true });
   
   // Use intelligent color coding for risk (lower risk = better colors)
@@ -478,6 +479,9 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
           valueRating={getRatingForRange(1 - risk, 0, 1, 'higher_better')}
           monospaced={true}
         />
+        {config.behavior === 'accumulation' && (
+          <TooltipRow label="Accumulated exposure" value={`${formatNumber(accumulatedRisk * 100, { smartDecimals: true })}%`} monospaced={true} />
+        )}
         <p className={tooltipStyles.muted}>Chance this batch develops {config.name.toLowerCase()}.</p>
         {expectedWeeks !== undefined && (
           <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
@@ -964,7 +968,7 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
               return `Risk: ${riskText} (${getRiskSeverityLabel(maxRisk)})`;
             })()
           ) : (
-            `Risk: ${formatNumber(feature.newRisk * 100, { smartDecimals: true })}% (${getRiskSeverityLabel(feature.newRisk)})`
+            `Risk: ${formatNumber(feature.currentRisk * 100, { smartDecimals: true })}% (${getRiskSeverityLabel(feature.currentRisk)})`
           )}
         </p>
         
@@ -972,7 +976,10 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
           <div className="border-t border-gray-600 pt-2">
             <p className={`${tooltipStyles.subtitle} ${tooltipStyles.warning}`}>Cumulative Risk</p>
             <p className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
-              Current risk: {formatNumber(feature.currentRisk * 100, { smartDecimals: true })}%
+              Accumulated exposure: {formatNumber((feature.accumulatedRisk ?? feature.currentRisk) * 100, { smartDecimals: true })}%
+            </p>
+            <p className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
+              State-adjusted risk: {formatNumber(feature.currentRisk * 100, { smartDecimals: true })}%
             </p>
             <p className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
               Weekly increase: +{formatNumber(feature.weeklyRiskIncrease * 100, { smartDecimals: true })}%

@@ -6,7 +6,7 @@ import { SALES_CONSTANTS } from '@/lib/constants/constants';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
 import { useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
-import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, updateInventoryBatch } from '@/lib/services';
+import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, calculateEffectiveAccumulationRisk, updateInventoryBatch } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateEstimatedPriceBreakdown, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
@@ -273,7 +273,8 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
  return (
  <div className="space-y-1">
  {displayData.riskFeatures.map(({ feature, config, expectedWeeks }) => {
- const risk = feature.risk || 0;
+ const accumulatedRisk = feature.risk || 0;
+ const risk = calculateEffectiveAccumulationRisk(wine, config, accumulatedRisk);
  const riskPercent = formatNumber(risk * 100, { smartDecimals: true });
 
  // Check if this is an accumulation feature to show weekly increase
@@ -284,6 +285,7 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
  featureName: feature.name,
  icon: feature.icon,
  currentRisk: risk,
+ accumulatedRisk,
  newRisk: risk,
  riskIncrease: 0,
  isPresent: feature.isPresent,
@@ -323,6 +325,9 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
  valueRating={getRatingForRange(1 - risk, 0, 1, 'higher_better')}
  monospaced={true}
  />
+ {isAccumulation && (
+ <TooltipRow label="Accumulated exposure" value={`${formatNumber(accumulatedRisk * 100, { smartDecimals: true })}%`} monospaced={true} />
+ )}
  <p className={tooltipStyles.muted}>Chance this batch develops {config.name.toLowerCase()}.</p>
  {weeklyIncreasePercent && (
  <div className="mt-1">

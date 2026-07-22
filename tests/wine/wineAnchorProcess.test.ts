@@ -29,12 +29,19 @@ describe('applyFeatureLayerAnchors', () => {
     expect(afterThreePasses.terroirExpression).toBe(0.587);
   });
 
-  it('applies the Terroir Expression feature when it has a positive severity', () => {
+  it('lets Terroir Expression development raise, but never lower, the site anchor', () => {
     const batch = makeBatch([
+      { id: 'terroir', isPresent: true, severity: 0.0001, name: 'Terroir Expression', icon: 'T' }
+    ]);
+    const harvestAnchors = { ...NEUTRAL_WINE_ANCHORS, terroirExpression: 0.5 };
+
+    expect(applyFeatureLayerAnchors(batch, harvestAnchors).terroirExpression).toBe(0.5);
+
+    const developedBatch = makeBatch([
       { id: 'terroir', isPresent: true, severity: 0.8, name: 'Terroir Expression', icon: 'T' }
     ]);
-    const anchors = { ...NEUTRAL_WINE_ANCHORS, terroirExpression: 0.5 };
-
-    expect(applyFeatureLayerAnchors(batch, anchors).terroirExpression).toBeCloseTo(0.554);
+    const developed = applyFeatureLayerAnchors(developedBatch, harvestAnchors);
+    expect(developed.terroirExpression).toBe(0.8);
+    expect(applyFeatureLayerAnchors(developedBatch, developed).terroirExpression).toBe(0.8);
   });
 });
