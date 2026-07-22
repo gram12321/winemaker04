@@ -44,7 +44,10 @@ export async function fullDatabaseReset(): Promise<void> {
   await clearGlobalMarket();
 
   const tables = [
-    'relationship_boosts', 'wine_orders', 'wine_batches', 'vineyards', 'activities',
+    // Storage-vessel records use RESTRICT foreign keys, so remove the ledger
+    // and allocation graph before deleting batches, plans, or companies.
+    'storage_vessel_use_ledger', 'storage_vessel_allocations',
+    'relationship_boosts', 'wine_orders', 'wine_batches', 'storage_vessel_allocation_plans', 'vineyards', 'activities',
     'achievements', 'highscores', 'prestige_events', 'transactions',
     'company_customers', 'notifications', 'companies', 'users', 'customers', 'wine_log'
   ];

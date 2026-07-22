@@ -170,6 +170,40 @@ describe('Storage Vessel market adapter', () => {
     expect(nearPerfect.qualityMultiplier).toBeGreaterThan(excellent.qualityMultiplier * 100);
   });
 
+  it('keeps perfect quality finite instead of reaching the global price cap', async () => {
+    const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    const breakdown = getStorageVesselPriceBreakdown({
+      capacityLitres: 250,
+      productionYear: 2026,
+      currentYear: 2026,
+      qualityScore: 1,
+      cleanliness: 'clean',
+      supplierBaseMultiplier: 1,
+      supplierRelationshipMultiplier: 1,
+      companyPrestige: 0,
+    });
+
+    expect(breakdown.qualityMultiplier).toBeLessThan(10_000);
+    expect(breakdown.finalPrice).toBeLessThan(10_000_000);
+  });
+
+  it('keeps zero-quality vessels above the market minimum price', async () => {
+    const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
+    const breakdown = getStorageVesselPriceBreakdown({
+      capacityLitres: 250,
+      productionYear: 2026,
+      currentYear: 2026,
+      qualityScore: 0,
+      cleanliness: 'clean',
+      supplierBaseMultiplier: 1,
+      supplierRelationshipMultiplier: 1,
+      companyPrestige: 0,
+    });
+
+    expect(breakdown.finalPrice).toBeGreaterThan(0);
+    expect(breakdown.finalPrice).toBeGreaterThanOrEqual(breakdown.minimumPrice);
+  });
+
   it('applies an asymptotic age discount without reaching zero', async () => {
     const { getStorageVesselPriceBreakdown } = await import('@/lib/services/market/storageVessels/storageVesselMarketAdapter');
     const input = { capacityLitres: 250, qualityScore: 0.8, cleanliness: 'clean' as const, supplierBaseMultiplier: 1, supplierRelationshipMultiplier: 1, companyPrestige: 0, currentYear: 2026 };
@@ -259,7 +293,7 @@ describe('Storage Vessel market adapter', () => {
     expect(mocks.deleteBuyMarketOffer).not.toHaveBeenCalledWith('company-1', retentionOfferId);
   });
 
-  it('retires legacy catalogue rows before generating current supplier offers', async () => {
+  it('retires legacy rows and generates a seasonal supplier offer count', async () => {
     let marketOffers: BuyMarketOfferRecord[] = [offer];
     mocks.getCompanyBuyMarketOffers.mockImplementation(async () => ({ data: marketOffers, error: null }));
     mocks.deleteBuyMarketOffer.mockImplementation(async (_companyId: string, offerId: string) => {
@@ -276,7 +310,9 @@ describe('Storage Vessel market adapter', () => {
 
     expect(mocks.deleteBuyMarketOffer).toHaveBeenCalledWith('company-1', offer.offerId);
     expect(mocks.upsertBuyMarketOffers).toHaveBeenCalledOnce();
-    expect(offers).toHaveLength(54);
+    const supplierOffers = offers.filter((marketOffer) => marketOffer.source.kind === 'supplier_stock');
+    expect(supplierOffers.length).toBeGreaterThanOrEqual(10);
+    expect(supplierOffers.length).toBeLessThanOrEqual(20);
     expect(offers[0]).toMatchObject({ source: { kind: 'supplier_stock', seller: { id: 'cooperage_duval' } }, payload: { priceSnapshot: expect.any(Object) } });
     expect(offers[0].priceBreakdown.finalPricePerVessel).toBe(offers[0].pricePerVessel);
   });

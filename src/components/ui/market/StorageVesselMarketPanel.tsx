@@ -120,10 +120,15 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       source: offer.source.kind,
       vessel: offer.payload.vesselName ?? '',
       capacity: offer.payload.capacityLitres,
+      material: offer.payload.material,
       age: offer.payload.productionYear,
       quality: offer.payload.qualityScore,
+      condition: offer.payload.condition ?? 1,
+      fills: offer.payload.fillHistory ?? 0,
+      cleanliness: offer.payload.cleanliness ?? 'clean',
       available: offer.availableUnits,
       price: offer.pricePerVessel,
+      quantity: offer.availableUnits,
     }[sortKey] ?? offer.payload.qualityScore);
     const result = value(left) > value(right) ? 1 : value(left) < value(right) ? -1 : 0;
     return sortDirection === 'asc' ? result : -result;
@@ -164,17 +169,17 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     {
       key: 'vessel',
       header: 'Vessel ID',
-      sortable: false,
+      sortable: true,
       className: 'min-w-[190px]',
       render: (offer) => <div className="font-medium text-white">{offer.payload.vesselName ?? 'Assigned on purchase'}</div>,
     },
     { key: 'capacity', header: headerWithTooltip('Capacity', 'Fixed capacity for each individually owned vessel.'), sortable: true, className: 'text-right', render: (offer) => `${offer.payload.capacityLitres.toLocaleString()} L` },
-    { key: 'material', header: 'Material', sortable: false, className: 'text-right capitalize', render: (offer) => offer.payload.material.replace('_', ' ') },
+    { key: 'material', header: 'Material', sortable: true, className: 'text-right capitalize', render: (offer) => offer.payload.material.replace('_', ' ') },
     { key: 'age', header: headerWithTooltip('Vessel age', 'Production year and current vessel age.'), sortable: true, className: 'text-right', render: (offer) => `${Math.max(0, (currentYear || offer.payload.productionYear) - offer.payload.productionYear)} years (${offer.payload.productionYear})` },
     { key: 'quality', header: headerWithTooltip('Quality', 'Vessel quality is shown now; its gameplay effects remain deferred.'), sortable: true, className: 'text-right', render: (offer) => <span className={getColorClass(offer.payload.qualityScore)}>{getQualityInfo(offer.payload.qualityScore).category} ({offer.payload.qualityScore.toFixed(2)})</span> },
-    { key: 'condition', header: 'Condition', sortable: false, className: 'text-right', render: (offer) => `${Math.round((offer.payload.condition ?? 1) * 100)}%` },
-    { key: 'fills', header: 'Fills', sortable: false, className: 'text-right', render: (offer) => offer.payload.fillHistory ?? 0 },
-    { key: 'cleanliness', header: 'Cleanliness', sortable: false, className: 'text-right capitalize', render: (offer) => offer.payload.cleanliness ?? 'clean' },
+    { key: 'condition', header: 'Condition', sortable: true, className: 'text-right', render: (offer) => `${Math.round((offer.payload.condition ?? 1) * 100)}%` },
+    { key: 'fills', header: 'Fills', sortable: true, className: 'text-right', render: (offer) => offer.payload.fillHistory ?? 0 },
+    { key: 'cleanliness', header: 'Cleanliness', sortable: true, className: 'text-right capitalize', render: (offer) => offer.payload.cleanliness ?? 'clean' },
     { key: 'available', header: headerWithTooltip('Supply', 'Global assets are one-off. Local supplier stock is company-specific.'), sortable: true, className: 'text-right', render: (offer) => offer.source.kind === 'supplier_stock' ? `${offer.availableUnits} vessels` : '1 vessel' },
     {
       key: 'price',
@@ -186,7 +191,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     {
       key: 'quantity',
       header: 'Quantity',
-      sortable: false,
+      sortable: true,
       className: 'w-[160px] text-right',
       render: (offer) => <div onClick={(event) => event.stopPropagation()}><MarketQuickBuyRowAction quantity={getQuantity(offer)} maxQuantity={offer.availableUnits} unitLabel="vessel(s)" disabled={loading} onQuantityChange={(quantity) => setQuantityByOfferId((current) => ({ ...current, [offer.id]: quantity }))} />{errorByOfferId[offer.id] && <div className="mt-1 flex justify-end gap-1 text-[11px] text-red-300"><AlertTriangle className="h-3 w-3" />{errorByOfferId[offer.id]}</div>}</div>,
     },

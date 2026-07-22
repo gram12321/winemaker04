@@ -12,7 +12,7 @@ import {
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAsymmetricalMultiplier, deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { GAME_INITIALIZATION, getStorageVesselCatalogueEntry, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CATALOGUE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { GAME_INITIALIZATION, getStorageVesselCatalogueEntry, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CATALOGUE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_DEFAULT_STOCK_CHANCE, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_MIN_PRICE, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SUPPLIERS, STORAGE_VESSEL_SUPPLIER_STOCK_CHANCES, TRANSACTION_CATEGORIES } from '@/lib/constants';
 import { getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getActiveStorageVesselMarketListings, purchaseUsedStorageVesselListing } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';
@@ -93,13 +93,18 @@ export function getStorageVesselPriceBreakdown(input: {
   const ageYears = Math.max(0, input.currentYear - input.productionYear);
   const ageMultiplier = STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER
     + (1 - STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER) * Math.exp(-ageYears / STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS);
-  const qualityMultiplier = input.qualityScore * calculateAsymmetricalMultiplier(input.qualityScore);
+  // The generic quality curve reaches its global 50M cap at exactly 1.00.
+  // Storage-vessel quality must support perfect vessels without making one
+  // vessel effectively priceless, so use the finite .99 tier as the endpoint.
+  const qualityScoreForPricing = Math.min(0.99, Math.max(0, input.qualityScore));
+  const qualityMultiplier = input.qualityScore * calculateAsymmetricalMultiplier(qualityScoreForPricing);
   const cleanlinessMultiplier = STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS[input.cleanliness];
   const conditionMultiplier = input.condition ?? 1;
   const fillHistoryMultiplier = 1 / (1 + (input.fillHistory ?? 0) * STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY);
   const genericBreakdown = getBuyGoodsPriceBreakdown({
     basePrice: STORAGE_VESSEL_BASE_PRICE,
     itemMultiplier: capacityMultiplier * materialMultiplier * qualityMultiplier * ageMultiplier * cleanlinessMultiplier * conditionMultiplier * fillHistoryMultiplier * input.supplierBaseMultiplier,
+    minimumPrice: STORAGE_VESSEL_MIN_PRICE,
     supplierRelationshipMultiplier: input.supplierRelationshipMultiplier,
     companyPrestige: input.companyPrestige,
   });
@@ -228,8 +233,15 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
   const createdYear = state.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR;
   const createdSeason = state.season ?? GAME_INITIALIZATION.STARTING_SEASON;
   const expires = getNextSeasonDate(createdSeason, createdYear);
-  const expectedOfferCount = STORAGE_VESSEL_SUPPLIERS.length * STORAGE_VESSEL_CATALOGUE.length;
   if (currentOffers.some((offer) => offer.lastRefreshedYear === createdYear && offer.lastRefreshedSeason === createdSeason)) return;
+
+  const catalogueBySupplier = STORAGE_VESSEL_SUPPLIERS.map((supplier) => ({
+    supplier,
+    catalogue: STORAGE_VESSEL_CATALOGUE.filter((entry) => deterministicSeasonalVariation(
+      `${companyId}:${createdYear}:${createdSeason}:${supplier.id}:${entry.id}:stock`, 0, 1,
+    ) < (STORAGE_VESSEL_SUPPLIER_STOCK_CHANCES[supplier.id]?.[entry.material] ?? STORAGE_VESSEL_DEFAULT_STOCK_CHANCE)),
+  }));
+  const expectedOfferCount = catalogueBySupplier.reduce((count, entry) => count + entry.catalogue.length, 0);
 
   const previousOffers = currentOffers;
   const relationships = await getBuyMarketCounterpartyRelationships(STORAGE_VESSEL_SUPPLIERS.map((supplier) => ({ kind: 'supplier' as const, id: supplier.id, name: supplier.name })));
@@ -248,7 +260,7 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
 
   const companyValue = await calculateCompanyValue().catch(() => 0);
   const generatedNameCounts = new Map<string, number>();
-  const created = STORAGE_VESSEL_SUPPLIERS.flatMap((supplier) => STORAGE_VESSEL_CATALOGUE.map<BuyMarketOfferRecord>((catalogue) => {
+  const created = catalogueBySupplier.flatMap(({ supplier, catalogue: supplierCatalogue }) => supplierCatalogue.map<BuyMarketOfferRecord>((catalogue) => {
     const { id: catalogueId, vesselType, material, capacityLitres } = catalogue;
     const seed = `${companyId}:${state.currentYear}:${state.season}:${supplier.id}:${catalogueId}`;
     const qualityScore = Number(deterministicSeasonalVariation(`${seed}:quality`, 0, 1).toFixed(2));
@@ -275,7 +287,9 @@ async function ensureStorageVesselOffers(companyId: string): Promise<void> {
     generatedNameCounts.set(nameBase, nameNumber);
     return {
       companyId,
-      offerId: `${STORAGE_VESSEL_OFFER_PREFIX}_${companyId}_${state.currentYear}_${state.season}_${supplier.id}_${capacityLitres}`,
+      // Capacity is not unique across materials; include the catalogue id so
+      // each generated vessel offer has a distinct key within the upsert.
+      offerId: `${STORAGE_VESSEL_OFFER_PREFIX}_${companyId}_${state.currentYear}_${state.season}_${supplier.id}_${catalogueId}`,
       wareGroup: 'storage_vessels',
       sellerId: supplier.id, sellerName: supplier.name, originTag: 'seasonal_supplier', availableUnits: getBuyGoodsOfferAvailability(`${seed}:availability`, companyValue, state.prestige ?? 0, 1, 4),
       unit: 'vessel',

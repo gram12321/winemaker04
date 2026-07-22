@@ -40,6 +40,13 @@ export const STORAGE_VESSEL_SUPPLIERS: readonly StorageVesselSupplierProfile[] =
   { id: 'nordic_cellar_craft', name: 'Nordic Cellar Craft', basePriceMultiplier: 0.97 },
   { id: 'heritage_coopers', name: 'Heritage Coopers', basePriceMultiplier: 1.1 },
 ];
+/** Seasonal catalogue stocking probabilities by supplier and material. */
+export const STORAGE_VESSEL_SUPPLIER_STOCK_CHANCES: Record<string, Partial<Record<StorageVesselMaterial, number>>> = {
+  cooperage_duval: { oak: 0.48, chestnut: 0.48, ceramic: 0.2 },
+  nordic_cellar_craft: { stainless_steel: 0.48, concrete: 0.38, plastic: 0.38 },
+  heritage_coopers: { stainless_steel: 0.48, oak: 0.28, chestnut: 0.28, concrete: 0.3, ceramic: 0.3, plastic: 0.18 },
+};
+export const STORAGE_VESSEL_DEFAULT_STOCK_CHANCE = 0.12;
 export const STORAGE_VESSEL_BASE_PRICE = 850;
 export const STORAGE_VESSEL_MIN_PRICE = 500;
 export const STORAGE_VESSEL_MAX_PRICE = 10_000;
@@ -73,13 +80,13 @@ export const STORAGE_VESSEL_USED_MARKET_NPC_PROFILES: readonly StorageVesselNpcM
   { sellerId: 'vintner_recovery_house', sellerName: 'Vintner Recovery House', material: 'plastic', capacityLitres: 1_000 },
 ];
 export const STORAGE_VESSEL_USED_MARKET_NPC_LISTINGS_PER_SEASON = STORAGE_VESSEL_USED_MARKET_NPC_PROFILES.length;
-export const STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_MIN = 0.35;
-export const STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_RANGE = 0.55;
-export const STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_MIN = 0.35;
-export const STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_RANGE = 0.55;
+export const STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_MIN = 0.01;
+export const STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_RANGE = 0.99;
+export const STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_MIN = 0.01;
+export const STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_RANGE = 0.99;
 export const STORAGE_VESSEL_USED_MARKET_NPC_MAX_FILL_HISTORY = 8;
 export const STORAGE_VESSEL_USED_MARKET_NPC_MAX_AGE_YEARS = 20;
-export const STORAGE_VESSEL_USED_MARKET_NPC_DIRTY_CHANCE = 1 / 3;
+export const STORAGE_VESSEL_USED_MARKET_NPC_DIRTY_CHANCE = 1 / 10;
 
 export const STORAGE_VESSEL_OFFER_PREFIX = 'storage_vessel';
 export const STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG = 0.5;
