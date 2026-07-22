@@ -10,7 +10,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates, useWinePriceCalculator } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
 import { getCurrentCompany } from '@/lib/services';
-import { SALES_CONSTANTS } from '@/lib/constants';
+import { SALES_CONSTANTS } from '@/lib/constants/constants';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 /**

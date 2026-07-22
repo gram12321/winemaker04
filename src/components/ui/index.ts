@@ -44,7 +44,6 @@ export { default as WineModal } from './modals/UImodals/wineModal';
 export { default as SellGrapesModal } from './modals/activitymodals/SellGrapesModal';
 export { default as BuyMarketModal } from './market/BuyMarketModal';
 export { default as VineyardModal } from './modals/UImodals/vineyardModal';
-export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
 
 export { MarketWindow } from './market/MarketWindow';
 export { MarketOfferTable } from './market/MarketOfferTable.tsx';

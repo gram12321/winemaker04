@@ -1,5 +1,5 @@
-import { type ResearchProject } from '@/lib/constants/researchConstants';
-import { GAME_INITIALIZATION } from '@/lib/constants';
+import { type ResearchProject } from '@/lib/features/researchUpgrade/constants/researchCatalog';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 import { achievementsFeature } from '@/lib/features/achievements';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';

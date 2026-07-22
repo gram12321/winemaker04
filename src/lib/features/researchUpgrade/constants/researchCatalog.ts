@@ -3,9 +3,9 @@
  * Defines available research projects and their properties
  */
 
-import { GrapeVariety, GRAPE_VARIETIES } from '../types/types';
-import { calculateGrapeDifficulty, type GrapeDifficultyBreakdown } from '../services/wine/features/grapeDifficulty';
-import { getGrapeIconSrc } from '../utils/icons';
+import { GrapeVariety, GRAPE_VARIETIES } from '@/lib/types/types';
+import { calculateGrapeDifficulty, type GrapeDifficultyBreakdown } from '@/lib/services/wine/features/grapeDifficulty';
+import { getGrapeIconSrc } from '@/lib/utils/icons';
 import { type BuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltyService';
 
 /**
@@ -1434,20 +1434,3 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       // ===== STAFF =====
       ...STAFF_LIMIT_RESEARCH_PROJECTS
 ];
-
-// ===== HELPER FUNCTIONS =====
-
-/**
- * Get research project by ID
- */
-export function getResearchProject(id: string): ResearchProject | undefined {
-      return RESEARCH_PROJECTS.find(project => project.id === id);
-}
-
-/**
- * Get research projects by category
- */
-export function getResearchProjectsByCategory(category: ResearchProject['category']): ResearchProject[] {
-      return RESEARCH_PROJECTS.filter(project => project.category === category);
-}
-

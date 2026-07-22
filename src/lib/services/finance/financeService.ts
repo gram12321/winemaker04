@@ -2,7 +2,8 @@ import { getGameState, syncPersistedMoney } from '../core/gameState';
 import type { GameState, Season, Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
-import { SEASON_ORDER, TRANSACTION_CATEGORIES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
+import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
 import { CAPITAL_FLOW_TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
@@ -184,10 +185,10 @@ export const onCompanyActivated = (companyId: string): void => {
 companyFeature.lifecycle.registerActivationHook(onCompanyActivated);
 
 // Calculate company value (total assets - total liabilities)
-export const calculateCompanyValue = async (): Promise<number> => {
+export const calculateCompanyValue = async (companyId?: string): Promise<number> => {
   try {
-    const financialData = await calculateFinancialData('year');
-    const totalOutstandingLoans = await loanLenderFeature.metrics.calculateTotalOutstandingLoans();
+    const financialData = await calculateFinancialData('year', { companyId });
+    const totalOutstandingLoans = await loanLenderFeature.metrics.calculateTotalOutstandingLoans(companyId);
     return financialData.totalAssets - totalOutstandingLoans;
   } catch (error) {
     console.error('Error calculating company value:', error);

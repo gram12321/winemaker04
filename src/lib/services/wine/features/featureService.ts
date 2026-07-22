@@ -1,13 +1,13 @@
 import { WineBatch, WineCharacteristics, CustomerType, Vineyard, WineBatchState } from '../../../types/types';
 import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, AccumulationConfig, TriggeredConfig } from '../../../types/wineFeatures';
-import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from './constants/commonFeaturesUtil';
 import { isActionAvailable } from '../winery/wineryService';
 import { getColorClass, getColorCategory } from '../../../utils/utils';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { notificationService } from '../../core/notificationService';
 import { NotificationCategory } from '../../../types/types';
-import { addFeaturePrestigeEvent } from '../../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getBottleAgingSeverity } from './agingService';
 import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
@@ -1426,7 +1426,7 @@ async function handleManifestation(
   await sendManifestationNotification(batch, config);
   
   if (config.effects.prestige?.onManifestation) {
-    await addFeaturePrestigeEvent(batch, config, 'manifestation', { vineyard });
+    await prestigeFeature.events.addFeature(batch, config, 'manifestation', { vineyard });
   }
 }
 

@@ -1,5 +1,5 @@
-import { FeatureConfig } from '../../types/wineFeatures';
-import { WineBatch } from '../../types/types';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
+import { WineBatch } from '@/lib/types/types';
 
 /**
  * Stuck Fermentation

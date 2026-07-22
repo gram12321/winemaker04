@@ -2,9 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { clearAllAchievements, clearAllCompanies, clearAllCompaniesAndUsers, clearAllCustomers, clearAllUsers, fullDatabaseReset, clearGlobalMarket, clearGlobalMarketGoods } from '@/lib/database/admin/adminDB';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, initializeCustomers, updateGameState } from '@/lib/services';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
-import { insertPrestigeEvent } from '@/lib/database';
-import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
-import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
+import { prestigeFeature } from '@/lib/features/prestige';
+import { formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { SEASONS, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 import type { Season } from '@/lib/types/types';
 import { userFeature } from '@/lib/features/user';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
@@ -131,26 +132,7 @@ export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
   const parsedAmount = amount || 100;
 
   try {
-    const gameState = getGameState();
-    const currentWeek = calculateAbsoluteWeeks(
-      gameState.week!,
-      gameState.season!,
-      gameState.currentYear!
-    );
-
-    // Add prestige event using the proper service layer
-    await insertPrestigeEvent({
-      id: uuidv4(),
-      type: 'admin_cheat',
-      amount_base: parsedAmount,
-      created_game_week: currentWeek,
-      decay_rate: 0, // Admin prestige doesn't decay
-      source_id: null,
-      payload: {
-        reason: 'Admin cheat',
-        addedAmount: parsedAmount
-      }
-    });
+    await prestigeFeature.events.recordAdminAdjustment(parsedAmount);
 
     // Clear prestige cache to force recalculation
     clearPrestigeCache();

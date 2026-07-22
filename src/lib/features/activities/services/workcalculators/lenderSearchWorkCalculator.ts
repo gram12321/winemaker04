@@ -1,7 +1,7 @@
 import { WorkCategory, LenderSearchOptions } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/features/activities/constants/activityConstants';
-import { LENDER_SEARCH_BASE_COST, LENDER_TYPE_DISTRIBUTION, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_SEARCH } from '@/lib/constants/loanConstants';
+import { LENDER_SEARCH_BASE_COST, LENDER_TYPE_DISTRIBUTION, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_SEARCH } from '@/lib/features/loanLender/constants/loanConstants';
 
 /**
  * Calculate work required for lender search activity

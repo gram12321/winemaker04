@@ -1,10 +1,10 @@
-﻿import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { WineBatch, type GrapeVariety, type WeatherState } from '@/lib/types/types';
 import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
 import { DialogProps } from '@/lib/types/UItypes';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Slider, UnifiedTooltip } from '@/components/ui';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
-import { COOPERATIVE_LEVELS } from '@/lib/constants';
+import { COOPERATIVE_LEVELS } from '@/lib/constants/cooperativeConstants';
 import {
   GrapeBuyer,
   GrapeSalePricing,

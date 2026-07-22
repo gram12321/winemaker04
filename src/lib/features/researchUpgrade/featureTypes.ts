@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import type { ResearchProject, UnlockType } from '@/lib/constants/researchConstants';
+import type { ResearchProject, UnlockType } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import type { Activity, GameDate } from '@/lib/types/types';
 import type { ResearchPermanentEffectsSummary } from './services/research/researchPermanentEffectsService';
 

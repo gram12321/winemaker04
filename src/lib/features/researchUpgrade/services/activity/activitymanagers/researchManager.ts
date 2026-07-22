@@ -3,8 +3,9 @@ import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState'
 import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { activitiesFeature } from '@/lib/features/activities';
-import { getResearchProject, RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
-import { addResearchPrestigeEvent } from '@/lib/services/prestige/prestigeService';
+import { RESEARCH_PROJECTS } from '@/lib/features/researchUpgrade/constants/researchCatalog';
+import { getResearchProject } from '@/lib/features/researchUpgrade/services/research/researchCatalogService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { researchUpgradeFeature } from '../../..';
@@ -28,6 +29,26 @@ export async function startResearch(projectId: string): Promise<string | null> {
             const gameState = getGameState();
             const researchCost = activitiesFeature.work.calculateResearchCost(projectId);
             const companyId = getCurrentCompanyId();
+
+            // Research activities use the project as their logical target. Keep
+            // this guard even when the UI has stale state, because the activity
+            // read goes back to the company database.
+            const existingResearchActivity = (await activitiesFeature.reads.getAll()).find(activity =>
+                  (activity.status === 'active' || activity.status === 'paused') &&
+                  activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH &&
+                  activity.params?.type === 'research' &&
+                  activity.params?.researchId === projectId
+            );
+            if (existingResearchActivity) {
+                  await notificationService.addMessage(
+                        `Research project "${project.title}" is already in progress.`,
+                        'researchManager.startResearch',
+                        'Research Already Started',
+                        NotificationCategory.FINANCE_AND_STAFF
+                  );
+                  return null;
+            }
+
             const permanentEffects = await getResearchPermanentEffects(companyId || undefined);
             const { totalWork } = activitiesFeature.work.calculateResearch(projectId, {
                   workMultiplier: permanentEffects.administrationAndResearchWorkMultiplier
@@ -69,7 +90,8 @@ export async function startResearch(projectId: string): Promise<string | null> {
                   return null;
             }
 
-            // Deduct research cost immediately
+            // Deduct research cost immediately. If the database uniqueness
+            // guard rejects a concurrent start, the amount is refunded below.
             await addTransaction(
                   -researchCost,
                   `Research: ${project.title}`,
@@ -78,10 +100,11 @@ export async function startResearch(projectId: string): Promise<string | null> {
             );
 
             // Create the research activity
-    const activityId = await activitiesFeature.lifecycle.create({
+            const result = await activitiesFeature.lifecycle.createWithResult({
                   category: WorkCategory.ADMINISTRATION_AND_RESEARCH,
                   title: project.title,
                   totalWork,
+                  targetId: projectId,
                   activityDetails: `Cost: ${formatNumber(researchCost, { currency: true, decimals: 0 })}`,
                   params: {
                         type: 'research',
@@ -94,7 +117,16 @@ export async function startResearch(projectId: string): Promise<string | null> {
                   isCancellable: true
             });
 
-            return activityId;
+            if (!result.activityId) {
+                  await addTransaction(
+                        researchCost,
+                        `Research start refund: ${project.title}`,
+                        TRANSACTION_CATEGORIES.RESEARCH,
+                        false
+                  );
+            }
+
+            return result.activityId;
       } catch (error) {
             console.error('Error starting research:', error);
             return null;
@@ -135,7 +167,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
 
             // Grant prestige reward
             if (project.prestigeReward && project.prestigeReward > 0) {
-                  await addResearchPrestigeEvent(project.title, resolvedProjectId, project.prestigeReward);
+                  await prestigeFeature.events.addResearch(project.title, resolvedProjectId, project.prestigeReward);
             }
 
             // Build completion message

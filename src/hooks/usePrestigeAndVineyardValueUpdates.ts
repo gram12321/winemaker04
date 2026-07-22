@@ -1,12 +1,11 @@
 // Unified hook to handle all prestige updates (company and vineyard)
 import { useEffect, useRef } from 'react';
 import { getGameState, getCurrentCompany } from '../lib/services/core/gameState';
-import { calculateCompanyValuePrestige, updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
-import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { useGameUpdates } from './useGameUpdates';
-import { getMaxLandValue } from '@/lib/services/wine/winescore/landValueModifierCalculation';
 import { calculateCompanyValue } from '../lib/services/finance/financeService';
 import { recalculateVineyardValues } from '@/lib/services/vineyard/vineyardManager';
+import { decayRelationshipBoostsOneWeek } from '@/lib/services/sales/relationshipService';
 
 /**
  * Unified hook that monitors all prestige-affecting changes and updates prestige events accordingly
@@ -57,18 +56,7 @@ export function usePrestigeUpdates() {
         } else if (currentCompanyValue !== lastCompanyValueRef.current) {
 
           // Update company value prestige with logarithmic scaling
-          const maxLandValue = getMaxLandValue();
-          const companyValuePrestige = calculateCompanyValuePrestige(currentCompanyValue, maxLandValue);
-          await updateBasePrestigeEvent(
-            'company_finance',
-            'company_net_worth',
-            companyValuePrestige,
-            {
-              companyNetWorth: currentCompanyValue,
-              maxLandValue,
-              prestigeBase01: companyValuePrestige,
-            }
-          );
+          await prestigeFeature.lifecycle.updateCompanyValue();
 
           lastCompanyValueRef.current = currentCompanyValue;
 
@@ -90,7 +78,7 @@ export function usePrestigeUpdates() {
           
           // Apply weekly decay to prestige events and relationship boosts
           try {
-            await decayPrestigeEventsOneWeek();
+            await prestigeFeature.lifecycle.decayOneWeek();
             await decayRelationshipBoostsOneWeek();
           } catch (error) {
             console.error('Failed to apply weekly decay:', error);

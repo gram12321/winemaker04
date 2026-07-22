@@ -5,11 +5,11 @@ import { appendStorageBackedHarvestBatch, saveWineBatch, loadWineBatches, update
 import { consumeStorageBackedWineBatch } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
-import { GAME_INITIALIZATION } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
-import { calculateCurrentPrestige } from '../../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConstants';
 import { calculateLandValueModifier } from '../winescore/landValueModifierCalculation';
@@ -17,7 +17,7 @@ import { generateDefaultCharacteristics } from '../characteristics/defaultCharac
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
 import { initializeBatchFeatures, processEventTrigger, simulateMarketFeatureLifecycle, type ProcessEventTriggerOptions } from '../features/featureService';
-import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
 import { calculateGrapeSuitabilityMetrics } from '../../vineyard/vineyardValueCalc';
 import {
   combineWineAnchorSets,
@@ -460,7 +460,7 @@ async function buildMarketStateBatch(input: CreateMarketWineBatchInput): Promise
     input.source
   );
 
-  const prestigeData = await calculateCurrentPrestige();
+  const prestigeData = await prestigeFeature.reads.calculateCurrent();
   const silentMarketEventTrigger: ProcessEventTriggerOptions = { suppressSideEffects: true };
   let batch = await buildHarvestStageBatch({
     vineyard: pseudoVineyard,
@@ -671,7 +671,7 @@ export async function createWineBatchFromHarvest(
   )) {
     throw new Error('The selected harvest batch no longer matches its Storage Vessel allocation.');
   }
-  const prestigeData = await calculateCurrentPrestige();
+  const prestigeData = await prestigeFeature.reads.calculateCurrent();
 
   const incomingBatch = await buildHarvestStageBatch({
     vineyard,

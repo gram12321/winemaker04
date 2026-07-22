@@ -1,4 +1,4 @@
-import { COOPERATIVE_LEVELS } from '@/lib/constants';
+import { COOPERATIVE_LEVELS } from '@/lib/constants/cooperativeConstants';
 import { loadCooperativeMembershipRow, upsertCooperativeMembershipRow } from '@/lib/database';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 

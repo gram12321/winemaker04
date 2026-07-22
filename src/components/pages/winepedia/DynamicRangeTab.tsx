@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { BASE_BALANCED_RANGES } from '@/lib/constants';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { WineCharacteristicsDisplay, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';

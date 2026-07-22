@@ -5,7 +5,7 @@ import { loadVineyards } from '../../database/activities/vineyardDB';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from './relationshipService';
 import { getGameState, getCurrentPrestige } from '../core/gameState';
-import { addSalePrestigeEvent, addFeaturePrestigeEvent, addContractOutcomePrestigeEvent } from '../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
@@ -17,7 +17,7 @@ import {
 } from '../wine/winery/inventoryService';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 import { formatNumber } from '../../utils/utils';
-import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs } from '../wine/features/constants/commonFeaturesUtil';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { CONTRACT_PRESTIGE_CONFIG } from '../../constants/contractConstants';
 
@@ -459,7 +459,7 @@ export async function fulfillContract(
     
     // Add prestige event
     if (isWinePresaleContract(contract)) {
-      await addContractOutcomePrestigeEvent({
+      await prestigeFeature.events.addContractOutcome({
         outcome: 'presale_fulfilled',
         baseAmount: CONTRACT_PRESTIGE_CONFIG.presaleFulfillBase,
         description: `Wine pre-sale fulfilled for ${contract.customerName}`,
@@ -470,7 +470,7 @@ export async function fulfillContract(
         },
       });
     } else {
-      await addSalePrestigeEvent(
+      await prestigeFeature.events.addSale(
         revenue,
         contract.customerName,
         `Contract (${contract.requestedQuantity} bottles)`,
@@ -576,7 +576,7 @@ async function addContractFeaturePrestigeEvents(
         continue;
       }
 
-      await addFeaturePrestigeEvent(fulfilledWine.wineBatch, config, 'sale', {
+          await prestigeFeature.events.addFeature(fulfilledWine.wineBatch, config, 'sale', {
         customerName: contract.customerName,
         order: orderContext,
         vineyard,
@@ -693,7 +693,7 @@ export async function expireOldContracts(): Promise<number> {
             'Wine pre-sale defaulted'
           );
 
-          await addContractOutcomePrestigeEvent({
+          await prestigeFeature.events.addContractOutcome({
             outcome: 'presale_defaulted',
             baseAmount: CONTRACT_PRESTIGE_CONFIG.presaleDefaultBase,
             description: `Wine pre-sale defaulted for ${contract.customerName}`,

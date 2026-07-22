@@ -116,6 +116,12 @@ vi.mock('@/lib/features/staff', () => ({
   },
 }));
 
+vi.mock('@/lib/features/prestige', () => ({
+  prestigeFeature: {
+    lifecycle: { updateCellarCollection: mocks.updateCellarCollectionPrestige },
+  },
+}));
+
 vi.mock('@/lib/services', () => ({
   getGameState: mocks.getGameState,
   updateGameState: mocks.updateGameState,

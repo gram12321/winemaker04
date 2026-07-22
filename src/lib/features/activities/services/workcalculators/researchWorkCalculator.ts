@@ -1,10 +1,10 @@
 import { type WorkFactor } from './workCalculator';
 import {
-      getResearchProject,
       RESEARCH_PROJECT_ECONOMICS,
       type ResearchProject,
       type ResearchProjectEconomics
-} from '@/lib/constants/researchConstants';
+} from '@/lib/features/researchUpgrade/constants/researchCatalog';
+import { getResearchProject } from '@/lib/features/researchUpgrade/services/research/researchCatalogService';
 
 const DEFAULT_CATEGORY_MODIFIERS: Record<ResearchProject['category'], number> = {
       administration: -0.04,

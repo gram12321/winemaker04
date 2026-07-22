@@ -1,6 +1,6 @@
 import type { EconomyPhase, Lender, Loan, LoanOffer } from '@/lib/types/types';
-import { LOAN_EXTRA_PAYMENT } from '@/lib/constants/loanConstants';
-import { LOAN_AMOUNT_RANGES } from '@/lib/constants/loanConstants';
+import { LOAN_EXTRA_PAYMENT } from '@/lib/features/loanLender/constants/loanConstants';
+import { LOAN_AMOUNT_RANGES } from '@/lib/features/loanLender/constants/loanConstants';
 import { calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { getAllLenders } from './lenderService';
 import { getCurrentCreditRating, getScaledLoanAmountLimit } from './loanService';

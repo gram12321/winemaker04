@@ -9,7 +9,7 @@ import { Grape, MapPin, Ruler, Mountain, Compass, BarChart3 } from 'lucide-react
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory, getColorClass, getRangeColor } from '@/lib/utils';
 import { getAltitudeRating, getAspectRating, calculateVineyardExpectedYield } from '@/lib/services';
-import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
+import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants/vineyardConstants';
 import { getRegionalPriceRange } from '@/lib/services';
 import { getVineyardLandValueModifierFactors } from '@/lib/services/wine/winescore/landValueModifierCalculation';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ResearchProject } from '@/lib/constants/researchConstants';
+import type { ResearchProject } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import {
   getResearchRequirementReasons,
   isResearchProjectEligible,

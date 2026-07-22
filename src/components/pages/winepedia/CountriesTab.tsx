@@ -1,6 +1,6 @@
  
 import { GridCard } from '@/components/ui';
-import { CUSTOMER_REGIONAL_DATA } from '@/lib/constants';
+import { CUSTOMER_REGIONAL_DATA } from '@/lib/constants/constants';
 import { formatPercent, getColorClass } from '@/lib/utils/utils';
 
 export function CountriesTab() {

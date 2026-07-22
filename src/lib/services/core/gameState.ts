@@ -1,9 +1,9 @@
 // Enhanced game state service that integrates with the new company system
 import { GameState, Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
-import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
-import { CREDIT_RATING } from '../../constants/loanConstants';
-import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
+import { CREDIT_RATING } from '@/lib/features/loanLender/constants/loanConstants';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { companyFeature } from '@/lib/features/company';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
 import { staffFeature } from '@/lib/features/staff';
@@ -93,7 +93,7 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
   
   // Update base prestige events if money changed
   if (updates.money !== undefined && updates.money !== oldMoney) {
-    await updateCompanyValuePrestige(updates.money);
+    await prestigeFeature.lifecycle.updateCompanyValue();
     prestigeCache = null; // clear cached total after base prestige changes
   }
   
@@ -176,7 +176,7 @@ export const syncPersistedMoney = async (money: number, moneyVersion?: number): 
 
   if (money !== oldMoney) {
     try {
-      await updateCompanyValuePrestige(money);
+      await prestigeFeature.lifecycle.updateCompanyValue();
     } catch (error) {
       console.error('Failed to update company-value prestige:', error);
     }
@@ -275,7 +275,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   try {
     await initializePrestigeSystem();
     // Ensure company value prestige is updated with current money
-    await updateCompanyValuePrestige(company.money);
+      await prestigeFeature.lifecycle.updateCompanyValue();
     prestigeCache = null;
   } catch (error) {
     console.error('Failed to initialize prestige system:', error);
@@ -330,7 +330,7 @@ export async function getCurrentPrestige(): Promise<number> {
   }
   
   try {
-    const { totalPrestige } = await calculateCurrentPrestige();
+    const { totalPrestige } = await prestigeFeature.reads.calculateCurrent();
     
     // Update cache
     prestigeCache = {
@@ -352,7 +352,7 @@ export async function getCurrentPrestige(): Promise<number> {
 // Initialize prestige system
 export async function initializePrestigeSystem(): Promise<void> {
   try {
-    await initializeBasePrestigeEvents();
+    await prestigeFeature.lifecycle.initialize();
     
     // Get initial prestige calculation
     await getCurrentPrestige();

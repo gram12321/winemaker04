@@ -1,5 +1,6 @@
 import { ASPECTS, type Aspect } from '@/lib/types/types';
-import { NAMES, REGION_ALTITUDE_RANGES, REGION_SOIL_TYPES } from '@/lib/constants';
+import { NAMES } from '@/lib/constants/namesConstants';
+import { REGION_ALTITUDE_RANGES, REGION_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 import { getRandomFromArray, randomInt } from '@/lib/utils/utils';
 
 export function getRandomAspect(): Aspect {

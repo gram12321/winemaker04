@@ -14,7 +14,8 @@ import {
   CrossTraitPenaltyTab,
   EconomyTab,
   WeatherTab,
-  GrapeBuyersTab
+  GrapeBuyersTab,
+  WineAnchorsTab
 } from '@/components/pages/winepedia/index';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
@@ -43,6 +44,7 @@ export default function Winepedia({ view }: WinepediaProps) {
       { id: 'customerTypes', label: 'Customer Types', component: CustomerTypesTab },
       { id: 'countries', label: 'Countries', component: CountriesTab },
       { id: 'wineRegions', label: 'Wine Regions', component: WineRegionsTab },
+      { id: 'wineAnchors', label: 'Wine Anchors', component: WineAnchorsTab },
       { id: 'winemaking', label: 'Winemaking', component: WinemakingTab },
       { id: 'mathematicalModels', label: 'Mathematical Models', component: MathematicalModelsTab },
       { id: 'grapeBuyers', label: 'Grape Buyers', component: GrapeBuyersTab },

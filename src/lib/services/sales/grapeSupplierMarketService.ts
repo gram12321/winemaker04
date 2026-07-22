@@ -2,15 +2,7 @@ import { NAMES, GRAPE_MERCHANT_SUFFIXES } from '../../constants/namesConstants';
 import { calculateCompanyValue } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import {
-  BASE_SEASONAL_SUPPLIER_COUNT,
-  BULK_BASE_SEASON_SUPPLY_KG,
-  BULK_SUPPLIER_ID,
-  COUNTRY_SUPPLIER_CONFIG,
-  MAX_SEASONAL_SUPPLIER_COUNT,
-  SUPPLIER_MARKET_COUNTRY_KEYS,
-  type SupplierMarketCountryKey
-} from '@/lib/constants';
+import { BASE_SEASONAL_SUPPLIER_COUNT, BULK_BASE_SEASON_SUPPLY_KG, BULK_SUPPLIER_ID, COUNTRY_SUPPLIER_CONFIG, MAX_SEASONAL_SUPPLIER_COUNT, SUPPLIER_MARKET_COUNTRY_KEYS, type SupplierMarketCountryKey } from '@/lib/constants/grapeSupplierMarketConstants';
 import { getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import {

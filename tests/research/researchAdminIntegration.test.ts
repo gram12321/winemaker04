@@ -14,7 +14,7 @@ vi.mock('@/lib/constants', () => ({
   },
 }));
 
-vi.mock('@/lib/constants/researchConstants', () => ({
+vi.mock('@/lib/features/researchUpgrade/constants/researchCatalog', () => ({
   RESEARCH_PROJECTS: [
     { id: 'research-a', unlocks: [{ type: 'grape', value: 'Chardonnay' }] },
     { id: 'research-b', unlocks: [] },

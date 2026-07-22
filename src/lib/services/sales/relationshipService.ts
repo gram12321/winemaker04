@@ -2,9 +2,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { Customer } from '../../types/types';
 import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { getGameState } from '../core/gameState';
-import { calculateCurrentPrestige } from '../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { calculateInvertedSkewedMultiplier } from '../../utils/calculator';
-import { insertRelationshipBoost, getRelationshipBoostsByCustomer } from '../../database/customers/relationshipBoostsDB';
+import {
+  deleteRelationshipBoosts,
+  getRelationshipBoostsByCustomer,
+  insertRelationshipBoost,
+  listRelationshipBoostsForDecay,
+  updateRelationshipBoostAmount,
+} from '../../database/customers/relationshipBoostsDB';
 
 /**
  * Create a relationship boost when an order is accepted
@@ -38,6 +44,26 @@ export async function createRelationshipBoost(
 export async function calculateCustomerRelationshipBoosts(customerId: string): Promise<number> {
   const boosts = await getRelationshipBoostsByCustomer(customerId);
   return boosts.reduce((sum, row) => sum + (row.amount || 0), 0);
+}
+
+export async function decayRelationshipBoostsOneWeek(): Promise<void> {
+  const relationshipMinAmount = 0.001;
+  try {
+    const boostRows = await listRelationshipBoostsForDecay();
+    const toDelete = boostRows
+      .filter((row) => (row.amount || 0) * (row.decay_rate || 1) < relationshipMinAmount)
+      .map((row) => row.id);
+
+    await Promise.all(boostRows
+      .filter((row) => !toDelete.includes(row.id))
+      .map((row) => updateRelationshipBoostAmount(row.id, (row.amount || 0) * (row.decay_rate || 1))));
+
+    if (toDelete.length > 0) {
+      await deleteRelationshipBoosts(toDelete);
+    }
+  } catch (error) {
+    console.error('Failed to apply weekly decay to relationship boosts:', error);
+  }
 }
 
 
@@ -82,7 +108,7 @@ export async function calculateRelationshipBreakdown(customer: Customer): Promis
 
   // Get company prestige (cached)
   if (!cachedPrestige || (now - cacheTimestamp) > CACHE_TTL) {
-    const { totalPrestige: companyPrestige } = await calculateCurrentPrestige();
+    const { totalPrestige: companyPrestige } = await prestigeFeature.reads.calculateCurrent();
     cachedPrestige = companyPrestige;
     cacheTimestamp = now;
   }

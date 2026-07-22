@@ -2,7 +2,8 @@ import { formatNumber, getColorClass } from '@/lib/utils';
 import { calculateFinancialData, calculateCompanyValue } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
-import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS, WEEKS_PER_SEASON } from '@/lib/constants';
+import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS } from '@/lib/constants/financeConstants';
+import { WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 import { loanLenderFeature } from '@/lib/features/loanLender';
 
 interface IncomeBalanceViewProps {

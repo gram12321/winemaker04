@@ -9,7 +9,7 @@ import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
 import { canStoragePlanHoldVolume, getStoragePlanCapacityLitres, initializeHarvestVolumeLitres } from '../wine/winery/storageVesselAllocationService';
-import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants';
+import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants/storageVesselConstants';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import {
@@ -466,8 +466,8 @@ export async function updateVineyardAges(): Promise<void> {
         
         await saveVineyard(updatedVineyard);
         try {
-          const { updateBaseVineyardPrestigeEvent } = await import('../prestige/prestigeService');
-          await updateBaseVineyardPrestigeEvent(vineyard.id);
+          const { prestigeFeature } = await import('@/lib/features/prestige');
+          await prestigeFeature.lifecycle.updateVineyard(vineyard.id);
         } catch (error) {
           console.error('Failed to update prestige after annual vine aging:', error);
         }
@@ -778,8 +778,8 @@ export async function handlePartialPlanting(
       
       // Update prestige events to reflect new density (affects prestige calculations)
       try {
-        const { updateBaseVineyardPrestigeEvent } = await import('../prestige/prestigeService');
-        await updateBaseVineyardPrestigeEvent(vineyard.id);
+          const { prestigeFeature } = await import('@/lib/features/prestige');
+          await prestigeFeature.lifecycle.updateVineyard(vineyard.id);
       } catch (error) {
         console.error('Failed to update prestige during partial planting:', error);
       }

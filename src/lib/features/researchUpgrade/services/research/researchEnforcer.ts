@@ -1,4 +1,4 @@
-import type { ResearchProject, UnlockType } from '@/lib/constants/researchConstants';
+import type { ResearchProject, UnlockType } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import { researchUpgradeFeature } from '../../index';
 
 /**

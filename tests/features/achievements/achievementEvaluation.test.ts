@@ -76,6 +76,7 @@ vi.mock('@/lib/utils/companyUtils', () => ({
 
 vi.mock('@/lib/services/core/gameState', () => ({
   getGameState: mocks.getGameState,
+  getCurrentCompany: () => mocks.activeCompany,
 }));
 
 vi.mock('@/lib/database/core/achievementsDB', () => ({
@@ -117,7 +118,7 @@ vi.mock('@/lib/services/finance/financeService', () => ({
   loadTransactions: vi.fn(async () => []),
 }));
 
-vi.mock('@/lib/database/customers/prestigeEventsDB', () => ({
+vi.mock('@/lib/features/prestige/database/prestigeEventsDB', () => ({
   insertPrestigeEvent: mocks.insertPrestigeEvent,
   insertPrestigeEventIfAbsentBySource: mocks.insertCompanyReward,
   insertVineyardAchievementPrestigeEventIfAbsent: mocks.insertVineyardReward,

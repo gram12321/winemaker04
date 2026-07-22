@@ -1,4 +1,14 @@
-export { ECONOMY_EXPECTATION_MULTIPLIERS } from './economyConstants';
+export { ECONOMY_EXPECTATION_MULTIPLIERS } from '../../../constants/economyConstants';
+
+export const SHARE_CALCULATION = {
+  TARGET_SHARE_PRICE: 50,
+  MIN_SHARES: 10000,
+} as const;
+
+export function calculateInitialShareCount(totalCapital: number): number {
+  const calculatedShares = Math.round(totalCapital / SHARE_CALCULATION.TARGET_SHARE_PRICE);
+  return Math.max(calculatedShares, SHARE_CALCULATION.MIN_SHARES);
+}
 
 /**
  * Expected improvement rates (per 48-week period) for trend-based metrics

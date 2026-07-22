@@ -27,10 +27,11 @@ vi.mock('@/lib/features/weather', () => ({
   resolveWeatherWeek: mocks.resolveWeatherWeek,
   resolveSeasonalWeatherForecast: mocks.rollSeasonalWeatherForecast,
 }));
-vi.mock('@/lib/services/prestige/prestigeService', () => ({
-  calculateCurrentPrestige: vi.fn(async () => ({ totalPrestige: 0 })),
-  initializeBasePrestigeEvents: vi.fn(async () => undefined),
-  updateCompanyValuePrestige: vi.fn(async () => undefined),
+vi.mock('@/lib/features/prestige', () => ({
+  prestigeFeature: {
+    reads: { calculateCurrent: vi.fn(async () => ({ totalPrestige: 0 })) },
+    lifecycle: { initialize: vi.fn(async () => undefined), updateCompanyValue: vi.fn(async () => undefined) },
+  },
 }));
 vi.mock('@/lib/features/company', () => ({
   companyFeature: {

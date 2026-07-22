@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BASE_SEASONAL_BUYER_COUNT, BULK_BASE_SEASON_LIMIT_KG } from '@/lib/constants';
+import { BASE_SEASONAL_BUYER_COUNT, BULK_BASE_SEASON_LIMIT_KG } from '@/lib/constants/grapeBuyerMarketConstants';
 
 type BuyerRow = {
   company_id: string;
