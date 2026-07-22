@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Lender, Loan, LoanOffer, LenderType } from '@/lib/types/types';
 import { buildLoanApplicationPayload, buildLoanOffer, buildLoanPaymentSummary } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/features/activities/services/workcalculators/lenderSearchWorkCalculator';
-import { LENDER_TYPE_DISTRIBUTION, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES } from '@/lib/constants/loanConstants';
+import { LENDER_TYPE_DISTRIBUTION, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES } from '@/lib/features/loanLender/constants/loanConstants';
 
 const lender: Lender = {
   id: 'lender-1', name: 'Test Bank', type: 'Bank', riskTolerance: 0.5,

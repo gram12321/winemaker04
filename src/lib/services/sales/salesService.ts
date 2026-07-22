@@ -8,7 +8,7 @@ import { createRelationshipBoost } from '../sales/relationshipService';
 import { prestigeFeature } from '@/lib/features/prestige';
 import { getCurrentPrestige } from '../core/gameState';
 import { SALES_CONSTANTS } from '../../constants/constants';
-import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs } from '../wine/features/constants/commonFeaturesUtil';
 import { getInventoryBatchById, saveInventoryBatch } from '../wine/winery/inventoryService';
 
 // ===== ORDER MANAGEMENT =====

@@ -64,7 +64,7 @@ vi.mock('@/lib/services/core/gameState', () => ({
   getCurrentPrestige: mocks.getCurrentPrestige
 }));
 
-vi.mock('@/lib/constants/wineFeatures/commonFeaturesUtil', () => ({
+vi.mock('@/lib/services/wine/features/constants/commonFeaturesUtil', () => ({
   getAllFeatureConfigs: mocks.getAllFeatureConfigs
 }));
 

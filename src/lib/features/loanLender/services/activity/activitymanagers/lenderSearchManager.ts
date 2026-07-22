@@ -4,7 +4,7 @@ import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
-import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
+import { LENDER_TYPE_DISTRIBUTION } from '@/lib/features/loanLender/constants/loanConstants';
 import { buildLenderSearchQuote } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { calculateLenderAvailability, getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
 import { getCurrentCreditRating, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';

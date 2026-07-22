@@ -14,7 +14,7 @@ import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from './LenderSearchOptionsModal';
 // Search results are rendered from the loan feature's app overlays.
 import { useGameStateWithData } from '@/hooks';
-import { LENDER_TYPE_DISTRIBUTION, LOAN_PREPAYMENT } from '@/lib/constants';
+import { LENDER_TYPE_DISTRIBUTION, LOAN_PREPAYMENT } from '@/lib/features/loanLender/constants/loanConstants';
 
 export function LoansView() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);

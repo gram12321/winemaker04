@@ -5,7 +5,7 @@ import { appendStorageBackedHarvestBatch, saveWineBatch, loadWineBatches, update
 import { consumeStorageBackedWineBatch } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
-import { GAME_INITIALIZATION } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
@@ -17,7 +17,7 @@ import { generateDefaultCharacteristics } from '../characteristics/defaultCharac
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
 import { initializeBatchFeatures, processEventTrigger, simulateMarketFeatureLifecycle, type ProcessEventTriggerOptions } from '../features/featureService';
-import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
 import { calculateGrapeSuitabilityMetrics } from '../../vineyard/vineyardValueCalc';
 import {
   combineWineAnchorSets,

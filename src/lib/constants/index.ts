@@ -7,11 +7,8 @@ export * from './grapeConstants';
 export * from './namesConstants';
 export * from './vineyardConstants';
 export * from './economyConstants';
-export * from './loanConstants';
 export * from './financeConstants';
 export * from './staffConstants';
-export * from './researchPresentationConstants';
-export * from './achievementConstants';
 export * from './timeConstants';
 export * from './creditRatingConstants';
 export * from './cooperativeConstants';
@@ -19,17 +16,6 @@ export * from './grapeBuyerMarketConstants';
 export * from './grapeSupplierMarketConstants';
 export * from './buyGrapeMarketConstants';
 export * from './buyGoodsConstants';
-export * from './buyMarketConstants';
 export * from './storageVesselConstants';
 export * from './sellGrapesConstants';
 export * from './weatherConstants';
-
-
-// Wine features
-export * from './wineFeatures/oxidation';
-export * from './wineFeatures/greenFlavor';
-export * from './wineFeatures/stuckFermentation';
-export * from './wineFeatures/terroir';
-export * from './wineFeatures/bottleAging';
-export * from './wineFeatures/lateHarvest';
-export * from './wineFeatures/commonFeaturesUtil';

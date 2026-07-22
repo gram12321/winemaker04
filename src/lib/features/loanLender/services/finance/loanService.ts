@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '@/lib/types/types';
 import { NotificationCategory } from '@/lib/types/types';
-import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_LIQUIDATION, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/constants/loanConstants';
-import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
+import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_LIQUIDATION, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/features/loanLender/constants/loanConstants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
+import { SEASON_ORDER } from '@/lib/constants/timeConstants';
 import { getCurrentPrestige, getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { insertLoan, loadActiveLoans, updateLoan, clearLoanWarning, setLoanWarning } from '@/lib/database/core/loansDB';

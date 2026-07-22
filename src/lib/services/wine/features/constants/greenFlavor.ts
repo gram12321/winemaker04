@@ -1,7 +1,7 @@
-import { FeatureConfig } from '../../types/wineFeatures';
-import { Vineyard } from '../../types/types';
-import { CrushingOptions } from '../../services/wine/characteristics/crushingCharacteristics';
-import { formatNumber } from '../../utils/utils';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
+import { Vineyard } from '@/lib/types/types';
+import { CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Green Flavor/Vegetal Character

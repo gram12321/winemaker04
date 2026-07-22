@@ -16,7 +16,7 @@ import { getSalesSummary, loadWineOrders } from '@/lib/database/customers/salesD
 import { loadWineContracts } from '@/lib/database/sales/contractDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import type { AchievementStats, AchievementWorkspace } from './featureTypes';
-import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants/achievementConstants';
+import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/features/achievements/constants/achievementConstants';
 
 const EXCLUDED_REVENUE_DESCRIPTIONS = new Set(['Starting Capital', 'Starting Capital Adjustment']);
 const BULK_GRAPE_SALE_MARKER = 'Grape Sale:';

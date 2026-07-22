@@ -76,7 +76,7 @@ vi.mock('@/lib/constants', () => ({
   STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG: 1,
   STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES: 225,
 }));
-vi.mock('@/lib/constants/wineFeatures/commonFeaturesUtil', () => ({ getFeatureConfig: () => null }));
+vi.mock('@/lib/services/wine/features/constants/commonFeaturesUtil', () => ({ getFeatureConfig: () => null }));
 vi.mock('@/lib/features/weather', () => ({ getWeatherIcon: () => '', getWeatherLabel: () => '' }));
 vi.mock('@/lib/services/wine/winery/storageVesselAllocationService', () => ({
   getAvailableStorageVessels: mocks.getAvailableStorageVessels,

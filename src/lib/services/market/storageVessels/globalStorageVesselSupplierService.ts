@@ -1,14 +1,5 @@
 import { deterministicSeasonalVariation } from '@/lib/utils';
-import {
-  STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_MIN,
-  STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_RANGE,
-  STORAGE_VESSEL_USED_MARKET_NPC_DIRTY_CHANCE,
-  STORAGE_VESSEL_USED_MARKET_NPC_MAX_AGE_YEARS,
-  STORAGE_VESSEL_USED_MARKET_NPC_MAX_FILL_HISTORY,
-  STORAGE_VESSEL_USED_MARKET_NPC_PROFILES,
-  STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_MIN,
-  STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_RANGE,
-} from '@/lib/constants';
+import { STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_MIN, STORAGE_VESSEL_USED_MARKET_NPC_CONDITION_RANGE, STORAGE_VESSEL_USED_MARKET_NPC_DIRTY_CHANCE, STORAGE_VESSEL_USED_MARKET_NPC_MAX_AGE_YEARS, STORAGE_VESSEL_USED_MARKET_NPC_MAX_FILL_HISTORY, STORAGE_VESSEL_USED_MARKET_NPC_PROFILES, STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_MIN, STORAGE_VESSEL_USED_MARKET_NPC_QUALITY_RANGE } from '@/lib/constants/storageVesselConstants';
 import { ensureNpcUsedStorageVesselListings, type NpcStorageVesselListingInput } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { ensureGlobalMarketSupplierListings, type GlobalMarketSupplierAdapter, type GlobalMarketSupplierDate } from '@/lib/services/market/globalMarketSupplierService';
 import { getStorageVesselNameBase } from './storageVesselNamingService';

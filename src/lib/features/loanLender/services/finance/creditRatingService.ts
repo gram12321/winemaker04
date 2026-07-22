@@ -4,7 +4,7 @@ import { calculateCompanyWeeks, clamp01 } from '@/lib/utils';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 import { vineyardAgePrestigeModifier } from '@/lib/utils/calculator';
 import { calculateConsistencyScore } from '@/lib/utils/consistencyUtils';
-import { CREDIT_RATING_WEIGHTS, CREDIT_RATING_CONSTANTS } from '@/lib/constants';
+import { CREDIT_RATING_WEIGHTS, CREDIT_RATING_CONSTANTS } from '@/lib/constants/creditRatingConstants';
 
 
 // Credit rating calculation interfaces

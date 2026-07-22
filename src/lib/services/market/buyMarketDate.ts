@@ -1,4 +1,4 @@
-import { SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
+import { SEASONS, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 
 export interface BuyMarketGameDate { year: number; season: string; week: number; }
 

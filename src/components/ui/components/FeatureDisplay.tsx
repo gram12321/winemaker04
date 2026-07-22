@@ -20,7 +20,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { UnifiedTooltip, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction, getFeatureDisplaySeverity } from '@/lib/services/wine/features/featureService';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs } from '@/lib/services/wine/features/constants/commonFeaturesUtil';
 
 interface FeatureDisplayProps {
   batch?: WineBatch;

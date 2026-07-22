@@ -17,7 +17,7 @@ import {
 } from '../wine/winery/inventoryService';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 import { formatNumber } from '../../utils/utils';
-import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs } from '../wine/features/constants/commonFeaturesUtil';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { CONTRACT_PRESTIGE_CONFIG } from '../../constants/contractConstants';
 

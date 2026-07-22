@@ -1,6 +1,6 @@
  
 import { GridCard } from '@/components/ui';
-import { SALES_CONSTANTS } from '@/lib/constants';
+import { SALES_CONSTANTS } from '@/lib/constants/constants';
 import { formatPercent } from '@/lib/utils/utils';
 
 export function CustomerTypesTab() {

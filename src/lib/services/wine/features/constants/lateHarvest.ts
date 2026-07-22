@@ -1,5 +1,5 @@
-import { FeatureConfig } from '../../types/wineFeatures';
-import { GameDate, Season } from '../../types/types';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
+import { GameDate, Season } from '@/lib/types/types';
 
 type HarvestTiming = {
   season: Season;

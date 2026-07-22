@@ -1,15 +1,6 @@
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
-import {
-  BUY_MARKET_COUNTERPARTY_LEVELS,
-  BUY_MARKET_RELATIONSHIP_POINTS_PER_CURRENCY,
-  BUY_MARKET_RELATIONSHIP_YEARLY_CAP_BASE,
-  BUY_MARKET_RELATIONSHIP_YEARLY_CAP_MAX_MULTIPLIER,
-  BUY_MARKET_RELATIONSHIP_YEARLY_CAP_VALUE_FLOOR,
-  BUY_MARKET_RELATIONSHIP_YEARLY_CAP_VALUE_LOG_OFFSET,
-  BUY_MARKET_RELATIONSHIP_YEARLY_CAP_VALUE_SCALE,
-  GAME_INITIALIZATION,
-  type BuyMarketCounterpartyRelationshipLevel,
-} from '@/lib/constants';
+import { BUY_MARKET_COUNTERPARTY_LEVELS, BUY_MARKET_RELATIONSHIP_POINTS_PER_CURRENCY, BUY_MARKET_RELATIONSHIP_YEARLY_CAP_BASE, BUY_MARKET_RELATIONSHIP_YEARLY_CAP_MAX_MULTIPLIER, BUY_MARKET_RELATIONSHIP_YEARLY_CAP_VALUE_FLOOR, BUY_MARKET_RELATIONSHIP_YEARLY_CAP_VALUE_LOG_OFFSET, BUY_MARKET_RELATIONSHIP_YEARLY_CAP_VALUE_SCALE, type BuyMarketCounterpartyRelationshipLevel } from '@/lib/constants/buyGoodsConstants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
 import {
@@ -19,8 +10,8 @@ import {
 } from '@/lib/database/market/buyMarketCounterpartyRelationshipsDB';
 import type { BuyMarketOfferSeller } from '@/lib/types/market';
 
-export type { BuyMarketCounterpartyLevelConfig, BuyMarketCounterpartyRelationshipLevel } from '@/lib/constants';
-export { BUY_MARKET_COUNTERPARTY_LEVELS } from '@/lib/constants';
+export type { BuyMarketCounterpartyLevelConfig, BuyMarketCounterpartyRelationshipLevel } from '@/lib/constants/buyGoodsConstants';
+export { BUY_MARKET_COUNTERPARTY_LEVELS } from '@/lib/constants/buyGoodsConstants';
 export type BuyMarketCounterparty = BuyMarketOfferSeller;
 export interface BuyMarketCounterpartyRelationship { buyerCompanyId: string; counterpartyKind: BuyMarketCounterparty['kind']; counterpartyId: string; counterpartyName: string; totalPurchases: number; totalUnitsPurchased: number; loyaltyScore: number; level: BuyMarketCounterpartyRelationshipLevel; lastPurchaseYear: number | null; consecutiveYears: number; yearUnitsPurchased: number; yearRelationshipPoints: number; yearGuardYear: number | null; }
 

@@ -7,8 +7,8 @@ import {
 import {
   RESEARCH_PROJECTS,
   RESEARCH_PROJECT_ECONOMICS,
-  getResearchProject
-} from '@/lib/constants/researchConstants';
+} from '@/lib/features/researchUpgrade/constants/researchCatalog';
+import { getResearchProject } from '@/lib/features/researchUpgrade/services/research/researchCatalogService';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { calculateGrapeDifficulty } from '@/lib/services/wine/features/grapeDifficulty';
 

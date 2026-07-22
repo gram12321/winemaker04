@@ -1,4 +1,4 @@
-import { FeatureConfig } from '../../types/wineFeatures';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
 
 /**
  * Grey Rot Feature

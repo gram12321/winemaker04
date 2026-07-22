@@ -11,7 +11,8 @@ import {
 } from '@/lib/database/winery/storageVesselsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
-import { GAME_INITIALIZATION, STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants/storageVesselConstants';
 import type { StorageVessel } from '@/lib/types/storageVessels';
 import type { WineBatch } from '@/lib/types/types';
 

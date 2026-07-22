@@ -59,6 +59,3 @@ export * from './wine/winery/storageVesselService';
 export * from './wine/winery/storageVesselAllocationService';
 export * from './wine/winery/storageVesselMaintenanceService';
 
-// Constants
-export * from '@/lib/constants';
-

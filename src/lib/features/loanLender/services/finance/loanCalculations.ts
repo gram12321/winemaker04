@@ -3,7 +3,7 @@ import {
   DURATION_INTEREST_MODIFIERS,
   LENDER_TYPE_MULTIPLIERS,
   LOAN_PREPAYMENT,
-} from "@/lib/constants/loanConstants";
+} from "@/lib/features/loanLender/constants/loanConstants";
 import { ECONOMY_INTEREST_MULTIPLIERS } from "@/lib/constants/economyConstants";
 
 export function calculateCreditRatingModifier(creditRating: number): number {

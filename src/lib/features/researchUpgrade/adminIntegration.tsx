@@ -1,6 +1,7 @@
 import { lazy } from 'react';
-import { GAME_INITIALIZATION, type SeasonName } from '@/lib/constants';
-import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { type SeasonName } from '@/lib/constants/timeConstants';
+import { RESEARCH_PROJECTS } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import {
   deleteResearchUnlocksByIds,
   getAllResearchUnlocks,

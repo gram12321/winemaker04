@@ -1,4 +1,4 @@
-import { RESEARCH_PROJECTS, type ResearchPermanentEffect } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchPermanentEffect } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 

@@ -4,7 +4,7 @@ import { acceptWinePresaleContract, rejectContract } from '@/lib/services/sales/
 import { getContractGenerationChance } from '@/lib/services/sales/contractGenerationService';
 import { acceptForwardContract, autoDeliverForwardContract, getForwardContracts, rejectForwardContract } from '@/lib/services/sales/forwardContractService';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
-import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import { FORWARD_CONTRACT_CONFIG } from '@/lib/constants/contractConstants';
 import { formatNumber, formatGameDateFromObject, formatPercent } from '@/lib/utils/utils';
 import { NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';

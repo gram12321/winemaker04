@@ -1,8 +1,8 @@
 // Enhanced game state service that integrates with the new company system
 import { GameState, Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
-import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
-import { CREDIT_RATING } from '../../constants/loanConstants';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
+import { CREDIT_RATING } from '@/lib/features/loanLender/constants/loanConstants';
 import { prestigeFeature } from '@/lib/features/prestige';
 import { companyFeature } from '@/lib/features/company';
 import { Company, loadGameState, saveGameState } from '@/lib/database';

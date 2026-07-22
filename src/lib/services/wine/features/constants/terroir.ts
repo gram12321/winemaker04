@@ -1,5 +1,5 @@
-import { FeatureConfig } from '../../types/wineFeatures';
-import { formatNumber } from '../../utils/utils';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Terroir Expression Feature

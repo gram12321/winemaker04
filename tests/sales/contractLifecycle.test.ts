@@ -63,7 +63,7 @@ vi.mock('@/lib/features/prestige', () => ({
   }
 }));
 
-vi.mock('@/lib/constants/wineFeatures/commonFeaturesUtil', () => ({
+vi.mock('@/lib/services/wine/features/constants/commonFeaturesUtil', () => ({
   getAllFeatureConfigs: mocks.getAllFeatureConfigs
 }));
 

@@ -8,7 +8,7 @@ import {
   WEATHER_STATE_BY_SEASON,
   type WeightedChoice,
 } from '@/lib/constants/weatherConstants';
-import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 import type { GameDate, GameState, Season, WeatherForecastConfidence, WeatherForecastPattern, WeatherIntensity, WeatherState } from '@/lib/types/types';
 import type { ResolveWeatherWeekInput, WeatherWeekContext } from './weatherTypes';
 

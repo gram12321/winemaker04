@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NAMES } from '@/lib/constants';
+import { NAMES } from '@/lib/constants/namesConstants';
 import { getStorageVesselName, getStorageVesselNameBase } from '@/lib/services/market/storageVessels/storageVesselNamingService';
 
 describe('Storage Vessel naming service', () => {

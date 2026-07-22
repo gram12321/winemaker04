@@ -1,4 +1,4 @@
-import { LenderType } from '../types/types';
+import { LenderType } from '@/lib/types/types';
 // Lender search base cost
 export const LENDER_SEARCH_BASE_COST = 2000;
 

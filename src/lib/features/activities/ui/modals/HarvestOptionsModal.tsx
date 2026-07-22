@@ -11,7 +11,8 @@ import { WeatherOperationStatusNotice } from '@/components/ui/components/Weather
 import { notificationService } from '@/lib/services';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import { previewFeatureRisks, getFeatureConfig } from '@/lib/services';
+import { previewFeatureRisks } from '@/lib/services';
+import { getFeatureConfig } from '@/lib/services/wine/features/constants/commonFeaturesUtil';
 import { createWeatherWeekContext, resolveWeatherOperationImpact } from '@/lib/features/weather';
 import { addStorageVesselCapacity, createStorageAllocationPlan, getAvailableStorageVessels, getStoragePlanCapacityLitres, initializeHarvestVolumeLitres, releaseStorageAllocationPlan, releaseUnusedStorageVesselCapacity } from '@/lib/services/wine/winery/storageVesselAllocationService';
 import type { StorageVessel } from '@/lib/types/storageVessels';

@@ -12,7 +12,7 @@ import { formatNumber, getColorClass, getCharacteristicEffectColorInfo, getChara
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
-import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/services/wine/features/constants/commonFeaturesUtil';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 import { calculateYieldMultiplier, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 

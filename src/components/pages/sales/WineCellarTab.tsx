@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { formatNumber, formatPercent, getQualityCategory, getColorClass, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
-import { SALES_CONSTANTS } from '@/lib/constants';
+import { SALES_CONSTANTS } from '@/lib/constants/constants';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
 import { useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';

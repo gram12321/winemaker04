@@ -1,6 +1,6 @@
 import { WineBatch, WineCharacteristics, CustomerType, Vineyard, WineBatchState } from '../../../types/types';
 import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, AccumulationConfig, TriggeredConfig } from '../../../types/wineFeatures';
-import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from './constants/commonFeaturesUtil';
 import { isActionAvailable } from '../winery/wineryService';
 import { getColorClass, getColorCategory } from '../../../utils/utils';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';

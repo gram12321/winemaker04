@@ -1,4 +1,4 @@
-import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchProject } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import { getUnlockedResearchIds } from '@/lib/database';
 import { getCurrentPrestige } from '@/lib/services';
 import { activitiesFeature } from '@/lib/features/activities';

@@ -1,4 +1,4 @@
-﻿import { EconomyPhase, Season, WeatherIntensity, WeatherState, WineBatch, type WineBatchState } from '../../types/types';
+import { EconomyPhase, Season, WeatherIntensity, WeatherState, WineBatch, type WineBatchState } from '../../types/types';
 import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -10,15 +10,7 @@ import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { getGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import {
-  BASE_GRAPE_PRICE_PER_KG,
-  FAVORITE_GRAPE_PRIMARY_BONUS,
-  FAVORITE_GRAPE_SECONDARY_BONUS,
-  GRAPE_SALE_FIXED_MARKET_PENALTY,
-  GRAPE_SALE_PRESTIGE_MAX_BONUS,
-  SELLABLE_BATCH_STATES,
-  SELL_STATE_PRICE_MULTIPLIERS
-} from '@/lib/constants';
+import { BASE_GRAPE_PRICE_PER_KG, FAVORITE_GRAPE_PRIMARY_BONUS, FAVORITE_GRAPE_SECONDARY_BONUS, GRAPE_SALE_FIXED_MARKET_PENALTY, GRAPE_SALE_PRESTIGE_MAX_BONUS, SELLABLE_BATCH_STATES, SELL_STATE_PRICE_MULTIPLIERS } from '@/lib/constants/sellGrapesConstants';
 import { getCooperativeMembership, recordCooperativeSale, getCooperativeFloorPrice } from './cooperativeService';
 import { recordBuyerSale } from '@/lib/services';
 import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';

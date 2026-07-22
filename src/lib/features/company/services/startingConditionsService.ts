@@ -2,7 +2,8 @@ import { FIRST_COMPANY_PLAYER_BALANCE_SEED, FIRST_COMPANY_PLAYER_CASH_CONTRIBUTI
 import { staffFeature } from '@/lib/features/staff';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getPlantedVineyardStatus } from '@/lib/services/vineyard/vineyardService';
-import { TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { formatNumber, getStoryImageSrc } from '@/lib/utils';
 import { addTransaction } from '@/lib/services/finance/financeService';
 import { companyFeature } from '@/lib/features/company';

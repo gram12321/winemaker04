@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import { getUnlockedResearchIds, unlockResearch } from '@/lib/database/core/researchUnlocksDB';
 import { startResearch, completeResearch } from './services/activity/activitymanagers/researchManager';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';

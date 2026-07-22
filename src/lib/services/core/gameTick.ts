@@ -11,7 +11,8 @@ import { generateContracts } from '@/lib/services/sales/contractGenerationServic
 import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
-import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { loanLenderFeature } from '@/lib/features/loanLender';

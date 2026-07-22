@@ -1,4 +1,4 @@
-import { calculateInitialShareCount } from '@/lib/constants/financeConstants';
+import { calculateInitialShareCount } from './constants/shareValuationConstants';
 import { getGameState } from '@/lib/services/core/gameState';
 import type { BoardShareFeature } from './featureTypes';
 

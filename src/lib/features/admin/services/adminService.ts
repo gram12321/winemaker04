@@ -4,7 +4,8 @@ import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, i
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { prestigeFeature } from '@/lib/features/prestige';
 import { formatNumber, getRandomFromArray, randomInt } from '@/lib/utils';
-import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { SEASONS, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 import type { Season } from '@/lib/types/types';
 import { userFeature } from '@/lib/features/user';
 import { getCurrentCompany } from '@/lib/services/core/gameState';

@@ -15,7 +15,7 @@ import { purchaseBuyMarketOffer } from '@/lib/services/market/buyMarketService';
 import { formatNumber, getColorClass, getQualityInfo } from '@/lib/utils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getGameState } from '@/lib/services/core/gameState';
-import { STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES } from '@/lib/constants';
+import { STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES } from '@/lib/constants/storageVesselConstants';
 import {
   BUY_MARKET_COUNTERPARTY_LEVELS,
   getBuyMarketRelationshipPreview,
