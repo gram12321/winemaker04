@@ -38,7 +38,7 @@ flowchart LR
 | Lifecycle | Features, oxidation, aging, prestige | Current taste, price, cellar value, risks |
 | Weather | Weekly state/forecast, site response, economy | Health/ripeness, operation work, market context |
 | Markets | Wine/grape state, economy, weather, loyalty, research | Normalized Buy Market offers, global/local sources, orders, contracts, prices, revenue |
-| Storage | Vessels, allocations, maintenance activities | Capacity, batch volume, equipment and market assets |
+| Storage | Vessels, allocations, maintenance activities; derived contact/expression indexes | Capacity, batch volume, equipment and market assets; future explicit wine-contact effects |
 | Progression | Scores, sales, assets, research | Prestige, achievements, leaderboards, gates |
 
 ## Wine calculation flow
@@ -86,6 +86,7 @@ flowchart LR
 - Winter blocks starting planting; severe conditions slow planting/harvesting work and extreme conditions can pause it. Clearing's annual availability is a vineyard rule.
 - Buy Market previews are side-effect-free. Each offer has one seller/source and buyer-to-seller relationship pricing; adapters retain their own stock, evolution, and base-price rules. Global grape lots are projected from an immutable listing snapshot and game date, so no viewer-specific evolution writes occur.
 - Storage Vessels are canonical assets. Supplier purchases create company-owned assets; used-market purchases transfer a globally listed asset with identity and history intact. Wine contact marks a vessel dirty, but cleanliness is warning-only; Empty Vessel changes only the selected filled volume and Clean Vessel is a separate cancellable activity.
+- Storage exposes normalized `contactIntensity` (capacity-derived) and `vesselExpression` (quality, condition, fill history, and age) as material-neutral inputs. They are not yet consumers of the wine calculation flow.
 - Research changes access, scaling, or explicit upstream inputs; it does not bypass structure/taste computation. `unlocks` and `permanentEffects` are authoritative over descriptive benefit copy.
 - Prestige writes carry explicit source and decay metadata. Staff work has one category-derived primary skill; role/task/grape bonuses are additive and capped at 50%, and XP comes only from persisted applied work.
 

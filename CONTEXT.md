@@ -53,3 +53,5 @@ This is the stable vocabulary and rules snapshot. Use `docs/PROJECT_INFO.md` for
 ### Storage vessel rollout 1
 
 Storage vessels now use a canonical catalogue (`catalogueId`) for legal type/material/capacity combinations. Supplier and global used-market offers are generated from that catalogue; material multipliers affect market pricing only in this rollout. Wine-contact effects remain deferred.
+
+The Storage Vessel domain now derives two normalized, material-neutral inputs for a later wine-contact effect: `contactIntensity` uses a vessel's capacity and `vesselExpression` uses quality, condition, fill history, and age. They do not yet alter anchors, features, structure, taste, score, price, or work.

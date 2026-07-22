@@ -29,6 +29,12 @@ export interface StorageVesselNpcMarketProfile {
 }
 export const STORAGE_VESSEL_SIZES_LITRES = [250, 500, 1000] as const;
 export const STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES = 250;
+/** A 250 L vessel is the maximum baseline contact-intensity reference point. */
+export const STORAGE_VESSEL_CONTACT_INTENSITY_REFERENCE_CAPACITY_LITRES = STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES;
+/** Repeated fills are the main source of a vessel becoming more neutral. */
+export const STORAGE_VESSEL_EXPRESSION_FILL_HALF_LIFE = 4;
+/** Calendar age softens expression more slowly than actual fills. */
+export const STORAGE_VESSEL_EXPRESSION_AGE_HALF_LIFE_YEARS = 20;
 export const STORAGE_VESSEL_SUPPLIERS: readonly StorageVesselSupplierProfile[] = [
   { id: 'cooperage_duval', name: 'Cooperage Duval', basePriceMultiplier: 1.04 },
   { id: 'nordic_cellar_craft', name: 'Nordic Cellar Craft', basePriceMultiplier: 0.97 },
