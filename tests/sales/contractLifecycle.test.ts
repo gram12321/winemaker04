@@ -57,12 +57,13 @@ vi.mock('@/lib/services/core/gameState', () => ({
   getCurrentPrestige: mocks.getCurrentPrestige
 }));
 
-vi.mock('@/lib/services/prestige/prestigeService', () => ({
-  addSalePrestigeEvent: mocks.addSalePrestigeEvent,
-  addFeaturePrestigeEvent: mocks.addFeaturePrestigeEvent
+vi.mock('@/lib/features/prestige', () => ({
+  prestigeFeature: {
+    events: { addSale: mocks.addSalePrestigeEvent, addFeature: mocks.addFeaturePrestigeEvent, addContractOutcome: vi.fn(async () => undefined) },
+  }
 }));
 
-vi.mock('@/lib/constants/wineFeatures/commonFeaturesUtil', () => ({
+vi.mock('@/lib/services/wine/features/constants/commonFeaturesUtil', () => ({
   getAllFeatureConfigs: mocks.getAllFeatureConfigs
 }));
 

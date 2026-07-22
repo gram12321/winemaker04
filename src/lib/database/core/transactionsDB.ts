@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Season, Transaction } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { SEASON_ORDER } from '@/lib/constants';
+import { SEASON_ORDER } from '@/lib/constants/timeConstants';
 import { buildGameDate } from '../dbMapperUtils';
 
 const TRANSACTIONS_TABLE = 'transactions';

@@ -12,7 +12,9 @@ import {
 } from '@/lib/database/market/buyMarketOffersDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAsymmetricalMultiplier, deterministicSeasonalVariation, formatNumber, getNextSeasonDate } from '@/lib/utils';
-import { GAME_INITIALIZATION, STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
+import { STORAGE_VESSEL_AGE_DECAY_SCALE_YEARS, STORAGE_VESSEL_AGE_RESIDUAL_MULTIPLIER, STORAGE_VESSEL_BASE_PRICE, STORAGE_VESSEL_CLEANLINESS_MULTIPLIERS, STORAGE_VESSEL_FILL_HISTORY_PRICE_DECAY, STORAGE_VESSEL_MAX_GENERATED_AGE_YEARS, STORAGE_VESSEL_OFFER_PREFIX, STORAGE_VESSEL_OFFER_RETENTION_CHANCE, STORAGE_VESSEL_REFERENCE_CAPACITY_LITRES, STORAGE_VESSEL_SIZES_LITRES, STORAGE_VESSEL_SUPPLIERS } from '@/lib/constants/storageVesselConstants';
 import { getCompanyStorageVessels, insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
 import { getActiveStorageVesselMarketListings, purchaseUsedStorageVesselListing } from '@/lib/database/market/storageVesselMarketListingsDB';
 import { getBuyGoodsOfferAvailability, getBuyGoodsPriceBreakdown, type BuyGoodsPriceBreakdown } from '@/lib/services/market/buyGoods/buyGoodsPricing';

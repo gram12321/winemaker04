@@ -4,7 +4,7 @@ import {
   BASE_VINEYARD_COUNT_LIMIT,
   RESEARCH_PROJECTS,
   type ResearchProject,
-} from '@/lib/constants/researchConstants';
+} from '@/lib/features/researchUpgrade/constants/researchCatalog';
 
 export type VineyardCapUnlockType = 'vineyard_size' | 'total_vineyard_hectares' | 'vineyard_count';
 

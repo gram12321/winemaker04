@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => {
     insertPrestigeEvent: vi.fn(async () => undefined),
     insertPrestigeEventIfAbsentBySource: vi.fn(async () => true),
     loadVineyards: vi.fn(async () => vineyards),
+    loadWineBatches: vi.fn(async () => []),
     saveVineyard: vi.fn(async (vineyard: Vineyard) => {
       vineyards = vineyards.map(candidate => candidate.id === vineyard.id ? vineyard : candidate);
       return true;
@@ -29,7 +30,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/lib/database/customers/prestigeEventsDB', () => ({
+vi.mock('@/lib/features/prestige/database/prestigeEventsDB', () => ({
   listPrestigeEventsForUI: mocks.listPrestigeEventsForUI,
   listPrestigeEvents: mocks.listPrestigeEvents,
   upsertPrestigeEventBySource: mocks.upsertPrestigeEventBySource,
@@ -42,8 +43,17 @@ vi.mock('@/lib/database/activities/vineyardDB', () => ({
   saveVineyard: mocks.saveVineyard
 }));
 
+vi.mock('@/lib/database/activities/inventoryDB', () => ({
+  loadWineBatches: mocks.loadWineBatches,
+}));
+
+vi.mock('@/lib/utils/companyUtils', () => ({
+  getCurrentCompanyId: () => 'company-1',
+}));
+
 vi.mock('@/lib/services/core/gameState', () => ({
-  getGameState: mocks.getGameState
+  getGameState: mocks.getGameState,
+  getCurrentCompany: () => ({ id: 'company-1' }),
 }));
 
 vi.mock('@/lib/services/finance/financeService', () => ({
@@ -178,9 +188,40 @@ describe('prestige service', () => {
   });
 
   it('uses the shared company value prestige formula without hook-specific doubling', async () => {
-    const { calculateCompanyValuePrestige } = await import('@/lib/services/prestige/prestigeService');
+    const { calculateCompanyValuePrestige } = await import('@/lib/features/prestige/services/prestigeService');
 
     expect(calculateCompanyValuePrestige(1000000, 1000000)).toBeCloseTo(Math.log(2));
+  });
+
+  it('keeps related reads and calculations in the captured company scope', async () => {
+    const {
+      calculateCurrentPrestige,
+      initializeBasePrestigeEvents,
+      updateCellarCollectionPrestige,
+    } = await import('@/lib/features/prestige/services/prestigeService');
+
+    await calculateCurrentPrestige();
+    await initializeBasePrestigeEvents();
+    await updateCellarCollectionPrestige();
+
+    expect(mocks.listPrestigeEventsForUI).toHaveBeenCalledWith('company-1');
+    expect(mocks.loadVineyards).toHaveBeenCalledWith('company-1');
+    expect(mocks.calculateCompanyValue).toHaveBeenCalledWith('company-1');
+    expect(mocks.loadWineBatches).toHaveBeenCalledWith('company-1');
+  });
+
+  it('refreshes company-value prestige from persisted financial data without a caller value', async () => {
+    const { updateCompanyValuePrestige } = await import('@/lib/features/prestige/services/prestigeService');
+
+    await updateCompanyValuePrestige();
+
+    expect(mocks.calculateCompanyValue).toHaveBeenCalledWith('company-1');
+    expect(mocks.upsertPrestigeEventBySource).toHaveBeenCalledWith(
+      'company_finance',
+      'company_net_worth',
+      expect.objectContaining({ amount_base: 0 }),
+      'company-1',
+    );
   });
 
   it('aggregates company-level wine feature events as company prestige and vineyard-level feature events as vineyard prestige', async () => {
@@ -201,7 +242,7 @@ describe('prestige service', () => {
       })
     ]);
 
-    const { calculateCurrentPrestige } = await import('@/lib/services/prestige/prestigeService');
+    const { calculateCurrentPrestige } = await import('@/lib/features/prestige/services/prestigeService');
 
     const result = await calculateCurrentPrestige();
 
@@ -215,7 +256,7 @@ describe('prestige service', () => {
   });
 
   it('soft-caps planting completion prestige near +2 for high-base vineyards', async () => {
-    const { addVineyardAchievementPrestigeEvent } = await import('@/lib/services/prestige/prestigeService');
+    const { addVineyardAchievementPrestigeEvent } = await import('@/lib/features/prestige/services/prestigeService');
 
     await addVineyardAchievementPrestigeEvent('planting', 'vineyard-1', 50);
 
@@ -225,7 +266,7 @@ describe('prestige service', () => {
   });
 
   it('uses fulfilled sale size and dynamic vineyard reputation for feature sale prestige', async () => {
-    const { addFeaturePrestigeEvent } = await import('@/lib/services/prestige/prestigeService');
+    const { addFeaturePrestigeEvent } = await import('@/lib/features/prestige/services/prestigeService');
 
     await addFeaturePrestigeEvent(wineBatch(), terroirSaleConfig, 'sale', {
       customerName: 'North Cellars',
@@ -261,7 +302,7 @@ describe('prestige service', () => {
   });
 
   it('shows research-completion events as research milestones', async () => {
-    const { getEventDisplayData } = await import('@/lib/services/prestige/prestigeService');
+    const { getEventDisplayData } = await import('@/lib/features/prestige/services/prestigeService');
 
     const displayData = getEventDisplayData(prestigeEvent({
       type: 'research',
@@ -280,7 +321,7 @@ describe('prestige service', () => {
   });
 
   it('writes one source-keyed research prestige event', async () => {
-    const { addResearchPrestigeEvent } = await import('@/lib/services/prestige/prestigeService');
+    const { addResearchPrestigeEvent } = await import('@/lib/features/prestige/services/prestigeService');
 
     await addResearchPrestigeEvent('Temperature Controlled Fermentation', 'fermentation_temp_control', 4);
 
@@ -292,6 +333,6 @@ describe('prestige service', () => {
         projectId: 'fermentation_temp_control',
         description: 'Completed research: Temperature Controlled Fermentation',
       },
-    }));
+    }), 'company-1');
   });
 });

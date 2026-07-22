@@ -4,9 +4,8 @@ import { createActivity } from '@/lib/features/activities/services/activitymanag
 import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { calculateTotalBookkeepingWork } from '../workcalculators/bookkeepingWorkCalculator';
 import { notificationService } from '@/lib/services';
-import { v4 as uuidv4 } from 'uuid';
-import { calculateAbsoluteWeeks, formatSeasonChangeNotification } from '@/lib/utils/utils';
-import { insertPrestigeEvent } from '@/lib/database';
+import { formatSeasonChangeNotification } from '@/lib/utils/utils';
+import { prestigeFeature } from '@/lib/features/prestige';
 
 export async function checkAndTriggerBookkeeping(
   newSeason?: string,
@@ -147,20 +146,7 @@ async function handleSpilloverPenalties(spilloverData: {
 
 // Apply prestige penalty for incomplete bookkeeping
 async function applyPrestigePenalty(penalty: number, taskCount: number): Promise<void> {
-  const gameState = getGameState();
-
-  await insertPrestigeEvent({
-    id: uuidv4(),
-    type: 'penalty',
-    amount_base: -penalty,
-    created_game_week: calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!),
-    decay_rate: 0.90,
-    payload: {
-      description: `Incomplete bookkeeping penalty (${taskCount} tasks)`,
-      taskCount
-    },
-    source_id: 'bookkeeping_penalty'
-  });
+  await prestigeFeature.events.recordBookkeepingPenalty(penalty, taskCount);
 }
 
 

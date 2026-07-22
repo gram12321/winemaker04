@@ -1,17 +1,13 @@
 import type { AchievementConfig, AchievementWithStatus, AchievementUnlock, GameState, Transaction, WineOrder } from '@/lib/types/types';
 import { ALL_ACHIEVEMENTS } from './achievementDefinitions';
 import { unlockAchievement, getAllAchievementUnlocks, getAchievementUnlock } from '@/lib/database/core/achievementsDB';
-import {
-  insertPrestigeEventIfAbsentBySource,
-  insertVineyardAchievementPrestigeEventIfAbsent,
-} from '@/lib/database/customers/prestigeEventsDB';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { getGameState } from '@/lib/services/core/gameState';
 import { getCompanyFinancialSnapshot } from '@/lib/services/finance/financeService';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { wineLogFeature } from '@/lib/features/wineLog';
-import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
@@ -20,7 +16,7 @@ import { getSalesSummary, loadWineOrders } from '@/lib/database/customers/salesD
 import { loadWineContracts } from '@/lib/database/sales/contractDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import type { AchievementStats, AchievementWorkspace } from './featureTypes';
-import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/constants/achievementConstants';
+import { ACHIEVEMENT_DEADLINE_YEARS } from '@/lib/features/achievements/constants/achievementConstants';
 
 const EXCLUDED_REVENUE_DESCRIPTIONS = new Set(['Starting Capital', 'Starting Capital Adjustment']);
 const BULK_GRAPE_SALE_MARKER = 'Grape Sale:';
@@ -550,32 +546,19 @@ async function spawnAchievementPrestigeEvents(
 ): Promise<void> {
   if (!achievement.prestige || !context) return;
 
-  const gameState = context.gameState;
-  const currentWeek = calculateAbsoluteWeeks(
-    gameState.week,
-    gameState.season,
-    gameState.currentYear
-  );
-  
   // Spawn company prestige event
   if (achievement.prestige.company) {
-    await insertPrestigeEventIfAbsentBySource({
-      id: uuidv4(),
-      type: 'achievement',
-      amount_base: achievement.prestige.company.baseAmount,
-      created_game_week: currentWeek,
-      decay_rate: achievement.prestige.company.decayRate,
-      source_id: `achievement:${achievement.id}`,
-      payload: {
-        event: 'achievement_unlock',
-        achievementId: achievement.id,
-        achievementName: achievement.name,
-        achievementIcon: achievement.icon,
-        achievementCategory: achievement.category,
-        achievementLevel: achievement.achievementLevel,
-        unlockedValue: unlock.metadata?.value
-      }
-    }, unlock.companyId);
+    await prestigeFeature.events.recordAchievement({
+      companyId: unlock.companyId,
+      achievementId: achievement.id,
+      achievementName: achievement.name,
+      achievementIcon: achievement.icon,
+      achievementCategory: achievement.category,
+      achievementLevel: achievement.achievementLevel,
+      amount: achievement.prestige.company.baseAmount,
+      decayRate: achievement.prestige.company.decayRate,
+      unlockedValue: unlock.metadata?.value,
+    });
   }
   
   // Spawn vineyard prestige events for ALL qualifying vineyards (one per vineyard that meets the condition)
@@ -602,24 +585,18 @@ async function spawnAchievementPrestigeEvents(
     
     // The database uniqueness constraint handles overlapping checks safely.
     for (const vineyard of qualifyingVineyards) {
-      await insertVineyardAchievementPrestigeEventIfAbsent({
-        id: uuidv4(),
-        type: 'vineyard_achievement',
-        amount_base: achievement.prestige.vineyard.baseAmount,
-        created_game_week: currentWeek,
-        decay_rate: achievement.prestige.vineyard.decayRate,
-        source_id: vineyard.id,
-        payload: {
-          achievementId: achievement.id,
-          achievementName: achievement.name,
-          achievementIcon: achievement.icon,
-          achievementCategory: achievement.category,
-          achievementLevel: achievement.achievementLevel,
-          vineyardId: vineyard.id,
-          vineyardName: vineyard.name,
-          event: 'achievement_unlock'
-        }
-      }, unlock.companyId);
+      await prestigeFeature.events.recordVineyardAchievement({
+        companyId: unlock.companyId,
+        achievementId: achievement.id,
+        achievementName: achievement.name,
+        achievementIcon: achievement.icon,
+        achievementCategory: achievement.category,
+        achievementLevel: achievement.achievementLevel,
+        amount: achievement.prestige.vineyard.baseAmount,
+        decayRate: achievement.prestige.vineyard.decayRate,
+        vineyardId: vineyard.id,
+        vineyardName: vineyard.name,
+      });
     }
   }
 }

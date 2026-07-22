@@ -26,7 +26,7 @@ This document is the ownership and boundary map. Stable game rules live in `CONT
 | Staff | `features/staff/`, Staff UI and activity staff seam | staff/team databases and staff constants |
 | Loans | `features/loanLender/`, finance UI injections | loan/lender databases and loan constants |
 | Research | `features/researchUpgrade/`, Research page/admin inspector | research unlock database/constants |
-| Prestige/achievements | prestige services; `features/achievements/` UI | prestige and achievement databases |
+| Prestige/achievements | `features/prestige/` and `features/achievements/` | feature-owned prestige and achievement databases |
 | Player/company | `features/user/`, `features/company/`, Login/gateway/Profile/Settings | player, company, and preference databases |
 | Leaderboards | `features/leaderboards/`, leaderboard page/summaries | highscores database and atomic ranking migration |
 
@@ -48,7 +48,7 @@ This document is the ownership and boundary map. Stable game rules live in `CONT
 | Staff | `features/staff/` | feature-owned Staff workspace; Activity staff surfaces consume the Staff UI seam | `database/core/staffDB.ts`, `database/core/teamDB.ts`, `staff.specialized_roles`, `staff.experience`, staff constants |
 | Loans | `features/loanLender/` | feature-injected finance UI | loan/lender databases, `loanCalculations.ts`, and loan constants |
 | Research | `features/researchUpgrade/`, research constants | `Research.tsx`, admin inspector | research unlock database and view services |
-| Prestige | `services/prestige/` | prestige UI | prestige-event database |
+| Prestige | `features/prestige/` | intent-level `prestigeFeature` lifecycle, reads, events, calculations, and modal composition | feature-owned, explicitly company-scoped prestige-event database |
 | Achievements | `features/achievements/` | feature-owned achievement workspace | achievement database adapter |
 
 ## Feature Seams

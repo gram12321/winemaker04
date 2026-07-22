@@ -8,7 +8,7 @@ import { getGameState } from '@/lib/services/core/gameState';
 import { buildLoanOffer, buildLenderSearchQuote, loadBorrowerLoanCapacity } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { startLenderSearch } from '@/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager';
 import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
-import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION, LENDER_SEARCH } from '@/lib/constants/loanConstants';
+import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION, LENDER_SEARCH } from '@/lib/features/loanLender/constants/loanConstants';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 interface LenderSearchOptionsModalProps {

@@ -7,7 +7,7 @@ import { getGameState } from '@/lib/services/core/gameState';
 import { buildLoanOffer, buildTakeLoanQuote, loadBorrowerLoanCapacity } from '@/lib/features/loanLender/services/finance/loanQuoteService';
 import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
 import { WarningModal } from '@/components/ui';
-import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES } from '@/lib/constants/loanConstants';
+import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES } from '@/lib/features/loanLender/constants/loanConstants';
 
 interface LenderSearchResultsModalProps {
   isOpen: boolean;

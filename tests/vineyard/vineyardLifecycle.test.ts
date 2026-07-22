@@ -127,8 +127,12 @@ vi.mock('@/lib/utils/companyUtils', () => ({
   getCurrentCompanyId: mocks.getCurrentCompanyId
 }));
 
-vi.mock('@/lib/services/prestige/prestigeService', () => ({
-  updateBaseVineyardPrestigeEvent: mocks.updateBaseVineyardPrestigeEvent
+vi.mock('@/lib/features/prestige', () => ({
+  prestigeFeature: {
+    lifecycle: { updateVineyard: mocks.updateBaseVineyardPrestigeEvent },
+    reads: { calculateVineyard: vi.fn(async () => 0), getBaseVineyard: vi.fn(async () => 0) },
+    events: { addVineyardAchievement: vi.fn(async () => undefined) },
+  }
 }));
 
 

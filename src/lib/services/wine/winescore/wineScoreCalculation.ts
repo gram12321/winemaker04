@@ -1,6 +1,6 @@
 import { WineBatch, Vineyard } from '../../../types/types';
 import { SALES_CONSTANTS } from '../../../constants/constants';
-import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
+import { getAllFeatureConfigs } from '../features/constants/commonFeaturesUtil';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../../utils/calculator';
 import { clamp01 } from '../../../utils/utils';
 import { calculateTasteQualityIndex } from '../taste/tasteQualityIndexService';

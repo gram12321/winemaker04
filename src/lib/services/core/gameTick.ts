@@ -1,6 +1,7 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, processWeeklyFeatureRisks, processWeeklyFermentation, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, processEconomyPhaseTransition, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, processWeeklyFeatureRisks, processWeeklyFermentation, processWeeklyBuyMarketLifecycle, refreshBuyMarketForSeason, generateForwardContracts, expireAndDefaultForwardContracts } from '@/lib/services';
 import { staffFeature } from '@/lib/features/staff';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { activitiesFeature } from '@/lib/features/activities';
 import { leaderboardsFeature } from '@/lib/features/leaderboards';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
@@ -10,7 +11,8 @@ import { generateContracts } from '@/lib/services/sales/contractGenerationServic
 import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
-import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
+import { GAME_INITIALIZATION } from '@/lib/constants/constants';
+import { SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants/timeConstants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { loanLenderFeature } from '@/lib/features/loanLender';
@@ -284,7 +286,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     // Update cellar collection prestige (permanent event recalculation)
     (async () => {
       try {
-        await updateCellarCollectionPrestige();
+        await prestigeFeature.lifecycle.updateCellarCollection();
       } catch (error) {
         console.warn('Error during cellar collection prestige update:', error);
       }

@@ -22,7 +22,7 @@ import {
   UnifiedTooltip,
 } from '@/components/ui';
 import { Progress } from '@/components/ui/shadCN/progress';
-import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/constants/researchConstants';
+import { RESEARCH_PROJECTS, type ResearchProject, type UnlockType } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade/feature';
 import {
   buildResearchFootprintSummary,

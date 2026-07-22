@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GridCard, UnifiedTooltip, tooltipStyles } from '@/components/ui';
 import { generateDefaultCharacteristics } from '@/lib/services/wine/characteristics/defaultCharacteristics';
-import { GRAPE_CONST } from '@/lib/constants';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { calculateGrapeDifficulty } from '@/lib/services';
 import { GrapeInfoView } from '../../ui/modals/UImodals/winepediaGrapeInfoModal';
 import { GrapeVariety } from '@/lib/types/types';

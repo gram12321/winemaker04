@@ -1,7 +1,7 @@
 // Wine Features Registry
 // Central registry of all active feature configurations
 
-import { FeatureConfig } from '../../types/wineFeatures';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
 import { OXIDATION_FEATURE } from './oxidation';
 import { GREEN_FLAVOR_FEATURE } from './greenFlavor';
 import { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';

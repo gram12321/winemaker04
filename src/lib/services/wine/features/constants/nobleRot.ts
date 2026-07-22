@@ -1,5 +1,5 @@
-import { FeatureConfig, WineFeature } from '../../types/wineFeatures';
-import { Vineyard } from '../../types/types';
+import { FeatureConfig, WineFeature } from '@/lib/types/wineFeatures';
+import { Vineyard } from '@/lib/types/types';
 
 const clampWeek = (week: number, min: number, max: number): number => {
   if (!Number.isFinite(week)) return min;

@@ -5,7 +5,7 @@ import { getGameState, getCurrentPrestige, getTransactions, notificationService 
 import { researchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { NotificationCategory } from '@/lib/types/types';
-import { SEASON_ORDER } from '@/lib/constants';
+import { SEASON_ORDER } from '@/lib/constants/timeConstants';
 
 /**
  * Helper function to get previous season and year

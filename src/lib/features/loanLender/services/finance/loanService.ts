@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '@/lib/types/types';
 import { NotificationCategory } from '@/lib/types/types';
-import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_LIQUIDATION, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/constants/loanConstants';
-import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
+import { LOAN_DEFAULT, LOAN_LIMIT_SCALING, LOAN_MISSED_PAYMENT_PENALTIES, LOAN_PRESTIGE_FAME_SCALING, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_LIQUIDATION, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/features/loanLender/constants/loanConstants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
+import { SEASON_ORDER } from '@/lib/constants/timeConstants';
 import { getCurrentPrestige, getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { addTransaction, calculateTotalAssets } from '@/lib/services/finance/financeService';
 import { insertLoan, loadActiveLoans, updateLoan, clearLoanWarning, setLoanWarning } from '@/lib/database/core/loansDB';
@@ -12,8 +13,8 @@ import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { calculateCreditRating } from '@/lib/features/loanLender/services/finance/creditRatingService';
 import { calculateEffectiveInterestRate, calculateOriginationFee, calculateSeasonalPayment } from './loanCalculations';
 import { calculateLenderAvailability } from '@/lib/features/loanLender/services/finance/lenderService';
-import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
-import { calculateAbsoluteWeeks, formatNumber, formatPercent, getRandomFromArray } from '@/lib/utils';
+import { prestigeFeature } from '@/lib/features/prestige';
+import { formatNumber, formatPercent, getRandomFromArray } from '@/lib/utils';
 import { loadVineyards, deleteVineyards } from '@/lib/database/activities/vineyardDB';
 import { loadWineBatches, bulkUpdateWineBatches } from '@/lib/database/activities/inventoryDB';
 
@@ -384,23 +385,17 @@ export async function enforceEmergencyQuickLoanIfNeeded(): Promise<void> {
     LOAN_PRESTIGE_FAME_SCALING.EMERGENCY_QUICK
   );
 
-  await insertPrestigeEvent({
-    id: uuidv4(),
-    type: 'company_finance',
-    amount_base: prestigePenalty.amount,
-    created_game_week: calculateAbsoluteWeeks(gameState.week || 1, gameState.season || 'Spring', gameState.currentYear || 2024),
-    decay_rate: EMERGENCY_QUICK_LOAN.PRESTIGE_DECAY_RATE,
-    source_id: null,
-    payload: {
-      reason: 'Emergency Quick Loan',
-      lenderName: penalizedLender.name,
-      lenderType: penalizedLender.type,
-      loanAmount: principalAmount,
-      missedPaymentAmount: negativeBalance,
-      basePrestigePenalty: prestigePenalty.basePenalty,
-      currentPrestige: prestigePenalty.currentPrestige,
-      prestigeFameComponent: prestigePenalty.fameComponent
-    }
+  await prestigeFeature.events.recordFinancePenalty({
+    amount: prestigePenalty.amount,
+    decayRate: EMERGENCY_QUICK_LOAN.PRESTIGE_DECAY_RATE,
+    reason: 'Emergency Quick Loan',
+    lenderName: penalizedLender.name,
+    lenderType: penalizedLender.type,
+    loanAmount: principalAmount,
+    missedPaymentAmount: negativeBalance,
+    basePrestigePenalty: prestigePenalty.basePenalty,
+    currentPrestige: prestigePenalty.currentPrestige,
+    prestigeFameComponent: prestigePenalty.fameComponent,
   });
 
   await notificationService.addMessage(
@@ -1277,29 +1272,22 @@ async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): 
     }
   }
 
-  const gameState = getGameState();
   const prestigePenalty = await calculatePrestigePenaltyBreakdown(
     PRESTIGE_PENALTY,
     LOAN_PRESTIGE_FAME_SCALING.RESTRUCTURE
   );
 
-  await insertPrestigeEvent({
-    id: uuidv4(),
-    type: 'company_finance',
-    amount_base: prestigePenalty.amount,
-    created_game_week: calculateAbsoluteWeeks(gameState.week || 1, gameState.season || 'Spring', gameState.currentYear || 2024),
-    decay_rate: PRESTIGE_DECAY_RATE,
-    source_id: null,
-    payload: {
-      reason: 'Forced Loan Restructure',
-      lenderName: consolidatedLoanId ? lenderName ?? 'Consolidated Lender' : 'Asset Liquidation',
-      lenderType: lenderType ?? 'Bank',
-      loanAmount: consolidatedPrincipal,
-      missedPaymentAmount: totalForcedBalance,
-      basePrestigePenalty: prestigePenalty.basePenalty,
-      currentPrestige: prestigePenalty.currentPrestige,
-      prestigeFameComponent: prestigePenalty.fameComponent
-    }
+  await prestigeFeature.events.recordFinancePenalty({
+    amount: prestigePenalty.amount,
+    decayRate: PRESTIGE_DECAY_RATE,
+    reason: 'Forced Loan Restructure',
+    lenderName: consolidatedLoanId ? lenderName ?? 'Consolidated Lender' : 'Asset Liquidation',
+    lenderType: lenderType ?? 'Bank',
+    loanAmount: consolidatedPrincipal,
+    missedPaymentAmount: totalForcedBalance,
+    basePrestigePenalty: prestigePenalty.basePenalty,
+    currentPrestige: prestigePenalty.currentPrestige,
+    prestigeFameComponent: prestigePenalty.fameComponent,
   });
 
   await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_RESTRUCTURE);
@@ -1798,7 +1786,6 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
  */
 async function applyWarning2Penalties(loan: Loan): Promise<void> {
   const penalties = LOAN_MISSED_PAYMENT_PENALTIES.WARNING_2;
-  const gameState = getGameState();
   const prestigePenalty = await calculatePrestigePenaltyBreakdown(
     penalties.PRESTIGE_PENALTY,
     LOAN_PRESTIGE_FAME_SCALING.WARNING_2
@@ -1817,23 +1804,17 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
   });
 
   // Apply prestige penalty
-  await insertPrestigeEvent({
-    id: uuidv4(),
-    type: 'company_finance',
-    amount_base: prestigePenalty.amount,
-    created_game_week: calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!),
-    decay_rate: penalties.PRESTIGE_DECAY_RATE,
-    source_id: null,
-    payload: {
-      reason: 'Loan Payment Missed (Warning #2)',
-      lenderName: loan.lenderName,
-      lenderType: loan.lenderType,
-      loanAmount: loan.principalAmount,
-      missedPaymentAmount: loan.seasonalPayment,
-      basePrestigePenalty: prestigePenalty.basePenalty,
-      currentPrestige: prestigePenalty.currentPrestige,
-      prestigeFameComponent: prestigePenalty.fameComponent
-    }
+  await prestigeFeature.events.recordFinancePenalty({
+    amount: prestigePenalty.amount,
+    decayRate: penalties.PRESTIGE_DECAY_RATE,
+    reason: 'Loan Payment Missed (Warning #2)',
+    lenderName: loan.lenderName,
+    lenderType: loan.lenderType,
+    loanAmount: loan.principalAmount,
+    missedPaymentAmount: loan.seasonalPayment,
+    basePrestigePenalty: prestigePenalty.basePenalty,
+    currentPrestige: prestigePenalty.currentPrestige,
+    prestigeFameComponent: prestigePenalty.fameComponent,
   });
 
   // Queue bookkeeping penalty work
@@ -2137,8 +2118,6 @@ async function queueLoanPenaltyWork(workUnits: number, lenderName: string, warni
  */
 async function defaultOnLoan(loanId: string): Promise<void> {
   try {
-    const gameState = getGameState();
-
     // Get loan details before updating
     const loan = await loadActiveLoans().then(loans => loans.find(l => l.id === loanId));
     if (!loan) {
@@ -2157,23 +2136,17 @@ async function defaultOnLoan(loanId: string): Promise<void> {
       LOAN_PRESTIGE_FAME_SCALING.DEFAULT
     );
 
-    await insertPrestigeEvent({
-      id: uuidv4(),
-      type: 'company_finance',
-      amount_base: prestigePenalty.amount,
-      created_game_week: calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!),
-      decay_rate: LOAN_DEFAULT.PRESTIGE_DECAY_RATE,
-      source_id: null,
-      payload: {
-        reason: 'Loan Default',
-        lenderName: loan.lenderName,
-        lenderType: loan.lenderType,
-        loanAmount: loan.principalAmount,
-        missedPaymentAmount: loan.seasonalPayment,
-        basePrestigePenalty: prestigePenalty.basePenalty,
-        currentPrestige: prestigePenalty.currentPrestige,
-        prestigeFameComponent: prestigePenalty.fameComponent
-      }
+    await prestigeFeature.events.recordFinancePenalty({
+      amount: prestigePenalty.amount,
+      decayRate: LOAN_DEFAULT.PRESTIGE_DECAY_RATE,
+      reason: 'Loan Default',
+      lenderName: loan.lenderName,
+      lenderType: loan.lenderType,
+      loanAmount: loan.principalAmount,
+      missedPaymentAmount: loan.seasonalPayment,
+      basePrestigePenalty: prestigePenalty.basePenalty,
+      currentPrestige: prestigePenalty.currentPrestige,
+      prestigeFameComponent: prestigePenalty.fameComponent,
     });
 
     // Credit rating will be recalculated automatically with comprehensive system

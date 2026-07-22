@@ -1,7 +1,7 @@
 import type { Loan } from '@/lib/types/types';
 import { NotificationCategory } from '@/lib/types/types';
-import { LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/constants/loanConstants';
-import { TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '@/lib/features/loanLender/constants/loanConstants';
+import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { addTransaction } from '@/lib/services/finance/financeService';
 import { loadActiveLoans, updateLoan, clearLoanWarning } from '@/lib/database/core/loansDB';

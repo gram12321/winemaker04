@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { achievementsFeature } from '@/lib/features/achievements';
-import { getResearchProject } from '@/lib/constants/researchConstants';
+import { getResearchProject } from '@/lib/features/researchUpgrade/services/research/researchCatalogService';
 import { calculatePrestigePenaltyWithFame } from '@/lib/features/loanLender/services/finance/loanService';
 import {
   calculateFeatureSalePrestigeWithReputation,
   calculateSalePrestigeWithAssets,
   calculateVineyardSalePrestige
-} from '@/lib/services/prestige/prestigeCalculator';
+} from '@/lib/features/prestige/services/prestigeCalculator';
 
 const MAX_LAND_VALUE_BENCHMARK = 1_000_000;
 

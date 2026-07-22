@@ -17,7 +17,7 @@ import { calculateCompanyValue } from '../finance/financeService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory, getNextSeasonDate, getRandomFromArray, randomInt } from '../../utils';
 import { getAvailableBuyers } from './sellGrapesService';
-import { addContractOutcomePrestigeEvent } from '../prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { recordBuyerSale } from './grapeBuyerLoyaltyService';
 import { triggerGameUpdate, triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { GrapeForwardContract, ForwardTargetState, Season } from '../../types/types';
@@ -317,7 +317,7 @@ export async function autoDeliverForwardContract(contractId: string): Promise<{ 
     if (fulfilled) {
       try {
         await recordBuyerSale(contract.buyerId, contract.quantityKg, now.year);
-        await addContractOutcomePrestigeEvent({
+        await prestigeFeature.events.addContractOutcome({
           outcome: 'forward_fulfilled',
           baseAmount: CONTRACT_PRESTIGE_CONFIG.forwardFulfillBase,
           description: `Forward contract fulfilled for ${contract.buyerName}`,
@@ -381,7 +381,7 @@ export async function expireAndDefaultForwardContracts(): Promise<number> {
           false
         );
 
-        await addContractOutcomePrestigeEvent({
+        await prestigeFeature.events.addContractOutcome({
           outcome: 'forward_defaulted',
           baseAmount: CONTRACT_PRESTIGE_CONFIG.forwardDefaultBase,
           description: `Forward contract defaulted for ${contract.buyerName}`,

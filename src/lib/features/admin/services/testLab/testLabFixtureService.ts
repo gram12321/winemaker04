@@ -14,7 +14,7 @@ import type { CrushingOptions } from '@/lib/services/wine/characteristics/crushi
 import type { FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { calculateEstimatedPrice, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
-import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeService';
+import { prestigeFeature } from '@/lib/features/prestige';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
@@ -263,7 +263,7 @@ async function applyAndPersistBatchOverrides(
   params: Record<string, string | number | boolean>
 ): Promise<WineBatch> {
   const overriddenBatch = applyTestLabBatchOverrides(batch, params);
-  const prestigeData = await calculateCurrentPrestige();
+  const prestigeData = await prestigeFeature.reads.calculateCurrent();
   const estimatedPrice = calculateEstimatedPrice(
     overriddenBatch,
     vineyard,

@@ -16,6 +16,9 @@ export const GAME_INITIALIZATION = {
   STARTING_PRESTIGE: 1,
 } as const;
 
+/** NPC-backed advance paid whenever a player lists a resellable good globally. */
+export const GLOBAL_MARKET_IMMEDIATE_PAYOUT_MULTIPLIER = 0.7;
+
 // Constants for scaling order generation based on company prestige
 export const PRESTIGE_ORDER_GENERATION = {
   // Base order generation chances

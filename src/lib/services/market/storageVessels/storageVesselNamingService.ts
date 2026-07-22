@@ -1,4 +1,4 @@
-import { NAMES } from '@/lib/constants';
+import { NAMES } from '@/lib/constants/namesConstants';
 import type { StorageVesselMaterial } from '@/lib/types/storageVessels';
 
 const MATERIAL_NAME_COUNTRY: Record<StorageVesselMaterial, keyof typeof NAMES> = {

@@ -83,7 +83,7 @@ vi.mock('@/lib/features/loanLender/services/finance/lenderService', () => ({
   getAllLenders: mocks.getAllLenders
 }));
 
-vi.mock('@/lib/database/customers/prestigeEventsDB', () => ({
+vi.mock('@/lib/features/prestige/database/prestigeEventsDB', () => ({
   insertPrestigeEvent: mocks.insertPrestigeEvent
 }));
 

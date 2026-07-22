@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { STORAGE_VESSEL_OFFER_RETENTION_CHANCE } from '@/lib/constants';
+import { STORAGE_VESSEL_OFFER_RETENTION_CHANCE } from '@/lib/constants/storageVesselConstants';
 import type { BuyMarketOfferRecord } from '@/lib/types/market';
 import { deterministicSeasonalVariation } from '@/lib/utils';
 

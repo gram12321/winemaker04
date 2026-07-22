@@ -4,13 +4,13 @@ import {
   type ResearchProject,
   type ResearchUnlock,
   type UnlockType,
-} from '@/lib/constants/researchConstants';
+} from '@/lib/features/researchUpgrade/constants/researchCatalog';
 import {
   CHAINED_RESEARCH_UNLOCK_TYPES,
   CHAINED_VINEYARD_CAP_UNLOCK_TYPES,
   LADDER_TYPES,
   MARKET_UNLOCK_TYPES,
-} from '@/lib/constants/researchPresentationConstants';
+} from '@/lib/features/researchUpgrade/constants/researchPresentationConstants';
 import { activitiesFeature } from '@/lib/features/activities';
 import {
   formatVineyardCapacityValue,

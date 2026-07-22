@@ -1,6 +1,6 @@
-import { FeatureConfig } from '../../types/wineFeatures';
-import { GRAPE_CONST } from '../grapeConstants';
-import { formatNumber } from '../../utils/utils';
+import { FeatureConfig } from '@/lib/types/wineFeatures';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Bottle Aging Feature

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GrapeVariety } from '@/lib/types/types';
-import { GRAPE_CONST, REGION_ALTITUDE_RANGES, REGION_HEAT_PROFILE } from '@/lib/constants';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
+import { REGION_ALTITUDE_RANGES, REGION_HEAT_PROFILE } from '@/lib/constants/vineyardConstants';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, WineCharacteristicsDisplay, UnifiedTooltip, tooltipStyles } from '@/components/ui';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, formatPercent, getColorClass, getGrapeDifficultyCategory, getGrapeDifficultyDescription } from '@/lib/utils';

@@ -1,4 +1,4 @@
-import { type UnlockType } from '@/lib/constants/researchConstants';
+import { type UnlockType } from '@/lib/features/researchUpgrade/constants/researchCatalog';
 
 export const CHAINED_VINEYARD_CAP_UNLOCK_TYPES: ReadonlySet<UnlockType> = new Set([
   'vineyard_size',
