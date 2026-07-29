@@ -20,7 +20,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { withTestLabPrefix } from './runId';
 import { insertStorageVessels } from '@/lib/database/winery/storageVesselsDB';
-import { createStorageAllocationPlan } from '@/lib/services/wine/winery/storageVesselAllocationService';
+import { createStorageAllocationPlan, initializeHarvestVolumeLitres } from '@/lib/services/wine/winery/storageVesselAllocationService';
 
 export interface TestLabCompanyResult {
   company: Awaited<ReturnType<typeof companyFeature.records.get>>;
@@ -77,6 +77,16 @@ const optionalNumberParam = (
   if (typeof value === 'string' && value.trim() === '') return null;
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+/** Preserve Supabase's diagnostic fields when a test-lab fixture cannot persist. */
+const formatDatabaseError = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (!error || typeof error !== 'object') return String(error);
+  const candidate = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+  const parts = [candidate.message, candidate.details, candidate.hint, candidate.code]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  return parts.length > 0 ? parts.join(' — ') : String(error);
 };
 
 type TestLabFeaturePreset =
@@ -424,14 +434,17 @@ export async function createGrapeBatch(
     purchasedSeason: harvestDate.season,
     purchasedWeek: harvestDate.week,
   }]);
-  if (inserted.error) throw inserted.error;
-  const plan = await createStorageAllocationPlan({ requiredLitres: numberParam(params, 'quantityKg', 1200) * 0.5, vesselIds: [vesselId] });
+  if (inserted.error) {
+    throw new Error(`Could not create the test-lab storage vessel: ${formatDatabaseError(inserted.error)}`);
+  }
+  const quantityKg = numberParam(params, 'quantityKg', 1200);
+  const plan = await createStorageAllocationPlan({ requiredLitres: initializeHarvestVolumeLitres(quantityKg), vesselIds: [vesselId] });
   if (!plan.planId) throw new Error(plan.error || 'Could not reserve test-lab storage vessel.');
   const batch = await createWineBatchFromHarvest(
     result.vineyard.id,
     batchVineyardName,
     result.vineyard.grape || 'Pinot Noir',
-    numberParam(params, 'quantityKg', 1200),
+    quantityKg,
     harvestDate,
     harvestDate,
     plan.planId

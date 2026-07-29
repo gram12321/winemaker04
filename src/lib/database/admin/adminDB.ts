@@ -43,10 +43,29 @@ export async function fullDatabaseReset(): Promise<void> {
   // global market assets first; this is a deliberate development reset.
   await clearGlobalMarket();
 
+  // Delete in dependency order. Storage vessel allocation plans are referenced
+  // by wine_batches, while their usage ledger references batches; deleting the
+  // old flat wine tables first now violates those foreign keys.
   const tables = [
-    'relationship_boosts', 'wine_orders', 'wine_batches', 'vineyards', 'activities',
-    'achievements', 'highscores', 'prestige_events', 'transactions',
-    'company_customers', 'notifications', 'companies', 'users', 'customers', 'wine_log'
+    'relationship_boosts',
+    'wine_orders',
+    'storage_vessel_use_ledger',
+    'wine_log',
+    'storage_vessel_allocations',
+    'wine_batches',
+    'storage_vessel_allocation_plans',
+    'storage_vessels',
+    'vineyards',
+    'activities',
+    'achievements',
+    'highscores',
+    'prestige_events',
+    'transactions',
+    'company_customers',
+    'notifications',
+    'companies',
+    'users',
+    'customers',
   ];
   const errors: string[] = [];
 
