@@ -49,6 +49,14 @@ function getPriceDriverSummary(priceBreakdown: StorageVesselPriceBreakdown): { i
   return { increases, reduces };
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'Could not load Storage Vessel market offers.';
+}
+
 const PriceCalculationTooltip: React.FC<{
   breakdown: StorageVesselPriceBreakdown;
   isSupplierStock: boolean;
@@ -90,6 +98,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [quantityByOfferId, setQuantityByOfferId] = useState<Record<string, number>>({});
   const [errorByOfferId, setErrorByOfferId] = useState<Record<string, string>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sortKey, setSortKey] = useState('quality');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>('desc');
@@ -105,6 +114,10 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       setOffers(nextOffers);
       setCompanyValue(computedCompanyValue);
       setSelectedOfferId((current) => current && nextOffers.some((offer) => offer.id === current) ? current : nextOffers[0]?.id ?? null);
+      setLoadError(null);
+    } catch (error) {
+      console.error('Failed to load Storage Vessel market offers.', error);
+      setLoadError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -264,8 +277,9 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     </div>
 
     <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-sm"><span className="font-medium text-cyan-200">Storage Vessels</span><p className="mt-1 text-xs text-gray-300">Supplier vessels are new stock. Used listings are the same globally listed assets and retain their name, material, condition, cleanliness, age, and fill history when purchased.</p></div>
+    {loadError && <div role="alert" className="flex items-center justify-between gap-3 rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-200"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>Could not load Storage Vessel market offers: {loadError}</span></div><Button variant="outline" onClick={() => void loadOffers()} disabled={loading}>Retry</Button></div>}
     <div className="overflow-hidden rounded border border-gray-700 bg-gray-800/60"><div className="overflow-x-auto"><MarketOfferTable rows={sortedOffers} columns={columns} rowKey={(offer) => offer.id} sortKey={sortKey} sortDirection={sortDirection} onSort={(key) => { if (key !== sortKey) { setSortKey(key); setSortDirection('asc'); } else { setSortDirection((current) => current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc'); } }} selectedRowKey={selectedOffer?.id ?? null} onRowClick={(offer) => setSelectedOfferId(offer.id)} /></div></div>
-    {sortedOffers.length === 0 && <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">No vessel offers are currently available for this source.</div>}
+    {sortedOffers.length === 0 && !loadError && <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">No vessel offers are currently available for this source.</div>}
 
     <DialogFooter><Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button><Button className="bg-amber-600 hover:bg-amber-500" disabled={loading || !selectedOffer} onClick={() => void handlePurchase()}>{loading ? 'Buying...' : `Buy for ${formatNumber(selectedTotal, { currency: true, decimals: 0 })}`}</Button></DialogFooter>
   </>;
