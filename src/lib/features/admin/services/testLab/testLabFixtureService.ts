@@ -416,6 +416,7 @@ export async function createGrapeBatch(
   const vesselId = uuidv4();
   const inserted = await insertStorageVessels([{
     id: vesselId,
+    catalogueId: 'stainless_steel_tank_2500',
     ownerKind: 'company',
     ownerCompanyId: result.company.id,
     vesselType: 'container',
@@ -438,7 +439,7 @@ export async function createGrapeBatch(
     throw new Error(`Could not create the test-lab storage vessel: ${formatDatabaseError(inserted.error)}`);
   }
   const quantityKg = numberParam(params, 'quantityKg', 1200);
-  const plan = await createStorageAllocationPlan({ requiredLitres: initializeHarvestVolumeLitres(quantityKg), vesselIds: [vesselId] });
+  const plan = await createStorageAllocationPlan({ requiredLitres: initializeHarvestVolumeLitres(quantityKg), vesselId });
   if (!plan.planId) throw new Error(plan.error || 'Could not reserve test-lab storage vessel.');
   const batch = await createWineBatchFromHarvest(
     result.vineyard.id,

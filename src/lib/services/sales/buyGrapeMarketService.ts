@@ -967,8 +967,8 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
     } : previewBatch.originSnapshot,
   };
 
-  if (storageVesselIds.length === 0) {
-    return { success: false, error: 'Select enough Storage Vessel capacity before purchasing this batch.' };
+  if (storageVesselIds.length !== 1) {
+    return { success: false, error: 'Select exactly one Storage Vessel for this batch.' };
   }
 
   purchasedBatch.volumeLitres = initializeHarvestVolumeLitres(roundedQuantity);

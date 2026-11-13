@@ -6,6 +6,25 @@ export type StorageVesselOperationalStatus = 'operational' | 'maintenance';
 export type StorageVesselCleanliness = 'clean' | 'dirty';
 export type StorageVesselOccupancy = 'available' | 'reserved' | 'in_use' | 'maintenance';
 export type StorageVesselOwnerKind = 'company' | 'npc_market';
+export type StorageVesselCatalogueId =
+  | 'oak_cask_250'
+  | 'oak_cask_500'
+  | 'oak_cask_1000'
+  | 'chestnut_cask_500'
+  | 'chestnut_cask_1000'
+  | 'chestnut_cask_2000'
+  | 'stainless_steel_tank_500'
+  | 'stainless_steel_tank_1000'
+  | 'stainless_steel_tank_2500'
+  | 'concrete_tank_750'
+  | 'concrete_tank_1500'
+  | 'concrete_tank_3000'
+  | 'ceramic_container_250'
+  | 'ceramic_container_500'
+  | 'ceramic_container_1000'
+  | 'plastic_container_1000'
+  | 'plastic_container_2500'
+  | 'plastic_container_5000';
 export type StorageVesselMarketListingStatus = 'active' | 'sold' | 'retired';
 export type StorageVesselMarketListingOrigin = 'npc_generated' | 'player_sellback';
 export type StorageAllocationPlanStatus = 'reserved' | 'active' | 'released';
@@ -38,8 +57,23 @@ export interface StorageVesselAllocation {
   releasedAt?: string;
 }
 
+export interface StorageVesselUseLedgerEntry {
+  id: string;
+  vesselId: string;
+  allocationPlanId: string;
+  wineBatchId: string;
+  batchStateAtFirstUse: StorageVesselBatchState;
+  initialFilledLitres: number;
+  usedYear: number;
+  usedSeason: string;
+  usedWeek: number;
+}
+
+export type StorageVesselBatchState = 'grapes' | 'must_ready' | 'must_fermenting' | 'bottled';
+
 export interface StorageVessel {
   id: string;
+  catalogueId: StorageVesselCatalogueId;
   vesselName?: string;
   ownerKind: StorageVesselOwnerKind;
   ownerCompanyId?: string;
@@ -97,6 +131,7 @@ export interface StorageVesselOfferPriceSnapshot extends BuyGoodsPriceQuoteInput
 }
 
 export interface StorageVesselOfferPayload {
+  catalogueId: StorageVesselCatalogueId;
   vesselType: StorageVesselType;
   material: StorageVesselMaterial;
   qualityScore: number;

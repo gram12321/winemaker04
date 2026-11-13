@@ -1,10 +1,11 @@
 import { supabase } from '../core/supabase';
-import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan, StorageVesselOccupancy } from '@/lib/types/storageVessels';
+import type { StorageVessel, StorageVesselAllocation, StorageVesselAllocationPlan, StorageVesselOccupancy, StorageVesselUseLedgerEntry } from '@/lib/types/storageVessels';
 
 const TABLE = 'storage_vessels';
 
 interface StorageVesselRow {
   id: string;
+  catalogue_id: StorageVessel['catalogueId'];
   vessel_name: string | null;
   owner_kind: StorageVessel['ownerKind'];
   owner_company_id: string | null;
@@ -27,6 +28,7 @@ interface StorageVesselRow {
 function fromRow(row: StorageVesselRow): StorageVessel {
   return {
     id: row.id,
+    catalogueId: row.catalogue_id,
     vesselName: row.vessel_name ?? undefined,
     ownerKind: row.owner_kind,
     ownerCompanyId: row.owner_company_id ?? undefined,
@@ -51,6 +53,7 @@ function fromRow(row: StorageVesselRow): StorageVessel {
 function toRow(vessel: StorageVessel): StorageVesselRow {
   return {
     id: vessel.id,
+    catalogue_id: vessel.catalogueId,
     vessel_name: vessel.vesselName ?? null,
     owner_kind: vessel.ownerKind,
     owner_company_id: vessel.ownerCompanyId ?? null,
@@ -194,10 +197,22 @@ export async function getCompanyStorageAllocations(companyId: string): Promise<{
   return { data: ((data ?? []) as unknown as AllocationRow[]).map(fromAllocationRow), error };
 }
 
+export async function getCompanyStorageVesselUseLedger(companyId: string): Promise<{ data: StorageVesselUseLedgerEntry[]; error: unknown }> {
+  const { data, error } = await supabase.from('storage_vessel_use_ledger').select('*, storage_vessels!inner(owner_company_id)').eq('storage_vessels.owner_company_id', companyId).order('used_year').order('used_week');
+  return {
+    data: ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id), vesselId: String(row.vessel_id), allocationPlanId: String(row.allocation_plan_id), wineBatchId: String(row.wine_batch_id),
+      batchStateAtFirstUse: row.batch_state_at_first_use as StorageVesselUseLedgerEntry['batchStateAtFirstUse'], initialFilledLitres: Number(row.initial_filled_litres),
+      usedYear: Number(row.used_year), usedSeason: String(row.used_season), usedWeek: Number(row.used_week),
+    })),
+    error,
+  };
+}
+
 export async function reserveStorageVesselPlan(input: {
   companyId: string;
   requiredLitres: number;
-  vesselIds: string[];
+  vesselId: string;
   activityId?: string;
   createdYear: number;
   createdSeason: string;
@@ -206,7 +221,7 @@ export async function reserveStorageVesselPlan(input: {
   const { data, error } = await supabase.rpc('reserve_storage_vessel_plan', {
     p_company_id: input.companyId,
     p_required_litres: input.requiredLitres,
-    p_vessel_ids: input.vesselIds,
+    p_vessel_ids: [input.vesselId],
     p_activity_id: input.activityId ?? null,
     p_created_year: input.createdYear,
     p_created_season: input.createdSeason,
@@ -225,21 +240,10 @@ export async function addStorageVesselPlanAllocations(companyId: string, planId:
 }
 
 export async function activateStorageVesselPlan(companyId: string, planId: string, batchId: string, volumeLitres: number, date: { year: number; season: string; week: number }) {
-  const { data, error } = await supabase
-    .from('storage_vessel_allocation_plans')
-    .update({
-      wine_batch_id: batchId,
-      status: 'active',
-      required_litres: volumeLitres,
-      activated_year: date.year,
-      activated_season: date.season,
-      activated_week: date.week,
-    })
-    .eq('company_id', companyId)
-    .eq('id', planId)
-    .eq('status', 'reserved')
-    .select('*')
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('activate_storage_vessel_plan_for_batch', {
+    p_company_id: companyId, p_plan_id: planId, p_batch_id: batchId, p_volume_litres: volumeLitres,
+    p_year: date.year, p_season: date.season, p_week: date.week,
+  });
   return { data: data ? fromPlanRow(data as unknown as AllocationPlanRow) : null, error };
 }
 

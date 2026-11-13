@@ -30,6 +30,7 @@ export async function createPurchasedStorageVessels(
   const safeQuantity = Math.max(1, Math.round(quantity));
   const vessels: StorageVessel[] = Array.from({ length: safeQuantity }, () => ({
     id: uuidv4(),
+    catalogueId: payload.catalogueId,
     ownerKind: 'company',
     ownerCompanyId: companyId,
     vesselType: payload.vesselType,

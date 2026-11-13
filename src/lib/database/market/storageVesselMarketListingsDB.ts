@@ -50,7 +50,7 @@ function mapMarketVessel(row: Record<string, unknown>): StorageVessel {
   return {
     id: String(row.id), vesselName: typeof row.vessel_name === 'string' ? row.vessel_name : undefined,
     ownerKind: row.owner_kind as StorageVessel['ownerKind'], ownerCompanyId: typeof row.owner_company_id === 'string' ? row.owner_company_id : undefined,
-    vesselType: row.vessel_type as StorageVessel['vesselType'], material: row.material as StorageVessel['material'],
+    catalogueId: row.catalogue_id as StorageVessel['catalogueId'], vesselType: row.vessel_type as StorageVessel['vesselType'], material: row.material as StorageVessel['material'],
     qualityScore: Number(row.quality_score), condition: Number(row.condition), fillHistory: Number(row.fill_history),
     productionYear: Number(row.production_year), capacityLitres: Number(row.capacity_litres), acquisitionPrice: Number(row.acquisition_price),
     sourceOfferId: String(row.source_offer_id), operationalStatus: row.operational_status as StorageVessel['operationalStatus'],
@@ -61,6 +61,8 @@ function mapMarketVessel(row: Record<string, unknown>): StorageVessel {
 
 export interface NpcStorageVesselListingInput {
   generationKey: string;
+  catalogueId: StorageVessel['catalogueId'];
+  vesselType: StorageVessel['vesselType'];
   sellerCounterpartyId: string;
   sellerName: string;
   vesselName: string;

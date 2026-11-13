@@ -4,7 +4,7 @@ import { calculateUsedStorageVesselMarketValue, isUsedStorageVesselListingVisibl
 import type { StorageVessel, StorageVesselMarketListing } from '@/lib/types/storageVessels';
 
 const vessel = (material: StorageVessel['material'] = 'oak'): StorageVessel => ({
-  id: 'vessel-1', vesselName: 'Alice #1', ownerKind: 'npc_market', vesselType: 'cask', material,
+  id: 'vessel-1', catalogueId: material === 'oak' ? 'oak_cask_500' : 'stainless_steel_tank_500', vesselName: 'Alice #1', ownerKind: 'npc_market', vesselType: material === 'oak' ? 'cask' : 'steel_tank', material,
   qualityScore: 0.7, condition: 0.8, fillHistory: 3, productionYear: 2020, capacityLitres: 500,
   acquisitionPrice: 1000, sourceOfferId: 'npc', operationalStatus: 'operational', cleanliness: 'dirty', occupancy: 'available',
   purchasedYear: 2026, purchasedSeason: 'Spring', purchasedWeek: 1,
