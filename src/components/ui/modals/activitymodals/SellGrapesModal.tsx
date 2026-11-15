@@ -104,7 +104,7 @@ const CooperativeMembershipPanel: React.FC<{
       </div>
 
       {/* Stats row */}
-      <div className="flex gap-4 text-gray-400">
+      <div className="flex flex-wrap gap-4 text-gray-400">
         <span>Streak: <strong className="text-white">{streak} {streak === 1 ? 'year' : 'years'}</strong></span>
         <span>Total sales: <strong className="text-white">{totalSales}</strong></span>
         {membership?.totalKgSold ? (
@@ -168,13 +168,13 @@ const BuyerLoyaltyPanel: React.FC<{
         <span className={`font-bold ${getLoyaltyColor(level)}`}>{config.name}</span>
       </div>
 
-      <div className="flex gap-4 text-gray-400">
+      <div className="flex flex-wrap gap-4 text-gray-400">
         <span>Total sales: <strong className="text-white">{(loyalty?.totalSales ?? 0)}</strong></span>
         <span>Streak: <strong className="text-white">{(loyalty?.consecutiveYears ?? 0)} {(loyalty?.consecutiveYears ?? 0) === 1 ? 'year' : 'years'}</strong></span>
         <span>Total sold: <strong className="text-white">{(loyalty?.totalKgSold ?? 0).toLocaleString()} kg</strong></span>
       </div>
 
-      <div className="flex gap-4 text-gray-300">
+      <div className="flex flex-wrap gap-4 text-gray-300">
         <span>Loyalty score: <strong className="text-white">{score.toLocaleString()}</strong></span>
         <span>Relationship growth cap (year): <strong className="text-white">{(loyalty?.yearLoyaltyPoints ?? 0).toLocaleString()} / {yearlyCap.toLocaleString()}</strong></span>
       </div>
@@ -607,6 +607,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           return (
             <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
               <Slider
+                aria-label={`Percentage of grapes to sell to ${buyer.name}`}
                 value={[Math.min(buyerQuantity, buyerMaxSelectablePercent)]}
                 onValueChange={([value]) => {
                   const safePercent = Math.max(1, Math.min(Math.round(value ?? 100), buyerMaxSelectablePercent));
@@ -621,6 +622,19 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                 className="py-1"
                 disabled={buyerMaxSelectableKg <= 0}
               />
+              <label className="block text-xs text-gray-400">
+                Sale percentage
+                <input type="number" inputMode="numeric" key={buyerQuantity} defaultValue={Math.min(buyerQuantity, buyerMaxSelectablePercent)}
+                  min={1} max={buyerMaxSelectablePercent} step={1} disabled={buyerMaxSelectableKg <= 0}
+                  onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                  onBlur={(event) => {
+                    const value = event.currentTarget.valueAsNumber;
+                    const safePercent = Number.isFinite(value) ? Math.max(1, Math.min(Math.round(value), buyerMaxSelectablePercent)) : Math.min(buyerQuantity, buyerMaxSelectablePercent);
+                    event.currentTarget.value = String(safePercent);
+                    setSalePercentageByBuyerId((current) => ({ ...current, [buyer.id]: safePercent }));
+                  }}
+                  className="mt-1 min-h-11 w-full rounded border border-gray-600 bg-gray-900 px-2 py-2 text-base text-white" />
+              </label>
               <div className="flex justify-between text-[11px] text-gray-400">
                 <span>{Math.max(1, Math.min(buyerQuantity, buyerMaxSelectablePercent))}%</span>
                 <span className="text-white">{Math.max(1, Math.min(buyerMaxSelectableKg, Math.round((batch.quantity * buyerQuantity) / 100))).toLocaleString()} kg</span>
@@ -636,7 +650,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
   return (
     <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[96rem] max-h-[calc(100dvh-1rem)] p-3 sm:p-6 overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
           <DialogDescription className="sr-only">
@@ -696,7 +710,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             <div className="space-y-3">
               {isBulkSettlement ? (
                 <div className="bg-gray-800 rounded p-3 space-y-3 text-sm border border-cyan-800/70">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap gap-2 items-center justify-between">
                     <p className="text-cyan-200 font-medium uppercase tracking-wide text-xs">Global market settlement</p>
                     <span className="text-xs text-gray-400">Bulk Grape Merchant</span>
                   </div>
@@ -712,7 +726,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                 </div>
               ) : pricing && (
                 <div className="bg-gray-800 rounded p-3 space-y-3 text-sm border border-gray-700/70">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap gap-2 items-center justify-between">
                     <p className="text-gray-400 font-medium uppercase tracking-wide text-xs">Price Summary</p>
                     <span className="text-xs text-gray-400">{selectedBuyer?.name ?? 'Buyer'}</span>
                   </div>
@@ -749,7 +763,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             <p className="text-sm font-semibold text-white">Offers</p>
             <div className="flex flex-wrap items-center gap-2">
               <select
-                className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white"
+                className="min-h-11 max-w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white"
                 value={grapeFilter}
                 onChange={(event) => setGrapeFilter(event.target.value)}
               >
@@ -796,7 +810,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           <Button
             onClick={handleSell}
             disabled={isSelling || !selectedBuyer || (!isBulkSettlement && !pricing) || exceedsBuyerCap || selectedQuantityKg <= 0}
-            className="bg-amber-600 hover:bg-amber-500 text-white"
+            className="min-h-11 h-auto whitespace-normal bg-amber-600 hover:bg-amber-500 text-white"
           >
             {isSelling ? 'Selling…' : isBulkSettlement
               ? `Settle for ${formatNumber(globalListingPayout, { currency: true, decimals: 0 })} and list globally`

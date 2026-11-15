@@ -18,13 +18,13 @@ export function CountriesTab() {
           >
             <div className="space-y-4">
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-2">
                   <span className="font-medium text-gray-700">Purchasing Power:</span>
                   <span className={`font-bold ${getColorClass(data.purchasingPower)}`}>
                     {formatPercent(data.purchasingPower, 0, true)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-2">
                   <span className="font-medium text-gray-700">Wine Tradition:</span>
                   <span className={`font-bold ${getColorClass(data.wineTradition)}`}>
                     {formatPercent(data.wineTradition, 0, true)}
@@ -36,7 +36,7 @@ export function CountriesTab() {
                 <h4 className="font-medium text-gray-700 mb-2">Customer Type Distribution:</h4>
                 <div className="space-y-1">
                   {Object.entries(data.customerTypeWeights).map(([type, weight]) => (
-                    <div key={type} className="flex justify-between items-center text-sm">
+                    <div key={type} className="flex flex-wrap justify-between items-center gap-2 text-sm">
                       <span className="text-gray-600">{type}:</span>
                       <span className="font-medium">{formatPercent(weight, 0, true)}</span>
                     </div>

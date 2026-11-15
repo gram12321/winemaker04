@@ -188,8 +188,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
 
   // Render
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <ActivityOptionsModal
+    <ActivityOptionsModal
         onClose={onClose}
         title={`Plant Vineyard: ${vineyard.name}`}
         subtitle={`Configure planting options for this ${vineyard.hectares} hectare vineyard. Work calculations include grape suitability and altitude factors.`}
@@ -246,8 +245,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
             </div>
           );
         })()}
-      </ActivityOptionsModal>
-    </div>
+    </ActivityOptionsModal>
   );
 };
 

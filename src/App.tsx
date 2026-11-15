@@ -287,7 +287,7 @@ function App({ adminFeature }: AppProps) {
   // Show login page if no company is selected
   if (!isGameInitialized && currentPage === 'login') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+      <div className="min-h-dvh bg-gradient-to-br from-amber-50 to-orange-100">
         <Login onCompanySelected={handleCompanySelected} onCompanyCreated={handleCompanyCreated} forcePlayerSelection={forcePlayerSelection} />
         <Toaster />
       </div>
@@ -295,7 +295,7 @@ function App({ adminFeature }: AppProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+    <div className="min-h-dvh bg-gradient-to-br from-amber-50 to-orange-100">
       <Header
         currentPage={currentPage}
         onNavigate={handleNavigate}
@@ -305,7 +305,7 @@ function App({ adminFeature }: AppProps) {
         adminAvailable={Boolean(adminFeature?.isAvailable())}
       />
 
-      <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 mx-auto w-full max-w-7xl">
+      <main className="flex-1 min-w-0 px-3 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-4 md:px-6 md:pt-6 lg:px-8 lg:pb-6 mx-auto w-full max-w-7xl">
         {renderCurrentPage()}
       </main>
 

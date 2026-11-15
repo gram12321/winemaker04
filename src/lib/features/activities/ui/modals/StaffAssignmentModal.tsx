@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 // Staff Assignment Modal
 // Modal for assigning staff members to activities
 
@@ -139,30 +140,25 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-xs sm:max-w-2xl lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl lg:max-w-4xl overflow-hidden flex flex-col scrollbar-styled w-[calc(100%-1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] min-w-0 gap-0 p-0 [&>button]:text-gray-200">
         {/* Header */}
-        <div className="flex justify-between items-start p-3 sm:p-6 border-b border-gray-700">
+        <div className="flex justify-between items-start shrink-0 gap-3 p-3 pr-16 sm:p-6 sm:pr-16 border-b border-gray-700">
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg sm:text-xl font-bold text-white">Assign Staff</h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-1 truncate">{activity.title}</p>
+            <DialogTitle className="text-lg sm:text-xl font-bold text-white">Assign Staff</DialogTitle>
+            <p className="text-xs sm:text-sm text-gray-400 mt-1 break-words">{activity.title}</p>
             {defaultTeam && (
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <span>{defaultTeam.icon}</span>
-                <span className="italic truncate">
+                <span className="italic break-words">
                   Auto-assigns team: {defaultTeam.name} ({teamMemberCount} {teamMemberCount === 1 ? 'member' : 'members'})
                 </span>
               </div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none ml-2 flex-shrink-0"
-          >
-            ×
-          </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-styled">
         {/* Work Preview */}
         <div className="bg-gray-800 p-3 sm:p-4 border-b border-gray-700">
           <h3 className="text-sm font-semibold text-white mb-3">Work Progress Preview</h3>
@@ -244,7 +240,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
         </div>
 
         {/* Staff List */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 scrollbar-styled">
+        <div className="p-3 sm:p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-white text-sm sm:text-base">Available Staff ({allStaff.length})</h3>
           </div>
@@ -282,11 +278,11 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                       className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${isSelected ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'
                         }`}
                     >
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex flex-wrap gap-2 items-start justify-between mb-3">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className={`${getFlagIcon(staff.nationality)} text-base flex-shrink-0`}></span>
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-white truncate">{staff.name}</div>
+                            <div className="text-sm font-medium text-white break-words">{staff.name}</div>
                             <div className="text-xs text-gray-400">{skillInfo.name}</div>
                             <div className="text-xs text-gray-500">{staff.nationality}</div>
                           </div>
@@ -297,7 +293,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleStaff(staff.id)}
-                            className="rounded border-gray-500 bg-gray-700"
+                            aria-label={`Assign ${staff.name}`}
+                            className="h-6 w-6 rounded border-gray-500 bg-gray-700"
                           />
                         </div>
                       </div>
@@ -313,7 +310,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
               </div>
 
               {/* Desktop Table Layout */}
-              <div className="hidden sm:block bg-gray-800 rounded-lg overflow-hidden">
+              <div className="hidden sm:block bg-gray-800 rounded-lg overflow-x-auto">
                 <table className="min-w-full">
                   <thead className="bg-gray-700">
                     <tr>
@@ -328,7 +325,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                           type="checkbox"
                           checked={selectAll}
                           onChange={handleSelectAll}
-                          className="rounded border-gray-500 bg-gray-700"
+                          aria-label="Select all staff"
+                          className="h-6 w-6 rounded border-gray-500 bg-gray-700"
                         />
                       </th>
                     </tr>
@@ -358,7 +356,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                               type="checkbox"
                               checked={selectedStaffIds.includes(staff.id)}
                               onChange={() => handleToggleStaff(staff.id)}
-                              className="rounded border-gray-500 bg-gray-700"
+                              aria-label={`Assign ${staff.name}`}
+                              className="h-6 w-6 rounded border-gray-500 bg-gray-700"
                             />
                           </td>
                         </tr>
@@ -371,8 +370,9 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           )}
         </div>
 
+        </div>
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-3 sm:p-6 border-t border-gray-700">
+        <div className="shrink-0 [&_button]:min-h-11 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-3 sm:p-6 border-t border-gray-700">
           <Button
             variant="outline"
             onClick={onClose}
@@ -387,8 +387,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
             Assign {selectedStaffIds.length} Staff
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

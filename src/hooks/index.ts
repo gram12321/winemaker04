@@ -9,3 +9,4 @@ export * from './useWineStructureIndex';
 export * from './useWineCombinedScore';
 export { useCustomerData } from './useCustomerData';
 export { useWinePriceCalculator } from './useWinePriceCalculator';
+export { useIsMobile, useNeedsTouchDisclosure } from './use-mobile';

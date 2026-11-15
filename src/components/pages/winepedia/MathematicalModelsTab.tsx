@@ -304,7 +304,7 @@ export function MathematicalModelsTab() {
       <div className="space-y-8">
 
         {/* Skewed Multiplier */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Skewed Multiplier</h3>
           <p className="text-gray-600 mb-4">
             Maps 0-1 input to 0-1 output heavily skewed toward 0 with exponential approach to 1.
@@ -349,9 +349,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.skewedData}>
+                    <LineChart accessibilityLayer data={chartData.skewedData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
@@ -369,7 +369,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* Normalize1000To01WithTail */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Normalization (Normalize1000To01WithTail)</h3>
           <p className="text-gray-600 mb-4">
             Converts raw values (0-1000+) to a normalized 0-1 scale with gentler low-end boost and the same high-tail compression as the original.
@@ -394,9 +394,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.normalizationDataNew}>
+                    <LineChart accessibilityLayer data={chartData.normalizationDataNew}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="input" domain={[0, 2000]} tickFormatter={(value) => formatNumber(value, { decimals: 0 })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
@@ -424,7 +424,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* Inverted Skewed Multiplier */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Inverted Skewed Multiplier</h3>
           <p className="text-gray-600 mb-4">
             Mathematical inverse of Skewed Multiplier. Maps 0-1 input to 0-1 output heavily skewed toward 1.
@@ -458,9 +458,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.invertedSkewedData}>
+                    <LineChart accessibilityLayer data={chartData.invertedSkewedData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
@@ -488,7 +488,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* Asymmetrical Multiplier */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Asymmetrical Multiplier</h3>
           <p className="text-gray-600 mb-4">
             Asymmetrical multiplier using multi-segment scaling with smooth transitions.
@@ -538,9 +538,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.asymmetricalData}>
+                    <LineChart accessibilityLayer data={chartData.asymmetricalData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis scale="log" domain={[1, 100000000]} tickFormatter={(value) => {
@@ -574,7 +574,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* NEW: Asymmetrical 0-1 Scaler */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Asymmetrical 0-1 Scaler</h3>
           <p className="text-gray-600 mb-4">
             Maps 0-1 → 0-1 with fast rise around 0.3-0.4 and early saturation by ~0.75.
@@ -602,9 +602,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.asymmetricalScalerData}>
+                    <LineChart accessibilityLayer data={chartData.asymmetricalScalerData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
@@ -631,7 +631,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* NormalizeScrewed1000To01WithTail */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Prestige Normalization (NormalizeScrewed1000To01WithTail)</h3>
           <p className="text-gray-600 mb-4">
             Converts raw prestige values (0-1000+) to a normalized 0-1 scale with "screwed" distribution and tail compression.
@@ -662,9 +662,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.prestigeNormalizationData}>
+                    <LineChart accessibilityLayer data={chartData.prestigeNormalizationData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="prestige" domain={[0, 2000]} tickFormatter={(value) => formatNumber(value, { decimals: 0 })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
@@ -703,7 +703,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* Symmetrical Multiplier */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Symmetrical Multiplier</h3>
           <p className="text-gray-600 mb-4">
             Creates bell curve distribution where input 0.5 maps to exactly 1.0x multiplier.
@@ -733,9 +733,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.symmetricalData}>
+                    <LineChart accessibilityLayer data={chartData.symmetricalData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0.7, 1.3]} allowDataOverflow={false} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true }) + 'x'} />
@@ -763,7 +763,7 @@ export function MathematicalModelsTab() {
         </div>
 
         {/* Vineyard Age Prestige Modifier */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Vineyard Age Prestige Modifier</h3>
           <p className="text-gray-600 mb-4">
             Calculates prestige modifier based on vine age using different mathematical approaches for different age ranges.
@@ -791,9 +791,9 @@ export function MathematicalModelsTab() {
               </div>
               <div className="mt-3">
                 <h5 className="font-semibold mb-2">Curve Shape:</h5>
-                <div className="h-48 w-full">
+                <div className="h-48 min-w-0 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.ageData}>
+                    <LineChart accessibilityLayer data={chartData.ageData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(value) => `${value}y`} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
@@ -822,7 +822,7 @@ export function MathematicalModelsTab() {
 
 
         {/* Yield Projection (Ripeness and Age) */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">Yield Projection</h3>
           <p className="text-gray-600 mb-4">
             Expected harvest yield (kg) under fixed assumptions (1 ha, density {activitiesFeature.config.defaultVineDensity}, Chardonnay, Bordeaux, health 1.0).
@@ -831,9 +831,9 @@ export function MathematicalModelsTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Yield vs Ripeness</h4>
-              <div className="h-48 w-full">
+              <div className="h-48 min-w-0 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData.yieldByRipeness}>
+                  <LineChart accessibilityLayer data={chartData.yieldByRipeness}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="ripeness" domain={[0, 1]} tickFormatter={(v) => formatNumber(v, { decimals: 1, forceDecimals: true })} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
@@ -848,9 +848,9 @@ export function MathematicalModelsTab() {
             </div>
             <div>
               <h4 className="font-semibold mb-2">Yield vs Age</h4>
-              <div className="h-48 w-full">
+              <div className="h-48 min-w-0 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData.yieldByAge}>
+                  <LineChart accessibilityLayer data={chartData.yieldByAge}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
@@ -866,7 +866,7 @@ export function MathematicalModelsTab() {
           </div>
         </div>
         {/* XP Progress Model */}
-        <div className="border rounded-lg p-6">
+        <div className="min-w-0 border rounded-lg p-3 sm:p-6">
           <h3 className="text-xl font-semibold mb-4">XP Progress Model (normalizeXP)</h3>
           <p className="text-gray-600 mb-4">
             Calculates visual progress (0-1) based on normalized XP (XP/1000).

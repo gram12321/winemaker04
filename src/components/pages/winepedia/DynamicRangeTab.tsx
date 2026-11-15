@@ -73,13 +73,13 @@ export function DynamicRangeTab() {
 
         <section>
           <h3 className="text-lg font-medium">Interactive Range Adjustments</h3>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
             <p className="text-sm text-gray-600">
               Adjust sliders to see how characteristics affect each other's ranges.
             </p>
             <button
               onClick={() => setSliderValues(calculateMidpointCharacteristics())}
-              className={RESET_BUTTON_CLASSES}
+              className={`${RESET_BUTTON_CLASSES} min-h-11 whitespace-normal`}
             >
               Reset to Midpoints
             </button>

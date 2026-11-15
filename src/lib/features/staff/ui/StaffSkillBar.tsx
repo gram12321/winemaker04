@@ -73,7 +73,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="w-20 shrink-0 text-xs text-gray-600">{label}</div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <UnifiedTooltip
           content={buildTooltipContent()}
           title={`${label} Skill Details`}
@@ -84,8 +84,9 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
           density="compact"
           showMobileHint={true}
           mobileHintVariant="corner-dot"
-          triggerClassName={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}
+          triggerClassName="flex min-h-11 w-full items-center"
         >
+          <div className="flex min-h-11 w-full items-center">
           <div className={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}>
             <div
               className="absolute top-0 bottom-0"
@@ -109,6 +110,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
                 }}
               />
             )}
+          </div>
           </div>
         </UnifiedTooltip>
       </div>

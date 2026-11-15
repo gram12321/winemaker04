@@ -72,13 +72,13 @@ export const Equipment: React.FC<EquipmentProps> = () => {
   }, [activities, sellRequest, withLoading]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="min-w-0 space-y-4 break-words">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Equipment</h1>
           <p className="text-sm text-gray-500">Owned cellar equipment and production capacity.</p>
         </div>
-        <Button onClick={() => setIsBuyMarketOpen(true)} className="bg-amber-600 hover:bg-amber-500">Buy Equipment</Button>
+        <Button onClick={() => setIsBuyMarketOpen(true)} className="min-h-11 bg-amber-600 hover:bg-amber-500">Buy Equipment</Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -91,7 +91,7 @@ export const Equipment: React.FC<EquipmentProps> = () => {
 
       <section className="overflow-hidden rounded-lg border bg-white shadow-sm">
         <div className="border-b px-4 py-3"><h2 className="font-semibold">Cellar Vessels</h2></div>
-        <div className="hidden grid-cols-[1.5fr_0.8fr_1fr_0.8fr_1fr_0.8fr_1fr_0.7fr_1fr_1.2fr_1.8fr_auto] gap-2 border-b bg-gray-50 px-4 py-2 text-xs font-medium uppercase text-gray-500 md:grid">
+        <div className="hidden grid-cols-[1.5fr_0.8fr_1fr_0.8fr_1fr_0.8fr_1fr_0.7fr_1fr_1.2fr_1.8fr_auto] gap-2 border-b bg-gray-50 px-4 py-2 text-xs font-medium uppercase text-gray-500 2xl:grid">
           <span>Vessel ID</span><span>Age</span><span>Material</span><span>Size</span><span>Quality</span><span>Condition</span><span>Cleanliness</span><span>Fills</span><span>Availability</span><span>Acquisition</span><span>Contents</span><span>Actions</span>
         </div>
         <div className="divide-y">
@@ -117,15 +117,15 @@ export const Equipment: React.FC<EquipmentProps> = () => {
             const sellback = getStorageVesselSellbackEligibility(vessel, activities);
 
             return (
-              <div key={vessel.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1.5fr_0.8fr_1fr_0.8fr_1fr_0.8fr_1fr_0.7fr_1fr_1.2fr_1.8fr_auto]">
-                <div className="font-medium">{getStorageVesselDisplayName(vessel)}</div>
-                <div className="text-xs text-gray-600">{vessel.productionYear} ({Math.max(0, currentYear - vessel.productionYear)} years)</div>
-                <div className="text-xs capitalize text-gray-600">{vessel.material.replace('_', ' ')}</div>
-                <div className="text-xs text-gray-600">{formatNumber(vessel.capacityLitres, { decimals: 0 })} L</div>
-                <div className={`text-xs ${getColorClass(vessel.qualityScore)}`}>{getQualityInfo(vessel.qualityScore).category} ({vessel.qualityScore.toFixed(2)})</div>
-                <div className="text-xs text-gray-600">{Math.round(vessel.condition * 100)}%</div>
-                <div className={`text-xs font-medium ${vessel.cleanliness === 'clean' ? 'text-emerald-700' : 'text-amber-600'}`}>{vessel.cleanliness}</div>
-                <div className="text-xs text-gray-600">{vessel.fillHistory}</div>
+              <div key={vessel.id} className="grid min-w-0 grid-cols-2 gap-3 px-4 py-4 text-sm [&>*]:min-w-0 2xl:grid-cols-[1.5fr_0.8fr_1fr_0.8fr_1fr_0.8fr_1fr_0.7fr_1fr_1.2fr_1.8fr_auto]">
+                <div className="col-span-2 font-medium 2xl:col-span-1"><span className="block text-xs font-normal text-gray-500 2xl:hidden">Vessel ID</span>{getStorageVesselDisplayName(vessel)}</div>
+                <div className="text-xs text-gray-600"><span className="block text-gray-500 2xl:hidden">Age</span>{vessel.productionYear} ({Math.max(0, currentYear - vessel.productionYear)} years)</div>
+                <div className="text-xs capitalize text-gray-600"><span className="block text-gray-500 2xl:hidden">Material</span>{vessel.material.replace('_', ' ')}</div>
+                <div className="text-xs text-gray-600"><span className="block text-gray-500 2xl:hidden">Size</span>{formatNumber(vessel.capacityLitres, { decimals: 0 })} L</div>
+                <div className={`text-xs ${getColorClass(vessel.qualityScore)}`}><span className="block text-gray-500 2xl:hidden">Quality</span>{getQualityInfo(vessel.qualityScore).category} ({vessel.qualityScore.toFixed(2)})</div>
+                <div className="text-xs text-gray-600"><span className="block text-gray-500 2xl:hidden">Condition</span>{Math.round(vessel.condition * 100)}%</div>
+                <div className={`text-xs font-medium ${vessel.cleanliness === 'clean' ? 'text-emerald-700' : 'text-amber-600'}`}><span className="block text-gray-500 2xl:hidden">Cleanliness</span>{vessel.cleanliness}</div>
+                <div className="text-xs text-gray-600"><span className="block text-gray-500 2xl:hidden">Fills</span>{vessel.fillHistory}</div>
                 <UnifiedTooltip
                   title={availability.available ? 'Available' : 'Unavailable'}
                   content={availability.available
@@ -145,19 +145,19 @@ export const Equipment: React.FC<EquipmentProps> = () => {
                     <span aria-hidden="true">●</span> {availability.available ? 'Available' : 'Unavailable'}
                   </div>
                 </UnifiedTooltip>
-                <div className="text-xs text-gray-600">{formatNumber(vessel.acquisitionPrice, { currency: true, decimals: 0 })}</div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-gray-600"><span className="block text-gray-500 2xl:hidden">Acquisition</span>{formatNumber(vessel.acquisitionPrice, { currency: true, decimals: 0 })}</div>
+                <div className="min-w-0 text-xs text-gray-600"><span className="block text-gray-500 2xl:hidden">Contents</span>
                   {batch ? <><span className="font-medium">Contains: {batch.grape} {batch.harvestStartDate.year}, {batch.vineyardName}</span>{emptyingActivity && <div className="mt-1 text-amber-700">Emptying in progress</div>}</>
                     : activity ? `Harvesting ${activity.params.targetName ?? 'batch'}`
                       : 'Empty'}
                 </div>
-                <div>
+                <div className="col-span-2 flex flex-wrap items-start gap-2 2xl:col-span-1 2xl:block">
                   {batch && vessel.occupancy === 'in_use' && (
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={emptyingActivity}
-                      className="border-red-300 text-red-700 hover:bg-red-50"
+                      className="min-h-11 border-red-300 text-red-700 hover:bg-red-50"
                       onClick={() => setEmptyingRequest({ vessel, batch })}
                     >
                       {emptyingActivity ? 'Emptying…' : 'Empty Vessel'}
@@ -168,7 +168,7 @@ export const Equipment: React.FC<EquipmentProps> = () => {
                       size="sm"
                       variant="outline"
                       disabled={cleaningActivity}
-                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                      className="min-h-11 border-amber-300 text-amber-700 hover:bg-amber-50"
                       onClick={() => setCleaningRequest(vessel)}
                     >
                       {cleaningActivity ? 'Cleaning…' : 'Clean Vessel'}
@@ -184,7 +184,7 @@ export const Equipment: React.FC<EquipmentProps> = () => {
                         size="sm"
                         variant="outline"
                         disabled={!sellback.eligible}
-                        className="mt-1 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        className="min-h-11 mt-1 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                         onClick={() => setSellRequest(vessel)}
                       >
                         Sell to Market

@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
@@ -271,30 +272,13 @@ Note: These effects apply each week while fermentation is active.`
   const validation = validateFermentationBatch(batch);
   if (!validation.valid) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Cannot Start Fermentation</h2>
-            <button
-              type="button"
-              className="text-gray-400 hover:text-gray-600"
-              onClick={onClose}
-            >
-              ✕
-            </button>
-          </div>
-          <p className="text-red-600 mb-4">{validation.reason}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="px-4 py-2 border border-gray-300 rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50"
-              onClick={onClose}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="max-w-lg overflow-y-auto">
+          <DialogTitle className="pr-10 text-xl font-bold">Cannot Start Fermentation</DialogTitle>
+          <p className="text-red-600">{validation.reason}</p>
+          <button type="button" className="min-h-11 rounded border px-4 py-2" onClick={onClose}>Close</button>
+        </DialogContent>
+      </Dialog>
     );
   }
 
@@ -540,8 +524,7 @@ Note: These effects apply each week while fermentation is active.`
 
   // Render
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <ActivityOptionsModal
+    <ActivityOptionsModal
         onClose={onClose}
         title={`Start Fermentation`}
         subtitle={`Configure fermentation process for ${batch.quantity}kg of ${batch.grape} must from ${batch.vineyardName}. Choose method and temperature control that will affect weekly characteristic development.`}
@@ -558,8 +541,7 @@ Note: These effects apply each week while fermentation is active.`
         maxHeight="90vh"
       >
         {customContent}
-      </ActivityOptionsModal>
-    </div>
+    </ActivityOptionsModal>
   );
 };
 

@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types/types';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
@@ -5,7 +6,7 @@ import { formatNumber, getFlagIcon, getColorClass, setModalMinimized } from '@/l
 import { staffFeature } from '@/lib/features/staff';
 import { Button, Badge, WarningModal } from '@/components/ui';
 import { startHiringProcess, clearPendingCandidates } from '@/lib/features/activities/services/activitymanagers/staffSearchManager';
-import { X, Minimize2 } from 'lucide-react';
+import { Minimize2 } from 'lucide-react';
 
 interface StaffSearchResultsModalProps {
   isOpen: boolean;
@@ -108,12 +109,12 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
   if (isMinimized) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="bg-gray-900 rounded-lg shadow-lg w-full max-w-5xl overflow-hidden flex flex-col scrollbar-styled w-[calc(100%-1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] min-w-0 gap-0 p-0 [&>button]:text-gray-200">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
+        <div className="flex justify-between items-start shrink-0 gap-3 p-4 pr-16 sm:p-6 sm:pr-16 border-b border-gray-700">
           <div>
-            <h2 className="text-2xl font-bold text-white">Staff Search Results</h2>
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-white">Staff Search Results</DialogTitle>
             <p className="text-sm text-gray-400 mt-1">
               {availableCandidates.length} candidate{availableCandidates.length !== 1 ? 's' : ''} available
               {hiredCandidateIds.size > 0 && ` (${hiredCandidateIds.size} already hired)`}
@@ -122,24 +123,19 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
           <div className="flex items-center gap-2">
             <button
               onClick={handleMinimize}
-              className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+              aria-label="Minimize results"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-400 hover:text-white rounded transition-colors"
               title="Minimize"
             >
               <Minimize2 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-white text-2xl leading-none"
-            >
-              <X className="h-6 w-6" />
             </button>
           </div>
         </div>
 
         {/* Two Column Layout */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto overscroll-contain md:flex-row md:overflow-hidden">
           {/* Left Column - Candidate List */}
-          <div className="w-1/2 border-r border-gray-700 overflow-y-auto scrollbar-styled">
+          <div className="w-full max-h-60 shrink-0 border-b border-gray-700 overflow-y-auto scrollbar-styled md:max-h-none md:w-1/2 md:shrink md:border-b-0 md:border-r">
             <div className="p-4">
               <h3 className="text-lg font-semibold text-white mb-4">Available Candidates</h3>
               <div className="space-y-2">
@@ -148,19 +144,21 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                   const isSelected = selectedCandidateId === candidate.id;
                   
                   return (
-                    <div 
+                    <button
+                      type="button"
+                      aria-pressed={isSelected}
                       key={candidate.id || index} 
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`block w-full min-w-0 text-left break-words p-3 rounded-lg border cursor-pointer transition-colors ${
                         isSelected 
                           ? 'bg-blue-600 border-blue-500' 
                           : 'bg-gray-800 border-gray-700 hover:bg-gray-750'
                       }`}
                       onClick={() => handleCandidateSelect(candidate.id)}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-2 items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className={`${getFlagIcon(candidate.nationality)} text-lg`}></span>
-                          <div className="flex-1">
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium text-white">{candidate.name}</div>
                             <div className="text-xs text-gray-400">{skillInfo.name}</div>
                             {candidate.specializedRoles.length > 0 && (
@@ -173,7 +171,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                           <div className="text-xs text-gray-400">per week</div>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -181,9 +179,9 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
           </div>
 
           {/* Right Column - Candidate Preview */}
-          <div className="w-1/2 overflow-y-auto scrollbar-styled">
+          <div className="min-w-0 break-words w-full shrink-0 scrollbar-styled md:w-1/2 md:shrink md:overflow-y-auto">
             {selectedCandidate ? (
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-white mb-6">Candidate Preview</h3>
                 
                 <div className="space-y-6">
@@ -191,7 +189,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                   <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                     <h4 className="text-sm font-medium text-white mb-4">Personal Information</h4>
                     <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between">
                         <span className="text-gray-400">Name:</span>
                         <div className="flex items-center gap-2">
                           <span className={`${getFlagIcon(selectedCandidate.nationality)} text-base`}></span>
@@ -206,11 +204,11 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                           </div>
                         </div>
                       )}
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between">
                         <span className="text-gray-400">Nationality:</span>
                         <span className="text-white">{selectedCandidate.nationality}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between">
                         <span className="text-gray-400">Skill Level:</span>
                         <Badge variant="outline" className={`text-xs bg-gray-600 text-white border-gray-500 ${getColorClass(selectedCandidate.skillLevel)}`}>
                           {getSkillLevelInfo(selectedCandidate.skillLevel).name} ({formatNumber(selectedCandidate.skillLevel * 100, { smartDecimals: true })}%)
@@ -264,7 +262,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t border-gray-700">
+        <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center p-4 sm:p-6 border-t [&_button]:min-h-11 border-gray-700">
           <div className="text-sm text-gray-400">
             <span className="font-medium text-white">{availableCandidates.length}</span> candidate{availableCandidates.length !== 1 ? 's' : ''} remaining
           </div>
@@ -286,8 +284,8 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

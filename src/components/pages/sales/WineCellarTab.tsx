@@ -4,7 +4,7 @@ import { formatNumber, formatPercent, getQualityCategory, getColorClass, getRang
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { SALES_CONSTANTS } from '@/lib/constants/constants';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
 import { useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
 import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, calculateEffectiveAccumulationRisk, updateInventoryBatch } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
@@ -533,6 +533,7 @@ onWineDetailsClick
 
  const {
  sortedData: sortedBottledWines,
+ sortConfig: cellarSortConfig,
  handleSort: handleCellarSort,
  getSortIndicator: getCellarSortIndicator,
  isColumnSorted: isCellarColumnSorted
@@ -877,7 +878,7 @@ onWineDetailsClick
 
  {/* Vintage Wines Table (Collapsible) */}
  {isExpanded && (
- <div className="overflow-x-auto">
+ <div className="hidden overflow-x-auto lg:block">
  <Table className="text-xs">
  <TableHeader>
  <TableRow>
@@ -1032,7 +1033,33 @@ onWineDetailsClick
  )}
  </div>
 
- {/* Wine Cellar Cards - Mobile (Enhanced) */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 lg:hidden" aria-label="Sort wines">
+        <label className="grid min-w-0 gap-1 text-xs text-gray-600">
+          Sort wines by
+          <Select value={cellarSortConfig ? String(cellarSortConfig.key) : ''} onValueChange={(key) => handleCellarSort(key as keyof WineBatch)}>
+            <SelectTrigger className="min-h-11 min-w-0 bg-white" aria-label="Sort wines by">
+              <SelectValue placeholder="Choose a field" />
+            </SelectTrigger>
+            <SelectContent>
+              {cellarColumns.filter((column) => column.sortable).map((column) => (
+                <SelectItem key={String(column.key)} value={String(column.key)}>{column.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-11 bg-white"
+          disabled={!cellarSortConfig}
+          onClick={() => cellarSortConfig && handleCellarSort(cellarSortConfig.key)}
+          aria-label={`Change sort direction${cellarSortConfig ? `, currently ${cellarSortConfig.direction ?? 'off'}` : ''}`}
+        >
+          {cellarSortConfig ? getCellarSortIndicator(cellarSortConfig.key) : '↕'}
+        </Button>
+      </div>
+      {/* Wine Cellar Cards - Mobile (Enhanced) */}
  <div className="lg:hidden space-y-4">
  {sortedBottledWines.length === 0 ? (
  <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
@@ -1057,9 +1084,9 @@ onWineDetailsClick
  <div key={wine.id} className="bg-white rounded-lg shadow overflow-hidden">
  {/* Card Header */}
  <div className="bg-gradient-to-r from-purple-50 to-amber-50 p-4 border-b">
- <div className="flex justify-between items-start">
+ <div className="flex flex-wrap gap-2 justify-between items-start">
  <div className="flex-1">
- <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+ <h3 className="flex flex-wrap items-center gap-2 text-lg font-bold text-gray-900">
  {wine.grape}
  <BatchBadge batch={wine} />
  </h3>
@@ -1082,12 +1109,13 @@ onWineDetailsClick
  <div className="p-4 space-y-4">
  {/* Aging Progress */}
  <div>
+ <div className="mb-3"><StructureAndQualityDisplay batch={wine} /></div>
  <div className="text-xs text-gray-500 uppercase mb-1">Aging Progress</div>
  <AgingProgressBar wine={wine} />
  </div>
 
  {/* Score & Features */}
- <div className="grid grid-cols-3 gap-3">
+ <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
  <div>
  <div className="text-xs text-gray-500 uppercase mb-1">Score</div>
  <WineScoreDisplay wine={wine} />
@@ -1112,7 +1140,7 @@ onWineDetailsClick
 
  {/* Pricing */}
  <div className="border-t pt-3">
- <div className="flex justify-between items-center mb-2">
+ <div className="flex flex-wrap gap-2 justify-between items-center mb-2">
  <span className="text-sm text-gray-600">Estimated Price:</span>
  <EstimatedPriceDisplay
  wine={wine}
@@ -1121,7 +1149,7 @@ onWineDetailsClick
  vineyardPrestige={vineyardPrestigeById[wine.vineyardId]}
  />
  </div>
- <div className="flex justify-between items-center mb-2">
+ <div className="flex flex-wrap gap-2 justify-between items-center mb-2">
  <span className="text-sm text-gray-600">Asking Price:</span>
  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
  <input
@@ -1142,7 +1170,7 @@ onWineDetailsClick
  onClick={(e) => e.stopPropagation()}
  onFocus={(e) => e.stopPropagation()}
  onMouseDown={(e) => e.stopPropagation()}
- className="w-24 px-2 py-1 border rounded text-sm"
+ aria-label={`Asking price for ${wine.grape} ${wine.harvestStartDate.year}`} inputMode="decimal" className="min-h-11 w-24 px-2 py-1 border rounded text-base"
  />
  <Pencil className="h-4 w-4 text-gray-500" />
  <button
@@ -1151,7 +1179,7 @@ onWineDetailsClick
  void handlePriceSave(wine);
  }}
  disabled={!hasPendingPriceChange(wine)}
- className={`inline-flex items-center justify-center text-xs px-2 py-1 rounded border ${
+ className={`inline-flex min-h-11 min-w-11 items-center justify-center text-xs px-2 py-1 rounded border ${
  hasPendingPriceChange(wine)
  ? 'border-green-200 text-green-700 hover:bg-green-50'
  : 'border-gray-200 text-gray-400 cursor-not-allowed'
@@ -1166,7 +1194,7 @@ onWineDetailsClick
  e.stopPropagation();
  handlePriceCancel(wine.id);
  }}
- className="inline-flex items-center justify-center text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
+ className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
  title="Reset Input"
  >
  <RotateCcw className="h-4 w-4" />

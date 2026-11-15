@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { getCurrentPrestige, processGameTick } from '@/lib/services';
 import { formatGameDate, formatNumber } from '@/lib/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
-import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
+import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
-import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
+import { CalendarDays, MessageSquareText, LogOut, MenuIcon } from 'lucide-react';
 import { getCurrentCompany } from '@/lib/services';
 import { prestigeFeature } from '@/lib/features/prestige';
 import { createWeatherWeekContext, getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
@@ -52,6 +52,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   const currentCompany = getCurrentCompany();
   const showAdminDashboard = adminAvailable;
 
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => {
+      if (desktopQuery.matches) setMobileMenuOpen(false);
+    };
+    closeOnDesktop();
+    desktopQuery.addEventListener('change', closeOnDesktop);
+    return () => desktopQuery.removeEventListener('change', closeOnDesktop);
+  }, []);
+
   // Use consolidated hook for reactive prestige loading
   const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);
 
@@ -95,19 +105,22 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
     { id: 'equipment', label: 'Equipment', icon: '⚙️' },
     { id: 'sales', label: 'Sales', icon: NAVIGATION_EMOJIS.sales }
   ];
+  const isCurrentNavItem = (id: string) => id === 'dashboard'
+    ? currentPage === 'dashboard' || currentPage === 'company-overview'
+    : currentPage === id;
 
   return (
     <>
       <header className="w-full bg-red-800 text-white shadow-md">
         <div className="max-w-7xl mx-auto py-0.5 px-3 sm:px-4 md:px-6 lg:px-8 text-sm">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <div className="flex items-center">
-              <button onClick={() => handleNavigation('dashboard')} className="text-sm font-semibold">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
+            <div className="flex min-w-0 items-center justify-center sm:justify-start">
+              <button type="button" aria-label="Open company overview" onClick={() => handleNavigation('dashboard')} className="text-sm font-semibold">
                 🍷 Winery Management {appVersion}
               </button>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-nowrap sm:gap-2">
             {/* Time display - responsive */}
             <div className="flex items-center space-x-2 mr-2">
               <CalendarDays className="h-3.5 w-3.5" />
@@ -134,8 +147,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               onClick={handleIncrementWeek}
               variant="ghost" 
               size="icon"
+              aria-label={isAdvancingTime ? 'Advancing week' : 'Advance one week'}
+              title={isAdvancingTime ? 'Advancing week' : 'Advance one week'}
               disabled={isAdvancingTime}
-              className="sm:hidden text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="sm:hidden min-h-10 min-w-10 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CalendarDays className="h-4 w-4" />
             </Button>
@@ -143,8 +158,17 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             {/* Money display - responsive */}
             <Badge 
               variant="outline" 
+              role="button"
+              tabIndex={0}
+              aria-label={`Open finance, cash ${formatNumber(gameState.money || 0, { currency: true })}`}
               className="bg-red-700 text-white border-red-500 px-2 py-0.5 items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
               onClick={() => handleNavigation('finance')}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleNavigation('finance');
+                }
+              }}
               title="View Finance"
             >
               <span className="font-medium">{formatNumber(gameState.money || 0, { currency: true })}</span>
@@ -152,8 +176,17 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             
             <Badge 
               variant="outline" 
+              role="button"
+              tabIndex={0}
+              aria-label={`Open finance, cash ${formatNumber(gameState.money || 0, { currency: true })}`}
               className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors sm:hidden"
               onClick={() => handleNavigation('finance')}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleNavigation('finance');
+                }
+              }}
               title="View Finance"
             >
               <span className="font-medium text-xs">{formatNumber(gameState.money || 0, { currency: true, compact: true, decimals: 1 })}</span>
@@ -162,16 +195,34 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             {/* Prestige display - responsive */}
             <Badge 
               variant="outline" 
+              role="button"
+              tabIndex={0}
+              aria-label={`Open prestige breakdown, ${formatNumber(currentPrestige, { decimals: 1 })}`}
               className="bg-red-700 text-white border-red-500 px-2 py-0.5 items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
               onClick={handlePrestigeClick}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  void handlePrestigeClick();
+                }
+              }}
             >
               <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatNumber(currentPrestige, { compact: true, decimals: 1 }) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}</span>
             </Badge>
             
             <Badge 
               variant="outline" 
+              role="button"
+              tabIndex={0}
+              aria-label={`Open prestige breakdown, ${formatNumber(currentPrestige, { decimals: 1 })}`}
               className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors sm:hidden"
               onClick={handlePrestigeClick}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  void handlePrestigeClick();
+                }
+              }}
             >
               <span className="font-medium text-xs">⭐ {formatNumber(currentPrestige, { compact: true, decimals: 1 })}</span>
             </Badge>
@@ -188,18 +239,25 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               variant="panel"
               density="compact"
               className="max-w-sm"
-              onClick={() => {
-                try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
-                handleNavigation('winepedia');
-              }}
+              showMobileHint={false}
             >
               <Badge 
                 variant="outline" 
+                role="button"
+                tabIndex={0}
+                aria-label={`Open economy details, ${gameState.economyPhase || 'Stable'}`}
                 className={`px-2 py-0.5 items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Stable')}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
                   handleNavigation('winepedia');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
+                    handleNavigation('winepedia');
+                  }
                 }}
               >
                 <span className="w-2 h-2 rounded-full bg-green-400 mr-1.5"></span>
@@ -209,10 +267,20 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             
             <Badge 
               variant="outline" 
+              role="button"
+              tabIndex={0}
+              aria-label={`Open economy details, ${gameState.economyPhase || 'Stable'}`}
               className={`px-1.5 py-0.5 flex items-center cursor-pointer transition-colors sm:hidden ${getEconomyPhaseColorClass(gameState.economyPhase || 'Stable')}`}
               onClick={() => {
                 try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
                 handleNavigation('winepedia');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
+                  handleNavigation('winepedia');
+                }
               }}>
               <span className="font-medium text-xs">{gameState.economyPhase}</span>
             </Badge>
@@ -229,16 +297,23 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               variant="panel"
               density="compact"
               className="max-w-sm"
-              onClick={() => {
-                handleNavigation('weather-center');
-              }}
+              showMobileHint={false}
             >
               <Badge
                 variant="outline"
+                role="button"
+                tabIndex={0}
+                aria-label={`Open Weather Center, ${weather.state}`}
                 className="px-2 py-0.5 hidden sm:flex items-center cursor-pointer bg-red-700 text-white border-red-500 hover:bg-red-600"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleNavigation('weather-center');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleNavigation('weather-center');
+                  }
                 }}
               >
                 <span className="mr-1.5">{getWeatherIcon(weather.state)}</span>
@@ -248,9 +323,18 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
 
             <Badge
               variant="outline"
+              role="button"
+              tabIndex={0}
+              aria-label={`Open Weather Center, ${weather.state}`}
               className="px-1.5 py-0.5 sm:hidden flex items-center cursor-pointer bg-red-700 text-white border-red-500 hover:bg-red-600"
               onClick={() => {
                 handleNavigation('weather-center');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleNavigation('weather-center');
+                }
               }}
             >
               <span className="mr-1">{getWeatherIcon(weather.state)}</span>
@@ -261,8 +345,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             <Button 
               variant="ghost" 
               size="icon"
+              aria-label={`Open notifications${consoleHook.unreadCount > 0 ? `, ${consoleHook.unreadCount} unread` : ''}`}
               onClick={() => consoleHook.openHistory()}
-              className="rounded-full h-8 w-8 items-center justify-center text-white hover:bg-red-700 relative hidden sm:flex"
+              className="rounded-full h-10 w-10 items-center justify-center text-white hover:bg-red-700 relative hidden sm:flex"
             >
               <MessageSquareText className="h-4 w-4" />
               {consoleHook.unreadCount > 0 && (
@@ -276,8 +361,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             <Button 
               variant="ghost" 
               size="icon"
+              aria-label={`Open notifications${consoleHook.unreadCount > 0 ? `, ${consoleHook.unreadCount} unread` : ''}`}
               onClick={() => consoleHook.openHistory()}
-              className="rounded-full h-8 w-8 flex items-center justify-center text-white hover:bg-red-700 relative sm:hidden"
+              className="rounded-full h-10 w-10 flex items-center justify-center text-white hover:bg-red-700 relative sm:hidden"
             >
               <MessageSquareText className="h-4 w-4" />
               {consoleHook.unreadCount > 0 && (
@@ -291,6 +377,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Open navigation menu"
+              aria-expanded={mobileMenuOpen}
               className="lg:hidden text-white hover:bg-red-700"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -370,13 +458,14 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden xl:flex items-center justify-center gap-1 pt-1 pb-0.5">
+          <nav aria-label="Main navigation" className="hidden lg:flex items-center justify-center gap-1 pt-1 pb-0.5">
             {navItems.map((item) => (
               <Button
                 key={item.id}
                 onClick={() => handleNavigation(item.id)}
-                variant={currentPage === item.id ? "secondary" : "ghost"}
+              variant={isCurrentNavItem(item.id) ? "secondary" : "ghost"}
                 size="sm"
+              aria-current={isCurrentNavItem(item.id) ? 'page' : undefined}
                 className="bg-transparent hover:bg-red-700 text-white border-0 px-2"
               >
                 <span className="mr-2">{item.icon}</span>
@@ -387,75 +476,63 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
         </div>
       </header>
       
-      {/* Mobile Navigation Menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-          <nav className="fixed top-0 left-0 bottom-0 w-3/4 max-w-sm bg-white dark:bg-slate-800 p-6 shadow-xl flex flex-col">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-semibold text-primary">Navigation</h2>
-              <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex flex-col space-y-2 mb-6 p-3 bg-blue-50 rounded-md">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{formatGameDate(gameState.week, gameState.season, gameState.currentYear)}</span>
-                  <Button 
-                    onClick={() => {
-                      handleIncrementWeek();
-                      setMobileMenuOpen(false);
-                    }}
-                    variant="outline" 
-                    size="sm"
-                    disabled={isAdvancingTime}
-                    className="flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                    <span>{isAdvancingTime ? 'Processing...' : 'End Week'}</span>
-                  </Button>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge 
-                    variant="secondary" 
-                    className="flex-1 py-1 flex items-center justify-center gap-1.5 bg-amber-50 text-amber-700"
-                  >
-                    <span>💰</span>
-                    <span className="font-medium">
-                      {formatNumber(gameState.money || 0, { currency: true })}
-                    </span>
-                  </Badge>
-                  <Badge 
-                    variant="secondary" 
-                    className="flex-1 py-1 flex items-center justify-center gap-1.5 bg-purple-50 text-purple-700"
-                  >
-                    <span>⭐</span>
-                    <span className="font-medium">
-                      {currentPrestige >= 1000 ? formatNumber(currentPrestige, { compact: true, decimals: 1 }) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}
-                    </span>
-                  </Badge>
-                </div>
+      <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <DialogContent id="game-mobile-navigation" className="fixed inset-y-0 left-0 right-auto m-0 flex h-dvh max-h-dvh w-[min(88vw,24rem)] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-r bg-white p-0 pt-[env(safe-area-inset-top)] dark:bg-slate-800 lg:hidden">
+          <DialogHeader className="border-b px-5 py-4 pr-14 text-left">
+            <DialogTitle className="text-xl font-semibold text-primary">Navigation</DialogTitle>
+            <DialogDescription className="sr-only">Choose a game area, account page, or player action.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+            <div className="flex flex-col gap-2 rounded-md bg-blue-50 p-3 text-slate-900 dark:bg-slate-700 dark:text-white">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">{formatGameDate(gameState.week, gameState.season, gameState.currentYear)}</span>
+                <Button
+                  onClick={() => {
+                    handleIncrementWeek();
+                    setMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  disabled={isAdvancingTime}
+                  className="min-h-11 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span>{isAdvancingTime ? 'Processing...' : 'End Week'}</span>
+                </Button>
               </div>
-              
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="flex-1 py-1 flex items-center justify-center gap-1.5 bg-amber-50 text-amber-700">
+                  <span aria-hidden="true">💰</span>
+                  <span className="font-medium">{formatNumber(gameState.money || 0, { currency: true })}</span>
+                  <span className="sr-only">Current company cash</span>
+                </Badge>
+                <Badge variant="secondary" className="flex-1 py-1 flex items-center justify-center gap-1.5 bg-purple-50 text-purple-700">
+                  <span aria-hidden="true">⭐</span>
+                  <span className="font-medium">
+                    {currentPrestige >= 1000 ? formatNumber(currentPrestige, { compact: true, decimals: 1 }) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}
+                  </span>
+                  <span className="sr-only">Company prestige</span>
+                </Badge>
+              </div>
+            </div>
+
+            <nav aria-label="Main navigation" className="flex flex-col gap-1">
               {navItems.map((item) => (
                 <Button
                   key={item.id}
                   variant="ghost"
                   onClick={() => handleNavigation(item.id)}
-                  className={`w-full justify-start text-left mb-1 py-3 text-foreground ${
-                    currentPage === item.id ? "bg-muted" : ""
-                  }`}
+                  aria-current={isCurrentNavItem(item.id) ? 'page' : undefined}
+                  className={`min-h-11 w-full justify-start text-left text-foreground ${isCurrentNavItem(item.id) ? "bg-muted" : ""}`}
                 >
-                  <span className="mr-3 text-lg">{item.icon}</span>
+                  <span className="mr-3 text-lg" aria-hidden="true">{item.icon}</span>
                   {item.label}
                 </Button>
               ))}
-            </div>
-            
-            <div className="mt-auto pt-6 border-t">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Account</h3>
+            </nav>
+
+            <div className="border-t pt-4">
+              <h3 className="mb-2 px-3 text-sm font-medium text-muted-foreground">Account and reference</h3>
               {[
                 { id: 'profile', label: 'Profile' },
                 { id: 'settings', label: 'Settings' },
@@ -463,40 +540,34 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 { id: 'highscores', label: 'Highscores' },
                 { id: 'achievements', label: 'Achievements' },
                 { id: 'wine-log', label: 'Wine Production Log' },
-                { id: 'winepedia', label: 'Wine-Pedia' }
+                { id: 'winepedia', label: 'Wine-Pedia' },
               ].map(({ id, label }) => (
                 <Button
                   key={id}
                   variant="ghost"
                   onClick={() => handleNavigation(id)}
-                  className="w-full justify-start text-left py-2 text-foreground"
+                  aria-current={currentPage === id ? 'page' : undefined}
+                  className="min-h-11 w-full justify-start text-left text-foreground"
                 >
                   {label}
                 </Button>
               ))}
-              
-              <Button
-                variant="ghost"
-                onClick={onBackToLogin}
-                className="w-full justify-start text-left py-2 text-destructive hover:text-destructive mt-2"
-              >
-                <LogOut className="mr-3 h-4 w-4" />
-                Switch Company
-              </Button>
-              
-              <Button
-                variant="ghost"
-                onClick={() => { void onLogout(); }}
-                className="w-full justify-start text-left py-2 text-destructive hover:text-destructive mt-2"
-              >
+
+              {onBackToLogin && (
+                <Button variant="ghost" onClick={onBackToLogin} className="min-h-11 w-full justify-start text-left text-destructive hover:text-destructive">
+                  <LogOut className="mr-3 h-4 w-4" />
+                  Switch Company
+                </Button>
+              )}
+
+              <Button variant="ghost" onClick={() => { void onLogout(); }} className="min-h-11 w-full justify-start text-left text-destructive hover:text-destructive">
                 <LogOut className="mr-3 h-4 w-4" />
                 Log out player
               </Button>
             </div>
-          </nav>
-        </div>
-      )}
-      
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Notification History Modal - controlled by NotificationCenter component */}
       {consoleHook.isHistoryOpen && 
         <NotificationCenter 

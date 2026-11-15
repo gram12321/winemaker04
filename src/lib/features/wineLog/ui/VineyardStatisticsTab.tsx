@@ -35,7 +35,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
         return (
           <Card key={vineyard.id}>
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex flex-wrap justify-between items-start gap-2">
                 <div>
                   <CardTitle className="text-lg">{vineyard.name}</CardTitle>
                   <CardDescription>{vineyard.region}, {vineyard.country}</CardDescription>
@@ -50,7 +50,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
             
             <CardContent className="space-y-4">
               {/* Production Summary */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="text-center p-2 bg-purple-50 rounded-lg">
                   <div className="text-xl font-bold text-purple-900">{analytics.totalBottles}</div>
                   <div className="text-xs text-purple-600">Bottles</div>
@@ -71,29 +71,29 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   <MapPin className="h-3 w-3" /> Terroir Profile
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-2">
                     <span className="text-gray-500">Soil:</span>
                     <span className="font-medium">{vineyard.soil.join(', ')}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-2">
                     <span className="text-gray-500">Altitude:</span>
                     <span className="font-medium">{vineyard.altitude}m</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-2">
                     <span className="text-gray-500">Aspect:</span>
                     <span className="font-medium">{vineyard.aspect}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-2">
                     <span className="text-gray-500">Vine Age:</span>
                     <span className="font-medium">{vineyard.vineAge || 0} years</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-2">
                     <span className="text-gray-500">Health:</span>
                     <span className={`font-medium ${getColorClass(vineyard.vineyardHealth)}`}>
                       {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-2">
                     <span className="text-gray-500">Prestige:</span>
                     <span className="font-medium">{formatNumber(vineyard.vineyardPrestige, { decimals: 1 })}</span>
                   </div>
@@ -151,10 +151,16 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                           );
                         })}
                       </div>
+                      <details className="mt-3 text-xs">
+                        <summary className="flex min-h-11 cursor-pointer items-center underline underline-offset-2">View yearly wine scores</summary>
+                        <dl className="space-y-2">
+                          {analytics.yearlyScores.map((yearData) => <div key={yearData.year} className="flex flex-wrap justify-between gap-2"><dt>{yearData.year}</dt><dd>{formatPercent(yearData.avgScore, 1, true)}</dd></div>)}
+                        </dl>
+                      </details>
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Avg Wine Score:</span>
                       <span className={`font-medium ${getColorClass(analytics.avgWineScore)}`}>
@@ -225,7 +231,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   </h4>
                   <div className="space-y-1.5">
                     {analytics.grapePerformance.map(grape => (
-                      <div key={grape.variety} className="flex justify-between items-center text-xs">
+                      <div key={grape.variety} className="flex flex-wrap justify-between items-center gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-700">{grape.variety}</span>
                           <span className="text-gray-400">({grape.vintages}x)</span>
@@ -250,7 +256,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   <h4 className="text-xs font-semibold mb-2 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Feature Analysis (Cellar)
                   </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     {analytics.featureStats.terroir > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">🌿 Terroir:</span>
@@ -324,7 +330,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   <Award className="h-3 w-3" /> Best Production
                 </h4>
                 <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-wrap justify-between items-start gap-2">
                     <div>
                       <div className="font-medium text-gray-900">{analytics.bestWine.vintage} {analytics.bestWine.grape}</div>
                       <div className="text-xs text-gray-600 mt-0.5">{analytics.bestWine.quantity} bottles • {formatNumber(analytics.bestWine.estimatedPrice, { currency: true, decimals: 0 })}/btl</div>

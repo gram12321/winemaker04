@@ -144,7 +144,7 @@ describe('grape buyer market', () => {
     );
   });
 
-  it('creates the always-available bulk buyer and scales its seasonal limit from company demand', async () => {
+  it('creates the always-available bulk buyer without a local seasonal cap', async () => {
     const { getBulkBuyer } = await import('@/lib/services/sales/grapeBuyerMarketService');
 
     const buyer = await getBulkBuyer('France');
@@ -153,12 +153,12 @@ describe('grape buyer market', () => {
       id: 'bulk_buyer',
       name: 'Bulk Grape Merchant',
       buyerCategory: 'bulk',
-      soldThisSeasonKg: 0,
+      effectiveSeasonLimitKg: undefined,
+      soldThisSeasonKg: undefined,
+      remainingSeasonLimitKg: undefined,
       relationshipMultiplier: 1
     });
     expect(buyer!.baseSeasonLimitKg).toBe(BULK_BASE_SEASON_LIMIT_KG);
-    expect(buyer!.effectiveSeasonLimitKg).toBeGreaterThan(BULK_BASE_SEASON_LIMIT_KG);
-    expect(buyer!.remainingSeasonLimitKg).toBe(buyer!.effectiveSeasonLimitKg);
     expect(mocks.createBuyerRow).toHaveBeenCalledWith(expect.objectContaining({
       buyer_id: 'bulk_buyer',
       country: 'France',
@@ -167,17 +167,17 @@ describe('grape buyer market', () => {
   });
 
   it('records seasonal buyer sales against the current season and affects remaining capacity', async () => {
-    const { getBulkBuyer, recordMarketBuyerSale } = await import('@/lib/services/sales/grapeBuyerMarketService');
+    const { getSeasonalBuyers, recordMarketBuyerSale } = await import('@/lib/services/sales/grapeBuyerMarketService');
 
-    const beforeSale = await getBulkBuyer('France');
-    await recordMarketBuyerSale('bulk_buyer', 500, 2026, 'Spring');
-    const afterSale = await getBulkBuyer('France');
+    const beforeSale = (await getSeasonalBuyers('France'))[0];
+    await recordMarketBuyerSale(beforeSale.id, 500, 2026, 'Spring');
+    const afterSale = (await getSeasonalBuyers('France')).find(buyer => buyer.id === beforeSale.id);
 
-    expect(afterSale!.soldThisSeasonKg).toBe(500);
-    expect(afterSale!.remainingSeasonLimitKg).toBe(beforeSale!.effectiveSeasonLimitKg! - 500);
+    expect(afterSale?.soldThisSeasonKg).toBe(500);
+    expect(afterSale?.remainingSeasonLimitKg).toBe(beforeSale.effectiveSeasonLimitKg! - 500);
     expect(mocks.updateBuyerRow).toHaveBeenCalledWith(
       'company-1',
-      'bulk_buyer',
+      beforeSale.id,
       expect.objectContaining({
         sold_this_season_kg: 500,
         last_active_year: 2026,

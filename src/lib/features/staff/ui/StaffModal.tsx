@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { Activity } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getColorClass } from '@/lib/utils';
@@ -7,7 +7,7 @@ import { getStaffExperiencePresentation } from '../services/staffPresentationSer
 import { getWageColorClass } from '../services/wageCalculations';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants/timeConstants';
-import { Button, Badge } from '@/components/ui';
+import { Dialog, DialogContent, DialogTitle, Button, Badge } from '@/components/ui';
 import { StaffSkillBarsList } from './StaffSkillBar';
 import { useGameState, useGameStateWithData } from '@/hooks/useGameState';
 
@@ -18,6 +18,7 @@ interface StaffModalProps extends DialogProps {
 }
 
 const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activityApi, onFire }) => {
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const gameState = useGameState();
   const activities = useGameStateWithData(activityApi.reads.getAll, []);
   const allStaffMembers = gameState.staff ?? [];
@@ -78,31 +79,33 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent aria-describedby={undefined}
+        onOpenAutoFocus={() => { returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onCloseAutoFocus={(event) => { event.preventDefault(); returnFocusRef.current?.focus(); }} className="bg-gray-900 text-white w-[calc(100vw-1rem)] max-w-3xl max-h-[calc(100dvh-1rem)] gap-0 p-0 overflow-hidden flex flex-col [&>button]:hidden">
+        <div className="flex shrink-0 justify-between items-start gap-2 p-3 sm:p-6 border-b border-gray-700">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <DialogTitle className="text-xl font-bold text-white flex flex-wrap items-center gap-2">
               <span className={`${getFlagIcon(staff.nationality)} text-base`}></span>
               {staff.name}
-            </h2>
+            </DialogTitle>
             <p className="text-sm text-gray-400 mt-1">
               {staff.nationality} • {skillInfo.name} • Hired Week {staff.hireDate.week}, {staff.hireDate.season} {staff.hireDate.year}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
+            aria-label="Close dialog" className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-gray-400 hover:text-white text-2xl leading-none"
           >
             ×
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-styled">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6 scrollbar-styled">
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-400">Nationality:</span>
                   <div className="text-white font-medium flex items-center gap-2 mt-1">
@@ -110,14 +113,15 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
                     {staff.nationality}
                   </div>
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <span className="text-gray-400">Broad role{staff.specializedRoles.length === 1 ? '' : 's'}:</span>
                   {staff.specializedRoles.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {staff.specializedRoles.map(role => (
-                        <Badge key={role} variant="secondary" className="text-xs bg-amber-600 text-white" title={SPECIALIZED_ROLES[role].description}>
-                          {SPECIALIZED_ROLES[role].title}
-                        </Badge>
+                        <div key={role} className="space-y-1">
+                          <Badge variant="secondary" className="text-xs bg-amber-600 text-white">{SPECIALIZED_ROLES[role].title}</Badge>
+                          <p className="text-xs text-gray-300">{SPECIALIZED_ROLES[role].description}</p>
+                        </div>
                       ))}
                     </div>
                   ) : <div className="text-sm text-gray-500 mt-1">No broad role</div>}
@@ -142,15 +146,15 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Compensation</h3>
               <div className="space-y-3">
-                <div className="flex justify-between text-sm">
+                <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
                   <span className="text-gray-400">Weekly Wage:</span>
                   <span className={`font-medium ${getWageColorClass(staff.wage, 'weekly')}`}>{formatNumber(staff.wage, { currency: true })}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
                   <span className="text-gray-400">Seasonal Wage ({WEEKS_PER_SEASON} weeks):</span>
                   <span className={`font-medium ${getWageColorClass(staff.wage * WEEKS_PER_SEASON, 'seasonal')}`}>{formatNumber(staff.wage * WEEKS_PER_SEASON, { currency: true })}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
                   <span className="text-gray-400">Annual Wage ({WEEKS_PER_YEAR} weeks):</span>
                   <span className={`font-medium ${getWageColorClass(staff.wage * WEEKS_PER_YEAR, 'annual')}`}>{formatNumber(staff.wage * WEEKS_PER_YEAR, { currency: true })}</span>
                 </div>
@@ -234,7 +238,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
 
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Employment Details</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-400">Hire Date:</span>
                   <div className="text-white font-medium mt-1">
@@ -349,25 +353,25 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, activit
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
+        <div className="flex shrink-0 flex-wrap justify-end gap-3 p-3 sm:p-6 border-t border-gray-700">
           <Button
             variant="outline"
             onClick={onClose}
-            className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
+            className="min-h-11 bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
           >
             Close
           </Button>
           {onFire && (
             <Button
               onClick={handleFire}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="min-h-11 bg-red-600 hover:bg-red-700 text-white"
             >
               Fire Employee
             </Button>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

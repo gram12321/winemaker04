@@ -66,7 +66,22 @@ export function WeatherCenterPage() {
           <CardTitle>Vineyard Weather Impact Preview</CardTitle>
           <CardDescription>Next-week forecast outcomes. Weather changes normal vineyard progression; it does not replace it.</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="min-w-0 space-y-3 p-3 sm:p-6">
+          <div className="space-y-3 md:hidden">
+            {presentation.rows.length === 0 ? <p className="py-4 text-sm text-slate-500">No planted vineyards available for weather preview.</p> : presentation.rows.map((row) => (
+              <article key={row.id} className="space-y-3 rounded-lg border p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="break-words font-semibold">{row.name}</h3><VineyardStatusBadge status={row.status as any} /></div>
+                <dl className="space-y-3">
+                  <div><dt className="font-medium">Ripeness: current → forecast</dt><dd>{percent(row.ripeness.current)} → {percent(row.ripeness.projected)}<p className={deltaClass(row.ripeness.weatherContribution)}>Weather {signedPercent(row.ripeness.weatherContribution)}</p></dd></div>
+                  <div><dt className="font-medium">Health: current → forecast</dt><dd>{percent(row.health.current)} → {percent(row.health.projected)}<p className={deltaClass(row.health.weatherContribution)}>Weather {signedPercent(row.health.weatherContribution)}</p></dd></div>
+                </dl>
+                <p className="font-medium text-slate-700">{row.siteSummary}</p><p className="text-slate-600">{row.siteNote}</p>
+                <button type="button" aria-expanded={expandedVineyardId === row.id} className="min-h-11 text-left underline decoration-dotted underline-offset-2" onClick={() => setExpandedVineyardId(expandedVineyardId === row.id ? null : row.id)}>{expandedVineyardId === row.id ? 'Hide explanation' : 'Why this forecast?'}</button>
+                {expandedVineyardId === row.id && <p className="text-slate-600">{row.explanation}</p>}
+              </article>
+            ))}
+          </div>
+          <div className="hidden md:block">
           <Table>
             <TableHeader><TableRow><TableHead>Vineyard</TableHead><TableHead>Status</TableHead><TableHead>Ripeness</TableHead><TableHead>Health</TableHead><TableHead>Site note</TableHead></TableRow></TableHeader>
             <TableBody>
@@ -81,6 +96,7 @@ export function WeatherCenterPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

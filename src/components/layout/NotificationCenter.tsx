@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Button, Badge, ScrollArea } from "../ui";
-import { InfoIcon, X, Trash2, Eye, Filter, Shield, VolumeX } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Button, Badge, ScrollArea, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui";
+import { InfoIcon, X, Trash2, Eye, Filter, Shield, VolumeX, MoreVertical } from 'lucide-react';
 import { formatGameDate } from "@/lib/utils/utils";
 import { NotificationCategory } from "@/lib/types/types";
 import { getTailwindClasses } from "@/lib/utils/colorMapping";
@@ -153,44 +153,46 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
   return (
     <>
       {isHistoryOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center pb-4 sm:items-start sm:pt-16 sm:pb-0">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 pb-0 sm:items-start sm:bg-black/30 sm:pt-16 sm:pb-0">
           {/* Mobile: bottom positioning */}
-          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-lg z-50 sm:hidden">
-            <Card className="max-h-[90vh] overflow-hidden">
-              <CardHeader className="p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="mobile-notification-title" className="fixed inset-x-0 bottom-[env(safe-area-inset-bottom)] z-50 max-h-[min(84dvh,42rem)] w-full lg:hidden">
+            <Card className="flex max-h-[min(84dvh,42rem)] flex-col overflow-hidden rounded-b-none">
+              <CardHeader className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Notifications</CardTitle>
+                    <CardTitle id="mobile-notification-title" className="text-lg">Notifications</CardTitle>
                     <CardDescription>
                       {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-1">
                     {unreadCount > 0 && (
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         onClick={handleMarkAllAsRead}
-                        className="text-xs"
+                        className="size-10"
+                        aria-label="Mark all notifications as read"
+                        title="Mark all as read"
                       >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Mark all read
+                        <Eye className="size-4" />
                       </Button>
                     )}
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={handleClearAll}
-                      className="text-xs"
+                      className="size-10"
+                      aria-label="Clear all notifications"
+                      title="Clear all"
                     >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Clear all
+                      <Trash2 className="size-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <ScrollArea className="h-[40vh]">
-                <CardContent className="p-3">
+              <div className="min-h-0 max-h-[58dvh] overflow-y-auto overscroll-contain">
+                <CardContent className="p-3 pt-1">
                   {filteredMessages.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">No notifications</p>
                   ) : (
@@ -223,72 +225,28 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                 >
                                   {formatGameDate(message.gameWeek, message.gameSeason, message.gameYear)}
                                 </Badge>
-                                <div className="flex gap-1">
-                                  {isUnread && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
                                     <Button
                                       variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleMarkAsRead(message.id)}
-                                      className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
-                                      title="Mark as read"
+                                      size="icon"
+                                      className="size-10 shrink-0"
+                                      aria-label={`Actions for notification from ${message.userFriendlyOrigin || message.origin || 'game'}`}
                                     >
-                                      <Eye className="h-3 w-3" />
+                                      <MoreVertical className="size-4" />
                                     </Button>
-                                  )}
-                                  {message.origin && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleBlockThisOrigin(message.origin)}
-                                      className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
-                                      title={`Block notifications from ${message.origin} (save to history)`}
-                                    >
-                                      <Shield className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  {message.category && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleBlockThisCategory(message.category)}
-                                      className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
-                                      title={`Block all ${message.category} notifications (save to history)`}
-                                    >
-                                      <Filter className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  {message.origin && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleBlockThisOriginFromHistory(message.origin)}
-                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                                      title={`Completely silence notifications from ${message.origin} (no history)`}
-                                    >
-                                      <VolumeX className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  {message.category && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleBlockThisCategoryFromHistory(message.category)}
-                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                                      title={`Completely silence all ${message.category} notifications (no history)`}
-                                    >
-                                      <VolumeX className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDismiss(message.id)}
-                                    className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                                    title="Dismiss"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-64">
+                                    {isUnread && <DropdownMenuItem onSelect={() => handleMarkAsRead(message.id)}>Mark as read</DropdownMenuItem>}
+                                    {message.origin && <DropdownMenuItem onSelect={() => handleBlockThisOrigin(message.origin)}>Keep future alerts from this source in history</DropdownMenuItem>}
+                                    {message.category && <DropdownMenuItem onSelect={() => handleBlockThisCategory(message.category)}>Keep future {message.category} alerts in history</DropdownMenuItem>}
+                                    {(message.origin || message.category) && <DropdownMenuSeparator />}
+                                    {message.origin && <DropdownMenuItem onSelect={() => handleBlockThisOriginFromHistory(message.origin)}>Silence this source completely</DropdownMenuItem>}
+                                    {message.category && <DropdownMenuItem onSelect={() => handleBlockThisCategoryFromHistory(message.category)}>Silence this category completely</DropdownMenuItem>}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onSelect={() => handleDismiss(message.id)} className="text-destructive focus:text-destructive">Dismiss notification</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                               <p className={`break-words whitespace-pre-line ${isOld ? 'text-gray-600' : ''}`}>
                                 {message.text}
@@ -316,7 +274,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                     </div>
                   )}
                 </CardContent>
-              </ScrollArea>
+              </div>
               <CardFooter className="border-t p-3">
                 <div className="w-full flex justify-between">
                   <div className="text-xs text-gray-500">
@@ -331,7 +289,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
           </div>
           
           {/* Desktop: top positioning */}
-          <div className="hidden sm:block">
+          <div className="hidden lg:block">
             <Card className="z-50 w-[95%] max-w-lg max-h-[80vh] overflow-hidden">
               <CardHeader className="p-4 md:p-6">
                 <div className="flex items-center justify-between">

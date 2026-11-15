@@ -41,7 +41,7 @@ export function FounderPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex flex-wrap items-center gap-2">
           <Crown className="w-5 h-5 text-amber-500" />
           Founding Partners
         </CardTitle>
@@ -58,10 +58,10 @@ export function FounderPanel() {
             {founders.map((founder) => (
               <div
                 key={founder.id}
-                className="flex items-center justify-between p-3 bg-amber-50"
+                className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 bg-amber-50"
               >
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-gray-900">{founder.name}</span>
                     <Badge className="text-xs bg-amber-100 text-amber-800 border border-amber-300">
                       Founder
@@ -79,7 +79,7 @@ export function FounderPanel() {
                 <Button
                   onClick={() => handleBuyout(founder.id)}
                   disabled={buyingOut === founder.id}
-                  className="ml-4 text-xs px-3 py-1 h-auto bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                  className="min-h-11 max-w-full whitespace-normal sm:ml-4 text-xs px-3 py-2 h-auto bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
                 >
                   {buyingOut === founder.id
                     ? 'Processing…'

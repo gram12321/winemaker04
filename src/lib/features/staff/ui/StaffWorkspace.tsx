@@ -36,16 +36,16 @@ function TeamIconPicker({ open, value, onOpenChange, onSelect }: TeamIconPickerP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-2xl p-1">{value}</Button>
+        <Button variant="outline" size="sm" aria-label="Choose team icon" className="min-h-11 min-w-11 text-2xl p-1">{value}</Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Select Icon</DialogTitle>
           <DialogDescription>Choose an emoji icon for your team</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
           {EMOJI_OPTIONS.map(emoji => (
-            <Button key={emoji} variant="outline" size="sm" className="text-2xl p-2" onClick={() => onSelect(emoji)}>
+            <Button key={emoji} variant="outline" size="sm" aria-label={`Select team icon ${emoji}`} className="min-h-11 min-w-11 text-2xl p-2" onClick={() => onSelect(emoji)}>
               {emoji}
             </Button>
           ))}
@@ -67,7 +67,7 @@ function TeamTaskTypePicker({ open, selectedTaskTypes, onOpenChange, onSelect, g
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-6 w-6 p-0"><Edit3 className="h-3 w-3" /></Button>
+        <Button variant="outline" size="sm" aria-label="Choose default task types" className="h-11 w-11 p-0"><Edit3 className="h-3 w-3" /></Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -79,7 +79,7 @@ function TeamTaskTypePicker({ open, selectedTaskTypes, onOpenChange, onSelect, g
             const taskType = category.toLowerCase();
             const selected = selectedTaskTypes.includes(taskType);
             return (
-              <Button key={taskType} variant={selected ? 'default' : 'outline'} size="sm" className="justify-start" onClick={() => onSelect(taskType)} disabled={selected}>
+              <Button key={taskType} variant={selected ? 'default' : 'outline'} size="sm" className="min-h-11 h-auto whitespace-normal justify-start" onClick={() => onSelect(taskType)} disabled={selected}>
                 {getDisplayName(taskType)}
               </Button>
             );
@@ -325,12 +325,12 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
       </div>
 
       <div className="bg-white rounded-lg border p-4 space-y-4">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
           <div>
             <h1 className="text-base font-semibold text-gray-900">{title}</h1>
             <p className="text-xs text-gray-600 mt-0.5">Manage your winery staff and teams</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleStartCreatingTeam}
               disabled={isCreatingNewTeam}
@@ -350,14 +350,14 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Label className="text-sm font-medium">Filter by Team:</Label>
           <div className="flex flex-wrap gap-2">
             <Button
               variant={selectedTeamFilter === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedTeamFilter('all')}
-              className="text-xs"
+              className="min-h-11 text-xs"
             >
               All Teams ({allStaff.length})
             </Button>
@@ -367,7 +367,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                 variant={selectedTeamFilter === team.id ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedTeamFilter(team.id)}
-                className="text-xs flex items-center gap-1"
+                className="min-h-11 h-auto whitespace-normal text-xs flex items-center gap-1"
               >
                 <span>{team.icon}</span>
                 {team.name} ({allStaff.filter(s => (s.teamIds || []).includes(team.id)).length})
@@ -380,17 +380,17 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
           <div className="bg-gray-50 rounded-lg p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-md font-medium text-gray-900">Create New Team</h4>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleSaveNewTeam} disabled={!newTeamData.name.trim()}>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" aria-label="Save new team" className="min-h-11 min-w-11" onClick={handleSaveNewTeam} disabled={!newTeamData.name.trim()}>
                   <Check className="h-4 w-4" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={handleCancelNewTeam}>
+                <Button size="sm" variant="outline" aria-label="Cancel new team" className="min-h-11 min-w-11" onClick={handleCancelNewTeam}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <TeamIconPicker
                 open={showEmojiPicker}
                 value={newTeamData.icon}
@@ -427,14 +427,14 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
               </div>
               <div className="flex flex-wrap gap-1">
                 {newTeamData.defaultTaskTypes.map(taskType => (
-                  <Badge
+                  <Button type="button"
                     key={taskType}
                     variant="outline"
-                    className="text-xs cursor-pointer hover:bg-red-100"
+                    className="min-h-11 text-xs cursor-pointer hover:bg-red-100"
                     onClick={() => handleTaskTypeRemove(taskType)}
                   >
                     {activity.catalog.getTaskTypeDisplayName(taskType)} ×
-                  </Badge>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -449,9 +449,9 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
 
               return (
                 <>
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         {editingField === 'icon' && editingField ? (
                           <TeamIconPicker
                             open={showEmojiPicker}
@@ -469,7 +469,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                         )}
 
                         {editingField === 'name' ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Input
                               value={tempValue}
                               onChange={(e) => setTempValue(e.target.value)}
@@ -480,10 +480,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                                 if (e.key === 'Escape') handleCancelEdit();
                               }}
                             />
-                            <Button size="sm" onClick={() => handleSaveEdit(team.id)}>
+                            <Button size="sm" aria-label="Save team changes" className="min-h-11 min-w-11" onClick={() => handleSaveEdit(team.id)}>
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                            <Button size="sm" variant="outline" aria-label="Cancel team changes" className="min-h-11 min-w-11" onClick={handleCancelEdit}>
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
@@ -498,7 +498,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                       </div>
 
                       {editingField === 'description' ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Input
                             value={tempValue}
                             onChange={(e) => setTempValue(e.target.value)}
@@ -509,10 +509,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                               if (e.key === 'Escape') handleCancelEdit();
                             }}
                           />
-                          <Button size="sm" onClick={() => handleSaveEdit(team.id)}>
+                          <Button size="sm" aria-label="Save team changes" className="min-h-11 min-w-11" onClick={() => handleSaveEdit(team.id)}>
                             <Check className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                          <Button size="sm" variant="outline" aria-label="Cancel team changes" className="min-h-11 min-w-11" onClick={handleCancelEdit}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -529,7 +529,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 hover:text-red-700"
+                      aria-label={`Delete team ${team.name}`} className="min-h-11 min-w-11 text-red-600 hover:text-red-700"
                       onClick={() => handleDeleteTeam(team.id)}
                     >
                       <X className="h-4 w-4" />
@@ -555,10 +555,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {team.defaultTaskTypes.map(taskType => (
-                        <Badge
+                        <Button type="button"
                           key={taskType}
                           variant="outline"
-                          className="text-xs cursor-pointer hover:bg-red-100"
+                          className="min-h-11 text-xs cursor-pointer hover:bg-red-100"
                           onClick={async () => {
                             const updatedTeam = {
                               ...team,
@@ -568,7 +568,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                           }}
                         >
                     {activity.catalog.getTaskTypeDisplayName(taskType)} ×
-                        </Badge>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -642,10 +642,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                   className="bg-white rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => handleStaffCardClick(staff)}
                 >
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex flex-wrap gap-2 justify-between items-start mb-2">
                     <div>
                       <h3 className="text-sm font-semibold text-gray-900">{staff.name}</h3>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
                         <span className="text-xs text-gray-600">{staff.nationality}</span>
                         <Badge variant="outline" className={`text-2xs ${getColorClass(staff.skillLevel)}`}>
                           {skillInfo.name} ({formatNumber(staff.skillLevel * 100, { smartDecimals: true })}%)
@@ -670,7 +670,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-4 w-4 p-0 text-gray-400 hover:text-gray-600"
+                            aria-label={`Manage teams for ${staff.name}`} className="h-11 w-11 p-0 text-gray-400 hover:text-gray-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleTeamAssignment(staff);
@@ -701,7 +701,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                     <StaffSkillBarsList staff={staff} />
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <div className="flex flex-wrap gap-2 justify-between items-center pt-2 border-t border-gray-200">
                     <div className="flex items-center gap-4 text-xs text-gray-600">
                       <div>
                         <span className="font-medium">Wage:</span> <span className={getWageColorClass(staff.wage, 'weekly')}>{formatNumber(staff.wage, { currency: true })}/wk</span>
@@ -709,7 +709,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                     </div>
 
                     {staff.specializedRoles.length > 0 && (
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         {staff.specializedRoles.map(role => (
                           <Badge key={role} variant="secondary" className="text-2xs bg-amber-100 text-amber-900" title={SPECIALIZED_ROLES[role].description}>
                             {SPECIALIZED_ROLES[role].title}
@@ -735,6 +735,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                   <div className="text-2xs text-gray-500 mt-1">
                     Hired: Week {staff.hireDate.week}, {staff.hireDate.season} {staff.hireDate.year}
                   </div>
+                  <Button variant="outline" className="mt-3 min-h-11 w-full" aria-label={`View details for ${staff.name}`}
+                    onClick={(event) => { event.stopPropagation(); handleStaffCardClick(staff); }}>
+                    View Staff Details
+                  </Button>
                 </div>
               );
             })}
@@ -759,7 +763,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                     const team = allTeams.find(t => t.id === teamId);
                     return team ? (
                       <div key={teamId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span>{team.icon}</span>
                           <span>{team.name}</span>
                         </div>
@@ -767,7 +771,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveFromTeam(teamId)}
-                          className="text-red-600 hover:text-red-800"
+                          className="min-h-11 text-red-600 hover:text-red-800"
                         >
                           Remove
                         </Button>
@@ -789,7 +793,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title, activity }) => {
                     <Button
                       key={team.id}
                       variant="outline"
-                      className="w-full justify-start"
+                      className="min-h-11 h-auto whitespace-normal w-full justify-start"
                       onClick={() => handleAssignToTeam(team.id)}
                     >
                       <span className="mr-2">{team.icon}</span>

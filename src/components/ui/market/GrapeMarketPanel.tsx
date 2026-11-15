@@ -18,6 +18,7 @@ import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 import { getFeatureConfig } from '@/lib/services/wine/features/constants/commonFeaturesUtil';
 import { getGameState } from '@/lib/services/core/gameState';
 import { STORAGE_VESSEL_INITIAL_HARVEST_LITRES_PER_KG } from '@/lib/constants/storageVesselConstants';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { WineFeature } from '@/lib/types/wineFeatures';
 import type { WeatherState } from '@/lib/types/types';
 import { getWeatherIcon, getWeatherLabel } from '@/lib/features/weather';
@@ -164,6 +165,7 @@ const PriceCalculationTooltip: React.FC<{
 };
 
 export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sourceFilter = 'all' }) => {
+  const isMobile = useIsMobile();
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorByOfferId, setErrorByOfferId] = useState<Record<string, string>>({});
@@ -395,6 +397,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
       key: 'available',
       header: 'Supply',
       sortable: true,
+      mobileSummary: true,
       className: 'w-[9%] text-right text-gray-200 whitespace-nowrap min-w-[78px]',
       render: (offer) => `${offer.availableKg.toLocaleString()} kg`,
     },
@@ -402,6 +405,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
       key: 'quality',
       header: headerWithTooltip('Quality', 'Higher grape quality, structure, and taste usually increase bulk price and improve the wine’s potential.'),
       sortable: true,
+      mobileSummary: true,
       className: 'w-[13%] text-right min-w-[130px]',
       render: (offer) => (
         <div>
@@ -424,6 +428,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
       key: 'price',
       header: 'Price per kg',
       sortable: true,
+      mobileSummary: true,
       className: 'w-[9%] text-right text-amber-300 whitespace-nowrap min-w-[80px]',
       render: (offer) => (
         <PriceCalculationTooltip breakdown={getBuyOfferPriceBreakdown(offer)}>
@@ -437,6 +442,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
       key: 'action',
       header: headerWithTooltip('Quantity', 'Purchase quantity selected for this offer. You can sort by the amount you plan to buy.'),
       sortable: true,
+      mobileSummary: true,
       className: 'w-[16%] text-right min-w-[150px]',
       render: (offer) => (
         <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
@@ -464,11 +470,12 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
   ], [errorByOfferId, getOfferQuantity, headerWithTooltip, loading]);
 
   return <>
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 pb-4 sm:p-0">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
             {selectedOffer?.demandFactors ? (
               <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
+                <details open={!isMobile}>
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-xs">
                   <span className="text-cyan-200 font-medium">Market outlook</span>
                   <span className="inline-flex items-center gap-1 rounded border border-emerald-700/70 bg-emerald-900/30 px-2 py-1 text-emerald-200">
                     <span>{getSeasonVolatilityIcon(selectedOffer.demandFactors.volatilitySeason)}</span>
@@ -482,7 +489,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
                     <span>{getWeatherIcon((selectedOffer.demandFactors.volatilityWeatherState ?? 'Clear') as WeatherState)}</span>
                     <span>{getWeatherLabel((selectedOffer.demandFactors.volatilityWeatherState ?? 'Clear') as WeatherState, selectedOffer.demandFactors.volatilityWeatherIntensity ?? 'Mild')}</span>
                   </span>
-                </div>
+                </summary>
                 <div className="mt-2 space-y-1 text-[11px] text-gray-300">
                   {selectedOffer.demandFactors.volatilityPriceReason && (
                     <div><span className="text-cyan-300 font-medium">Price outlook:</span> {selectedOffer.demandFactors.volatilityPriceReason}</div>
@@ -494,7 +501,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
                     <div><span className="text-blue-300 font-medium">Supplier profile:</span> {selectedOffer.demandFactors.volatilityBuyerSensitivityReason}</div>
                   )}
                 </div>
-
+                </details>
               </div>
             ) : (
               <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-xs text-gray-300">
@@ -513,7 +520,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
             {priceBreakdown && selectedOffer ? (
               <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70">
                 <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-3">Purchase Summary</div>
-                <div className="flex items-end justify-between gap-3 border-b border-gray-700 pb-3">
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-700 pb-3">
                   <div>
                     <PriceCalculationTooltip breakdown={priceBreakdown}>
                       <div className="text-2xl font-bold text-amber-300 cursor-help underline decoration-dotted underline-offset-4">{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}<span className="ml-1 text-sm font-normal text-gray-400 no-underline">/kg</span></div>
@@ -526,19 +533,13 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
                   </div>
                 </div>
 
+                <details open={!isMobile} className="mt-3">
+                <summary className="cursor-pointer text-xs font-medium text-gray-300">Price factors and relationship impact</summary>
                 {(() => {
                   const drivers = getPriceDriverSummary(priceBreakdown);
                   return (
-                    <div className="mt-3 text-xs">
-                      <UnifiedTooltip
-                        title="What affects bulk price?"
-                        content={<span className="text-xs leading-snug">Wine potential, market conditions, your relationship with the seller, and processing stage can move the final price. Winepedia explains the usual direction of each factor without exposing the formula.</span>}
-                      >
-                        <div className="inline-flex items-center gap-1 text-gray-400">
-                          <span>Price drivers</span>
-                          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-600 text-[10px] text-gray-300">?</span>
-                        </div>
-                      </UnifiedTooltip>
+                    <div className="mt-2 text-xs">
+                      <div className="text-gray-400">Price drivers</div>
                       {drivers.increases.length > 0 && <div className="mt-1 text-amber-200">Higher: {drivers.increases.join(' · ')}</div>}
                       {drivers.reduces.length > 0 && <div className="mt-1 text-emerald-200">Lower: {drivers.reduces.join(' · ')}</div>}
                       {drivers.increases.length === 0 && drivers.reduces.length === 0 && <div className="mt-1 text-gray-300">Close to the normal market price.</div>}
@@ -552,7 +553,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
                     {trustPreview.cappedPoints > 0 ? ` (${trustPreview.rawPoints.toLocaleString()} raw, ${trustPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}
                   </div>
                 )}
-
+                </details>
               </div>
             ) : (
               <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70 text-gray-300">
@@ -561,13 +562,12 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2 items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-white">Waregroup: Grapes</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <p className="text-sm font-semibold text-white">Grapes · {displayedOffers.length} offers</p>
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:flex sm:flex-none">
+              <label className="grid min-w-0 gap-1 text-[11px] text-gray-400">Variety
               <select
-                className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white"
+                className="min-h-10 w-full min-w-0 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white"
                 value={grapeFilter}
                 onChange={(event) => setGrapeFilter(event.target.value)}
               >
@@ -576,8 +576,10 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
                   <option key={grape} value={grape}>{grape}</option>
                 ))}
               </select>
+              </label>
+              <label className="grid min-w-0 gap-1 text-[11px] text-gray-400">Stage
               <select
-                className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white"
+                className="min-h-10 w-full min-w-0 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white"
                 value={stateFilter}
                 onChange={(event) => setStateFilter(event.target.value as 'all' | BuyGrapeMarketOffer['batchState'])}
               >
@@ -586,11 +588,12 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
                 <option value="must_ready">Must</option>
                 <option value="must_fermenting">Fermenting</option>
               </select>
+              </label>
             </div>
           </div>
 
           <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden">
-            <div className="overflow-x-auto max-h-[56vh]">
+            <div className="lg:overflow-x-auto lg:max-h-[56vh]">
               <MarketOfferTable
                 rows={displayedOffers}
                 columns={columns}
@@ -624,7 +627,7 @@ export const GrapeMarketPanel: React.FC<GrapeMarketPanelProps> = ({ onClose, sou
           )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="sticky bottom-0 z-10 shrink-0 gap-2 border-t border-gray-700 bg-gray-900/95 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pb-0">
           <Button
             variant="outline"
             onClick={onClose}

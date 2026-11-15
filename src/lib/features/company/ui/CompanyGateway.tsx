@@ -21,18 +21,19 @@ function CompanyCard({ company, deleting, onSelect, onDelete }: {
   return (
     <Card className="hover:bg-accent/50 transition-colors">
       <CardContent className="p-3">
-        <div className="flex justify-between items-start">
-          <button type="button" className="flex-1 cursor-pointer text-left" onClick={() => onSelect(company)}>
+        <div className="flex items-start justify-between gap-2">
+          <button type="button" className="min-h-11 min-w-0 flex-1 cursor-pointer break-words text-left" onClick={() => onSelect(company)}>
             <h4 className="font-medium">{company.name}</h4>
             <p className="text-xs text-muted-foreground">Week {company.currentWeek}, {company.currentSeason} {company.currentYear}</p>
             <p className="text-xs">{formatNumber(company.money, { currency: true, decimals: 0 })}</p>
           </button>
-          <div className="flex items-center gap-2">
-            <div className="text-right text-[10px] text-muted-foreground">{formatLastPlayed(company.lastPlayed)}</div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="text-right text-xs text-muted-foreground">{formatLastPlayed(company.lastPlayed)}</div>
             <button
               type="button"
               onClick={(event) => onDelete(company.id, event)}
-              className={`p-1 rounded hover:bg-destructive/10 transition-colors text-xs ${deleting ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground'}`}
+              aria-label={deleting ? `Confirm deleting ${company.name}` : `Delete ${company.name}`}
+              className={`min-h-10 min-w-10 rounded hover:bg-destructive/10 transition-colors text-xs ${deleting ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground'}`}
               title={deleting ? 'Click again to confirm deletion' : 'Delete company'}
             >
               🗑️
@@ -119,7 +120,7 @@ export function CompanyGateway({
 
       <div className="pt-3 border-t">
         {!isCreating ? (
-          <Button type="button" onClick={() => setIsCreating(true)} className="w-full border-wine text-wine hover:bg-wine hover:text-white text-sm" variant="outline">
+          <Button type="button" onClick={() => setIsCreating(true)} className="min-h-11 w-full border-wine text-wine hover:bg-wine hover:text-white text-sm" variant="outline">
             <Building2 className="h-4 w-4 mr-2" />
             {showUnownedCompanies ? 'Create Company Without User' : 'Create New Company'}
           </Button>
@@ -146,9 +147,9 @@ export function CompanyGateway({
                 )}
               </>
             )}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={isLoading} className="bg-wine hover:bg-wine-dark text-white text-sm">{isLoading ? 'Creating...' : 'Start'}</Button>
-              {(listedCompanies.length > 0 || showUnownedCompanies) && <Button type="button" variant="outline" onClick={closeCreate} className="border-wine text-wine hover:bg-wine hover:text-white text-sm">Cancel</Button>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={isLoading} className="min-h-11 bg-wine hover:bg-wine-dark text-white text-sm">{isLoading ? 'Creating...' : 'Start'}</Button>
+              {(listedCompanies.length > 0 || showUnownedCompanies) && <Button type="button" variant="outline" onClick={closeCreate} className="min-h-11 border-wine text-wine hover:bg-wine hover:text-white text-sm">Cancel</Button>}
             </div>
           </form>
         )}

@@ -25,7 +25,7 @@ const FinancialSection: React.FC<{ title: string; children: React.ReactNode }> =
 );
 
 const DataRow: React.FC<{ label: string; value: string | number; valueClass?: string }> = ({ label, value, valueClass = '' }) => (
-  <div className="flex justify-between text-sm">
+  <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
     <span>{label}</span>
     <span className={`font-medium ${valueClass}`}>{typeof value === 'number' ? formatNumber(value, { currency: true }) : value}</span>
   </div>

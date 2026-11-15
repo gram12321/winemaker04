@@ -189,8 +189,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
 
   // Render
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <ActivityOptionsModal
+    <ActivityOptionsModal
         onClose={onClose}
         title={`Harvest Vineyard: ${vineyard.name}`}
         subtitle={`Configure harvesting options for this ${vineyard.hectares} hectare vineyard. Expected yield: ${harvestCalculation ? formatNumber(harvestCalculation.expectedYield, { decimals: 0 }) : 0} kg.`}
@@ -217,13 +216,13 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
         <div className="bg-gray-50 p-4 rounded mb-4">
           <h4 className="font-medium text-gray-700 mb-2">Cellar Vessels</h4>
           <div className="text-sm text-gray-600">
-            <div className="flex justify-between py-1">
+            <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 py-1">
               <span>Expected Yield:</span>
               <span className="font-medium text-green-600">
                 {harvestCalculation ? formatNumber(harvestCalculation.expectedYield, { decimals: 0 }) : 0} kg
               </span>
             </div>
-            <div className="flex justify-between py-1">
+            <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 py-1">
               <span>Selected Storage:</span>
               <span className={additionalRequiredLitres <= 0 || selectedCapacity >= additionalRequiredLitres ? 'text-green-600' : selectedCapacity <= 0 ? 'text-red-600' : 'text-amber-600'}>{selectedCapacity.toLocaleString()} L / {additionalRequiredLitres.toLocaleString()} L additional</span>
             </div>
@@ -232,7 +231,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {availableVessels.length === 0 && <div className="text-sm text-red-600 sm:col-span-2">Buy a Cellar Vessel before harvesting.</div>}
               {availableVessels.map((vessel) => (
-                <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 bg-white p-2 text-sm">
+                <label key={vessel.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded border border-gray-200 bg-white p-3 text-sm">
                   <input type="radio" name="harvest-vessel" checked={selectedVesselId === vessel.id} onChange={() => setSelectedVesselId(vessel.id)} />
                   <span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span>
                 </label>
@@ -258,8 +257,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
             </div>
           </div>
         )}
-      </ActivityOptionsModal>
-    </div>
+    </ActivityOptionsModal>
   );
 };
 

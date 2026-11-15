@@ -293,7 +293,7 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
 
   return (
     <div 
-      className="min-h-screen flex flex-col justify-center items-center p-3 text-sm"
+      className="min-h-dvh flex flex-col justify-start sm:justify-center items-center gap-3 overflow-x-hidden px-3 py-4 text-sm sm:gap-4"
       style={{
         backgroundImage: 'url("/assets/pic/loginbg.webp")',
         backgroundSize: 'cover',
@@ -485,7 +485,7 @@ export function Login({ onCompanySelected, onCompanyCreated, forcePlayerSelectio
         </div>
 
         {/* Links Container */}
-        <div className="mt-4 flex items-center justify-center gap-3 text-xs">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs">
           <a 
             href="https://trello.com/b/sipiTJrV/winemaker" 
             target="_blank"

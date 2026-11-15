@@ -1,9 +1,11 @@
 import * as React from "react"
 import { useState } from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
+import { Info } from "lucide-react"
 import { cn, getColorClass, getBadgeColorClasses, formatNumber } from "@/lib/utils/utils"
+import { Button } from "./button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./dialog"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile, useNeedsTouchDisclosure } from "@/hooks/use-mobile"
 
 
 // =============================
@@ -216,7 +218,9 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
   },
   ref
 ) {
-  const isMobile = useIsMobile();
+  const isNarrowLayout = useIsMobile();
+  const needsTouchDisclosure = useNeedsTouchDisclosure();
+  const isMobile = isNarrowLayout || needsTouchDisclosure;
   const [open, setOpen] = useState(false);
   const combinedClassName = cn(triggerClassName, className);
   const triggerDivRef = React.useRef<HTMLDivElement | null>(null);
@@ -269,10 +273,20 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
             }}
             className={combinedClassName}
             onClick={handleMobileClick}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setOpen(true);
+              }
+            }}
             onPointerDown={handleMobilePointerDown}
             onMouseDown={handleMobileMouseDown}
             style={{ position: 'relative', zIndex: 1 }} // Ensure wrapper is on top for event handling
-            tabIndex={-1}
+            tabIndex={0}
+            role="button"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-label={title ? `More information about ${title}` : 'More information'}
             {...restProps}
           >
             {children}
@@ -403,13 +417,14 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
     },
     ref
   ) {
-  const isMobile = useIsMobile();
+  const isNarrowLayout = useIsMobile();
+  const needsTouchDisclosure = useNeedsTouchDisclosure();
+  const isMobile = isNarrowLayout || needsTouchDisclosure;
     const [dialogOpen, setDialogOpen] = useState(false);
-    const triggerRef = React.useRef<HTMLDivElement | null>(null);
 
     // Mobile: Handle click events with proper propagation stopping
     if (isMobile) {
-      const handleMobileClick = (event: React.MouseEvent<HTMLDivElement>) => {
+      const handleMobileClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         // Stop propagation immediately to prevent bubbling to parent row/card
         event.stopPropagation();
         event.nativeEvent.stopImmediatePropagation?.();
@@ -422,16 +437,6 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
         }
       };
 
-      const handleMobilePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-        event.stopPropagation();
-        onPointerDown?.(event);
-      };
-
-      const handleMobileMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-        event.stopPropagation();
-        onMouseDown?.(event);
-      };
-
       const handleDialogContentClick = (event: React.MouseEvent) => {
         event.stopPropagation();
       };
@@ -440,66 +445,51 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
         event.stopPropagation();
       };
 
-      // Apply mobile hint styling to children
-      const hintedChildren = showMobileHint
-        ? (
-            mobileHintVariant === 'corner-dot'
-              ? (
-                  <span className={cn('relative block md:hidden w-full', mobileHintClassName)}>
-                    {children}
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-gray-400/70 shadow-sm z-10',
-                        mobileHintDotPosition === 'top-right' && 'right-0 -top-0.5 translate-x-1/4',
-                        mobileHintDotPosition === 'top-left' && 'left-0 -top-0.5 -translate-x-1/4',
-                        mobileHintDotPosition === 'bottom-right' && 'right-0 -bottom-0.5 translate-x-1/4',
-                        mobileHintDotPosition === 'bottom-left' && 'left-0 -bottom-0.5 -translate-x-1/4',
-                        mobileHintDotClassName
-                      )}
-                    />
-                  </span>
-                )
-              : (
-                  <span className={cn(
-                    'relative cursor-help after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:border-b after:border-dotted after:border-gray-400/70 md:after:border-b-0',
-                    mobileHintClassName
-                  )}>
-                    {children}
-                  </span>
-                )
-          )
-        : children;
-
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <div
-              ref={(node) => {
-                triggerRef.current = node;
-                if (typeof ref === 'function') ref(node as any);
-                else if (ref && 'current' in (ref as any)) (ref as any).current = node;
-              }}
-              className={cn('w-full', triggerClassName)}
-              onClick={handleMobileClick}
-              onPointerDown={handleMobilePointerDown}
-              onMouseDown={handleMobileMouseDown}
-              style={{ position: 'relative', zIndex: 1 }}
-              tabIndex={-1}
-              data-tooltip-trigger="true"
-              {...rest}
-            >
-              {hintedChildren}
-            </div>
-          </DialogTrigger>
+          <div
+            ref={ref}
+            className={cn(
+              'relative inline-flex min-w-0 max-w-full items-center',
+              showMobileHint && (mobileHintDotPosition.includes('left') ? 'pl-8' : 'pr-8'),
+              className,
+              triggerClassName
+            )}
+            onClick={onClick}
+            data-tooltip-trigger="true"
+            {...rest}
+          >
+            {children}
+            {showMobileHint && (
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={title ? `More information about ${title}` : 'More information'}
+                  aria-haspopup="dialog"
+                  aria-expanded={dialogOpen}
+                  className={cn(
+                    'absolute z-10 size-8 rounded-full bg-background/70 text-muted-foreground shadow-none hover:bg-background',
+                    mobileHintDotPosition.includes('left') ? 'left-0' : 'right-0',
+                    mobileHintDotPosition.includes('top') ? 'top-0' : 'bottom-0',
+                    mobileHintVariant === 'corner-dot' ? 'border-dotted' : 'border-solid',
+                    mobileHintClassName,
+                    mobileHintDotClassName
+                  )}
+                  onClick={handleMobileClick}
+                  onPointerDown={onPointerDown}
+                  onMouseDown={onMouseDown}
+                >
+                  <Info className="size-4" aria-hidden="true" />
+                </Button>
+              </DialogTrigger>
+            )}
+          </div>
           <DialogContent
-            className={cn(contentClassName || "max-w-sm")}
+            className={cn('w-[calc(100vw-1rem)] max-h-[75dvh] sm:max-h-[60dvh]', contentClassName || "max-w-sm")}
             onClick={handleDialogContentClick}
             onInteractOutside={handleInteractOutside}
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              triggerRef.current?.focus();
-            }}
           >
             <DialogHeader>
               <DialogTitle className={title ? undefined : "sr-only"}>
@@ -509,18 +499,34 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
                 {title ? `Details about ${title}` : "Additional information"}
               </DialogDescription>
             </DialogHeader>
-            <div className="text-xs" onClick={handleDialogContentClick}>{content}</div>
+            <div className="max-h-[55dvh] overflow-y-auto text-sm leading-relaxed" onClick={handleDialogContentClick}>{content}</div>
           </DialogContent>
         </Dialog>
       );
     }
 
     // Desktop: Use Radix UI tooltip directly
+  const desktopTriggerChildren = React.isValidElement(children)
+    ? (() => {
+        const child = children as React.ReactElement<any>;
+        if (child.type === React.Fragment) {
+          return <span tabIndex={0} aria-label={title} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">{child}</span>;
+        }
+        const nativeFocusable = typeof child.type === 'string'
+          && ['a', 'button', 'input', 'select', 'textarea', 'summary'].includes(child.type);
+        return React.cloneElement(child, {
+          tabIndex: nativeFocusable ? child.props.tabIndex : (child.props.tabIndex ?? 0),
+          'aria-label': child.props['aria-label'] ?? title,
+          className: cn(child.props.className, !nativeFocusable && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'),
+        });
+      })()
+    : <span tabIndex={0} aria-label={title} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">{children}</span>;
+
   return (
       <TooltipPrimitive.Provider>
         <TooltipPrimitive.Root>
           <TooltipPrimitive.Trigger asChild className={triggerClassName}>
-            {children}
+            {desktopTriggerChildren}
           </TooltipPrimitive.Trigger>
           <TooltipPrimitive.Portal>
             <TooltipPrimitive.Content

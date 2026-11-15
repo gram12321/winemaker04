@@ -3,7 +3,7 @@ import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType, EconomyP
 import { fulfillWineOrder, rejectWineOrder, generateCustomer } from '@/lib/services';
 import { formatNumber, formatPercent, formatGameDateFromObject, getBadgeColorClasses} from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedTooltip } from '../../ui';
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedTooltip } from '../../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown, clearRelationshipBreakdownCache } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -219,6 +219,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   // Use sorting hooks
   const {
     sortedData: sortedOrders,
+    sortConfig: orderSortConfig,
     handleSort: handleOrderSort,
     getSortIndicator: getOrderSortIndicator,
     isColumnSorted: isOrderColumnSorted
@@ -384,12 +385,12 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     <div className="space-y-3">
       {/* Order Status Filter */}
       <div className="bg-white rounded-lg shadow p-3">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-2 justify-between items-center">
           <div>
             <h3 className="text-sm font-semibold">Order Filter</h3>
             <p className="text-gray-500 text-xs">Filter orders by status</p>
           </div>
-          <div className="flex space-x-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs">
             {(['all', 'pending', 'fulfilled', 'rejected', 'expired'] as const).map((status) => (
               <button
                 key={status}
@@ -414,7 +415,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
 
       {/* Customer Acquisition Chance Display */}
       <div className="bg-white rounded-lg shadow p-3">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-2 justify-between items-center">
           <div>
             <h3 className="text-sm font-semibold">Customer Acquisition</h3>
             <p className="text-gray-500 text-xs">Current chance to attract new customers</p>
@@ -467,23 +468,23 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       {/* Order Management */}
       {pendingOrders.length > 0 && (
         <div className="bg-white rounded-lg shadow p-3">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap gap-2 justify-between items-center">
             <div>
               <h3 className="text-sm font-semibold">Order Management</h3>
               <p className="text-gray-500 text-xs">Manage pending orders</p>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleAcceptAll}
                 disabled={isLoading}
-                className="bg-green-600 text-white px-2.5 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-400 text-xs"
+                className="min-h-11 bg-green-600 text-white px-2.5 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-400 text-xs"
               >
                 Accept All ({pendingOrders.length})
               </button>
               <button
                 onClick={handleRejectAll}
                 disabled={isLoading}
-                className="bg-red-600 text-white px-2.5 py-1.5 rounded hover:bg-red-700 disabled:bg-gray-400 text-xs"
+                className="min-h-11 bg-red-600 text-white px-2.5 py-1.5 rounded hover:bg-red-700 disabled:bg-gray-400 text-xs"
               >
                 Reject All
               </button>
@@ -492,10 +493,10 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
         </div>
       )}
 
-      {/* Orders Table - Desktop */}
-      <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
+      {/* Full comparison table is reserved for wide layouts; phones use order cards below. */}
+      <div className="hidden bg-white rounded-lg shadow overflow-hidden lg:block">
         <div className="overflow-x-auto">
-          <Table className="text-xs">
+          <Table className="min-w-[1100px] text-xs">
             <TableHeader>
               <TableRow>
                 <TableHead 
@@ -1009,6 +1010,32 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
         )}
       </div>
 
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 lg:hidden" aria-label="Sort orders">
+        <label className="grid min-w-0 gap-1 text-xs text-gray-600">
+          Sort orders by
+          <Select value={orderSortConfig ? String(orderSortConfig.key) : ''} onValueChange={(key) => handleOrderSort(key as keyof WineOrder)}>
+            <SelectTrigger className="min-h-11 min-w-0 bg-white" aria-label="Sort orders by">
+              <SelectValue placeholder="Choose a field" />
+            </SelectTrigger>
+            <SelectContent>
+              {orderColumns.filter((column) => column.sortable).map((column) => (
+                <SelectItem key={String(column.key)} value={String(column.key)}>{column.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-11 bg-white"
+          disabled={!orderSortConfig}
+          onClick={() => orderSortConfig && handleOrderSort(orderSortConfig.key)}
+          aria-label={`Change sort direction${orderSortConfig ? `, currently ${orderSortConfig.direction ?? 'off'}` : ''}`}
+        >
+          {orderSortConfig ? getOrderSortIndicator(orderSortConfig.key) : '↕'}
+        </Button>
+      </div>
       {/* Orders Cards - Mobile */}
       <div className="lg:hidden space-y-4">
         {paginatedOrders.length === 0 ? (
@@ -1024,6 +1051,11 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
               const inventory = getInventoryForOrder(order);
               const customerKey = getCustomerKey(order.customerId);
               const hasAskingPriceShift = Math.abs(currentAskingPrice - orderAskingPrice) > 0.005;
+              const orderBatch = getBatchForOrder(order);
+              const orderVineyard = orderBatch ? vineyardById.get(orderBatch.vineyardId) : undefined;
+              const estimatedPriceBreakdown = orderBatch
+                ? calculateEstimatedPriceBreakdown(orderBatch, orderVineyard, prestige, orderVineyard?.vineyardPrestige)
+                : null;
               const premiumPercent = effectiveAskingPrice > 0
                 ? (order.offeredPrice - effectiveAskingPrice) / effectiveAskingPrice
                 : 0;
@@ -1032,7 +1064,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 <div key={order.id} className="bg-white rounded-lg shadow overflow-hidden">
                   {/* Card Header */}
                   <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 border-b">
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex flex-wrap gap-2 justify-between items-start mb-2">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`${getFlagIcon(order.customerCountry || '')} text-lg`}></span>
@@ -1041,6 +1073,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                           {order.customerType}
                         </span>
+                        <button type="button" onClick={() => onNavigateToWinepedia?.()} className="min-h-10 text-xs font-medium text-blue-700 underline underline-offset-2">
+                          Customer details
+                        </button>
                       </div>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -1168,6 +1203,10 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         <span>Ordered:</span>
                         <span>{formatGameDateFromObject(order.orderedAt)}</span>
                       </div>
+                      <div className="flex flex-wrap justify-between gap-2 mb-1">
+                        <span>Expires:</span>
+                        <span>{formatGameDateFromObject({ week: order.expiresWeek, season: order.expiresSeason, year: order.expiresYear })}</span>
+                      </div>
                       {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
                         <div className="text-orange-600">
                           Can fulfill: {order.fulfillableQuantity} bottles
@@ -1176,20 +1215,82 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                     </div>
                   </div>
 
+                  <details className="border-t px-4 py-2">
+                    <summary className="min-h-10 cursor-pointer py-2 text-sm font-medium text-gray-700">Customer, quantity, and bid details</summary>
+                    <div className="space-y-4 pb-2 text-sm">
+                      <section className="space-y-1">
+                        <h4 className="font-semibold text-gray-800">Customer relationship</h4>
+                        <p className="text-xs text-gray-600">Customer type range: {getCustomerTypeRange(order.customerType)}</p>
+                        <p className="whitespace-pre-line break-words text-xs text-gray-600">
+                          {relationshipBreakdowns[customerKey] ?? (isLoadingRelationships ? 'Loading relationship breakdown…' : 'Relationship data not available')}
+                        </p>
+                        {boostDetails[customerKey]?.length > 0 && (
+                          <ul className="space-y-1 text-xs text-gray-600">
+                            {boostDetails[customerKey].map((boost, index) => (
+                              <li key={`${boost.description}-${index}`}>
+                                {boost.description} · {formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })} weeks ago · +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
+
+                      <section className="space-y-1">
+                        <h4 className="font-semibold text-gray-800">Requested quantity</h4>
+                        {order.calculationData ? (
+                          <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                            <dt className="text-gray-500">Base quantity</dt><dd>{order.calculationData.baseQuantity}</dd>
+                            <dt className="text-gray-500">Price sensitivity</dt><dd>{formatNumber(order.calculationData.priceSensitivity, { decimals: 3, forceDecimals: true })}×</dd>
+                            <dt className="text-gray-500">Market and relationship</dt><dd>{formatNumber(order.calculationData.quantityMarketShareMultiplier, { decimals: 3, forceDecimals: true })}×</dd>
+                            {order.calculationData.difficulty && <><dt className="text-gray-500">Difficulty factor</dt><dd>{formatNumber(order.calculationData.difficulty.quantityFactor, { decimals: 3, forceDecimals: true })}×</dd></>}
+                            <dt className="font-medium">Requested total</dt><dd className="font-medium">{order.requestedQuantity} bottles</dd>
+                          </dl>
+                        ) : <p className="text-xs text-gray-600">Calculation data is not available.</p>}
+                        {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
+                          <p className="text-xs text-orange-700">Current inventory limits fulfillment to {order.fulfillableQuantity} bottles.</p>
+                        )}
+                      </section>
+
+                      <section className="space-y-1">
+                        <h4 className="font-semibold text-gray-800">Bid price</h4>
+                        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                          <dt className="text-gray-500">Order asking price</dt><dd>{formatNumber(orderAskingPrice, { currency: true, decimals: 2 })}</dd>
+                          {hasAskingPriceShift && <><dt className="text-gray-500">Current asking price</dt><dd>{formatNumber(currentAskingPrice, { currency: true, decimals: 2 })}</dd></>}
+                          {estimatedPriceBreakdown && <>
+                            <dt className="text-gray-500">Current estimated value</dt><dd>{formatNumber(estimatedPriceBreakdown.finalPrice, { currency: true, decimals: 2 })}</dd>
+                            <dt className="text-gray-500">Wine score</dt><dd>{formatPercent(estimatedPriceBreakdown.wineScore, 1, true)}</dd>
+                            <dt className="text-gray-500">Score curve</dt><dd>{formatNumber(estimatedPriceBreakdown.wineScoreMultiplier, { decimals: 3, forceDecimals: true })}×</dd>
+                            <dt className="text-gray-500">Land value multiplier</dt><dd>{formatNumber(estimatedPriceBreakdown.landValuePriceMultiplier, { decimals: 3, forceDecimals: true })}×</dd>
+                            {Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005 && <><dt className="text-gray-500">Feature multiplier</dt><dd>{formatNumber(estimatedPriceBreakdown.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}×</dd></>}
+                            {Math.abs(estimatedPriceBreakdown.companyPrestigeMultiplier - 1) > 0.0005 && <><dt className="text-gray-500">Company prestige</dt><dd>{formatNumber(estimatedPriceBreakdown.companyPrestigeMultiplier, { decimals: 3, forceDecimals: true })}×</dd></>}
+                            {Math.abs(estimatedPriceBreakdown.vineyardPrestigeMultiplier - 1) > 0.0005 && <><dt className="text-gray-500">Vineyard prestige</dt><dd>{formatNumber(estimatedPriceBreakdown.vineyardPrestigeMultiplier, { decimals: 3, forceDecimals: true })}×</dd></>}
+                          </>}
+                          {order.calculationData && <>
+                            <dt className="text-gray-500">Customer multiplier</dt><dd>{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}×</dd>
+                            <dt className="text-gray-500">Relationship bonus</dt><dd>{formatNumber(order.calculationData.relationshipBonusMultiplier ?? 1, { decimals: 3, forceDecimals: true })}×</dd>
+                            {order.calculationData.difficulty && <><dt className="text-gray-500">Difficulty factor</dt><dd>{formatNumber(order.calculationData.difficulty.priceFactor, { decimals: 3, forceDecimals: true })}×</dd></>}
+                            {order.calculationData.featurePriceMultiplier !== undefined && <><dt className="text-gray-500">Feature multiplier</dt><dd>{formatNumber(order.calculationData.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}×</dd></>}
+                          </>}
+                          <dt className="font-medium">Final bid</dt><dd className="font-medium">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</dd>
+                        </dl>
+                      </section>
+                    </div>
+                  </details>
+
                   {/* Card Footer - Actions */}
                   {order.status === 'pending' && (
                     <div className="bg-gray-50 px-4 py-3 border-t flex gap-2">
                       <button
                         onClick={() => handleFulfillOrder(order.id)}
                         disabled={isLoading}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium"
+                        className="min-h-11 flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium"
                       >
                         Accept
                       </button>
                       <button
                         onClick={() => handleRejectOrder(order.id)}
                         disabled={isLoading}
-                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-gray-400 text-sm font-medium"
+                        className="min-h-11 flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-gray-400 text-sm font-medium"
                       >
                         Reject
                       </button>
@@ -1207,7 +1308,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="min-h-11 flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     disabled={ordersPage <= 1}
                     onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
                   >
@@ -1217,7 +1318,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                     {ordersPage} / {totalOrdersPages}
                   </div>
                   <button
-                    className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="min-h-11 flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     disabled={ordersPage >= totalOrdersPages}
                     onClick={() => setOrdersPage(p => Math.min(totalOrdersPages, p + 1))}
                   >

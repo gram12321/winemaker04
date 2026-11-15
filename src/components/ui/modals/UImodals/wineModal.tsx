@@ -260,22 +260,22 @@ export const WineModal: React.FC<WineModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-y-auto scrollbar-styled">
+      <DialogContent className="flex w-[calc(100%-1rem)] min-w-0 max-w-6xl max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] flex-col gap-0 p-0 overflow-hidden scrollbar-styled">
         {/* Header with wine image */}
         <div
-          className="h-32 bg-cover bg-center relative"
+          className="min-h-32 shrink-0 bg-cover bg-center relative"
           style={{
             backgroundImage: "url('https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&h=300&fit=crop')",
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-            <div>
-              <div className="text-white text-lg font-semibold flex items-center gap-2">
+          <div className="relative p-4 pt-12 flex flex-wrap gap-2 items-end justify-between">
+            <div className="min-w-0 max-w-full flex-1">
+              <div className="min-w-0 break-words text-white text-lg font-semibold flex items-center gap-2">
                 <Wine className="h-5 w-5" />
                 {displayName}
               </div>
-              <div className="text-white/80 text-xs flex items-center gap-2">
+              <div className="text-white/80 text-xs flex flex-wrap items-center gap-2">
                 <Calendar className="h-3 w-3" />
                 {wineBatch.harvestStartDate.year} Vintage • {weeksSinceHarvest} weeks since harvest
                 {wineBatch.state === 'bottled' && wineBatch.agingProgress != null && wineBatch.agingProgress > 0 && (
@@ -283,7 +283,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="bg-white/90 text-gray-900">
                 {wineBatch.state.replace('_', ' ').toUpperCase()}
               </Badge>
@@ -294,7 +294,7 @@ export const WineModal: React.FC<WineModalProps> = ({
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="min-h-0 overflow-y-auto overscroll-contain p-4 scrollbar-styled">
           <DialogHeader>
             <DialogTitle className="text-base">Wine Details</DialogTitle>
             <DialogDescription className="text-xs">
@@ -304,28 +304,28 @@ export const WineModal: React.FC<WineModalProps> = ({
 
           {/* Tabbed Interface */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="overview" className="flex items-center gap-1">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
+              <TabsTrigger value="overview" className="flex min-h-11 items-center justify-center gap-1">
                 <BarChart3 className="h-3 w-3" />
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="quality" className="flex items-center gap-1">
+              <TabsTrigger value="quality" className="flex min-h-11 items-center justify-center gap-1">
                 <Award className="h-3 w-3" />
                 Land Value
               </TabsTrigger>
-              <TabsTrigger value="structure" className="flex items-center gap-1">
+              <TabsTrigger value="structure" className="flex min-h-11 items-center justify-center gap-1">
                 <TrendingUp className="h-3 w-3" />
                 Structure
               </TabsTrigger>
-              <TabsTrigger value="features" className="flex items-center gap-1">
+              <TabsTrigger value="features" className="flex min-h-11 items-center justify-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
                 Features
               </TabsTrigger>
-              <TabsTrigger value="taste" className="flex items-center gap-1">
+              <TabsTrigger value="taste" className="flex min-h-11 items-center justify-center gap-1">
                 <Radar className="h-3 w-3" />
                 Taste
               </TabsTrigger>
-              <TabsTrigger value="origins" className="flex items-center gap-1">
+              <TabsTrigger value="origins" className="flex min-h-11 items-center justify-center gap-1">
                 <BarChart3 className="h-3 w-3" />
                 Origins
               </TabsTrigger>
@@ -342,21 +342,21 @@ export const WineModal: React.FC<WineModalProps> = ({
                         <Wine className="h-4 w-4" /> Wine Info
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-2">
-                      <div className="flex justify-between">
+                    <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Quantity:</span>
                         <span className="font-medium">{wineBatch.quantity} {wineBatch.state === 'bottled' ? 'bottles' : 'kg'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">State:</span>
                         <span className="font-medium capitalize">{wineBatch.state.replace('_', ' ')}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Vintage age:</span>
                         <span className="font-medium">{weeksSinceHarvest} weeks (since harvest)</span>
                       </div>
                       {wineBatch.state === 'bottled' && (
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-muted-foreground">Bottle age:</span>
                           <span className="font-medium">{wineBatch.agingProgress ?? 0} weeks (in bottle)</span>
                         </div>
@@ -370,8 +370,8 @@ export const WineModal: React.FC<WineModalProps> = ({
                         <Award className="h-4 w-4" /> Scores
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-3">
-                      <div className="flex justify-between">
+                    <CardContent className="min-w-0 break-words py-3 text-sm space-y-3">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Wine Score:</span>
                         <UnifiedTooltip
                           content={
@@ -409,7 +409,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                         </UnifiedTooltip>
                       </div>
                       
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Structure:</span>
                         <UnifiedTooltip
                           content={
@@ -447,7 +447,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                         </UnifiedTooltip>
                       </div>
                       
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Taste Quality:</span>
                         <UnifiedTooltip
                           content={
@@ -485,7 +485,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                         </UnifiedTooltip>
                       </div>
 
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Land Value Modifier:</span>
                         <div className="text-right">
                           <div className={`font-medium ${getColorClass(landValueModifier)}`}>
@@ -503,21 +503,21 @@ export const WineModal: React.FC<WineModalProps> = ({
                         <MapPin className="h-4 w-4" /> Vineyard
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-2">
-                      <div className="flex justify-between">
+                    <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Name:</span>
                         <span className="font-medium">{wineBatch.vineyardName}</span>
                       </div>
                       {vineyard && (
                         <>
-                          <div className="flex justify-between">
+                          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                             <span className="text-muted-foreground">Location:</span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex min-h-11 items-center justify-center gap-1">
                               <span className={getFlagIcon(vineyard.country)} />
                               <span className="font-medium">{vineyard.region}</span>
                             </div>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                             <span className="text-muted-foreground">Size:</span>
                             <span className="font-medium">{vineyard.hectares} ha</span>
                           </div>
@@ -533,8 +533,9 @@ export const WineModal: React.FC<WineModalProps> = ({
                       <History className="h-4 w-4" /> Snapshots
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="py-3 text-sm">
-                    <div className="overflow-x-auto scrollbar-styled">
+                  <CardContent className="min-w-0 break-words py-3 text-sm">
+                    <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to compare all columns.</p>
+                    <div className="min-w-0 max-w-full overflow-x-auto scrollbar-styled">
                       <div className="grid min-w-[34rem] grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(5rem,6rem))] gap-2 text-[11px]">
                         <div className="font-medium text-muted-foreground">Metric</div>
                         <div className="text-right font-medium text-muted-foreground">Harvest</div>
@@ -570,27 +571,27 @@ export const WineModal: React.FC<WineModalProps> = ({
                       <TrendingUp className="h-4 w-4" /> Estimated Price
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="py-3 text-sm space-y-2">
-                    <div className="flex justify-between">
+                  <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Current estimate:</span>
                       <span className="font-medium text-gray-900">
                         {formatNumber(estimatedPriceBreakdown.finalPrice, { currency: true, decimals: 2 })}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Score curve multiplier:</span>
                       <span className="font-medium">
                         {formatNumber(estimatedPriceBreakdown.wineScoreMultiplier, { decimals: 2, forceDecimals: true })}x
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Land value multiplier:</span>
                       <span className="font-medium">
                         {formatNumber(estimatedPriceBreakdown.landValuePriceMultiplier, { decimals: 2, forceDecimals: true })}x
                       </span>
                     </div>
                     {hasFeatureMultiplier && (
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Feature multiplier:</span>
                         <span className="font-medium">
                           {formatNumber(estimatedPriceBreakdown.featurePriceMultiplier, { decimals: 2, forceDecimals: true })}x
@@ -598,7 +599,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </div>
                     )}
                     {hasCompanyPrestigeMultiplier && (
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Company prestige:</span>
                         <span className="font-medium">
                           {formatNumber(estimatedPriceBreakdown.companyPrestigeMultiplier, { decimals: 2, forceDecimals: true })}x
@@ -606,7 +607,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </div>
                     )}
                     {hasVineyardPrestigeMultiplier && (
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">Vineyard prestige:</span>
                         <span className="font-medium">
                           {formatNumber(estimatedPriceBreakdown.vineyardPrestigeMultiplier, { decimals: 2, forceDecimals: true })}x
@@ -642,7 +643,8 @@ export const WineModal: React.FC<WineModalProps> = ({
                           This batch has no persisted anchor history. Origins below are shown as a single legacy snapshot from neutral.
                         </div>
                       )}
-                      <div className="overflow-x-auto scrollbar-styled">
+                      <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to compare all columns.</p>
+                    <div className="min-w-0 max-w-full overflow-x-auto scrollbar-styled">
                         <div className="grid min-w-[34rem] grid-cols-[minmax(10rem,1fr)_repeat(3,minmax(5rem,7rem))] gap-2 text-[11px]">
                           <div className="font-medium text-amber-900/90">Anchor</div>
                           <div className="text-right font-medium text-amber-900/90">Current</div>
@@ -671,7 +673,8 @@ export const WineModal: React.FC<WineModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="overflow-x-auto scrollbar-styled">
+                      <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to compare all columns.</p>
+                    <div className="min-w-0 max-w-full overflow-x-auto scrollbar-styled">
                         <div className="grid min-w-[34rem] grid-cols-[minmax(10rem,1fr)_repeat(3,minmax(6rem,8rem))] gap-2 text-[11px]">
                           <div className="font-medium text-amber-900/90">Downstream</div>
                           <div className="text-right font-medium text-amber-900/90">Current</div>
@@ -740,7 +743,8 @@ export const WineModal: React.FC<WineModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="overflow-x-auto scrollbar-styled">
+                      <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to compare all columns.</p>
+                    <div className="min-w-0 max-w-full overflow-x-auto scrollbar-styled">
                         <div className="grid min-w-[48rem] grid-cols-[minmax(10rem,1fr)_repeat(4,minmax(5.5rem,7rem))] gap-2 text-[11px]">
                           <div className="font-medium text-amber-900/90">Isolated Anchor Impact (Totals)</div>
                           <div className="text-right font-medium text-amber-900/90">Structure Delta</div>
@@ -877,24 +881,24 @@ export const WineModal: React.FC<WineModalProps> = ({
                       <Wine className="h-4 w-4" /> Grape Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="py-3 text-sm space-y-2">
-                    <div className="flex justify-between">
+                  <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Grape:</span>
                       <span className="font-medium">{wineBatch.grape}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Color:</span>
                       <span className="font-medium capitalize">{wineBatch.grapeColor}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Natural Yield:</span>
                       <span className="font-medium">{formatNumber(wineBatch.naturalYield * 100, { smartDecimals: true })}%</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Fragile:</span>
                       <span className="font-medium">{formatNumber(wineBatch.fragile * 100, { smartDecimals: true })}%</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Prone to Oxidation:</span>
                       <span className="font-medium">{formatNumber(wineBatch.proneToOxidation * 100, { smartDecimals: true })}%</span>
                     </div>
@@ -908,20 +912,20 @@ export const WineModal: React.FC<WineModalProps> = ({
                       <Calendar className="h-4 w-4" /> Harvest Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="py-3 text-sm space-y-2">
-                    <div className="flex justify-between">
+                  <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Start Date:</span>
                       <span className="font-medium">
                         Week {wineBatch.harvestStartDate.week}, {wineBatch.harvestStartDate.season} {wineBatch.harvestStartDate.year}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">End Date:</span>
                       <span className="font-medium">
                         Week {wineBatch.harvestEndDate.week}, {wineBatch.harvestEndDate.season} {wineBatch.harvestEndDate.year}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-muted-foreground">Vintage age:</span>
                       <span className="font-medium">{weeksSinceHarvest} weeks</span>
                     </div>
@@ -992,7 +996,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                 </p>
 
                 {/* 3-Column Horizontal Grid */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Column 1: Evolving Features */}
                   <Card>
                     <CardHeader className="py-3">
@@ -1088,7 +1092,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                         <MapPin className="h-4 w-4" /> Source Snapshot
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-2">
+                    <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
                       <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Source</span>
                         <span className="font-medium capitalize">{wineBatch.originSnapshot.sourceKind}</span>
@@ -1125,7 +1129,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                       families and notes (0–1 bars).
                     </p>
                   </CardHeader>
-                  <CardContent className="py-3 text-sm space-y-3">
+                  <CardContent className="min-w-0 break-words py-3 text-sm space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {characteristicOrder.map((key) => {
                         // Calculate base by subtracting all effects from current characteristics

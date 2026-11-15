@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 import React, { useState, useMemo } from 'react';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
@@ -293,37 +294,19 @@ MAX PRESSURE BY METHOD:
   const validation = validateCrushingBatch(batch);
   if (!validation.valid) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Cannot Crush Batch</h2>
-            <button
-              type="button"
-              className="text-gray-400 hover:text-gray-600"
-              onClick={onClose}
-            >
-              ✕
-            </button>
-          </div>
-          <p className="text-red-600 mb-4">{validation.reason}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="px-4 py-2 border border-gray-300 rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50"
-              onClick={onClose}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="max-w-lg overflow-y-auto">
+          <DialogTitle className="pr-10 text-xl font-bold">Cannot Crush Batch</DialogTitle>
+          <p className="text-red-600">{validation.reason}</p>
+          <button type="button" className="min-h-11 rounded border px-4 py-2" onClick={onClose}>Close</button>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   // Render
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <ActivityOptionsModal
+    <ActivityOptionsModal
         onClose={onClose}
         title="Crush Wine Batch"
         subtitle={`Configure crushing options for ${batch.quantity}kg of ${batch.grape} grapes from ${batch.vineyardName}. Choose method and processing options that will affect the final wine characteristics.`}
@@ -346,7 +329,7 @@ MAX PRESSURE BY METHOD:
             <span>Pressing Intensity Effects</span>
           </h4>
           
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             {/* Left: Yield Impact */}
             <div>
               <p className="font-medium text-blue-800 mb-2">Yield Impact:</p>
@@ -523,8 +506,7 @@ MAX PRESSURE BY METHOD:
             })()}
           </div>
         )}
-      </ActivityOptionsModal>
-    </div>
+    </ActivityOptionsModal>
   );
 };
 

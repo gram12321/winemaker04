@@ -382,7 +382,7 @@ const Vineyard: React.FC = () => {
       fullWidth
     }: { label: string; disabled?: boolean; onClick: (e: React.MouseEvent) => void; primary: 'plant' | 'harvest' | 'clear'; title?: string; fullWidth?: boolean }
   ) => {
-    const base = `${fullWidth ? 'w-full' : ''} px-2 py-1 rounded text-xs font-medium`;
+    const base = `${fullWidth ? 'w-full' : ''} min-h-11 px-3 py-2 rounded text-sm font-medium`;
     const classes = disabled
       ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
       : primary === 'plant'
@@ -616,8 +616,8 @@ const Vineyard: React.FC = () => {
   }, [vineyards]);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-800">Vineyard Management</h2>
+    <div className="min-w-0 space-y-6 break-words">
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Vineyard Management</h2>
       
       
       
@@ -629,11 +629,11 @@ const Vineyard: React.FC = () => {
         }}
       >
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-3">
-          <div className="flex justify-between items-end">
+          <div className="flex flex-wrap gap-3 justify-between items-end">
             <h3 className="text-white text-base font-semibold">Vineyard Portfolio</h3>
             <button 
               onClick={() => setShowLandSearchModal(true)}
-              className="bg-green-700 hover:bg-green-800 text-white px-3 py-1.5 rounded"
+              className="bg-green-700 hover:bg-green-800 text-white min-h-11 px-3 py-2 rounded"
             >
               Search for Land
             </button>
@@ -706,7 +706,7 @@ const Vineyard: React.FC = () => {
                   <tr key={vineyard.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(vineyard)}>
                     {/* Vineyard & Location */}
                     <td className="px-4 py-4">
-                      <div className="text-sm font-medium text-gray-900">{vineyard.name}</div>
+                      <button type="button" className="min-h-11 text-left text-sm font-medium text-gray-900 underline-offset-4 hover:underline" onClick={(event) => { event.stopPropagation(); handleRowClick(vineyard); }}>{vineyard.name}</button>
                       <div className="text-sm text-gray-500">
                         {vineyard.grape ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -722,7 +722,7 @@ const Vineyard: React.FC = () => {
                       </div>
                       <div className="mt-2">
                         <button
-                          className="px-2 py-1 rounded text-xs font-semibold bg-red-600 hover:bg-red-700 text-white"
+                          className="min-h-11 px-3 py-2 rounded text-sm font-semibold bg-red-600 hover:bg-red-700 text-white"
                           title="Sell this vineyard for cash (10% fee)"
                           onClick={(e) => { e.stopPropagation(); handleSellVineyard(vineyard); }}
                         >
@@ -1046,9 +1046,9 @@ const Vineyard: React.FC = () => {
             <div key={vineyard.id} className="bg-white rounded-lg shadow overflow-hidden cursor-pointer" onClick={() => handleRowClick(vineyard)}>
               {/* Card Header */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 border-b">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900">{vineyard.name}</h3>
+                <div className="flex flex-wrap gap-2 justify-between items-start mb-2">
+                  <div className="min-w-0 flex-1">
+                    <h3><button type="button" className="min-h-11 text-left text-lg font-bold text-gray-900 underline-offset-4 hover:underline focus-visible:underline" onClick={(event) => { event.stopPropagation(); handleRowClick(vineyard); }} aria-label={`View ${vineyard.name} details`}>{vineyard.name}</button></h3>
                     <div className="text-sm text-gray-600 mt-1">
                       {vineyard.grape ? (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -1063,7 +1063,7 @@ const Vineyard: React.FC = () => {
                 </div>
                 
                 {/* Location and Size/Value */}
-                <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
+                <div className="flex flex-col items-start gap-3 text-sm text-gray-600 mt-2 sm:flex-row sm:justify-between">
                   <div className="flex items-center">
                     <span className={`${getFlagIcon(vineyard.country)} mr-2`}></span>
                     {vineyard.region}, {vineyard.country}
@@ -1085,16 +1085,16 @@ const Vineyard: React.FC = () => {
               <div className="p-4 space-y-4">
                 {/* Characteristics and Vine Details - 2 Column Grid */}
                 <div className="border-t pt-3">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Characteristics Section */}
                     <div>
                       <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Characteristics</div>
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-wrap gap-2 justify-between items-center text-sm">
                           <span className="text-gray-600">Soil:</span>
                           <span className="text-gray-900">{vineyard.soil.join(', ')}</span>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-wrap gap-2 justify-between items-center text-sm">
                           <span className="text-gray-600">Altitude:</span>
                           <div className="flex items-center">
                             <span className="text-gray-900 mr-2">{vineyard.altitude}m</span>
@@ -1119,7 +1119,7 @@ const Vineyard: React.FC = () => {
                             })()}
                           </div>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-wrap gap-2 justify-between items-center text-sm">
                           <span className="text-gray-600">Aspect:</span>
                           <div className="flex items-center">
                             <span className="text-gray-900 mr-2">{vineyard.aspect}</span>
@@ -1151,7 +1151,7 @@ const Vineyard: React.FC = () => {
                     <div>
                       <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Details</div>
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-wrap gap-2 justify-between items-center text-sm">
                           <span className="text-gray-600">Age:</span>
                           <span className="text-gray-900">
                             {vineyard.vineAge === null ? (
@@ -1163,7 +1163,7 @@ const Vineyard: React.FC = () => {
                             )}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-wrap gap-2 justify-between items-center text-sm">
                           <span className="text-gray-600">Prestige:</span>
                           <UnifiedTooltip
                             content={buildTooltipContent('prestige', { value: vineyard.vineyardPrestige ?? 0 })}
@@ -1181,7 +1181,7 @@ const Vineyard: React.FC = () => {
                             ); })()}
                           </UnifiedTooltip>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-wrap gap-2 justify-between items-center text-sm">
                           <span className="text-gray-600">Density:</span>
                           {vineyard.density > 0 ? (
                             <UnifiedTooltip
@@ -1214,7 +1214,7 @@ const Vineyard: React.FC = () => {
                     <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Information & Health</div>
                     <div className="space-y-3">
                       {/* Progress Bars and Yield - 2 Column Grid */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Left Column - Progress Bars */}
                         <div className="space-y-3">
                           {/* Vineyard Health Progress */}
@@ -1224,7 +1224,7 @@ const Vineyard: React.FC = () => {
                               <span>{formatPercentValue(vineyard.vineyardHealth || 1.0)}</span>
                             </div>
                             <UnifiedTooltip
-                              content={buildTooltipContent('health', { vineyard })}
+                              content={buildTooltipContent('health', { vineyard, value: vineyard.vineyardHealth || 1.0, weatherForecast: vineyardWeatherById.get(vineyard.id) })}
                               title="Vineyard Health Details"
                               side="top"
                               className="max-w-sm"
@@ -1251,7 +1251,7 @@ const Vineyard: React.FC = () => {
                               <span>{formatPercentValue(vineyard.ripeness || 0)}</span>
                             </div>
                             <UnifiedTooltip
-                              content={buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })}
+                              content={buildTooltipContent('ripeness', { value: vineyard.ripeness || 0, weatherForecast: vineyardWeatherById.get(vineyard.id) })}
                               title="Ripeness Details"
                               side="top"
                               className="max-w-sm"
@@ -1319,6 +1319,13 @@ const Vineyard: React.FC = () => {
               {/* Card Footer - Actions */}
               <div className="bg-gray-50 px-4 py-3 border-t" onClick={(e) => e.stopPropagation()}>
                 {getActionButtons(vineyard)}
+                <button
+                  type="button"
+                  className="mt-3 min-h-11 w-full rounded border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                  onClick={() => handleSellVineyard(vineyard)}
+                >
+                  Sell Vineyard (10% fee)
+                </button>
               </div>
             </div>
           ))

@@ -18,7 +18,7 @@ import {
   WineAnchorsTab
 } from '@/components/pages/winepedia/index';
 import { loanLenderFeature } from '@/lib/features/loanLender';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface WinepediaTab {
   id: string;
@@ -88,20 +88,32 @@ export default function Winepedia({ view }: WinepediaProps) {
   const ActiveComponent = tabs.find((tab) => tab.id === activeTab)?.component || GrapeVarietiesTab;
 
   return (
-    <div className="mx-auto max-w-[1120px] py-4 text-sm">
+    <div className="mx-auto min-w-0 max-w-[1120px] py-4 text-sm break-words [&_input]:min-w-0 [&_select]:min-w-0 [&_.grid>*]:min-w-0">
       <div className="flex flex-col gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-xl">Wine-Pedia</CardTitle>
             <CardDescription>Mechanics-first reference for formulas, ranges, progression, and market systems.</CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-wrap gap-2">
+          <CardContent className="min-w-0 px-3 pt-0 sm:px-6">
+            <div className="lg:hidden">
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="min-h-11 w-full" aria-label="Choose Wine-Pedia section">
+                  <SelectValue placeholder="Choose a section" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(60dvh,24rem)]">
+                  {tabs.map((tab) => <SelectItem key={tab.id} value={tab.id}>{tab.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="hidden flex-wrap gap-2 lg:flex">
               {orderedTabs.map((tab) => (
                 <Button
                   key={tab.id}
                   variant={activeTab === tab.id ? 'default' : 'outline'}
                   size="sm"
+                  className="min-h-11 h-auto whitespace-normal text-left"
+                  aria-pressed={activeTab === tab.id}
                   onClick={() => setActiveTab(tab.id)}
                 >
                   {tab.label}
@@ -115,7 +127,7 @@ export default function Winepedia({ view }: WinepediaProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{tabs.find((tab) => tab.id === activeTab)?.label || 'Wine-Pedia'}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="min-w-0 px-3 pt-0 sm:px-6">
             <ActiveComponent />
           </CardContent>
         </Card>

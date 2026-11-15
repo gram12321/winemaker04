@@ -104,7 +104,7 @@ export function LendersTab() {
         {/* Pagination controls */}
         <div className="flex items-center justify-end gap-2 text-sm">
           <button
-            className="px-2 py-1 border rounded disabled:opacity-50"
+            className="min-h-11 px-3 py-2 border rounded disabled:opacity-50"
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
@@ -114,7 +114,7 @@ export function LendersTab() {
             Page {page} / {totalPages}
           </span>
           <button
-            className="px-2 py-1 border rounded disabled:opacity-50"
+            className="min-h-11 px-3 py-2 border rounded disabled:opacity-50"
             disabled={page >= totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
           >
@@ -122,11 +122,24 @@ export function LendersTab() {
           </button>
         </div>
 
+        <div className="flex flex-wrap gap-2 lg:hidden" aria-label="Sort lenders">
+          {([
+            ['name', 'Name'], ['type', 'Type'], ['baseInterestRate', 'Interest rate'],
+            ['riskTolerance', 'Risk tolerance'], ['flexibility', 'Flexibility'],
+            ['marketPresence', 'Market presence'], ['minLoanAmount', 'Minimum loan'], ['maxLoanAmount', 'Maximum loan'],
+          ] as const).map(([key, label]) => (
+            <button key={key} type="button" onClick={() => handleSort(key)}
+              aria-pressed={sortConfig?.key === key}
+              className="min-h-11 rounded border px-3 py-2 text-xs">
+              {label}{getSortIndicator(key)}
+            </button>
+          ))}
+        </div>
         {/* Lenders table */}
         {pagedLenders.length > 0 ? (
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+            <Table className=" max-lg:block max-lg:[&_tbody]:block max-lg:[&_tbody>tr]:mb-3 max-lg:[&_tbody>tr]:block max-lg:[&_tbody>tr]:rounded-lg max-lg:[&_tbody>tr]:border max-lg:[&_tbody>tr]:border-gray-200 max-lg:[&_tbody>tr]:p-3 max-lg:[&_td]:block max-lg:[&_td]:w-full max-lg:[&_td]:break-words max-lg:[&_td]:text-left">
+              <TableHeader className="hidden lg:table-header-group">
                 <TableRow>
                   <TableHead 
                     className="cursor-pointer hover:bg-gray-50"
@@ -183,24 +196,24 @@ export function LendersTab() {
               <TableBody>
                 {pagedLenders.map((lender) => (
                   <TableRow key={lender.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{lender.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Name</span>{lender.name}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Type</span>
                       <Badge className={getLenderTypeColorClass(lender.type)}>
                         {lender.type}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatPercent(lender.baseInterestRate, 1, true)}</TableCell>
-                    <TableCell>{formatRiskTolerance(lender.riskTolerance)}</TableCell>
-                    <TableCell>{formatPercent(lender.flexibility, 1, true)}</TableCell>
-                    <TableCell>{formatPercent(lender.marketPresence, 1, true)}</TableCell>
-                    <TableCell>{formatNumber(lender.minLoanAmount, { currency: true })}</TableCell>
-                    <TableCell>{formatNumber(lender.maxLoanAmount, { currency: true })}</TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Interest rate</span>{formatPercent(lender.baseInterestRate, 1, true)}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Risk tolerance</span>{formatRiskTolerance(lender.riskTolerance)}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Flexibility</span>{formatPercent(lender.flexibility, 1, true)}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Market presence</span>{formatPercent(lender.marketPresence, 1, true)}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Minimum loan</span>{formatNumber(lender.minLoanAmount, { currency: true })}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Maximum loan</span>{formatNumber(lender.maxLoanAmount, { currency: true })}</TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Duration</span>
                       <div className="text-sm">
                         {formatNumber(lender.minDurationSeasons / 4, { smartDecimals: true })} - {formatNumber(lender.maxDurationSeasons / 4, { smartDecimals: true })} years
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Status</span>
                       {lender.blacklisted ? (
                         <Badge variant="destructive">Blacklisted</Badge>
                       ) : (

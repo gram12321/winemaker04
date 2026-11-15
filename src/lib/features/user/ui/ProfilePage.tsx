@@ -225,11 +225,11 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
   const colorClass = getColorClass(currentUser?.avatarColor || 'blue');
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 break-words">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
             <User className="h-6 w-6" />
             Player Profile
           </h2>
@@ -242,10 +242,10 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Information */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6 break-words">
             <Card>
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle>Profile</CardTitle>
                   <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                     <DialogTrigger asChild>
@@ -254,7 +254,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                         Edit
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
+                    <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[500px]">
                       <DialogHeader>
                         <DialogTitle>Edit Profile</DialogTitle>
                         <DialogDescription>
@@ -262,7 +262,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                         </DialogDescription>
                       </DialogHeader>
                       <Tabs defaultValue="basic">
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid h-auto w-full grid-cols-2 [&_button]:min-h-11">
                           <TabsTrigger value="basic">Basic Info</TabsTrigger>
                           <TabsTrigger value="avatar">Avatar</TabsTrigger>
                         </TabsList>
@@ -283,7 +283,10 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                             <Label className="text-sm font-medium">Avatar</Label>
                             <div className="grid grid-cols-4 gap-2 mt-2">
                               {AVATAR_OPTIONS.map((avatar) => (
-                                <div
+                                <button
+                                  type="button"
+                                  aria-label={`Select avatar ${avatar.id}`}
+                                  aria-pressed={selectedAvatar === avatar.id}
                                   key={avatar.id}
                                   className={`p-3 border rounded-md flex items-center justify-center cursor-pointer text-2xl transition-all ${
                                     selectedAvatar === avatar.id ? 'border-primary bg-primary/10' : 'hover:bg-accent'
@@ -291,7 +294,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                                   onClick={() => setSelectedAvatar(avatar.id)}
                                 >
                                   {avatar.emoji}
-                                </div>
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -300,15 +303,17 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                             <Label className="text-sm font-medium">Color</Label>
                             <div className="grid grid-cols-4 gap-2 mt-2">
                               {COLOR_OPTIONS.map((color) => (
-                                <div
+                                <button
+                                  type="button"
+                                  aria-pressed={selectedColor === color.id}
                                   key={color.id}
-                                  className={`${color.value} h-8 rounded-md border cursor-pointer flex items-center justify-center text-xs font-medium ${
+                                  className={`${color.value} min-h-11 rounded-md border cursor-pointer flex items-center justify-center text-xs font-medium ${
                                     selectedColor === color.id ? 'ring-2 ring-primary' : ''
                                   }`}
                                   onClick={() => setSelectedColor(color.id)}
                                 >
                                   {color.label}
-                                </div>
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -356,7 +361,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                   <div className="mt-4 w-full space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Email:</span>
-                      <span className="truncate ml-2">{currentUser.email || 'Not provided'}</span>
+                      <span className="min-w-0 break-all ml-2">{currentUser.email || 'Not provided'}</span>
                     </div>
                   </div>
                 )}
@@ -387,7 +392,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                 <CardDescription>Combined statistics for all your companies</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Card className="bg-primary/5">
                     <CardContent className="p-4 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Companies</p>
@@ -442,7 +447,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
 
           {/* Companies List */}
           <Card className="lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
@@ -450,12 +455,12 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                 </CardTitle>
                 <CardDescription>Click on a company to switch to it</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <Select
                   value={sortOption}
                   onValueChange={(value: any) => setSortOption(value)}
                 >
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger aria-label="Sort companies" className="min-h-11 w-[160px] max-w-full">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -477,7 +482,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                     variant="outline" 
                     onClick={handleRefresh}
                     disabled={isLoading}
-                    className="flex items-center gap-1"
+                    className="min-h-11 flex items-center gap-1"
                   >
                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     Refresh
@@ -502,10 +507,19 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                       className={`hover:bg-accent/50 cursor-pointer transition-colors ${
                         currentCompany?.id === company.id ? 'border-primary border-2' : ''
                       } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+                      role="button"
+                      tabIndex={isLoading ? -1 : 0}
+                      aria-disabled={isLoading}
+                      onKeyDown={(event) => {
+                        if (!isLoading && (event.key === 'Enter' || event.key === ' ')) {
+                          event.preventDefault();
+                          handleSelectCompany(company);
+                        }
+                      }}
                       onClick={() => handleSelectCompany(company)}
                     >
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
                               {company.name.charAt(0).toUpperCase()}
@@ -522,7 +536,7 @@ export function Profile({ currentCompany, portfolio, onCompanySelected, onBackTo
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Money</span>
                             <div className="font-medium">{formatNumber(company.money, { currency: true, decimals: 0 })}</div>

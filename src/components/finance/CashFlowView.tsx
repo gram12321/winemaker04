@@ -99,7 +99,7 @@ export function CashFlowView() {
                 return (
                   <div key={transaction.id} className="border border-gray-300 rounded-lg overflow-hidden bg-white">
                     <div className={`p-4 ${gradientClass}`}>
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex flex-wrap gap-2 justify-between items-start mb-2">
                         <div>
                           <div className="text-xs text-gray-500 mb-1">{formatGameDateFromObject(transaction.date)}</div>
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${flowMeta.badgeClass}`}>
@@ -114,7 +114,7 @@ export function CashFlowView() {
                       </div>
                       <div className="text-sm text-gray-700 mt-2">{transaction.description}</div>
                     </div>
-                    <div className="px-4 py-3 bg-gray-50 border-t flex justify-between items-center">
+                    <div className="px-4 py-3 bg-gray-50 border-t flex flex-wrap gap-2 justify-between items-center">
                       <span className="text-xs text-gray-600">Balance After:</span>
                       <span className="text-sm font-medium text-gray-900">{formatNumber(transaction.money, { currency: true })}</span>
                     </div>

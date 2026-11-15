@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { LoanOffer } from '@/lib/types/types';
 import { formatNumber, formatPercent, getLenderTypeColorClass, setModalMinimized } from '@/lib/utils';
-import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
+import { Dialog, DialogContent, DialogTitle, Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X, Minimize2 } from 'lucide-react';
 import { getGameState } from '@/lib/services/core/gameState';
 import { buildLoanOffer, buildTakeLoanQuote, loadBorrowerLoanCapacity } from '@/lib/features/loanLender/services/finance/loanQuoteService';
@@ -34,6 +34,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
   // Loan parameter state for third column
   const [loanAmount, setLoanAmount] = useState(LOAN_AMOUNT_RANGES.MIN);
   const [durationSeasons, setDurationSeasons] = useState(LOAN_DURATION_RANGES.MIN);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loanAmountCap, setLoanAmountCap] = useState<number | null>(null);
@@ -221,12 +222,14 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+        <DialogContent aria-describedby={undefined}
+        onOpenAutoFocus={() => { returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onCloseAutoFocus={(event) => { event.preventDefault(); returnFocusRef.current?.focus(); }} className="bg-gray-900 text-white w-[calc(100vw-1rem)] max-w-6xl max-h-[calc(100dvh-1rem)] gap-0 p-0 overflow-hidden flex flex-col [&>button]:hidden">
           {/* Header */}
-          <div className="flex justify-between items-center p-6 border-b border-gray-700">
+          <div className="flex shrink-0 justify-between items-start gap-2 p-3 sm:p-6 border-b border-gray-700">
             <div>
-              <h2 className="text-2xl font-bold text-white">Lender Search Results</h2>
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-white">Lender Search Results</DialogTitle>
               <p className="text-sm text-gray-400 mt-1">
                 {availableOffers.length} offer{availableOffers.length !== 1 ? 's' : ''} available
                 {acceptedOfferIds.size > 0 && ` (${acceptedOfferIds.size} already processed)`}
@@ -235,14 +238,14 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
             <div className="flex items-center gap-2">
               <button
                 onClick={handleMinimize}
-                className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+                className="min-h-11 min-w-11 flex items-center justify-center text-gray-400 hover:text-white p-1 rounded transition-colors"
                 title="Minimize"
               >
                 <Minimize2 className="h-5 w-5" />
               </button>
               <button
                 onClick={handleClose}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
+                aria-label="Close dialog" className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-gray-400 hover:text-white text-2xl leading-none"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -250,9 +253,9 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
           </div>
 
           {/* Three Column Layout */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="min-h-0 flex-1 flex flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
             {/* Left Column - Offer List */}
-            <div className="w-1/3 border-r border-gray-700 overflow-y-auto scrollbar-styled">
+            <div className="w-full min-w-0 shrink-0 border-b border-gray-700 lg:w-1/3 lg:shrink lg:border-b-0 lg:border-r lg:overflow-y-auto scrollbar-styled">
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-white mb-4">Available Offers</h3>
                 <div className="space-y-3">
@@ -262,6 +265,17 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                     return (
                       <div 
                         key={offer.id} 
+                        role="button"
+                        tabIndex={offer.isAvailable ? 0 : -1}
+                        aria-pressed={isSelected}
+                        aria-disabled={!offer.isAvailable}
+                        aria-label={`Select loan offer from ${offer.lender.name}`}
+                        onKeyDown={(event) => {
+                          if (offer.isAvailable && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            handleOfferSelect(offer.id);
+                          }
+                        }}
                         className={`p-4 rounded-lg border cursor-pointer transition-colors ${
                           isSelected 
                             ? 'bg-blue-600 border-blue-500' 
@@ -271,7 +285,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                               <span className="font-medium text-white text-sm">{offer.lender.name}</span>
                               <Badge className={getLenderTypeColorClass(offer.lender.type)}>
                                 {offer.lender.type}
@@ -308,9 +322,9 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
             </div>
 
             {/* Middle Column - Apply for Loan */}
-            <div className="w-1/3 border-r border-gray-700 overflow-y-auto scrollbar-styled">
+            <div className="w-full min-w-0 shrink-0 border-b border-gray-700 lg:w-1/3 lg:shrink lg:border-b-0 lg:border-r lg:overflow-y-auto scrollbar-styled">
               {selectedOffer && selectedOffer.isAvailable ? (
-                <div className="p-6">
+                <div className="p-3 sm:p-6">
                   <h3 className="text-lg font-semibold text-white mb-6">Apply for Loan</h3>
                   
                   <div className="space-y-6">
@@ -323,11 +337,11 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                         </Badge>
                       </div>
                       <div className="mt-3 space-y-2 text-sm">
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Base Interest Rate:</span>
                           <span className="text-white font-medium">{formatPercent(selectedOffer.lender.baseInterestRate)}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Risk Tolerance:</span>
                           <span className="text-white font-medium">{formatNumber(selectedOffer.lender.riskTolerance * 100, { smartDecimals: true })}%</span>
                         </div>
@@ -339,7 +353,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       <div>
                         <Label className="text-base font-medium text-white">Loan Amount</Label>
                         <div className="mt-2 space-y-2">
-                          <Slider
+                          <Slider aria-label="Loan amount"
                             value={[loanAmount]}
                             onValueChange={(value) => setLoanAmount(value[0])}
                             min={selectedOffer.lender.minLoanAmount}
@@ -347,7 +361,22 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                             step={1000}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-sm text-gray-400">
+                          <label className="block text-sm text-gray-300">
+                            Loan amount
+                            <input type="number" inputMode="numeric" key={loanAmount} defaultValue={loanAmount}
+                              min={selectedOffer.lender.minLoanAmount} max={loanAmountCap ?? selectedOffer.lender.maxLoanAmount} step={1000}
+                              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                              onBlur={(event) => {
+                                const value = event.currentTarget.valueAsNumber;
+                                if (Number.isFinite(value)) {
+                                  const next = Math.min(loanAmountCap ?? selectedOffer.lender.maxLoanAmount, Math.max(selectedOffer.lender.minLoanAmount, selectedOffer.lender.minLoanAmount + Math.round((value - selectedOffer.lender.minLoanAmount) / 1000) * 1000));
+                                  setLoanAmount(next);
+                                  event.currentTarget.value = String(next);
+                                } else { event.currentTarget.value = String(loanAmount); }
+                              }}
+                              className="mt-1 min-h-11 w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-base text-white" />
+                          </label>
+                          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm text-gray-400">
                             <span>{formatNumber(selectedOffer.lender.minLoanAmount, { currency: true })}</span>
                             <span className="font-medium text-white">{formatNumber(loanAmount, { currency: true })}</span>
                             <span>
@@ -367,7 +396,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       <div>
                         <Label className="text-base font-medium text-white">Duration (Years)</Label>
                         <div className="mt-2 space-y-2">
-                          <Slider
+                          <Slider aria-label="Duration in seasons"
                             value={[durationSeasons]}
                             onValueChange={(value) => setDurationSeasons(value[0])}
                             min={selectedOffer.lender.minDurationSeasons}
@@ -375,7 +404,22 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                             step={1}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-sm text-gray-400">
+                          <label className="block text-sm text-gray-300">
+                            Duration in seasons
+                            <input type="number" inputMode="numeric" key={durationSeasons} defaultValue={durationSeasons}
+                              min={selectedOffer.lender.minDurationSeasons} max={selectedOffer.lender.maxDurationSeasons} step={1}
+                              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                              onBlur={(event) => {
+                                const value = event.currentTarget.valueAsNumber;
+                                if (Number.isFinite(value)) {
+                                  const next = Math.min(selectedOffer.lender.maxDurationSeasons, Math.max(selectedOffer.lender.minDurationSeasons, selectedOffer.lender.minDurationSeasons + Math.round((value - selectedOffer.lender.minDurationSeasons) / 1) * 1));
+                                  setDurationSeasons(next);
+                                  event.currentTarget.value = String(next);
+                                } else { event.currentTarget.value = String(durationSeasons); }
+                              }}
+                              className="mt-1 min-h-11 w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-base text-white" />
+                          </label>
+                          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm text-gray-400">
                             <span>{formatNumber(selectedOffer.lender.minDurationSeasons / 4, { smartDecimals: true })} years</span>
                             <span className="font-medium text-white">{formatNumber(durationSeasons / 4, { smartDecimals: true })} years</span>
                             <span>{formatNumber(selectedOffer.lender.maxDurationSeasons / 4, { smartDecimals: true })} years</span>
@@ -405,9 +449,9 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
             </div>
 
             {/* Right Column - Offer Preview */}
-            <div className="w-1/3 overflow-y-auto scrollbar-styled">
+            <div className="w-full min-w-0 shrink-0 lg:w-1/3 lg:shrink lg:overflow-y-auto scrollbar-styled">
               {selectedOffer ? (
-                <div className="p-6">
+                <div className="p-3 sm:p-6">
                   <h3 className="text-lg font-semibold text-white mb-6">Offer Preview</h3>
                   
                   <div className="space-y-6">
@@ -415,19 +459,19 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                       <h4 className="text-sm font-medium text-white mb-4">Loan Terms</h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Principal Amount:</span>
                           <span className="text-white font-medium">{formatNumber(loanAmount, { currency: true })}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Duration:</span>
                           <span className="text-white">{formatNumber(durationSeasons / 4, { smartDecimals: true })} years ({durationSeasons} seasons)</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Interest Rate:</span>
                           <span className="text-white">{formatPercent(effectiveRate)}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Seasonal Payment:</span>
                           <span className="text-white">{formatNumber(seasonalPayment, { currency: true })}</span>
                         </div>
@@ -438,11 +482,11 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                       <h4 className="text-sm font-medium text-white mb-4">Cost Breakdown</h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Origination Fee:</span>
                           <span className="text-orange-400 font-medium">{formatNumber(originationFee, { currency: true })}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Total Interest:</span>
                           <span className="text-yellow-400">{formatNumber(totalInterest, { currency: true })}</span>
                         </div>
@@ -457,7 +501,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                       <h4 className="text-sm font-medium text-white mb-3">Work Required</h4>
                       <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
+                        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                           <span className="text-gray-400">Total Work:</span>
                           <span className="text-white font-medium">{formatNumber(workCalculation.totalWork, { smartDecimals: true })} work units</span>
                         </div>
@@ -493,7 +537,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between items-center p-6 border-t border-gray-700">
+          <div className="flex shrink-0 flex-wrap justify-between items-center gap-2 p-3 sm:p-6 border-t border-gray-700">
             <div className="text-sm text-gray-400">
               <span className="font-medium text-white">{availableOffers.length}</span> offer{availableOffers.length !== 1 ? 's' : ''} remaining
             </div>
@@ -515,8 +559,8 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
               </Button>
             </div>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
     </>
   );

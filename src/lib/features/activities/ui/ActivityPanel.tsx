@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/shadCN/button';
-import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui';
+import { ChevronLeft, Minimize2, Maximize2, ChevronUp, ChevronDown } from 'lucide-react';
 import { ActivityCard } from '@/lib/features/activities/ui/ActivityCard';
 import { Activity } from '@/lib/types/types';
 import { activitiesFeature } from '@/lib/features/activities';
@@ -35,6 +35,7 @@ export const ActivityPanel: React.FC = () => {
   const [selectedVesselId, setSelectedVesselId] = useState<string | null>(null);
   const [addingCapacity, setAddingCapacity] = useState(false);
   const [capacityError, setCapacityError] = useState<string | null>(null);
+  const [orderAnnouncement, setOrderAnnouncement] = useState('');
 
   useEffect(() => {
     if (!capacityActivity) return;
@@ -42,6 +43,16 @@ export const ActivityPanel: React.FC = () => {
     setSelectedVesselId(null);
     setCapacityError(null);
   }, [capacityActivity]);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => {
+      if (desktopQuery.matches) setMobileState('closed');
+    };
+    closeOnDesktop();
+    desktopQuery.addEventListener('change', closeOnDesktop);
+    return () => desktopQuery.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   // Drag & drop configuration
   const sensors = useSensors(
@@ -178,6 +189,14 @@ export const ActivityPanel: React.FC = () => {
     }
   };
 
+  const moveActivity = (activityId: string, direction: -1 | 1) => {
+    const currentIndex = orderedActivityIds.indexOf(activityId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= orderedActivityIds.length) return;
+    setOrderedActivityIds((items) => arrayMove(items, currentIndex, nextIndex));
+    setOrderAnnouncement(`Activity moved to position ${nextIndex + 1} of ${orderedActivityIds.length}.`);
+  };
+
   // Utility functions
   const getToggleIcon = () => {
     switch (panelState) {
@@ -207,51 +226,45 @@ export const ActivityPanel: React.FC = () => {
 
   return (
     <>
+      <div aria-live="polite" className="sr-only">{orderAnnouncement}</div>
       {/* Mobile floating button */}
-      <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50 lg:hidden">
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-3 z-40 lg:hidden">
         <Button
           variant="outline"
-          size="sm"
+          size="default"
           onClick={handleToggleMobile}
-          title="Open Activities"
-          className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+          aria-label={`${mobileState === 'open' ? 'Close' : 'Open'} activities panel, ${activities.length} activities`}
+          aria-expanded={mobileState === 'open'}
+          className="min-h-11 border-gray-600 bg-gray-900 text-white shadow-lg hover:bg-gray-800"
         >
-          <span className="mr-1">📋</span>
+          <span aria-hidden="true">📋</span>
+          <span className="sr-only">Activities</span>
           {activities.length}
         </Button>
       </div>
 
-      {/* Mobile sliding panel */}
-      {mobileState === 'open' && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setMobileState('closed')} />
-          <div className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-gray-900 p-6 shadow-xl flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white">Activities</h2>
-              <Button variant="ghost" size="icon" onClick={() => setMobileState('closed')}>
-                <X className="h-6 w-6 text-white" />
-              </Button>
-            </div>
-
-            <div className="mb-4 text-xs text-gray-400">
-              <span>{activeActivitiesCount} active</span>
-              <span className="mx-2">•</span>
-              <span>{pausedActivitiesCount} paused</span>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto scrollbar-styled">
-              {activities.length === 0 ? (
-                <div className="text-center text-gray-500 mt-8">
-                  <p>No active activities</p>
-                  <p className="text-sm mt-2">Start planting or other activities to see progress here</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {getOrderedActivities().map((activity) => {
-                    const progress = activityProgresses[activity.id];
-                    return (
+      <Dialog open={mobileState === 'open'} onOpenChange={(open) => setMobileState(open ? 'open' : 'closed')}>
+        <DialogContent className="fixed inset-x-0 bottom-0 top-auto m-0 flex h-[min(64dvh,34rem)] max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-t-2xl border border-gray-700 bg-gray-900 p-0 pt-[env(safe-area-inset-top)] text-white shadow-2xl lg:hidden">
+          <DialogHeader className="border-b border-gray-700 px-4 py-4 pr-14 text-left">
+            <DialogTitle className="text-xl font-semibold text-white">Activities</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              {activeActivitiesCount} active, {pausedActivitiesCount} paused
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] scrollbar-styled">
+            {activities.length === 0 ? (
+              <div className="text-center text-gray-300 mt-8">
+                <p>No active activities</p>
+                <p className="text-sm mt-2">Start planting or other activities to see progress here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {getOrderedActivities().map((activity, index) => {
+                  const progress = activityProgresses[activity.id];
+                  return (
+                    <div key={activity.id} className="rounded-lg">
+                      <ActivityOrderControls index={index} count={activities.length} onMoveUp={() => moveActivity(activity.id, -1)} onMoveDown={() => moveActivity(activity.id, 1)} />
                       <ActivityCard
-                        key={activity.id}
                         activity={activity}
                         progress={progress?.progress || 0}
                         timeRemaining={progress?.timeRemaining || 'Calculating...'}
@@ -261,15 +274,14 @@ export const ActivityPanel: React.FC = () => {
                         isMinimized={false}
                         onToggleMinimize={() => {}}
                       />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
-
+        </DialogContent>
+      </Dialog>
       {/* Desktop panel */}
       {panelState === 'hidden' ? (
         <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50 hidden lg:block">
@@ -329,7 +341,7 @@ export const ActivityPanel: React.FC = () => {
                         strategy={verticalListSortingStrategy}
                       >
                         <div className="space-y-3">
-                          {getOrderedActivities().map((activity) => {
+                          {getOrderedActivities().map((activity, index) => {
                             const progress = activityProgresses[activity.id];
                             const isMinimized = minimizedCards.has(activity.id);
                             return (
@@ -343,6 +355,10 @@ export const ActivityPanel: React.FC = () => {
                                 onResume={() => handleResumeActivity(activity.id)}
                                 isMinimized={isMinimized}
                                 onToggleMinimize={() => handleToggleCardMinimize(activity.id)}
+                                index={index}
+                                count={activities.length}
+                                onMoveUp={() => moveActivity(activity.id, -1)}
+                                onMoveDown={() => moveActivity(activity.id, 1)}
                               />
                             );
                           })}
@@ -391,20 +407,25 @@ export const ActivityPanel: React.FC = () => {
           </div>
         </div>
       )}
-      {capacityActivity && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">Choose Next Harvest Vessel</h2>
-            <p className="mt-1 text-sm text-gray-600">This vessel is full. Choose one new vessel; resumed harvesting creates a separate wine batch.</p>
-            <div className="mt-4 space-y-2">
+      <Dialog open={Boolean(capacityActivity)} onOpenChange={(open) => { if (!open && !addingCapacity) setCapacityActivity(null); }}>
+        {capacityActivity && (
+          <DialogContent className="max-w-md">
+            <DialogHeader className="text-left">
+              <DialogTitle>Choose Next Harvest Vessel</DialogTitle>
+              <DialogDescription>This vessel is full. Choose one new vessel; resumed harvesting creates a separate wine batch.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[35dvh] space-y-2 overflow-y-auto">
               {availableVessels.length === 0 && <p className="text-sm text-red-600">No available Storage Vessels. Buy equipment before resuming.</p>}
-              {availableVessels.map((vessel) => <label key={vessel.id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 p-2 text-sm"><input type="radio" name="next-harvest-vessel" checked={selectedVesselId === vessel.id} onChange={() => setSelectedVesselId(vessel.id)} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
+              {availableVessels.map((vessel) => <label key={vessel.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded border border-gray-200 p-2 text-sm"><input type="radio" name="next-harvest-vessel" className="size-5" checked={selectedVesselId === vessel.id} onChange={() => setSelectedVesselId(vessel.id)} /><span>{vessel.capacityLitres.toLocaleString()} L {vessel.material} {vessel.vesselType.replace('_', ' ')}</span></label>)}
             </div>
             {capacityError && <p className="mt-3 text-sm text-red-600">{capacityError}</p>}
-            <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity}>Cancel</Button><Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || !selectedVesselId} className="bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Updating…' : 'Start next batch and resume'}</Button></div>
-          </div>
-        </div>
-      )}
+            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setCapacityActivity(null)} disabled={addingCapacity} className="min-h-11">Cancel</Button>
+              <Button onClick={() => void handleAddCapacity()} disabled={addingCapacity || !selectedVesselId} className="min-h-11 bg-amber-600 hover:bg-amber-500">{addingCapacity ? 'Updating...' : 'Start next batch and resume'}</Button>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </>
   );
 };
@@ -419,7 +440,22 @@ interface SortableActivityCardProps {
   onResume?: () => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
+  index: number;
+  count: number;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
+
+const ActivityOrderControls: React.FC<{ index: number; count: number; onMoveUp: () => void; onMoveDown: () => void }> = ({ index, count, onMoveUp, onMoveDown }) => (
+  <div className="flex justify-end gap-1 pb-1">
+    <Button type="button" variant="outline" size="icon" className="size-9" aria-label="Move activity earlier" title="Move activity earlier" disabled={index === 0} onClick={onMoveUp}>
+      <ChevronUp aria-hidden="true" />
+    </Button>
+    <Button type="button" variant="outline" size="icon" className="size-9" aria-label="Move activity later" title="Move activity later" disabled={index === count - 1} onClick={onMoveDown}>
+      <ChevronDown aria-hidden="true" />
+    </Button>
+  </div>
+);
 
 /**
  * SortableActivityCard - Wrapper component that adds drag-and-drop functionality to ActivityCard
@@ -433,7 +469,11 @@ const SortableActivityCard: React.FC<SortableActivityCardProps> = ({
   onPause,
   onResume,
   isMinimized,
-  onToggleMinimize
+  onToggleMinimize,
+  index,
+  count,
+  onMoveUp,
+  onMoveDown
 }) => {
   const {
     attributes,
@@ -456,6 +496,7 @@ const SortableActivityCard: React.FC<SortableActivityCardProps> = ({
       style={style}
       {...attributes}
     >
+      <ActivityOrderControls index={index} count={count} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
       <ActivityCard
         activity={activity}
         progress={progress}

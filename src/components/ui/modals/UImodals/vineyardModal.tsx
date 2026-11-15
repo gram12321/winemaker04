@@ -51,23 +51,23 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[90vh] flex flex-col sm:max-h-[85vh] scrollbar-styled">
+      <DialogContent className="w-[calc(100%-1rem)] min-w-0 max-w-3xl p-0 gap-0 overflow-hidden max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] flex flex-col scrollbar-styled">
         {/* Top image bar */}
         <div
-          className="h-36 bg-cover bg-center relative"
+          className="min-h-36 shrink-0 bg-cover bg-center relative"
           style={{
             backgroundImage:
               "url('https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1200&h=300&fit=crop')",
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-            <div>
-              <div className="text-white text-lg font-semibold flex items-center gap-2">
+          <div className="relative p-4 pt-12 flex flex-wrap gap-2 items-end justify-between">
+            <div className="min-w-0 max-w-full flex-1">
+              <div className="min-w-0 break-words text-white text-lg font-semibold flex items-center gap-2">
                 <Grape className="h-5 w-5" />
                 {vineyard.name}
               </div>
-              <div className="text-white/80 text-xs flex items-center gap-2">
+              <div className="text-white/80 text-xs flex flex-wrap items-center gap-2">
                 <span className={getFlagIcon(vineyard.country)} />
                 {vineyard.region}, {vineyard.country}
               </div>
@@ -78,7 +78,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
           </div>
         </div>
 
-        <div className="p-4 pb-6 space-y-4 overflow-y-auto flex-1 scrollbar-styled">
+        <div className="min-h-0 p-4 pb-6 space-y-4 overflow-y-auto overscroll-contain flex-1 scrollbar-styled">
           <DialogHeader>
             <DialogTitle className="text-base">Vineyard Details</DialogTitle>
             <DialogDescription className="text-xs">
@@ -94,7 +94,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                   <Ruler className="h-4 w-4" /> Size & Value
                 </CardTitle>
               </CardHeader>
-              <CardContent className="py-3 text-sm">
+              <CardContent className="min-w-0 break-words py-3 text-sm">
                 <div className="font-semibold">{vineyard.hectares} ha</div>
                 <div className="text-muted-foreground text-xs">
                   Base: {formatNumber(vineyard.landValue, { currency: true })}/ha
@@ -113,7 +113,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                   <Mountain className="h-4 w-4" /> Altitude
                 </CardTitle>
               </CardHeader>
-              <CardContent className="py-3 text-sm">
+              <CardContent className="min-w-0 break-words py-3 text-sm">
                 <div className="flex items-center gap-2">
                   <span>{vineyard.altitude}m</span>
                   <span className={`px-1.5 py-0.5 rounded text-xs ${altitudeColors.text} ${altitudeColors.bg}`}>
@@ -133,7 +133,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                   <Compass className="h-4 w-4" /> Aspect
                 </CardTitle>
               </CardHeader>
-              <CardContent className="py-3 text-sm">
+              <CardContent className="min-w-0 break-words py-3 text-sm">
                 <div className="flex items-center gap-2 capitalize">
                   <span>{vineyard.aspect}</span>
                   <span className={`px-1.5 py-0.5 rounded text-xs ${aspectColors.text} ${aspectColors.bg}`}>
@@ -163,7 +163,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                   <MapPin className="h-4 w-4" /> Location & Terrain
                 </CardTitle>
               </CardHeader>
-              <CardContent className="py-3 text-sm space-y-2">
+              <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Country</span>
                   <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
               <CardHeader className="py-3">
                 <CardTitle className="text-xs font-medium">Vine Information</CardTitle>
               </CardHeader>
-              <CardContent className="py-3 text-sm space-y-2">
+              <CardContent className="min-w-0 break-words py-3 text-sm space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Grape</span>
                   <span className="font-medium">{vineyard.grape ?? 'Not planted'}</span>
@@ -341,7 +341,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
               <CardHeader className="py-3">
                 <CardTitle className="text-xs font-medium">Clearing Information</CardTitle>
               </CardHeader>
-              <CardContent className="py-3 text-sm space-y-3">
+              <CardContent className="min-w-0 break-words py-3 text-sm space-y-3">
 
                 {/* Clearing Task Status */}
                 <div className="space-y-2">
@@ -617,7 +617,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                       </UnifiedTooltip>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="py-3 text-sm space-y-3">
+                  <CardContent className="min-w-0 break-words py-3 text-sm space-y-3">
                     <div className="text-xs space-y-2">
                       <div className="space-y-1">
                         <UnifiedTooltip

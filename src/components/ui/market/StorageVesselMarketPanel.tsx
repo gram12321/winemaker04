@@ -183,21 +183,23 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       key: 'vessel',
       header: 'Vessel ID',
       sortable: true,
+      mobileSummary: true,
       className: 'min-w-[190px]',
       render: (offer) => <div className="font-medium text-white">{offer.payload.vesselName ?? 'Assigned on purchase'}</div>,
     },
-    { key: 'capacity', header: headerWithTooltip('Capacity', 'Fixed capacity for each individually owned vessel.'), sortable: true, className: 'text-right', render: (offer) => `${offer.payload.capacityLitres.toLocaleString()} L` },
+    { key: 'capacity', header: headerWithTooltip('Capacity', 'Fixed capacity for each individually owned vessel.'), sortable: true, mobileSummary: true, className: 'text-right', render: (offer) => `${offer.payload.capacityLitres.toLocaleString()} L` },
     { key: 'material', header: 'Material', sortable: true, className: 'text-right capitalize', render: (offer) => offer.payload.material.replace('_', ' ') },
     { key: 'age', header: headerWithTooltip('Vessel age', 'Production year and current vessel age.'), sortable: true, className: 'text-right', render: (offer) => `${Math.max(0, (currentYear || offer.payload.productionYear) - offer.payload.productionYear)} years (${offer.payload.productionYear})` },
-    { key: 'quality', header: headerWithTooltip('Quality', 'Vessel quality is shown now; its gameplay effects remain deferred.'), sortable: true, className: 'text-right', render: (offer) => <span className={getColorClass(offer.payload.qualityScore)}>{getQualityInfo(offer.payload.qualityScore).category} ({offer.payload.qualityScore.toFixed(2)})</span> },
-    { key: 'condition', header: 'Condition', sortable: true, className: 'text-right', render: (offer) => `${Math.round((offer.payload.condition ?? 1) * 100)}%` },
+    { key: 'quality', header: headerWithTooltip('Quality', 'Vessel quality is shown now; its gameplay effects remain deferred.'), sortable: true, mobileSummary: true, className: 'text-right', render: (offer) => <span className={getColorClass(offer.payload.qualityScore)}>{getQualityInfo(offer.payload.qualityScore).category} ({offer.payload.qualityScore.toFixed(2)})</span> },
+    { key: 'condition', header: 'Condition', sortable: true, mobileSummary: true, className: 'text-right', render: (offer) => `${Math.round((offer.payload.condition ?? 1) * 100)}%` },
     { key: 'fills', header: 'Fills', sortable: true, className: 'text-right', render: (offer) => offer.payload.fillHistory ?? 0 },
     { key: 'cleanliness', header: 'Cleanliness', sortable: true, className: 'text-right capitalize', render: (offer) => offer.payload.cleanliness ?? 'clean' },
-    { key: 'available', header: headerWithTooltip('Supply', 'Global assets are one-off. Local supplier stock is company-specific.'), sortable: true, className: 'text-right', render: (offer) => offer.source.kind === 'supplier_stock' ? `${offer.availableUnits} vessels` : '1 vessel' },
+    { key: 'available', header: headerWithTooltip('Supply', 'Global assets are one-off. Local supplier stock is company-specific.'), sortable: true, mobileSummary: true, className: 'text-right', render: (offer) => offer.source.kind === 'supplier_stock' ? `${offer.availableUnits} vessels` : '1 vessel' },
     {
       key: 'price',
       header: headerWithTooltip('Price', 'Hover the price to see the factors used for this market source.'),
       sortable: true,
+      mobileSummary: true,
       className: 'text-right text-amber-300',
       render: (offer) => <PriceCalculationTooltip breakdown={offer.priceBreakdown} isSupplierStock={offer.source.kind === 'supplier_stock'}><span className="cursor-help underline decoration-dotted underline-offset-2">{formatNumber(offer.pricePerVessel, { currency: true, decimals: 0 })}</span></PriceCalculationTooltip>,
     },
@@ -205,6 +207,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       key: 'quantity',
       header: 'Quantity',
       sortable: true,
+      mobileSummary: true,
       className: 'w-[160px] text-right',
       render: (offer) => <div onClick={(event) => event.stopPropagation()}><MarketQuickBuyRowAction quantity={getQuantity(offer)} maxQuantity={offer.availableUnits} unitLabel="vessel(s)" disabled={loading} onQuantityChange={(quantity) => setQuantityByOfferId((current) => ({ ...current, [offer.id]: quantity }))} />{errorByOfferId[offer.id] && <div className="mt-1 flex justify-end gap-1 text-[11px] text-red-300"><AlertTriangle className="h-3 w-3" />{errorByOfferId[offer.id]}</div>}</div>,
     },
@@ -231,6 +234,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
   const drivers = selectedPriceBreakdown ? getPriceDriverSummary(selectedPriceBreakdown) : null;
 
   return <>
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-0">
     <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-3">
       <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-xs">
         <div className="flex flex-wrap items-center gap-2">
@@ -249,7 +253,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
       {selectedOffer && selectedPriceBreakdown ? (
         <div className="rounded border border-gray-700/70 bg-gray-800 p-3 text-sm">
           <div className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">Purchase Summary</div>
-          <div className="flex items-end justify-between gap-3 border-b border-gray-700 pb-3">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-700 pb-3">
             <div>
               <PriceCalculationTooltip breakdown={selectedPriceBreakdown} isSupplierStock={selectedOffer.source.kind === 'supplier_stock'}>
                 <div className="cursor-help text-2xl font-bold text-amber-300 underline decoration-dotted underline-offset-4">{formatNumber(selectedPriceBreakdown.finalPricePerVessel, { currency: true, decimals: 0 })}<span className="ml-1 text-sm font-normal text-gray-400 no-underline">/vessel</span></div>
@@ -262,7 +266,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
             </div>
           </div>
           <div className="mt-3 text-xs">
-            <UnifiedTooltip title="What affects vessel price?" content={<span className="text-xs leading-snug">Material, vessel state, and the seller relationship adjust each quote. Local supplier stock also has supplier terms and company reputation. Hover the price for exact multipliers.</span>}>
+            <UnifiedTooltip title="What affects vessel price?" content={<span className="text-xs leading-snug">Material, vessel state, and the seller relationship adjust each quote. Local supplier stock also has supplier terms and company reputation. Open the price details for exact multipliers.</span>}>
               <div className="inline-flex cursor-help items-center gap-1 text-gray-400"><span>Price drivers</span><span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-600 text-[10px] text-gray-300">?</span></div>
             </UnifiedTooltip>
             {drivers && drivers.increases.length > 0 && <div className="mt-1 text-amber-200">Higher: {drivers.increases.join(' · ')}</div>}
@@ -281,6 +285,7 @@ export const StorageVesselMarketPanel: React.FC<StorageVesselMarketPanelProps> =
     <div className="overflow-hidden rounded border border-gray-700 bg-gray-800/60"><div className="overflow-x-auto"><MarketOfferTable rows={sortedOffers} columns={columns} rowKey={(offer) => offer.id} sortKey={sortKey} sortDirection={sortDirection} onSort={(key) => { if (key !== sortKey) { setSortKey(key); setSortDirection('asc'); } else { setSortDirection((current) => current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc'); } }} selectedRowKey={selectedOffer?.id ?? null} onRowClick={(offer) => setSelectedOfferId(offer.id)} /></div></div>
     {sortedOffers.length === 0 && !loadError && <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">No vessel offers are currently available for this source.</div>}
 
-    <DialogFooter><Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button><Button className="bg-amber-600 hover:bg-amber-500" disabled={loading || !selectedOffer} onClick={() => void handlePurchase()}>{loading ? 'Buying...' : `Buy for ${formatNumber(selectedTotal, { currency: true, decimals: 0 })}`}</Button></DialogFooter>
+    </div>
+    <DialogFooter className="sticky bottom-0 z-10 shrink-0 gap-2 border-t border-gray-700 bg-gray-900/95 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pb-0"><Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button><Button className="bg-amber-600 hover:bg-amber-500" disabled={loading || !selectedOffer} onClick={() => void handlePurchase()}>{loading ? 'Buying...' : `Buy for ${formatNumber(selectedTotal, { currency: true, decimals: 0 })}`}</Button></DialogFooter>
   </>;
 };

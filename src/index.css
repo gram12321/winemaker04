@@ -98,6 +98,12 @@
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
+  @media (max-width: 767px) {
+    html {
+      /* Rem-based text tokens need a readable phone baseline. */
+      font-size: 16px;
+    }
+  }
   body {
     @apply bg-background text-foreground;
   }

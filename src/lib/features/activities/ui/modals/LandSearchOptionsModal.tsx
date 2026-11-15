@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 import React, { useState, useEffect } from 'react';
 import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, getAllVineyards } from '@/lib/services';
 import { calculateLandSearchWork } from '../../services/workcalculators/landSearchWorkCalculator';
@@ -6,7 +7,6 @@ import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
 import { Button, UnifiedTooltip } from '@/components/ui';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
 import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 import {
@@ -34,8 +34,11 @@ const DualSlider: React.FC<{
   min: number;
   max: number;
   step?: number;
+  minimumLabel: string;
+  maximumLabel: string;
+  valueText: [string, string];
   onChange: (value: [number, number]) => void;
-}> = ({ value, min, max, step = 1, onChange }) => {
+}> = ({ value, min, max, step = 1, minimumLabel, maximumLabel, valueText, onChange }) => {
   return (
     <SliderPrimitive.Root
       min={min}
@@ -43,19 +46,60 @@ const DualSlider: React.FC<{
       step={step}
       value={value}
       onValueChange={(v) => onChange([v[0] as number, v[1] as number])}
-      className="relative flex items-center select-none touch-none w-full h-6"
+      className="relative flex items-center select-none touch-none w-full h-11"
     >
       <SliderPrimitive.Track className="bg-gray-700 relative grow rounded-full h-2">
         <SliderPrimitive.Range className="absolute bg-green-500 rounded-full h-full" />
       </SliderPrimitive.Track>
-      <SliderPrimitive.Thumb className="block w-4 h-4 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400" />
-      <SliderPrimitive.Thumb className="block w-4 h-4 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400" />
+      <SliderPrimitive.Thumb aria-label={minimumLabel} aria-valuetext={valueText[0]} className="block w-6 h-6 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400" />
+      <SliderPrimitive.Thumb aria-label={maximumLabel} aria-valuetext={valueText[1]} className="block w-6 h-6 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400" />
     </SliderPrimitive.Root>
   );
 };
 
 
-
+// Keep a local editing draft so values can be typed without fighting clamping while editing.
+const PreciseRangeInput: React.FC<{
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number | 'any';
+  onCommit: (value: number) => void;
+  rangeKey: string;
+}> = ({ label, value, min, max, step, onCommit, rangeKey }) => {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value, rangeKey]);
+  const commit = () => {
+    const parsed = draft.trim() === '' ? Number.NaN : Number(draft);
+    if (!Number.isFinite(parsed)) {
+      setDraft(String(value));
+      return;
+    }
+    const bounded = Math.max(min, Math.min(max, parsed));
+    const stepped = step === 'any' ? bounded : min + Math.round((bounded - min) / step) * step;
+    const next = Math.max(min, Math.min(max, step === 'any' ? stepped : Number(stepped.toPrecision(12))));
+    setDraft(String(next));
+    onCommit(next);
+  };
+  return (
+    <label className="block min-w-0 text-xs text-gray-300">
+      {label}
+      <input
+        type="number"
+        inputMode="decimal"
+        value={draft}
+        min={min}
+        max={max}
+        step={step}
+        onChange={event => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }}
+        className="mt-1 min-h-11 w-full rounded border border-gray-600 bg-gray-800 px-2 text-base text-white"
+      />
+    </label>
+  );
+};
 
 interface LandSearchOptionsModalProps {
   isOpen: boolean;
@@ -269,26 +313,20 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
   // Get all available regions for the multi-select (removed unused variable)
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl overflow-hidden flex flex-col scrollbar-styled w-[calc(100%-1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] min-w-0 gap-0 p-0 [&>button]:text-gray-200">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
+        <div className="flex justify-between items-start shrink-0 gap-3 p-4 pr-16 sm:p-6 sm:pr-16 border-b border-gray-700">
           <div>
-            <h2 className="text-2xl font-bold text-white">Land Search</h2>
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-white">Land Search</DialogTitle>
             <p className="text-sm text-gray-400 mt-1">Configure parameters for finding vineyard properties</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-styled">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 scrollbar-styled">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Region Selection */}
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               {/* Region Selection */}
               <div>
                 <label className="block text-sm font-medium text-white mb-3">
@@ -303,12 +341,12 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     </div>
                     <button
                       onClick={() => setOptions(prev => ({ ...prev, regions: [] }))}
-                      className="text-xs text-blue-400 hover:text-blue-300 underline"
+                      className="min-h-11 px-2 text-xs text-blue-400 hover:text-blue-300 underline"
                     >
                       Reset Selection
                     </button>
                   </div>
-                  <div className="grid grid-cols-5 gap-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2">
                     {Object.keys(COUNTRY_REGION_MAP).map((country) => {
                       // Check if all regions in this country are excluded
                       const countryRegions = [...(COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP] as readonly string[])];
@@ -316,9 +354,11 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                       const allRegionsExcluded = excludedCountryRegions.length === countryRegions.length;
                       
                       return (
-                        <div 
+                        <button
+                          type="button"
+                          aria-pressed={!allRegionsExcluded}
                           key={country} 
-                          className={`p-2 rounded border-dashed cursor-pointer transition-all duration-200 ${
+                          className={`min-h-11 min-w-0 break-words p-2 rounded border-dashed cursor-pointer transition-all duration-200 ${
                             allRegionsExcluded 
                               ? 'bg-gray-600 border-gray-500 text-gray-400 opacity-60' 
                               : 'bg-gray-800/50 border-gray-600 hover:bg-gray-700/50 text-gray-300 hover:text-white'
@@ -341,7 +381,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                               {excludedCountryRegions.length}/{countryRegions.length} excluded
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -396,7 +436,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                         <div className="text-xs font-medium text-gray-300 mb-2 uppercase tracking-wide">
                           {country}
                         </div>
-                        <div className="grid grid-cols-5 gap-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2">
                           {regions.map((region) => {
                             // Check if region is manually excluded
                             const isManuallyExcluded = options.regions.includes(region);
@@ -419,9 +459,12 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                                 : 'text-red-500 bg-red-50';
 
                             return (
-                              <div 
-                                key={region} 
-                                className={`p-2 rounded border-dashed cursor-pointer transition-all duration-200 ${
+                              <button
+                                type="button"
+                          aria-pressed={!isExcluded}
+                          disabled={isGrapeOrSoilFiltered}
+                          key={region}
+                                className={`min-h-11 min-w-0 break-words p-2 rounded border-dashed cursor-pointer transition-all duration-200 ${
                                   isExcluded 
                                     ? 'bg-gray-600 border-gray-500 text-gray-400 opacity-60' 
                                     : 'bg-gray-800/50 border-gray-600 hover:bg-gray-700/50 text-gray-300 hover:text-white'
@@ -448,7 +491,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                                     <div className="text-[10px] text-gray-500 mt-1">Filtered</div>
                                   )}
                                 </div>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -463,7 +506,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
             </div>
 
             {/* Middle Column - Combined Controls */}
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
             {/* Hectare Range */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
@@ -476,6 +519,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   const SLIDER_MAX = 1000;
                   const toHa = (s: number) => MIN_HA * Math.pow(MAX_HA / MIN_HA, s / SLIDER_MAX);
                   const toSlider = (ha: number) => {
+                    if (MAX_HA <= MIN_HA) return 0;
                     const clamped = Math.max(MIN_HA, Math.min(MAX_HA, ha));
                     return Math.round(Math.log(clamped / MIN_HA) / Math.log(MAX_HA / MIN_HA) * SLIDER_MAX);
                   };
@@ -485,6 +529,9 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     <div className="space-y-2">
                     <DualSlider
                       value={[minSlider, maxSlider]}
+                      minimumLabel="Minimum hectares"
+                      maximumLabel="Maximum hectares"
+                      valueText={options.hectareRange.map(value => `${formatNumber(value, { smartDecimals: true, smartMaxDecimals: true })} hectares`) as [string, string]}
                       min={0}
                       max={SLIDER_MAX}
                       step={1}
@@ -494,6 +541,10 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                         setOptions(prev => ({ ...prev, hectareRange: [newMin, newMax] }));
                       }}
                     />
+                      <div className="grid grid-cols-2 gap-3">
+                        <PreciseRangeInput rangeKey={options.hectareRange.join(':')} label="Minimum hectares" value={options.hectareRange[0]} min={MIN_HA} max={MAX_HA} step="any" onCommit={value => setOptions(previous => ({ ...previous, hectareRange: [Math.min(value, previous.hectareRange[1]), Math.max(value, previous.hectareRange[1])] }))} />
+                        <PreciseRangeInput rangeKey={options.hectareRange.join(':')} label="Maximum hectares" value={options.hectareRange[1]} min={MIN_HA} max={MAX_HA} step="any" onCommit={value => setOptions(previous => ({ ...previous, hectareRange: [Math.min(previous.hectareRange[0], value), Math.max(previous.hectareRange[0], value)] }))} />
+                      </div>
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
                         <span>{formatNumber(MIN_HA, { smartMaxDecimals: true })} ha</span>
                         <span>{formatNumber(MAX_HA, { smartDecimals: true, smartMaxDecimals: true })} ha</span>
@@ -518,6 +569,9 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     <div className="space-y-2">
                     <DualSlider
                       value={[currentMin, currentMax]}
+                      minimumLabel="Minimum normalized altitude"
+                      maximumLabel="Maximum normalized altitude"
+                      valueText={[`${formatNumber(currentMin * 100, { smartDecimals: true })}% of regional altitude range`, `${formatNumber(currentMax * 100, { smartDecimals: true })}% of regional altitude range`]}
                       min={MIN_N}
                       max={MAX_N}
                       step={STEP}
@@ -527,6 +581,10 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                         setOptions(prev => ({ ...prev, altitudeRange: [newMin, newMax] }));
                       }}
                     />
+                      <div className="grid grid-cols-2 gap-3">
+                        <PreciseRangeInput rangeKey={`${currentMin}:${currentMax}`} label="Minimum altitude (0 to 1)" value={currentMin} min={MIN_N} max={MAX_N} step={STEP} onCommit={value => setOptions(previous => ({ ...previous, altitudeRange: [Math.min(value, previous.altitudeRange?.[1] ?? MAX_N), Math.max(value, previous.altitudeRange?.[1] ?? MAX_N)] }))} />
+                        <PreciseRangeInput rangeKey={`${currentMin}:${currentMax}`} label="Maximum altitude (0 to 1)" value={currentMax} min={MIN_N} max={MAX_N} step={STEP} onCommit={value => setOptions(previous => ({ ...previous, altitudeRange: [Math.min(previous.altitudeRange?.[0] ?? MIN_N, value), Math.max(previous.altitudeRange?.[0] ?? MIN_N, value)] }))} />
+                      </div>
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
                         <span>{formatNumber(currentMin * 100, { smartDecimals: true })}%</span>
                         <span>{formatNumber(currentMax * 100, { smartDecimals: true })}%</span>
@@ -544,7 +602,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {GRAPE_VARIETIES.map((grape) => (
-                    <label key={grape} className="flex items-center cursor-pointer">
+                    <label key={grape} className="flex min-h-11 items-center cursor-pointer">
                       <input
                         type="checkbox"
                         checked={options.grapeVarieties?.includes(grape) || false}
@@ -573,12 +631,28 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <input
                   type="range"
+                  aria-label="Minimum grape suitability"
                   min="0"
                   max="1"
                   step="0.1"
                   value={options.minGrapeSuitability || 0}
                   onChange={(e) => setOptions(prev => ({ ...prev, minGrapeSuitability: Number(e.target.value) }))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                  className="min-h-11 w-full cursor-pointer accent-green-500"
+                />
+                <input
+                  type="number"
+                  aria-label="Minimum grape suitability precise value"
+                  className="mt-2 min-h-11 w-full rounded border border-gray-600 bg-gray-800 p-2 text-base text-white"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={options.minGrapeSuitability ?? 0}
+                  onChange={event => {
+                    if (event.target.validity.valid && Number.isFinite(event.target.valueAsNumber)) {
+                      const value = event.target.valueAsNumber;
+                      setOptions(previous => ({ ...previous, minGrapeSuitability: value }));
+                    }
+                  }}
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>Any Suitability</span>
@@ -596,7 +670,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {ASPECTS.map((aspect) => (
-                    <label key={aspect} className="flex items-center cursor-pointer">
+                    <label key={aspect} className="flex min-h-11 items-center cursor-pointer">
                       <input
                         type="checkbox"
                         checked={options.aspectPreferences?.includes(aspect) || false}
@@ -622,7 +696,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
                   {[...ALL_SOIL_TYPES].sort().map((soil) => (
-                    <label key={soil} className="flex items-center cursor-pointer">
+                    <label key={soil} className="flex min-h-11 items-center cursor-pointer">
                       <input
                         type="checkbox"
                         checked={options.soilTypes?.includes(soil) || false}
@@ -643,7 +717,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
             </div>
 
             {/* Right Column - Preview & Estimates */}
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               {/* Number of Options */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
@@ -651,12 +725,28 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <input
                   type="range"
+                  aria-label="Number of properties"
                   min="1"
                   max="10"
                   step="1"
                   value={options.numberOfOptions}
                   onChange={(e) => setOptions(prev => ({ ...prev, numberOfOptions: Number(e.target.value) }))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                  className="min-h-11 w-full cursor-pointer accent-green-500"
+                />
+                <input
+                  type="number"
+                  aria-label="Number of properties precise value"
+                  className="mt-2 min-h-11 w-full rounded border border-gray-600 bg-gray-800 p-2 text-base text-white"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={options.numberOfOptions ?? 1}
+                  onChange={event => {
+                    if (event.target.validity.valid && Number.isFinite(event.target.valueAsNumber)) {
+                      const value = event.target.valueAsNumber;
+                      setOptions(previous => ({ ...previous, numberOfOptions: value }));
+                    }
+                  }}
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>{formatNumber(1, { smartDecimals: true })}</span>
@@ -672,7 +762,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   <div>
                     <h4 className="text-sm font-medium text-white mb-2">Properties to Find</h4>
                     <div className="bg-blue-600 rounded-lg p-3 text-center">
-                      <div className="text-2xl font-bold text-white">{options.numberOfOptions}</div>
+                      <div className="text-xl sm:text-2xl font-bold text-white">{options.numberOfOptions}</div>
                       <div className="text-xs text-blue-100 mt-1">properties will be generated</div>
                     </div>
                   </div>
@@ -808,44 +898,44 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
               <div>
                 <h3 className="text-lg font-medium text-white mb-4">Search Criteria</h3>
                 <div className="bg-gray-800 rounded-lg p-4 space-y-2 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                     <span className="text-gray-400">Properties:</span>
                       <span className="text-white">{formatNumber(options.numberOfOptions, { smartDecimals: true })}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-gray-400">Regions:</span>
                       <span className="text-white">{options.regions.length > 0 ? `${formatNumber(redistributedProbabilities.length, { smartDecimals: true })} accessible` : 'All accessible'}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-gray-400">Hectares:</span>
                       <span className="text-white">{formatNumber(options.hectareRange[0], { smartDecimals: true })}-{formatNumber(options.hectareRange[1], { smartDecimals: true })}</span>
                     </div>
                     {options.altitudeRange && (
-                      <div className="flex justify-between">
+                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                         <span className="text-gray-400">Altitude:</span>
                         <span className="text-white">{formatNumber(options.altitudeRange[0], { smartDecimals: true })}-{formatNumber(options.altitudeRange[1], { smartDecimals: true })}m</span>
                     </div>
                   )}
                   {options.aspectPreferences && options.aspectPreferences.length > 0 && (
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-gray-400">Aspects:</span>
                       <span className="text-white">{options.aspectPreferences.length}</span>
                     </div>
                   )}
                   {options.soilTypes && options.soilTypes.length > 0 && (
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-gray-400">Soil Types:</span>
                       <span className="text-white">{options.soilTypes.length}</span>
                     </div>
                   )}
                   {options.grapeVarieties && options.grapeVarieties.length > 0 && (
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-gray-400">Grape Varieties:</span>
                       <span className="text-white">{options.grapeVarieties.join(', ')}</span>
                     </div>
                   )}
                   {options.minGrapeSuitability && options.minGrapeSuitability > 0 && (
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                       <span className="text-gray-400">Min Suitability:</span>
                       <span className="text-white">{formatNumber(options.minGrapeSuitability * 100, { smartDecimals: true })}%</span>
                     </div>
@@ -858,7 +948,8 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
+        {actionButtonHint && <p className="shrink-0 border-t border-gray-700 px-4 pt-3 text-sm text-amber-200" role="status">{actionButtonHint}</p>}
+        <div className="shrink-0 flex flex-col sm:flex-row sm:justify-end gap-2 p-4 sm:p-6 border-t [&_button]:min-h-11 [&_button]:whitespace-normal border-gray-700">
           <Button
             variant="outline"
             onClick={onClose}
@@ -873,7 +964,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
             <div>
               <Button
                 onClick={handleSubmit}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="min-h-11 h-auto w-full sm:w-auto whitespace-normal bg-green-600 hover:bg-green-700 text-white"
                 disabled={isLoadingVineyardLimit || isAtVineyardCountLimit || isAtTotalHectareLimit || !hasSearchableAreaCapacity}
               >
                 {isAtVineyardCountLimit
@@ -885,7 +976,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
             </div>
           </UnifiedTooltip>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

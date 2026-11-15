@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { WineContract, WineBatch } from '@/lib/types/types';
 import { fulfillContract, getEligibleWinesForContract } from '@/lib/services/sales/contractService';
 import { formatNumber } from '@/lib/utils/utils';
@@ -27,6 +28,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
   isLoading,
   withLoading
 }) => {
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [selectedWines, setSelectedWines] = useState<SelectedWine[]>([]);
   const [eligibleWines, setEligibleWines] = useState<Array<{ wine: WineBatch; validation: any }>>([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
@@ -148,24 +150,26 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent aria-describedby={undefined}
+        onOpenAutoFocus={() => { returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onCloseAutoFocus={(event) => { event.preventDefault(); returnFocusRef.current?.focus(); }} className="bg-white w-[calc(100vw-1rem)] max-w-4xl max-h-[calc(100dvh-1rem)] gap-0 p-0 overflow-hidden flex flex-col [&>button]:hidden">
         {/* Header */}
         <div className="bg-amber-600 text-white px-4 py-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Assign Wine to Contract</h3>
+          <DialogTitle className="text-lg font-semibold">Assign Wine to Contract</DialogTitle>
           <button
             onClick={onClose}
-            className="hover:bg-amber-700 rounded p-1"
+            aria-label="Close wine assignment" className="min-h-11 min-w-11 shrink-0 flex items-center justify-center hover:bg-amber-700 rounded p-1"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+        <div className="min-h-0 overflow-y-auto flex-1 p-3 sm:p-4 space-y-4">
           {/* Contract Details */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h4 className="font-semibold text-gray-900">{contract.customerName}</h4>
                 <p className="text-xs text-gray-600">{contract.customerType} • {contract.customerCountry}</p>
@@ -197,7 +201,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
               ? 'border-green-300 bg-green-50' 
               : 'border-gray-300 bg-gray-50'
           }`}>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-gray-900">Selected: {formatNumber(totalSelected)} bottles</p>
                 <p className="text-xs text-gray-600">
@@ -250,17 +254,17 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                           : 'border-gray-200 bg-white'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">
                             {formatCompletedWineName(wine)}
                           </p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                          <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-600">
                             <span>Available: {formatNumber(wine.quantity)} bottles</span>
                             <span>Taste Quality: {(tasteQualityIndex * 100).toFixed(0)}%</span>
                             <span>Structure: {(wine.structureIndex * 100).toFixed(0)}%</span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1">
+                          <div className="flex flex-wrap items-center gap-3 mt-1">
                             <div className="text-xs">
                               <span className="text-gray-600">
                                 {wine.askingPrice ? 'Asking' : 'Est. Value'}: 
@@ -295,7 +299,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                               const qty = Math.min(wine.quantity, Math.max(0, parseInt(e.target.value) || 0));
                               handleSelectWine(wine.id, qty);
                             }}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right"
+                            aria-label={`Bottles of ${formatCompletedWineName(wine)}`} inputMode="numeric" className="min-h-11 w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
                             placeholder="0"
                           />
                           <span className="text-xs text-gray-600">bottles</span>
@@ -310,23 +314,23 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between">
+        <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex shrink-0 flex-wrap gap-2 items-center justify-between">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm"
+            className="min-h-11 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm"
           >
             Cancel
           </button>
           <button
             onClick={handleFulfill}
             disabled={isLoading || !hasEnoughQuantity || eligibleWines.length === 0}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-11 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Fulfilling...' : 'Fulfill Contract'}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

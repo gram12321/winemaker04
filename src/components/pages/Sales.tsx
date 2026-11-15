@@ -85,10 +85,10 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
       <h2 className="text-xl font-semibold text-gray-800">Sales</h2>
       
       {/* Navigation Tabs */}
-      <div className="flex space-x-1 text-xs">
+      <div className="flex flex-wrap gap-1 text-xs">
         <button 
           onClick={() => setActiveTab('cellar')}
-          className={`px-3 py-1.5 rounded ${
+          className={`min-h-11 px-3 py-1.5 rounded ${
             activeTab === 'cellar' 
               ? 'bg-amber-600 text-white' 
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -98,7 +98,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         </button>
         <button 
           onClick={() => setActiveTab('orders')}
-          className={`px-3 py-1.5 rounded ${
+          className={`min-h-11 px-3 py-1.5 rounded ${
             activeTab === 'orders' 
               ? 'bg-amber-600 text-white' 
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -108,7 +108,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         </button>
         <button 
           onClick={() => setActiveTab('contracts')}
-          className={`px-3 py-1.5 rounded ${
+          className={`min-h-11 px-3 py-1.5 rounded ${
             activeTab === 'contracts' 
               ? 'bg-amber-600 text-white' 
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

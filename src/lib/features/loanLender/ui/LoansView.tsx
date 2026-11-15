@@ -94,7 +94,7 @@ export function LoansView() {
       {/* Active Loans Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <span className="text-lg">💰</span>
             Active Loans
           </CardTitle>
@@ -106,8 +106,8 @@ export function LoansView() {
               <p className="text-sm">Apply for a loan from available lenders below</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
+            <Table className=" max-lg:block max-lg:[&_tbody]:block max-lg:[&_tbody>tr]:mb-3 max-lg:[&_tbody>tr]:block max-lg:[&_tbody>tr]:rounded-lg max-lg:[&_tbody>tr]:border max-lg:[&_tbody>tr]:border-gray-200 max-lg:[&_tbody>tr]:p-3 max-lg:[&_td]:block max-lg:[&_td]:w-full max-lg:[&_td]:break-words max-lg:[&_td]:text-left">
+              <TableHeader className="hidden lg:table-header-group">
                 <TableRow>
                   <TableHead>Lender</TableHead>
                   <TableHead>Principal</TableHead>
@@ -145,30 +145,30 @@ export function LoansView() {
                       key={loan.id}
                       className={hasWarnings ? 'bg-red-50 border-l-4 border-l-red-400' : ''}
                     >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Lender</span>
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{loan.lenderName}</span>
                           <Badge className={getLenderTypeColorClass(loan.lenderType)}>
                             {loan.lenderType}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{formatNumber(loan.principalAmount, { currency: true })}</TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Principal</span>{formatNumber(loan.principalAmount, { currency: true })}</TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Origination fee</span>
                         <div className="text-orange-600 font-medium">
                           {formatNumber(loan.originationFee, { currency: true })}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Interest rate</span>
+                        <div className="flex flex-wrap items-center gap-2">
                           <span>{formatPercent(loan.effectiveInterestRate)}</span>
                           <Badge className={getEconomyPhaseColorClass(loan.economyPhaseAtCreation)}>
                             {loan.economyPhaseAtCreation}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{formatNumber(loan.seasonalPayment, { currency: true })}</TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Seasonal payment</span>{formatNumber(loan.seasonalPayment, { currency: true })}</TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Total interest</span>
                         <div className="text-sm">
                           <div className="font-medium">{formatNumber(totalInterest, { currency: true })}</div>
                           <div className="text-gray-500">
@@ -176,7 +176,7 @@ export function LoansView() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Total expenses</span>
                         <div className="text-sm">
                           <div className="font-medium text-red-600">{formatNumber(totalExpenses, { currency: true })}</div>
                           <div className="text-gray-500">
@@ -184,7 +184,7 @@ export function LoansView() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Remaining</span>
                         <div className="text-sm">
                           <div>{formatNumber(loan.remainingBalance, { currency: true })}</div>
                           <div className="text-gray-500">
@@ -192,7 +192,7 @@ export function LoansView() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Next payment</span>
                         <div className="text-sm">
                           <div>Week {loan.nextPaymentDue.week}</div>
                           <div className="text-gray-500">
@@ -200,7 +200,7 @@ export function LoansView() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Warnings</span>
                         <div className="space-y-2">
                           {isEmergencyLoan && (
                             <UnifiedTooltip
@@ -225,7 +225,7 @@ export function LoansView() {
                             </UnifiedTooltip>
                           )}
                           {hasWarnings ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Badge className="bg-red-100 text-red-800 border-red-200">
                                 {missedPayments}
                               </Badge>
@@ -241,8 +241,12 @@ export function LoansView() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Actions</span>
                         <div className="flex flex-col gap-2">
+                          <div className="text-xs text-gray-600 lg:hidden">
+                            Extra payment total: {extraTotalPaymentDisplay} (payment {seasonalPaymentDisplay} + administration {extraAdminFeeDisplay}).
+                            Full repayment: {repayInFullDisplay} (principal {formatNumber(loan.remainingBalance, { currency: true })} + prepayment indemnity {prepaymentPenaltyDisplay}).
+                          </div>
                           <UnifiedTooltip
                             content={
                               <div className="text-xs space-y-1">
@@ -258,7 +262,7 @@ export function LoansView() {
                               onClick={() => handleExtraPayment(loan.id)}
                               size="sm"
                               variant="outline"
-                              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                              className="min-h-11 h-auto whitespace-normal text-blue-600 border-blue-600 hover:bg-blue-50"
                             >
                               Make Extra Payment
                             </Button>
@@ -281,7 +285,7 @@ export function LoansView() {
                               onClick={() => handleRepayLoan(loan.id)}
                               size="sm"
                               variant="outline"
-                              className="text-green-600 border-green-600 hover:bg-green-50"
+                              className="min-h-11 h-auto whitespace-normal text-green-600 border-green-600 hover:bg-green-50"
                             >
                               Repay in Full
                             </Button>
@@ -302,7 +306,7 @@ export function LoansView() {
       {/* Search for Loan Offers */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <span className="text-lg">🔍</span>
             Search for Loan Offers
             <Badge variant="outline" className={`ml-2 ${getBadgeColorClasses(comprehensiveCreditRating).bg} ${getBadgeColorClasses(comprehensiveCreditRating).text}`}>
@@ -318,7 +322,7 @@ export function LoansView() {
               </p>
               <Button
                 onClick={handleSearchModalOpen}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
+                className="bg-blue-600 hover:bg-blue-700 min-h-11 h-auto whitespace-normal text-white px-3 sm:px-8 py-3 text-base sm:text-lg"
               >
                 🔍 Search for Loan Offers
               </Button>
@@ -389,26 +393,26 @@ export function LoansView() {
 
                                     {/* Credit Requirements */}
                                     <div className="space-y-2 text-sm">
-                                      <div className="flex justify-between">
+                                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                                         <span className="text-gray-600">Base Required:</span>
                                         <span className="font-medium">≥{formatPercent(lender.availability.baseRequirement / 100)}</span>
                                       </div>
 
-                                      <div className="flex justify-between">
+                                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                                         <span className="text-gray-600">Prestige Bonus:</span>
                                         <span className="font-medium text-green-600">
                                           +{formatPercent(lender.availability.prestigeBonus / 100)}
                                         </span>
                                       </div>
 
-                                      <div className="flex justify-between">
+                                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                                         <span className="text-gray-600">Adjusted Required:</span>
                                         <span className="font-medium">
                                           ≥{formatPercent(lender.availability.adjustedRequirement / 100)}
                                         </span>
                                       </div>
 
-                                      <div className="flex justify-between">
+                                      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
                                         <span className="text-gray-600">Your Credit:</span>
                                         <span className="font-medium text-blue-600">
                                           {formatPercent(comprehensiveCreditRating)}

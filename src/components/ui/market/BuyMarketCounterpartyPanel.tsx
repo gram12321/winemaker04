@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   BUY_MARKET_COUNTERPARTY_LEVELS,
   getBuyMarketRelationshipYearlyCap,
@@ -29,6 +30,7 @@ interface BuyMarketCounterpartyPanelProps {
 }
 
 export const BuyMarketCounterpartyPanel: React.FC<BuyMarketCounterpartyPanelProps> = ({ counterpartyName, relationship, companyValue, currentYear, unitsLabel }) => {
+  const isMobile = useIsMobile();
   const level = relationship?.level ?? 0;
   const config = BUY_MARKET_COUNTERPARTY_LEVELS[level];
   const nextLevel = level < 5 ? BUY_MARKET_COUNTERPARTY_LEVELS[(level + 1) as BuyMarketCounterpartyRelationshipLevel] : null;
@@ -37,13 +39,18 @@ export const BuyMarketCounterpartyPanel: React.FC<BuyMarketCounterpartyPanelProp
   const yearlyCap = getBuyMarketRelationshipYearlyCap(companyValue);
   const yearPoints = relationship?.yearGuardYear === currentYear ? relationship.yearRelationshipPoints : 0;
 
-  return <div className="space-y-2 rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs">
-    <div className="flex items-center justify-between"><span className="font-semibold text-blue-300">{getTrustIcon(level)} Market relationship</span><span className={`font-bold ${getBuyMarketCounterpartyTrustColor(level)}`}>{config.name}</span></div>
+  return <details open={!isMobile} className="rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs">
+    <summary className="flex min-w-0 cursor-pointer list-none flex-wrap items-center justify-between gap-x-2 gap-y-1">
+      <span className="font-semibold text-blue-300">{getTrustIcon(level)} Market relationship · {config.name}</span>
+      <span className="min-w-0 truncate text-gray-300">{counterpartyName ?? relationship?.counterpartyName ?? 'Unknown seller'}</span>
+    </summary>
+    <div className="mt-3 space-y-2 border-t border-blue-900/50 pt-3">
     <div className="text-gray-400">Seller: <strong className="text-white">{counterpartyName ?? relationship?.counterpartyName ?? 'Unknown'}</strong></div>
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-gray-400"><span>Total purchases: <strong className="text-white">{relationship?.totalPurchases ?? 0}</strong></span><span>Streak: <strong className="text-white">{relationship?.consecutiveYears ?? 0} {(relationship?.consecutiveYears ?? 0) === 1 ? 'year' : 'years'}</strong></span><span>Total bought: <strong className="text-white">{(relationship?.totalUnitsPurchased ?? 0).toLocaleString()} {unitsLabel}</strong></span></div>
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-gray-300"><span>Relationship score: <strong className="text-white">{score.toLocaleString()}</strong></span><span>Year cap: <strong className="text-white">{yearPoints.toLocaleString()} / {yearlyCap.toLocaleString()}</strong></span></div>
     {config.benefits.length > 0 && <ul className="space-y-0.5 text-gray-300">{config.benefits.map((benefit) => <li key={benefit}>• {benefit}</li>)}</ul>}
     {nextLevel && <div className="border-t border-blue-900/40 pt-2 text-amber-300">{scoreToNext === 0 ? `Ready to advance to ${nextLevel.name}!` : `${scoreToNext.toLocaleString()} relationship score to reach ${nextLevel.name}`}</div>}
     {!relationship && <div className="border-t border-blue-900/40 pt-2 text-amber-300">First purchase from this seller will establish this relationship.</div>}
-  </div>;
+    </div>
+  </details>;
 };

@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 import React, { useState } from 'react';
 import { SpecializedRole } from '@/lib/types/types';
 import type { StaffSearchOptions } from '../../services/workcalculators/staffSearchWorkCalculator';
@@ -6,7 +7,6 @@ import { startStaffSearch } from '../../services/activitymanagers/staffSearchMan
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui';
-import { X } from 'lucide-react';
 
 interface StaffSearchOptionsModalProps {
   isOpen: boolean;
@@ -54,23 +54,17 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
   const skillInfo = getSkillLevelInfo(options.skillLevel);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl overflow-hidden flex flex-col w-[calc(100%-1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] min-w-0 gap-0 p-0 [&>button]:text-gray-200">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
+        <div className="flex justify-between items-start shrink-0 gap-3 p-4 pr-16 sm:p-6 sm:pr-16 border-b border-gray-700">
           <div>
-            <h2 className="text-2xl font-bold text-white">Staff Search</h2>
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-white">Staff Search</DialogTitle>
             <p className="text-sm text-gray-400 mt-1">Configure parameters for finding new staff candidates</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column - Search Configuration */}
             <div className="space-y-6">
@@ -81,12 +75,28 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                 </label>
                 <input
                   type="range"
+                  aria-label="Number of candidates"
                   min="1"
                   max="10"
                   step="1"
                   value={options.numberOfCandidates}
                   onChange={(e) => setOptions(prev => ({ ...prev, numberOfCandidates: Number(e.target.value) }))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                  className="min-h-11 w-full cursor-pointer accent-green-500"
+                />
+                <input
+                  type="number"
+                  aria-label="Number of candidates precise value"
+                  className="mt-2 min-h-11 w-full rounded border border-gray-600 bg-gray-800 p-2 text-base text-white"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={options.numberOfCandidates ?? 1}
+                  onChange={event => {
+                    if (event.target.validity.valid && Number.isFinite(event.target.valueAsNumber)) {
+                      const value = event.target.valueAsNumber;
+                      setOptions(previous => ({ ...previous, numberOfCandidates: value }));
+                    }
+                  }}
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>1</span>
@@ -101,12 +111,28 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                 </label>
                 <input
                   type="range"
+                  aria-label="Minimum skill level"
                   min="0.1"
                   max="1.0"
                   step="0.1"
                   value={options.skillLevel}
                   onChange={(e) => setOptions(prev => ({ ...prev, skillLevel: Number(e.target.value) }))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                  className="min-h-11 w-full cursor-pointer accent-green-500"
+                />
+                <input
+                  type="number"
+                  aria-label="Minimum skill level precise value"
+                  className="mt-2 min-h-11 w-full rounded border border-gray-600 bg-gray-800 p-2 text-base text-white"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={options.skillLevel ?? 0.1}
+                  onChange={event => {
+                    if (event.target.validity.valid && Number.isFinite(event.target.valueAsNumber)) {
+                      const value = event.target.valueAsNumber;
+                      setOptions(previous => ({ ...previous, skillLevel: value }));
+                    }
+                  }}
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>Novice</span>
@@ -122,7 +148,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                 <label className="block text-sm font-medium text-white mb-3">Broad Roles (optional)</label>
                 <div className="space-y-2 mb-6">
                   {(Object.keys(SPECIALIZED_ROLES) as SpecializedRole[]).map(role => (
-                    <label key={role} className="flex items-start cursor-pointer">
+                    <label key={role} className="flex min-h-11 items-start cursor-pointer">
                       <input
                         type="checkbox"
                         checked={options.specializedRoles.includes(role)}
@@ -151,7 +177,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                   <div>
                     <h4 className="text-sm font-medium text-white mb-2">Candidates to Find</h4>
                     <div className="bg-blue-600 rounded-lg p-3 text-center">
-                      <div className="text-2xl font-bold text-white">{options.numberOfCandidates}</div>
+                      <div className="text-xl sm:text-2xl font-bold text-white">{options.numberOfCandidates}</div>
                       <div className="text-xs text-blue-100 mt-1">candidates will be generated</div>
                     </div>
                   </div>
@@ -227,7 +253,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
+        <div className="shrink-0 flex flex-col sm:flex-row sm:justify-end gap-2 p-4 sm:p-6 border-t [&_button]:min-h-11 [&_button]:whitespace-normal border-gray-700">
           <Button
             variant="outline"
             onClick={onClose}
@@ -237,13 +263,13 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="min-h-11 h-auto w-full sm:w-auto whitespace-normal bg-green-600 hover:bg-green-700 text-white"
           >
             Start Search ({formatNumber(searchWorkEstimate.cost, { currency: true })})
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

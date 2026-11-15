@@ -3,6 +3,7 @@ import type { WorkCategory } from '@/lib/types/types';
 import type { WorkFactor } from '../services/workcalculators/workCalculator';
 import { WorkCalculationTable } from './workCalculationTable';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/shadCN/dialog';
 
 export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group' | 'checkbox-group';
 
@@ -94,26 +95,18 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
   };
 
   return (
-    <div>
-      <div 
-        className={`bg-white rounded-lg shadow-lg overflow-y-auto scrollbar-styled ${maxWidthClasses[maxWidth]} w-full`}
-        style={{ maxHeight }}
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        onPointerDownOutside={(event) => event.preventDefault()}
+        className={`flex w-[calc(100%-1rem)] min-w-0 flex-col gap-0 overflow-hidden p-0 ${maxWidthClasses[maxWidth]}`}
+        style={{ maxHeight: `min(${maxHeight}, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem))` }}
       >
-      <div className="p-4 md:p-6">
-        <div className="flex justify-between items-start mb-4 md:mb-6 gap-2">
-          <h2 className="text-lg md:text-xl font-bold">{title}</h2>
-          <button
-            type="button"
-            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
-            onClick={onClose}
-          >
-            ✕
-          </button>
+        <div className="shrink-0 border-b p-4 pr-16 md:p-6 md:pr-16">
+          <DialogTitle className="text-lg md:text-xl font-bold break-words">{title}</DialogTitle>
+          {subtitle && <DialogDescription className="text-sm text-gray-600 mt-2">{subtitle}</DialogDescription>}
         </div>
-        
-        {subtitle && <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">{subtitle}</p>}
-        
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 scrollbar-styled">
           {/* Form Fields */}
           <div className="space-y-4 mb-6">
             {fields.map(field => (
@@ -139,7 +132,8 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                     >
                       <button
                         type="button"
-                        className="text-gray-400 hover:text-gray-600 text-sm ml-2"
+                        aria-label={`${field.label} information`}
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-500 hover:text-gray-700 text-sm ml-1"
                       >
                         ⓘ
                       </button>
@@ -151,7 +145,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                   <input
                     type="text"
                     id={field.id}
-                    className="w-full p-2 border rounded"
+                    className="min-h-11 w-full min-w-0 p-2 text-base border rounded"
                     value={options[field.id] as string || ''}
                     onChange={e => handleChange(field.id, e.target.value)}
                     required={field.required}
@@ -162,7 +156,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                   <input
                     type="number"
                     id={field.id}
-                    className="w-full p-2 border rounded"
+                    className="min-h-11 w-full min-w-0 p-2 text-base border rounded"
                     value={options[field.id] as number || ''}
                     onChange={e => handleChange(field.id, parseFloat(e.target.value))}
                     min={field.min}
@@ -175,7 +169,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                 {field.type === 'select' && field.options && (
                   <select
                     id={field.id}
-                    className="w-full p-2 border rounded"
+                    className="min-h-11 w-full min-w-0 p-2 text-base border rounded"
                     value={options[field.id] as string | number || ''}
                     onChange={e => handleChange(field.id, e.target.value)}
                     required={field.required}
@@ -193,12 +187,25 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                     <input
                       type="range"
                       id={field.id}
-                      className="w-full"
+                      className="min-h-11 w-full"
                       value={options[field.id] as number || field.min || 0}
                       onChange={e => handleChange(field.id, parseFloat(e.target.value))}
                       min={field.min}
                       max={field.max}
                       step={field.step}
+                    />
+                    <input
+                      type="number"
+                      aria-label={`${field.label} precise value`}
+                      className="mt-1 min-h-11 w-full rounded border p-2 text-base"
+                      value={options[field.id] ?? field.min ?? 0}
+                      min={field.min}
+                      max={field.max}
+                      step={field.step}
+                      onChange={event => {
+                        const value = event.target.valueAsNumber;
+                        if (event.target.validity.valid && Number.isFinite(value)) handleChange(field.id, value);
+                      }}
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>{field.min}</span>
@@ -211,7 +218,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                 {field.type === 'radio-group' && field.options && (
                   <div className="space-y-2 mt-1">
                     {field.options.map(option => (
-                      <div key={option.value} className="flex items-center">
+                      <div key={option.value} className="flex min-h-11 items-center">
                         <input
                           type="radio"
                           id={`${field.id}-${option.value}`}
@@ -233,7 +240,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                 {field.type === 'checkbox-group' && field.checkboxOptions && (
                   <div className="space-y-2 mt-1">
                     {field.checkboxOptions.map(option => (
-                      <label key={option.value} className="flex items-start cursor-pointer">
+                      <label key={option.value} className="flex min-h-11 items-start cursor-pointer gap-1">
                         <input
                           type="checkbox"
                           id={`${field.id}-${option.value}`}
@@ -281,7 +288,10 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
             </div>
           )}
           
-          <div className="mt-6 flex justify-end space-x-2">
+          </div>
+          <div className="shrink-0 border-t bg-white p-4 md:px-6">
+            {isSubmitDisabled && <p className="mb-3 text-sm text-amber-800" role="status">{disabledMessage}</p>}
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end [&_button]:min-h-11 [&_button]:whitespace-normal">
             <button
               type="button"
               className="px-4 py-2 border border-gray-300 rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50"
@@ -297,10 +307,10 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                 variant="panel"
                 density="compact"
               >
-                <span className="inline-block">
+                <span className="inline-block w-full sm:w-auto">
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded shadow-sm text-white bg-gray-400 cursor-not-allowed"
+                    className="w-full px-4 py-2 rounded shadow-sm text-white bg-gray-400 cursor-not-allowed"
                     disabled
                   >
                     {submitLabel}
@@ -315,11 +325,11 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
               {submitLabel}
             </button>
             )}
+            </div>
           </div>
         </form>
-      </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

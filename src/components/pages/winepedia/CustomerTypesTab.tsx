@@ -15,7 +15,7 @@ export function CustomerTypesTab() {
             description="Customer type characteristics"
           >
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium text-gray-700">Price Range:</span>
                   <p className="text-gray-600">

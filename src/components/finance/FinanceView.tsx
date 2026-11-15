@@ -234,9 +234,9 @@ export default function FinanceView() {
         }}
       >
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-900 to-transparent p-4">
-          <div className="flex justify-between items-end">
+          <div className="flex flex-wrap justify-between items-end gap-2">
             <div>
-              <h2 className="text-white text-2xl font-semibold flex items-center gap-3">
+              <h2 className="text-white text-xl sm:text-2xl font-semibold flex flex-wrap items-center gap-3">
                 <span className="text-2xl">💰</span>
                 Finance Management
               </h2>
@@ -250,7 +250,7 @@ export default function FinanceView() {
       </div>
 
       <Tabs defaultValue="income" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-transparent p-0 mb-4 space-x-2">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0 mb-4 [&>button]:min-h-11">
           <TabsTrigger
             value="income"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'income' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>

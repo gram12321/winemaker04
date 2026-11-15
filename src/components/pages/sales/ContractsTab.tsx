@@ -335,7 +335,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
 
       {/* Contract Generation Chance Display */}
       <div className="bg-white rounded-lg shadow p-3">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-2 justify-between items-center">
           <div>
             <h3 className="text-sm font-semibold">Contract Generation</h3>
             <p className="text-gray-500 text-xs">Current chance to receive new contracts</p>
@@ -514,12 +514,12 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
       {/* Contract Management */}
       {pendingContracts.length > 0 && (
         <div className="bg-white rounded-lg shadow p-3">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap gap-2 justify-between items-center">
             <div>
               <h3 className="text-sm font-semibold">Contract Management</h3>
               <p className="text-gray-500 text-xs">Manage pending contracts</p>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleRejectAll}
                 disabled={isLoading}
@@ -546,10 +546,21 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
         </div>
       </div>
 
+      {/* Phone sort controls retain every desktop sorting option. */}
+      <div className="flex flex-wrap items-center gap-2 lg:hidden" aria-label="Sort contracts">
+        <span className="text-xs text-gray-600">Sort by</span>
+        {contractColumns.map((column) => (
+          <button key={String(column.key)} type="button" onClick={() => handleContractSort(column.key)}
+            className="min-h-11 rounded border border-gray-300 bg-white px-3 py-2 text-xs"
+            aria-pressed={isContractColumnSorted(column.key)}>
+            {column.label} {getContractSortIndicator(column.key)}
+          </button>
+        ))}
+      </div>
       {/* Contracts Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <Table className="text-xs">
-          <TableHeader>
+        <Table className="text-xs max-lg:block max-lg:[&_tbody]:block max-lg:[&_tbody>tr]:mb-3 max-lg:[&_tbody>tr]:block max-lg:[&_tbody>tr]:rounded-lg max-lg:[&_tbody>tr]:border max-lg:[&_tbody>tr]:border-gray-200 max-lg:[&_tbody>tr]:p-3 max-lg:[&_td]:block max-lg:[&_td]:w-full max-lg:[&_td]:break-words max-lg:[&_td]:text-left">
+          <TableHeader className="hidden lg:table-header-group">
             <TableRow>
               <TableHead 
                 className="w-[140px]"
@@ -631,13 +642,13 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
               paginatedContracts.map((contract) => {
                 return (
                   <TableRow key={contract.id}>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Customer</span>
                       <div className="flex items-center gap-1">
                         <span className={getFlagIcon(contract.customerCountry)} style={{ width: '16px', height: '12px' }}></span>
                         <span className="font-medium">{contract.customerName}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Customer type</span>
                       <span className={`px-1.5 py-0.5 rounded text-xs ${getCustomerTypeBadge(contract.customerType)}`}>
                         {contract.customerType}
                       </span>
@@ -647,12 +658,12 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">{formatNumber(contract.requestedQuantity)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}</TableCell>
-                    <TableCell className="text-right font-semibold text-green-600">
+                    <TableCell className="text-right"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Quantity (bottles)</span>{formatNumber(contract.requestedQuantity)}</TableCell>
+                    <TableCell className="text-right"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Price per bottle</span>{formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}</TableCell>
+                    <TableCell className="text-right font-semibold text-green-600"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Total value</span>
                       {formatNumber(contract.totalValue, { currency: true, decimals: 2 })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Requirements</span>
                       <div className="space-y-0.5">
                         {contract.requirements.slice(0, 2).map((req, idx) => (
                           <div key={idx} className="text-xs text-gray-700">
@@ -679,52 +690,52 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Created</span>
                       {formatGameDateFromObject({
                         week: contract.createdWeek,
                         season: contract.createdSeason,
                         year: contract.createdYear
                       })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Expires</span>
                       {formatGameDateFromObject({
                         week: contract.expiresWeek,
                         season: contract.expiresSeason,
                         year: contract.expiresYear
                       })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Actions</span>
                       {contract.status === 'offered' && contract.contractMode === 'wine_presale' && (
-                        <div className="flex gap-1">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => handleAcceptPresaleContract(contract.id)}
                             disabled={isLoading}
-                            className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded disabled:opacity-50"
+                            className="min-h-11 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded disabled:opacity-50"
                           >
                             Accept
                           </button>
                           <button
                             onClick={() => handleRejectContract(contract.id)}
                             disabled={isLoading}
-                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                            className="min-h-11 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
                           >
                             Reject
                           </button>
                         </div>
                       )}
                       {contract.status === 'pending' && (
-                        <div className="flex gap-1">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => handleAssignWine(contract)}
                             disabled={isLoading}
-                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
+                            className="min-h-11 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
                           >
                             Assign Wine
                           </button>
                           <button
                             onClick={() => handleRejectContract(contract.id)}
                             disabled={isLoading}
-                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                            className="min-h-11 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
                           >
                             Reject
                           </button>
@@ -745,8 +756,8 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
           <h3 className="text-sm font-semibold text-gray-800">Harvest Forward Contracts</h3>
           <p className="text-xs text-gray-500">Bulk grape/must pre-sale agreements with upfront payment and later delivery.</p>
         </div>
-        <Table className="text-xs">
-          <TableHeader>
+        <Table className="text-xs max-lg:block max-lg:[&_tbody]:block max-lg:[&_tbody>tr]:mb-3 max-lg:[&_tbody>tr]:block max-lg:[&_tbody>tr]:rounded-lg max-lg:[&_tbody>tr]:border max-lg:[&_tbody>tr]:border-gray-200 max-lg:[&_tbody>tr]:p-3 max-lg:[&_td]:block max-lg:[&_td]:w-full max-lg:[&_td]:break-words max-lg:[&_td]:text-left">
+          <TableHeader className="hidden lg:table-header-group">
             <TableRow>
               <TableHead>Buyer</TableHead>
               <TableHead>Target</TableHead>
@@ -768,49 +779,49 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
             ) : (
               forwardContracts.map((contract) => (
                 <TableRow key={contract.id}>
-                  <TableCell className="font-medium">{contract.buyerName}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Buyer</span>{contract.buyerName}</TableCell>
+                  <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Target</span>
                     {contract.targetState}{contract.targetGrape ? ` / ${contract.targetGrape}` : ''}
                   </TableCell>
-                  <TableCell className="text-right">{formatNumber(contract.quantityKg)} {getForwardUnitLabel(contract)}</TableCell>
-                  <TableCell className="text-right">{formatNumber(contract.deliveredKg)} {getForwardUnitLabel(contract)}</TableCell>
-                  <TableCell className="text-right">{formatNumber(contract.totalValue, { currency: true, decimals: 2 })}</TableCell>
-                  <TableCell>{formatGameDateFromObject({ week: contract.dueWeek, season: contract.dueSeason, year: contract.dueYear })}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-right"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Quantity</span>{formatNumber(contract.quantityKg)} {getForwardUnitLabel(contract)}</TableCell>
+                  <TableCell className="text-right"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Delivered</span>{formatNumber(contract.deliveredKg)} {getForwardUnitLabel(contract)}</TableCell>
+                  <TableCell className="text-right"><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Value</span>{formatNumber(contract.totalValue, { currency: true, decimals: 2 })}</TableCell>
+                  <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Due</span>{formatGameDateFromObject({ week: contract.dueWeek, season: contract.dueSeason, year: contract.dueYear })}</TableCell>
+                  <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Status</span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-700">{contract.status}</span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell><span className="mb-1 block text-xs font-medium text-gray-500 lg:hidden">Actions</span>
                     {contract.status === 'offered' && (
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => handleAcceptForwardContract(contract.id)}
                           disabled={isLoading}
-                          className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded disabled:opacity-50"
+                          className="min-h-11 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded disabled:opacity-50"
                         >
                           Accept
                         </button>
                         <button
                           onClick={() => handleRejectForwardContract(contract.id)}
                           disabled={isLoading}
-                          className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                          className="min-h-11 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
                         >
                           Reject
                         </button>
                       </div>
                     )}
                     {contract.status === 'accepted' && (
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => handleAutoDeliverForwardContract(contract.id)}
                           disabled={isLoading}
-                          className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
+                          className="min-h-11 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
                         >
                           Auto Deliver
                         </button>
                         <button
                           onClick={() => handleRejectForwardContract(contract.id)}
                           disabled={isLoading}
-                          className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                          className="min-h-11 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
                         >
                           Cancel
                         </button>

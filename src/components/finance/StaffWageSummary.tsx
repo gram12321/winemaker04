@@ -37,19 +37,19 @@ export function StaffWageSummary() {
             <h4 className="font-semibold text-gray-800 text-sm uppercase tracking-wider">Wage Expenses</h4>
 
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
                 <span className="text-gray-600">Per Week</span>
                 <span className="font-medium text-gray-900">{formatNumber(weeklyWages, { currency: true })}</span>
               </div>
 
-              <div className="flex justify-between text-sm">
+              <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
                 <span className="text-gray-600">Per Season (12 weeks)</span>
                 <span className="font-medium text-gray-900">{formatNumber(seasonalWages, { currency: true })}</span>
               </div>
 
               <hr className="border-gray-300" />
 
-              <div className="flex justify-between text-sm">
+              <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-sm">
                 <span className="text-gray-700 font-medium">Per Year (4 seasons)</span>
                 <span className="font-bold text-gray-900">{formatNumber(yearlyWages, { currency: true })}</span>
               </div>
@@ -68,7 +68,7 @@ export function StaffWageSummary() {
             <h4 className="font-semibold text-gray-800 text-sm uppercase tracking-wider mb-3">Staff Members</h4>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {staff.map((member) => (
-                <div key={member.id} className="flex justify-between items-center text-sm py-2 border-b border-gray-200 last:border-0">
+                <div key={member.id} className="flex flex-wrap gap-2 justify-between items-center text-sm py-2 border-b border-gray-200 last:border-0">
                   <div>
                     <div className="font-medium text-gray-900">{member.name}</div>
                     <div className="text-xs text-gray-500">{member.nationality}</div>

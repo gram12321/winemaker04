@@ -1,10 +1,21 @@
 import { useGameState } from '@/hooks';
 import { buildWeatherReference, createWeatherWeekContext, getWeatherIcon } from '@/lib/features/weather';
+import { ResponsiveComparisonTable } from '@/components/ui';
 
 const reference = buildWeatherReference();
 
 export function WeatherTab() {
   const weather = createWeatherWeekContext(useGameState());
+  const vineyardIntensities = reference.vineyardMatrix[0]?.intensities ?? [];
+  const marketIntensities = reference.marketMatrix[0]?.intensities ?? [];
+  const vineyardRows = reference.vineyardMatrix.map((row) => ({
+    id: `vineyard-${row.state}`,
+    cells: [`${getWeatherIcon(row.state)} ${row.state}`, ...row.intensities.map((cell) => `×${cell.ripenessMultiplier.toFixed(2)} / ×${cell.healthMultiplier.toFixed(2)}`)],
+  }));
+  const marketRows = reference.marketMatrix.map((row) => ({
+    id: `market-${row.state}`,
+    cells: [`${getWeatherIcon(row.state)} ${row.state}`, ...row.intensities.map((cell) => `×${cell.priceMultiplier.toFixed(2)} / ×${cell.supplyMultiplier.toFixed(2)}`)],
+  }));
 
   return (
     <div className="space-y-5 text-sm">
@@ -27,13 +38,21 @@ export function WeatherTab() {
       <section>
         <p className="mb-1 font-medium">Vineyard weather multipliers</p>
         <p className="mb-2 text-xs text-slate-500">Each cell is ripeness / health multiplier applied to the normal weekly seasonal change.</p>
-        <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="border-b"><th className="p-1">State</th>{reference.vineyardMatrix[0].intensities.map((cell) => <th className="p-1" key={cell.intensity}>{cell.intensity}</th>)}</tr></thead><tbody>{reference.vineyardMatrix.map((row) => <tr className="border-b" key={row.state}><td className="p-1 font-medium">{getWeatherIcon(row.state)} {row.state}</td>{row.intensities.map((cell) => <td className="p-1" key={cell.intensity}>×{cell.ripenessMultiplier.toFixed(2)} / ×{cell.healthMultiplier.toFixed(2)}</td>)}</tr>)}</tbody></table></div>
+        <ResponsiveComparisonTable
+          label="Vineyard weather multipliers"
+          columns={['State', ...vineyardIntensities.map((cell) => cell.intensity)]}
+          rows={vineyardRows}
+        />
       </section>
 
       <section>
         <p className="mb-1 font-medium">Grape-market derivation</p>
         <p className="mb-2 text-xs text-slate-500">Each cell is the final price / supply multiplier after state pressure and intensity scaling, before the market clamps it.</p>
-        <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="border-b"><th className="p-1">State</th>{reference.marketMatrix[0].intensities.map((cell) => <th className="p-1" key={cell.intensity}>{cell.intensity}</th>)}</tr></thead><tbody>{reference.marketMatrix.map((row) => <tr className="border-b" key={row.state}><td className="p-1 font-medium">{getWeatherIcon(row.state)} {row.state}</td>{row.intensities.map((cell) => <td className="p-1" key={cell.intensity}>×{cell.priceMultiplier.toFixed(2)} / ×{cell.supplyMultiplier.toFixed(2)}</td>)}</tr>)}</tbody></table></div>
+        <ResponsiveComparisonTable
+          label="Grape market weather multipliers"
+          columns={['State', ...marketIntensities.map((cell) => cell.intensity)]}
+          rows={marketRows}
+        />
       </section>
 
       <section><p className="font-medium">Forecast behavior</p><p className="text-slate-500">{reference.forecastBehavior}</p></section>

@@ -211,7 +211,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                 <div key={entry.id} className="bg-white rounded-lg shadow overflow-hidden border">
                   {/* Card Header */}
                   <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-b">
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">{entry.grape}</h3>
                         <div className="text-sm text-gray-600 mt-1">{entry.vineyardName}</div>
@@ -243,15 +243,15 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                     </div>
 
                     <div className="border-t pt-3 space-y-2">
-                      <div className="flex justify-between text-sm">
+                      <div className="flex flex-col gap-1 text-sm sm:flex-row sm:justify-between">
                         <span className="text-gray-600">Bottles:</span>
                         <span className="font-medium">{entry.quantity} bottles</span>
                       </div>
-                      <div className="flex justify-between text-sm">
+                      <div className="flex flex-col gap-1 text-sm sm:flex-row sm:justify-between">
                         <span className="text-gray-600">Harvest Period:</span>
                         <span className="font-medium">{formatHarvestPeriod(entry.harvestDate)}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
+                      <div className="flex flex-col gap-1 text-sm sm:flex-row sm:justify-between">
                         <span className="text-gray-600">Bottled:</span>
                         <span className="font-medium">{formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}</span>
                       </div>
@@ -264,7 +264,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                           onClick={() => handleWineDetailsClick(entry)}
                           size="sm"
                           variant="outline"
-                          className="w-full text-purple-600 border-purple-600 hover:bg-purple-50 text-xs"
+                          className="min-h-11 w-full text-purple-600 border-purple-600 hover:bg-purple-50 text-xs"
                         >
                           View Wine Details
                         </Button>
@@ -293,7 +293,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="min-h-11 flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     disabled={page <= 1}
                     onClick={() => setPage(Math.max(1, page - 1))}
                   >
@@ -303,7 +303,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                     {page} / {totalPages}
                   </div>
                   <button
-                    className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="min-h-11 flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     disabled={page >= totalPages}
                     onClick={() => setPage(Math.min(totalPages, page + 1))}
                   >

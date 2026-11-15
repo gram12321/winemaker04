@@ -161,16 +161,16 @@ const Winery: React.FC = () => {
   const activeBatches = useMemo(() => wineBatches.filter(batch => batch.state !== 'bottled'), [wineBatches]);
 
   return (
-    <div className="space-y-3 text-sm">
+    <div className="min-w-0 space-y-3 text-sm break-words">
       {/* Winery Banner */}
       <div 
-        className="h-28 bg-cover bg-center rounded-lg relative"
+        className="min-h-40 sm:min-h-28 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=400&fit=crop')"
         }}
       >
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-900 to-transparent p-2.5">
-          <div className="flex justify-between items-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-end">
             <div>
               <h2 className="text-white text-base font-semibold flex items-center gap-2">
                 <span className="text-base">🍷</span>
@@ -182,7 +182,7 @@ const Winery: React.FC = () => {
               <div>{activeBatches.length} Active Batches</div>
               <Button
                 size="sm"
-                className="mt-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                className="min-h-11 mt-2 bg-emerald-600 text-white hover:bg-emerald-700"
                 onClick={() => setIsBuyMarketOpen(true)}
               >
                 Buy from Market
@@ -255,13 +255,13 @@ const Winery: React.FC = () => {
                 return (
                   <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   {/* Wine Batch Header */}
-                  <div className="flex justify-between items-start mb-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-start mb-3">
                     <h5 className="font-semibold text-gray-900 text-base">
                       {displayName}
                     </h5>
                     
                     {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 [&_button]:min-h-11">
                       <Button onClick={() => openModal('wine', batch.id)} size="sm" variant="outline" className="text-purple-600 border-purple-600 hover:bg-purple-50">
                         Wine Details
                       </Button>
@@ -295,9 +295,9 @@ const Winery: React.FC = () => {
                   {emptyingInProgress && <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">An Empty Vessel maintenance activity is in progress. Production actions are unavailable until it is cancelled or completed.</div>}
 
                   {/* 4-Grid Layout */}
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                     {/* Column 1: Overview */}
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-2">
                       <div className="text-xs font-medium text-gray-800">Overview</div>
                       <div className="text-xs text-gray-600">
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
@@ -323,7 +323,7 @@ const Winery: React.FC = () => {
                     </div>
 
                     {/* Column 2: Evolving Features */}
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-2">
                       <FeatureDisplay 
                         batch={batch} 
                         showEvolving={true}
@@ -334,7 +334,7 @@ const Winery: React.FC = () => {
                     </div>
 
                     {/* Column 3: Features */}
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-2">
                       <FeatureDisplay 
                         batch={batch} 
                         showEvolving={false}
@@ -345,7 +345,7 @@ const Winery: React.FC = () => {
                     </div>
 
                     {/* Column 4: Risks */}
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-2">
                       <FeatureDisplay 
                         batch={batch} 
                         showEvolving={false}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { GridCard, UnifiedTooltip, tooltipStyles } from '@/components/ui';
+import { GridCard, Button, UnifiedTooltip, tooltipStyles } from '@/components/ui';
 import { generateDefaultCharacteristics } from '@/lib/services/wine/characteristics/defaultCharacteristics';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { calculateGrapeDifficulty } from '@/lib/services';
@@ -44,17 +44,9 @@ export function GrapeVarietiesTab() {
     };
   });
 
-  if (selectedGrape) {
-    return (
-      <GrapeInfoView 
-        grapeName={selectedGrape}
-        isOpen={true}
-        onClose={() => setSelectedGrape(null)} 
-      />
-    );
-  }
-
   return (
+    <>
+    {selectedGrape && <GrapeInfoView grapeName={selectedGrape} isOpen={true} onClose={() => setSelectedGrape(null)} />}
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {grapeVarieties.map((grape, index) => {
@@ -89,7 +81,7 @@ export function GrapeVarietiesTab() {
                 variant="panel"
                 density="compact"
               >
-                <div className={`text-sm font-semibold mt-2 cursor-help inline-flex items-center gap-2 ${isLocked ? 'opacity-50' : ''}`}>
+                <div className={`text-sm font-semibold mt-2 cursor-help inline-flex flex-wrap items-center gap-2 ${isLocked ? 'opacity-50' : ''}`}>
                   <span>Grape Difficulty:</span>
                   <span>{grape.difficultyCategory}</span>
                   <span className={getColorClass(grape.difficulty.score)}>
@@ -97,13 +89,14 @@ export function GrapeVarietiesTab() {
                   </span>
                 </div>
               </UnifiedTooltip>
-              <div className={`text-sm font-medium ${isLocked ? 'text-gray-400' : 'text-blue-600'}`}>
-                Click to view details →
-              </div>
+              <Button id={`grape-details-${grape.name}`} type="button" variant="outline" className="min-h-11 h-auto w-full whitespace-normal" onClick={(event) => { event.stopPropagation(); setSelectedGrape(grape.name); }}>
+                View {grape.name} details
+              </Button>
             </GridCard>
           );
         })}
       </div>
     </div>
+    </>
   );
 }

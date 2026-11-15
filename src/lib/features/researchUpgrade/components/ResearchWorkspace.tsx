@@ -190,7 +190,7 @@ function getChainValueLabel(model: ResearchProjectModel): string | null {
 
 function getNodeClass(model: ResearchProjectModel, isSelected: boolean): string {
   return [
-    'min-h-[138px] w-[210px] shrink-0 rounded-lg border px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300',
+    'min-h-[138px] w-full sm:w-[210px] shrink-0 rounded-lg border px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300',
     NODE_STATUS_CLASSES[model.status],
     isSelected ? SELECTED_NODE_CLASS : '',
   ].filter(Boolean).join(' ');
@@ -588,7 +588,7 @@ export function ResearchWorkspace({
   const runningModels = projectModels.filter((model) => model.status === 'in-progress');
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6 break-words">
       {variant === 'player' ? (
         <section
           className="relative overflow-hidden rounded-xl border border-emerald-950/10 bg-emerald-950 text-white"
@@ -616,7 +616,7 @@ export function ResearchWorkspace({
               <div className="rounded-lg border border-white/10 bg-white/8 px-4 py-3">
                 <div className="text-xs uppercase tracking-wide text-emerald-100/70">Running</div>
                 <div className="mt-1 text-2xl font-semibold">{runningModels.length}</div>
-                <div className="truncate text-xs text-emerald-100/75">{runningModels[0]?.project.title || 'No active research'}</div>
+                <div className="break-words text-xs text-emerald-100/75">{runningModels[0]?.project.title || 'No active research'}</div>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/8 px-4 py-3">
                 <div className="text-xs uppercase tracking-wide text-emerald-100/70">Active Effects</div>
@@ -665,12 +665,14 @@ export function ResearchWorkspace({
 
           <div className="grid gap-3 lg:grid-cols-[1.4fr_repeat(2,minmax(0,0.75fr))_auto]">
             <Input
+              aria-label="Search research projects"
+              className="min-h-11"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search project, reward, prerequisite, or unlock"
             />
             <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Research map view" className="min-h-11">
                 <SelectValue placeholder="Map view" />
               </SelectTrigger>
               <SelectContent>
@@ -679,7 +681,7 @@ export function ResearchWorkspace({
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | ResearchStatus)}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Research project status" className="min-h-11">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -690,7 +692,7 @@ export function ResearchWorkspace({
                 <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center justify-end gap-2 rounded-md border px-3">
+            <div className="flex min-h-11 items-center justify-end gap-2 rounded-md border px-3">
               <Switch id={`${variant}-hide-completed`} checked={hideCompleted} onCheckedChange={setHideCompleted} />
               <Label htmlFor={`${variant}-hide-completed`} className="text-sm">Hide completed</Label>
             </div>
@@ -748,7 +750,7 @@ export function ResearchWorkspace({
                       </div>
                       <p className="mt-1 text-sm text-slate-600">{group.description}</p>
                     </div>
-                    <div className="min-w-[180px] text-xs text-slate-600">
+                    <div className="w-full min-w-0 md:w-48 text-xs text-slate-600">
                       <div className="flex justify-between gap-3">
                         <span>{stats.completed}/{stats.total} complete</span>
                         <span>{stats.available} available</span>
@@ -769,26 +771,27 @@ export function ResearchWorkspace({
                               </div>
                               <div className="mt-0.5 text-xs text-slate-500">{lane.detail}</div>
                             </div>
-                            <div className="min-w-[160px] text-xs text-slate-500">
+                            <div className="w-full min-w-0 md:w-40 text-xs text-slate-500">
                               <div className="text-right">{lane.completedSteps}/{lane.totalSteps}</div>
                               <Progress value={lane.progress} className="mt-1.5 h-1.5" />
                             </div>
                           </div>
 
-                          <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+                          <div className="mt-3 flex min-w-0 flex-col gap-2 pb-2 sm:flex-row sm:overflow-x-auto">
                             {lane.models.map((model, index) => {
                               const isSelected = model.project.id === selectedProjectId;
                               const isDisabled = readOnly || model.status !== 'available';
                               const chainValue = getChainValueLabel(model);
 
                               return (
-                                <div key={model.project.id} className="flex items-center gap-2">
+                                <div key={model.project.id} className="flex min-w-0 flex-col items-center gap-2 sm:shrink-0 sm:flex-row">
                                   <div
                                     id={`research-project-${model.project.id}`}
                                     role="button"
                                     tabIndex={0}
                                     onClick={() => setSelectedProjectId(model.project.id)}
                                     onKeyDown={(event) => {
+                                      if (event.target !== event.currentTarget) return;
                                       if (event.key === 'Enter' || event.key === ' ') {
                                         event.preventDefault();
                                         setSelectedProjectId(model.project.id);
@@ -806,6 +809,7 @@ export function ResearchWorkspace({
                                       <span>{formatNumber(model.totalCost, { currency: true, decimals: 0 })}</span>
                                       <span>{model.totalWork.toLocaleString()} work</span>
                                       <span>Difficulty {model.project.complexity}/10</span>
+                                      <a href="#research-project-brief" className="flex min-h-11 items-center underline underline-offset-2 xl:hidden" onClick={(event) => { event.stopPropagation(); setSelectedProjectId(model.project.id); }} aria-label={`Read project brief for ${model.project.title}`}>View project brief</a>
                                     </div>
                                     <div className="mt-2 flex items-center justify-between gap-2">
                                       <UnifiedTooltip
@@ -841,6 +845,7 @@ export function ResearchWorkspace({
                                       {!readOnly ? (
                                         <Button
                                           size="sm"
+                                          className="min-h-11"
                                           disabled={isDisabled}
                                           onClick={(event) => {
                                             event.stopPropagation();
@@ -858,7 +863,7 @@ export function ResearchWorkspace({
                                       ) : null}
                                     </div>
                                   </div>
-                                  {index < lane.models.length - 1 ? <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" /> : null}
+                                  {index < lane.models.length - 1 ? <ChevronRight className="h-4 w-4 shrink-0 rotate-90 text-slate-300 sm:rotate-0" /> : null}
                                 </div>
                               );
                             })}
@@ -882,6 +887,7 @@ export function ResearchWorkspace({
                                   tabIndex={0}
                                   onClick={() => setSelectedProjectId(model.project.id)}
                                   onKeyDown={(event) => {
+                                    if (event.target !== event.currentTarget) return;
                                     if (event.key === 'Enter' || event.key === ' ') {
                                       event.preventDefault();
                                       setSelectedProjectId(model.project.id);
@@ -894,6 +900,7 @@ export function ResearchWorkspace({
                                     {!readOnly ? (
                                       <Button
                                         size="sm"
+                                        className="min-h-11"
                                         disabled={isDisabled}
                                         onClick={(event) => {
                                           event.stopPropagation();
@@ -916,6 +923,7 @@ export function ResearchWorkspace({
                                     <span>{formatNumber(model.totalCost, { currency: true, decimals: 0 })}</span>
                                     <span>{model.totalWork.toLocaleString()} work</span>
                                     <span>Difficulty {model.project.complexity}/10</span>
+                                      <a href="#research-project-brief" className="flex min-h-11 items-center underline underline-offset-2 xl:hidden" onClick={(event) => { event.stopPropagation(); setSelectedProjectId(model.project.id); }} aria-label={`Read project brief for ${model.project.title}`}>View project brief</a>
                                     <span>{getGateLabel(model)}</span>
                                   </div>
                                 </div>
@@ -935,7 +943,7 @@ export function ResearchWorkspace({
             })}
           </div>
 
-          <aside className="xl:sticky xl:top-4 xl:h-fit">
+          <aside id="research-project-brief" tabIndex={-1} className="min-w-0 scroll-mt-4 xl:sticky xl:top-4 xl:h-fit">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Project Brief</CardTitle>
@@ -1079,7 +1087,7 @@ export function ResearchWorkspace({
                     <div className="flex flex-col gap-2">
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chain Context</div>
                       {selectedChainModels.length ? (
-                        <ScrollArea className="max-h-64">
+                        <ScrollArea className="max-h-none xl:max-h-64">
                           <div className="flex flex-col gap-2 pr-3">
                             {selectedChainModels.map((model) => {
                               const chainValue = getChainValueLabel(model);

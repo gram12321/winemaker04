@@ -78,7 +78,7 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex flex-wrap items-center gap-2">
               <Trophy className="h-5 w-5" />
               No Active Company
             </CardTitle>
@@ -99,11 +99,11 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 break-words">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-3">
             <Trophy className="h-8 w-8 text-yellow-500" />
             Achievements & Records
           </h2>
@@ -118,12 +118,12 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
         )}
       </div>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6 break-words">
 
         {/* Progress Overview */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <h3 className="text-lg font-semibold">Progress Overview</h3>
                 <p className="text-muted-foreground">
@@ -153,6 +153,8 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
               <Button
                 variant={selectedCategory === 'all' ? 'default' : 'outline'}
                 size="sm"
+                className="min-h-11"
+                aria-pressed={selectedCategory === 'all'}
                 onClick={() => setSelectedCategory('all')}
               >
                 All ({totalCount})
@@ -162,8 +164,9 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
                   key={value}
                   variant={selectedCategory === value ? 'default' : 'outline'}
                   size="sm"
+                  aria-pressed={selectedCategory === value}
                   onClick={() => setSelectedCategory(value)}
-                  className="flex items-center gap-2"
+                  className="min-h-11 h-auto flex flex-wrap items-center gap-2"
                 >
                   <Icon className="h-3 w-3" />
                   {label} ({achievementStats?.byCategory?.[value]?.total || 0})
@@ -245,7 +248,7 @@ export function AchievementsPage({ currentCompany, onBack, views, catalog }: Ach
 
                   {achievement.progress && (
                     <div className="space-y-2 mb-3">
-                      <div className="flex justify-between text-xs">
+                      <div className="flex flex-wrap justify-between gap-2 text-xs">
                         <span>Progress</span>
                         <span>
                           {achievement.progress.target >= 1000

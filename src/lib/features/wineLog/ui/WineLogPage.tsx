@@ -120,7 +120,7 @@ export function WineLog({ currentCompany }: CompanyProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 break-words">
       {/* Header */}
       <div>
         <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3 mb-2">
@@ -190,7 +190,7 @@ export function WineLog({ currentCompany }: CompanyProps) {
       </div>
 
       <Tabs defaultValue="history" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2 [&_button]:min-h-11 [&_button]:whitespace-normal">
           <TabsTrigger value="history">Production History</TabsTrigger>
           <TabsTrigger value="vineyard-stats">Vineyard Statistics</TabsTrigger>
         </TabsList>
@@ -202,7 +202,7 @@ export function WineLog({ currentCompany }: CompanyProps) {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedVineyard('all')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  className={`min-h-11 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
                     selectedVineyard === 'all'
                       ? 'bg-purple-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -216,7 +216,7 @@ export function WineLog({ currentCompany }: CompanyProps) {
                     <button
                       key={vineyard.id}
                       onClick={() => setSelectedVineyard(vineyard.id)}
-                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      className={`min-h-11 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
                         selectedVineyard === vineyard.id
                           ? 'bg-purple-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

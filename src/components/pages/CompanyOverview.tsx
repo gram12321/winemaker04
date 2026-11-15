@@ -272,21 +272,21 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
           backgroundImage: "url('https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&h=400&fit=crop')"
         }}
       >
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2">
-          <div className="flex justify-between items-end">
-            <div>
-              <h2 className="text-white text-base font-semibold flex items-center gap-2">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h2 className="flex items-center gap-2 break-words text-base font-semibold text-white">
                 <Building2 className="h-4 w-4" />
                 {company?.name || gameState.companyName || 'My Winery'}
               </h2>
               <p className="text-white/90 text-[10px] mt-0.5">{formatCompanyGameDate()}</p>
             </div>
             {onNavigate && (
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap justify-end gap-1.5">
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-2 py-1"
+                  className="min-h-10 bg-white/10 border-white/20 text-white hover:bg-white/20 px-2 py-1"
                   onClick={() => onNavigate('profile')}
                 >
                   Profile
@@ -294,7 +294,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-2 py-1"
+                  className="min-h-10 bg-white/10 border-white/20 text-white hover:bg-white/20 px-2 py-1"
                   onClick={() => onNavigate('highscores')}
                 >
                   Leaderboards

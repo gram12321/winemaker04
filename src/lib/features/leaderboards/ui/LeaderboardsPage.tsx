@@ -257,12 +257,12 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-12 h-12">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex shrink-0 items-center justify-center w-12 h-12">
                       {getRankIcon(index)}
                     </div>
                     <div>
-                      <div className="font-medium text-base">{score.companyName}</div>
+                      <div className="break-words font-medium text-base">{score.companyName}</div>
                       {currentCompanyId === score.companyId && (
                         <Badge variant="outline" className="text-xs mt-1">Your Company</Badge>
                       )}
@@ -288,7 +288,7 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
                 )}
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-2">
                     <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`text-lg font-bold ${getScoreColorClass(scoreType, score.value, index, scores.length)}`}>
@@ -308,11 +308,11 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
                       )}
                     </div>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex flex-wrap justify-between gap-2 text-sm">
                     <span className="text-gray-600">Game Date:</span>
                     <span className="text-gray-900">{formatGameDate(score)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex flex-wrap justify-between gap-2 text-sm">
                     <span className="text-gray-600">Achieved:</span>
                     <span className="text-gray-900">{score.achievedAt.toLocaleDateString()}</span>
                   </div>
@@ -326,12 +326,12 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
   }, [error, highscores, isLoading, currentCompanyId, getColumnTitle, getRankIcon, getScoreColorClass, getScoreCategory]);
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-w-0 min-h-screen bg-background p-2 sm:p-4 break-words">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col items-start justify-between gap-3 mb-6 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
               <Trophy className="h-8 w-8 text-yellow-500" />
               Global Leaderboards
             </h1>
@@ -375,10 +375,10 @@ export function LeaderboardsPage({ currentCompanyId, onBack }: LeaderboardPageIn
                     <TabsTrigger
                       key={scoreType}
                       value={scoreType}
-                      className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
+                      className="min-h-11 h-auto flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-normal text-left"
                     >
                       <span>{getTabIcon(scoreType)}</span>
-                      <span className="truncate max-w-[42vw] sm:max-w-none">{LEADERBOARD_DEFINITIONS[scoreType].tabTitle}</span>
+                      <span className="min-w-0">{LEADERBOARD_DEFINITIONS[scoreType].tabTitle}</span>
                     </TabsTrigger>
                   ))}
                 </TabsList>

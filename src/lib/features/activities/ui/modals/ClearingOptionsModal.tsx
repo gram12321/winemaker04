@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadCN/dialog';
 import React, { useState, useEffect } from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { formatNumber, getColorClass } from '@/lib/utils/utils';
@@ -147,23 +148,17 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
   const healthImprovement = projectedHealth - vineyard.vineyardHealth;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto scrollbar-styled">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent onPointerDownOutside={(event) => event.preventDefault()} aria-describedby={undefined} className="bg-white rounded-lg shadow-xl max-w-md w-full  overflow-hidden flex flex-col scrollbar-styled w-[calc(100%-1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] min-w-0 gap-0 p-0">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="flex justify-between items-start shrink-0 gap-3 p-4 pr-16 sm:p-6 sm:pr-16 border-b">
+          <DialogTitle className="text-xl font-bold text-gray-900">
             Clear Vineyard: {vineyard.name}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold"
-          >
-            ×
-          </button>
+          </DialogTitle>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
           <p className="text-gray-600">
             Select clearing tasks to improve the health of this {vineyard.hectares} hectare vineyard.
           </p>
@@ -187,7 +182,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             if (seasonalWarnings.length > 0) {
               return (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-center">
+                  <div className="flex min-h-11 items-center">
                     <div className="text-blue-600 mr-2">❄️</div>
                     <div className="text-sm text-blue-800">
                       <strong>Seasonal Restrictions:</strong> {seasonalWarnings.join(", ")}. You can still perform vine uprooting and replanting tasks.
@@ -200,7 +195,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             if (warnings.length > 0) {
               return (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-center">
+                  <div className="flex min-h-11 items-center">
                     <div className="text-yellow-600 mr-2">⚠️</div>
                     <div className="text-sm text-yellow-800">
                       <strong>Yearly Limits:</strong> {warnings.join(", ")}. You can still perform vine uprooting and replanting tasks.
@@ -238,7 +233,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             <h3 className="font-medium text-gray-900">Clearing Tasks</h3>
             
             {/* Clear Vegetation */}
-            <div className="flex items-center">
+            <div className="flex min-h-11 items-center">
               <input
                 type="checkbox"
                 id="clear-vegetation"
@@ -258,7 +253,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             </div>
             
             {/* Remove Debris */}
-            <div className="flex items-center">
+            <div className="flex min-h-11 items-center">
               <input
                 type="checkbox"
                 id="remove-debris"
@@ -277,7 +272,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             </div>
             
             {/* Uproot Vines */}
-            <div className="flex items-center">
+            <div className="flex min-h-11 items-center">
               <input
                 type="checkbox"
                 id="uproot-vines"
@@ -296,7 +291,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             </div>
             
             {/* Replant Vines */}
-            <div className="flex items-center">
+            <div className="flex min-h-11 items-center">
               <input
                 type="checkbox"
                 id="replant-vines"
@@ -321,12 +316,25 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                 </div>
                 <input
                   type="range"
+                  aria-label="Replanting intensity"
                   min={0}
                   max={100}
                   step={5}
                   value={options.replantingIntensity}
                   onChange={(e) => handleSliderChange(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  className="min-h-11 w-full cursor-pointer accent-green-600"
+                />
+                <input
+                  type="number"
+                  aria-label="Replanting intensity precise percent"
+                  className="min-h-11 w-full rounded border p-2 text-base"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={options.replantingIntensity}
+                  onChange={event => {
+                    if (event.target.validity.valid && Number.isFinite(event.target.valueAsNumber)) handleSliderChange(event.target.valueAsNumber);
+                  }}
                 />
                 <div className="text-sm text-gray-700 mt-1">
                   Replanting intensity: <span className="font-medium">{options.replantingIntensity}%</span>
@@ -422,7 +430,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
               {/* Gradual improvement info for replanting */}
               {options.tasks['replant-vines'] && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="w-3 h-3 bg-green-300 opacity-50 rounded"></div>
                     <span className="text-green-700 font-medium">Gradual Improvement:</span>
                     <span className="text-green-600">+{formatNumber(0.2 * options.replantingIntensity / 100 * 100, { smartDecimals: true })}% health over 5 years</span>
@@ -437,7 +445,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end space-x-3 p-6 border-t bg-gray-50">
+        <div className="shrink-0 flex flex-col sm:flex-row sm:justify-end gap-2 p-4 sm:p-6 border-t [&_button]:min-h-11 bg-gray-50">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -456,8 +464,8 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             Start Clearing
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

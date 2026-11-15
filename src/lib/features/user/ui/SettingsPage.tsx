@@ -140,11 +140,11 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 break-words">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-3">
             <SettingsIcon className="h-8 w-8" />
             Settings
           </h2>
@@ -152,7 +152,7 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
             Configure your game preferences for {currentCompany.name}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {onBack && (
             <Button variant="outline" onClick={onBack}>
               Back
@@ -166,7 +166,7 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
         </div>
       </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6 break-words">
           {/* Notifications */}
           <Card>
             <CardHeader>
@@ -179,14 +179,16 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <Label>Show Notifications</Label>
+                  <Label htmlFor="show-notifications">Show Notifications</Label>
                   <p className="text-sm text-muted-foreground">
                     Enable or disable popup notifications
                   </p>
                 </div>
                 <Switch
+                  id="show-notifications"
+                  className="shrink-0"
                   checked={settings.showNotifications}
                   onCheckedChange={handleNotificationToggle}
                   disabled={isLoading}
@@ -198,7 +200,7 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
           {/* Notification Filters */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Filter className="h-5 w-5" />
@@ -213,7 +215,7 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
                     variant="outline"
                     size="sm"
                     onClick={handleClearAllFilters}
-                    className="gap-2"
+                    className="min-h-11 gap-2"
                   >
                     <RotateCcw className="h-4 w-4" />
                     Reset to Default
@@ -237,15 +239,15 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
                       key={filter.id}
                       className="p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex min-w-0 items-start gap-3 flex-1">
                           {filter.type === 'origin' ? (
                             <Shield className="h-5 w-5 text-orange-600" />
                           ) : (
                             <Filter className="h-5 w-5 text-purple-600" />
                           )}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
                               <Badge variant={filter.type === 'origin' ? 'secondary' : 'outline'}>
                                 {filter.type === 'origin' ? 'Origin' : 'Category'}
                               </Badge>
@@ -261,17 +263,18 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={`Remove ${filter.value} notification filter`}
                           onClick={() => handleRemoveFilter(filter.id)}
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          className="min-h-11 min-w-11 shrink-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                       
                       {/* Block from history toggle */}
-                      <div className="flex items-center justify-between pl-8 pt-2 border-t">
+                      <div className="flex items-center justify-between gap-3 pt-2 border-t sm:pl-8">
                         <div className="space-y-0.5">
-                          <Label className="text-xs font-medium">
+                          <Label htmlFor={`block-history-${filter.id}`} className="text-xs font-medium">
                             {filter.blockFromHistory ? '🔇 Completely Silenced' : '📝 Saved to History'}
                           </Label>
                           <p className="text-xs text-muted-foreground">
@@ -281,6 +284,9 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
                           </p>
                         </div>
                         <Switch
+                          id={`block-history-${filter.id}`}
+                          aria-label={`Completely silence ${filter.value} notifications`}
+                          className="shrink-0"
                           checked={filter.blockFromHistory ?? false}
                           onCheckedChange={() => handleToggleBlockFromHistory(filter.id, filter.blockFromHistory ?? false)}
                           disabled={isLoading}
@@ -305,7 +311,7 @@ export function Settings({ currentCompany, notificationFilters: notificationFilt
 
       {/* Save Status */}
       {isLoading && (
-        <div className="fixed bottom-4 right-4">
+        <div role="status" className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 sm:left-auto">
           <Card>
             <CardContent className="p-3">
               <div className="flex items-center gap-2 text-sm">

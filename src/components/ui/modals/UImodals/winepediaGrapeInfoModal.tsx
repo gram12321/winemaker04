@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { GrapeVariety } from '@/lib/types/types';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { REGION_ALTITUDE_RANGES, REGION_HEAT_PROFILE } from '@/lib/constants/vineyardConstants';
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, WineCharacteristicsDisplay, UnifiedTooltip, tooltipStyles } from '@/components/ui';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, CardContent, CardHeader, CardTitle, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, WineCharacteristicsDisplay, UnifiedTooltip, tooltipStyles } from '@/components/ui';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, formatPercent, getColorClass, getGrapeDifficultyCategory, getGrapeDifficultyDescription } from '@/lib/utils';
 import { GrapeIcon } from '@/lib/utils/icons';
@@ -37,7 +37,7 @@ const DIFFICULTY_COMPONENT_LABELS: Record<keyof GrapeDifficultyComponents, strin
   grapeSuitability: 'Grape Suitability',
 };
 
-export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose }) => {
+export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose, isOpen = true }) => {
   const grapeMetadata = GRAPE_CONST[grapeName];
   if (!grapeMetadata) {
     return (
@@ -212,10 +212,11 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-4xl max-h-[85vh] shadow-lg flex flex-col scrollbar-styled">
-        <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
-        <div className="flex items-center gap-4">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById(`grape-details-${grapeName}`)?.focus(); }} className="flex w-[calc(100vw-1rem)] min-w-0 max-w-4xl max-h-[calc(100dvh-1rem)] flex-col gap-0 overflow-hidden p-0 shadow-lg break-words [&>button]:hidden">
+        <DialogDescription className="sr-only">Grape characteristics, difficulty, and regional suitability for {grapeMetadata.name}.</DialogDescription>
+        <CardHeader className="flex shrink-0 flex-row justify-between items-start gap-2 border-b p-3 sm:p-6">
+        <div className="flex min-w-0 items-center gap-3">
           <div>
             <GrapeIcon 
               variety={grapeName} 
@@ -224,8 +225,8 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
             />
           </div>
           <div>
-            <div className="flex items-center gap-3">
-          <CardTitle className="text-2xl font-bold text-wine">{grapeMetadata.name}</CardTitle>
+            <div className="flex flex-wrap items-center gap-3">
+          <DialogTitle asChild><CardTitle className="text-xl sm:text-2xl font-bold text-wine">{grapeMetadata.name}</CardTitle></DialogTitle>
               <Badge variant={grapeMetadata.grapeColor === 'red' ? 'destructive' : 'secondary'} className="uppercase tracking-wide">
                 {grapeMetadata.grapeColor}
               </Badge>
@@ -249,7 +250,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
               density="compact"
             >
               <div
-                className="mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold border border-wine/30 bg-wine/10 text-wine-dark cursor-help"
+                className="mt-2 inline-flex flex-wrap items-center rounded-full px-3 py-1 text-sm font-semibold border border-wine/30 bg-wine/10 text-wine-dark cursor-help"
               >
                 Grape Difficulty: {difficultyCategory} ·{' '}
                 <span className={`${getColorClass(difficulty.score)} ml-1`}>
@@ -259,10 +260,10 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
             </UnifiedTooltip>
           </div>
         </div>
-        <Button onClick={onClose} variant="ghost" size="sm">✕</Button>
+        <Button aria-label="Close grape details" onClick={onClose} variant="ghost" size="sm" className="min-h-11 min-w-11 shrink-0">✕</Button>
         </CardHeader>
         
-        <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto scrollbar-styled">
+        <CardContent className="min-h-0 min-w-0 p-3 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto overscroll-contain scrollbar-styled [&>*]:min-w-0">
         {/* Overview */}
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-wine-dark">Grape Overview</h3>
@@ -321,7 +322,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
         {/* Grape Difficulty */}
         <div className="md:col-span-2 space-y-3">
           <h3 className="text-lg font-semibold text-wine-dark">Grape Difficulty</h3>
-          <table className="w-full text-sm">
+          <table className="block w-full text-sm sm:table [&_tbody]:block sm:[&_tbody]:table-row-group [&_tr]:block sm:[&_tr]:table-row [&_td]:block sm:[&_td]:table-cell [&_td]:text-left">
             <tbody>
               {(Object.keys(DIFFICULTY_COMPONENT_LABELS) as Array<keyof GrapeDifficultyComponents>).map(componentKey => {
                 const componentScore = difficulty.components[componentKey];
@@ -445,7 +446,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                       {formatNumber(componentScore, { percent: true, percentIsDecimal: true, decimals: 0 })}
                       </div>
                       {componentKey === 'handling' && (
-                        <div className="flex justify-end items-center gap-2 mt-1 text-xs">
+                        <div className="flex flex-wrap justify-start sm:justify-end items-center gap-2 mt-1 text-xs">
                           <span className="text-muted-foreground">Fragility · Oxidation</span>
                           <span className="flex items-center gap-1 font-medium">
                             <span className={getColorClass(1 - grapeMetadata.fragile)}>
@@ -459,14 +460,14 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                         </div>
                       )}
                       {suitabilityDetails && componentKey === 'grapeSuitability' && (
-                        <div className="mt-1 text-xs space-y-1 text-right">
-                          <div className="flex justify-end items-center gap-2">
+                        <div className="mt-1 text-xs space-y-1 text-left sm:text-right">
+                          <div className="flex flex-wrap justify-start sm:justify-end items-center gap-2">
                             <span className="text-muted-foreground">Region match:</span>
                             <span className={`font-medium ${getColorClass(suitabilityDetails.regionAverage)}`}>
                               {formatNumber(suitabilityDetails.regionAverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
                             </span>
                           </div>
-                          <div className="flex justify-end items-center gap-2">
+                          <div className="flex flex-wrap justify-start sm:justify-end items-center gap-2">
                             <span className="text-muted-foreground">Altitude match:</span>
                             <span className={`font-medium ${getColorClass(suitabilityDetails.altitudeAverage)}`}>
                               {formatNumber(suitabilityDetails.altitudeAverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
@@ -476,7 +477,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                               {formatNumber(suitabilityDetails.altitudeCoverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
                             </span>
                           </div>
-                          <div className="flex justify-end items-center gap-2">
+                          <div className="flex flex-wrap justify-start sm:justify-end items-center gap-2">
                             <span className="text-muted-foreground">Sun match:</span>
                             <span className={`font-medium ${getColorClass(suitabilityDetails.sunAverage)}`}>
                               {formatNumber(suitabilityDetails.sunAverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
@@ -486,7 +487,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                               {formatNumber(suitabilityDetails.sunCoverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
                             </span>
                           </div>
-                          <div className="flex justify-end items-center gap-2">
+                          <div className="flex flex-wrap justify-start sm:justify-end items-center gap-2">
                             <span className="text-muted-foreground">Soil match:</span>
                             <span className={`font-medium ${getColorClass(suitabilityDetails.soilAverage)}`}>
                               {formatNumber(suitabilityDetails.soilAverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
@@ -509,7 +510,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
             <div className="space-y-3">
               <h4 className="text-md font-semibold text-wine-dark">Grape Suitability</h4>
               <Tabs defaultValue="region">
-              <TabsList className="grid grid-cols-4 w-full md:w-auto">
+              <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 w-full md:w-auto [&_button]:min-h-11 [&_button]:whitespace-normal">
                 <TabsTrigger value="region">Regions</TabsTrigger>
                 <TabsTrigger value="altitude">Altitude</TabsTrigger>
                 <TabsTrigger value="sun">Sun Exposure</TabsTrigger>
@@ -524,7 +525,8 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                       variant={suitabilityCountry === country ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setSuitabilityCountry(country)}
-                      className={suitabilityCountry === country ? 'bg-wine hover:bg-wine-dark' : ''}
+                      aria-pressed={suitabilityCountry === country}
+                      className={`min-h-11 ${suitabilityCountry === country ? 'bg-wine hover:bg-wine-dark' : ''}`}
                     >
                       {country}
                     </Button>
@@ -669,8 +671,8 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
 
         </div>
         </CardContent>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

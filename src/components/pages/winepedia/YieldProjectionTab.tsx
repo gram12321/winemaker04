@@ -39,6 +39,7 @@ function createVineyard(overrides: Partial<Vineyard>): Vineyard {
 }
 
 export function YieldProjectionTab() {
+  const [selectedHeatmapCell, setSelectedHeatmapCell] = useState(0);
   const [country, setCountry] = useState<string>('France');
   const [region, setRegion] = useState<string>('Bordeaux');
   
@@ -214,44 +215,44 @@ export function YieldProjectionTab() {
           {/* Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <select className="w-full p-2 border rounded" value={country} onChange={e => { setCountry(e.target.value); setRegion(COUNTRY_REGION_MAP[e.target.value as keyof typeof COUNTRY_REGION_MAP][0]); }}>
+              <label htmlFor="yield-country" className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+              <select id="yield-country" className="min-h-11 w-full p-2 border rounded" value={country} onChange={e => { setCountry(e.target.value); setRegion(COUNTRY_REGION_MAP[e.target.value as keyof typeof COUNTRY_REGION_MAP][0]); }}>
                 {availableCountries.map((c: string) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-              <select className="w-full p-2 border rounded" value={region} onChange={e => setRegion(e.target.value)}>
+              <label htmlFor="yield-region" className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+              <select id="yield-region" className="min-h-11 w-full p-2 border rounded" value={region} onChange={e => setRegion(e.target.value)}>
                 {(availableRegions || []).map((r: string) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Grape Variety</label>
-              <select className="w-full p-2 border rounded" value={grape} onChange={e => setGrape(e.target.value as GrapeVariety)}>
+              <label htmlFor="yield-grape" className="block text-sm font-medium text-gray-700 mb-1">Grape Variety</label>
+              <select id="yield-grape" className="min-h-11 w-full p-2 border rounded" value={grape} onChange={e => setGrape(e.target.value as GrapeVariety)}>
                 {GRAPE_VARIETIES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hectares</label>
-              <input className="w-full p-2 border rounded" type="number" min={0.1} step={0.1} value={hectares} onChange={e => setHectares(Number(e.target.value))} />
+              <label htmlFor="yield-hectares" className="block text-sm font-medium text-gray-700 mb-1">Hectares</label>
+              <input id="yield-hectares" className="min-h-11 w-full p-2 border rounded" type="number" min={0.1} step={0.1} value={hectares} onChange={e => setHectares(Number(e.target.value))} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Density (vines/ha)</label>
-              <input className="w-full p-2 border rounded" type="number" min={500} step={100} value={density} onChange={e => setDensity(Number(e.target.value))} />
+              <label htmlFor="yield-density" className="block text-sm font-medium text-gray-700 mb-1">Density (vines/ha)</label>
+              <input id="yield-density" className="min-h-11 w-full p-2 border rounded" type="number" min={500} step={100} value={density} onChange={e => setDensity(Number(e.target.value))} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ripeness</label>
-              <input className="w-full" type="range" min={0} max={1} step={0.01} value={ripeness} onChange={e => setRipeness(Number(e.target.value))} />
+              <label htmlFor="yield-ripeness" className="block text-sm font-medium text-gray-700 mb-1">Ripeness</label>
+              <input id="yield-ripeness" className="min-h-11 w-full" type="range" min={0} max={1} step={0.01} value={ripeness} onChange={e => setRipeness(Number(e.target.value))} />
               <div className="text-xs text-gray-500">{formatNumber(ripeness, { decimals: 2, forceDecimals: true })}</div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Health</label>
-              <input className="w-full" type="range" min={0} max={1} step={0.01} value={health} onChange={e => setHealth(Number(e.target.value))} />
+              <label htmlFor="yield-health" className="block text-sm font-medium text-gray-700 mb-1">Health</label>
+              <input id="yield-health" className="min-h-11 w-full" type="range" min={0} max={1} step={0.01} value={health} onChange={e => setHealth(Number(e.target.value))} />
               <div className="text-xs text-gray-500">{formatNumber(health, { decimals: 2, forceDecimals: true })}</div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vine Age (years)</label>
-              <input className="w-full" type="range" min={0} max={50} step={1} value={vineAge} onChange={e => setVineAge(Number(e.target.value))} />
+              <label htmlFor="yield-vine-age" className="block text-sm font-medium text-gray-700 mb-1">Vine Age (years)</label>
+              <input id="yield-vine-age" className="min-h-11 w-full" type="range" min={0} max={50} step={1} value={vineAge} onChange={e => setVineAge(Number(e.target.value))} />
               <div className="text-xs text-gray-500">{vineAge} years (Vine Yield: {formatNumber(calculateBaselineVineYield(vineAge), { decimals: 2, forceDecimals: true })})</div>
             </div>
             <div className="flex items-end">
@@ -271,9 +272,9 @@ export function YieldProjectionTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Yield vs Ripeness</h4>
-              <div className="h-64 w-full">
+              <div className="h-64 min-w-0 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={yieldVsRipeness}>
+                  <LineChart accessibilityLayer data={yieldVsRipeness}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="ripeness" domain={[0, 1]} tickFormatter={(v) => formatNumber(v, { decimals: 1, forceDecimals: true })} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
@@ -289,9 +290,9 @@ export function YieldProjectionTab() {
             </div>
             <div>
               <h4 className="font-semibold mb-2">Yield vs Age</h4>
-              <div className="h-64 w-full">
+              <div className="h-64 min-w-0 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={yieldVsAge}>
+                  <LineChart accessibilityLayer data={yieldVsAge}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
@@ -313,9 +314,9 @@ export function YieldProjectionTab() {
               <div className="text-sm text-gray-600 mb-2">
                 Includes grape–region suitability via the core yield function. Density fixed to current value; ripeness {formatNumber(ripeness, {decimals:2, forceDecimals:true})}, age {vineyardAge}y, health {formatNumber(health, {decimals:2, forceDecimals:true})}.
               </div>
-              <div className="h-64 w-full">
+              <div className="h-64 min-w-0 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={yieldVsHectares}>
+                  <LineChart accessibilityLayer data={yieldVsHectares}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="hectares" tickFormatter={(v) => `${formatNumber(v, { decimals: 2 })} ha`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
@@ -338,9 +339,9 @@ export function YieldProjectionTab() {
               <div className="text-sm text-gray-600 mb-2">
                 Shows the expected vine yield progression over time with min/max bands representing the possible range from randomness in updateVineyardVineYields.
               </div>
-              <div className="h-64 w-full">
+              <div className="h-64 min-w-0 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={vineYieldProgression}>
+                  <ComposedChart accessibilityLayer data={vineYieldProgression}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 2, forceDecimals: true })} />
@@ -410,26 +411,47 @@ export function YieldProjectionTab() {
                 };
                 return (
                   <div>
-                    <div className="overflow-auto">
+                    <div className="mb-3 space-y-2 text-sm">
+                      <p>Inspect a heatmap cell by tapping it or selecting its coordinates below. Swipe horizontally to see the complete map.</p>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <label>Heatmap ripeness
+                          <select className="min-h-11 w-full rounded border px-2" value={selectedHeatmapCell % ripenessSteps} onChange={(event) => setSelectedHeatmapCell(Math.floor(selectedHeatmapCell / ripenessSteps) * ripenessSteps + Number(event.target.value))}>
+                            {Array.from({ length: ripenessSteps }, (_, index) => <option key={index} value={index}>{formatNumber(index / (ripenessSteps - 1), { decimals: 2, forceDecimals: true })}</option>)}
+                          </select>
+                        </label>
+                        <label>Heatmap vine age
+                          <select className="min-h-11 w-full rounded border px-2" value={Math.floor(selectedHeatmapCell / ripenessSteps)} onChange={(event) => setSelectedHeatmapCell(Number(event.target.value) * ripenessSteps + selectedHeatmapCell % ripenessSteps)}>
+                            {Array.from({ length: ageSteps }, (_, index) => <option key={index} value={index}>{formatNumber(index / (ageSteps - 1) * 200, { decimals: 0 })} years</option>)}
+                          </select>
+                        </label>
+                      </div>
+                      <p role="status" className="font-medium">Ripeness {formatNumber(cells[selectedHeatmapCell].r, { decimals: 2, forceDecimals: true })}, age {formatNumber(cells[selectedHeatmapCell].a, { decimals: 0 })} years: {formatNumber(cells[selectedHeatmapCell].y, { decimals: 0 })} kg</p>
+                    </div>
+                    <div role="region" aria-label="Yield heatmap" tabIndex={0} className="max-w-full overflow-auto">
                       <div
                         className="grid"
                         style={{
-                          gridTemplateColumns: `repeat(${ripenessSteps}, minmax(8px, 1fr))`,
-                          gridTemplateRows: `repeat(${ageSteps}, minmax(8px, 1fr))`,
+                          gridTemplateColumns: `repeat(${ripenessSteps}, 20px)`,
+                          gridTemplateRows: `repeat(${ageSteps}, 20px)`,
                           gap: 1
                         }}
                       >
                         {cells.map((c, idx) => (
-                          <div
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            aria-label={`Ripeness ${formatNumber(c.r, { decimals: 2, forceDecimals: true })}, age ${formatNumber(c.a, { decimals: 0 })} years, yield ${formatNumber(c.y, { decimals: 0 })} kg`}
+                            aria-pressed={selectedHeatmapCell === idx}
+                            onClick={() => setSelectedHeatmapCell(idx)}
                             key={idx}
                             title={`Ripeness ${formatNumber(c.r, {decimals:2, forceDecimals:true})}, Age ${formatNumber(c.a, {decimals:0})}y\nYield ${formatNumber(c.y, {decimals:0})} kg`}
                             style={{ background: toColor(c.y) }}
-                            className="w-4 h-4 md:w-5 md:h-5"
+                            className={`w-5 h-5 ${selectedHeatmapCell === idx ? 'ring-2 ring-inset ring-black' : ''}`}
                           />
                         ))}
                       </div>
                     </div>
-                    <div className="flex justify-between mt-2 text-xs text-gray-600">
+                    <div className="flex flex-wrap justify-between gap-2 mt-2 text-xs text-gray-600">
                       <div>Ripeness 0 → 1</div>
                       <div>Age 200y (top to bottom)</div>
                     </div>
