@@ -986,7 +986,12 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number,
     description: `Market Purchase: ${roundedQuantity} kg ${offer.grape_variety} (${stateLabel(offer.batch_state)}) from ${offer.supplier_name}`,
     category: TRANSACTION_CATEGORIES.SUPPLIES,
   });
-  if (purchase.error || !purchase.data?.transaction) {
+  if (purchase.error) {
+    console.error('Grape market purchase failed:', purchase.error);
+    const detail = typeof purchase.error.message === 'string' ? purchase.error.message : 'Unknown database error';
+    return { success: false, error: `Could not complete the grape purchase: ${detail}` };
+  }
+  if (!purchase.data?.transaction) {
     return { success: false, error: 'Offer availability, vessel capacity, or funds changed. Please reopen the market.' };
   }
   await syncPersistedTransaction(purchase.data.transaction);

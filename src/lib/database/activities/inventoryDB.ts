@@ -111,7 +111,10 @@ export const toWineBatchRow = (batch: WineBatch, companyId = getCurrentCompanyId
 
 export async function prepareWineBatchForInsert(batch: WineBatch, companyId: string): Promise<Record<string, unknown>> {
   await ensureBatchNumber(batch);
-  return toWineBatchRow(batch, companyId);
+  return {
+    ...toWineBatchRow(batch, companyId),
+    updated_at: new Date().toISOString(),
+  };
 }
 
 export const saveWineBatch = async (batch: WineBatch): Promise<void> => {

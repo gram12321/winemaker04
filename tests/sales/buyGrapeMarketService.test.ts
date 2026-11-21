@@ -471,8 +471,18 @@ describe('buy grape market service', () => {
 
     const result = await purchaseBuyGrapeOffer('offer-1', 120, ['vessel-1']);
 
-    expect(result.success).toBe(false);
+    expect(result).toEqual({ success: false, error: 'Could not complete the grape purchase: purchase failed' });
     expect(mocks.syncPersistedTransaction).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes an atomic validation rejection from a database error', async () => {
+    mocks.purchaseGrapeMarketOfferAtomically.mockResolvedValueOnce({ data: null, error: null } as any);
+    const { purchaseBuyGrapeOffer } = await import('@/lib/services/sales/buyGrapeMarketService');
+
+    await expect(purchaseBuyGrapeOffer('offer-1', 120, ['vessel-1'])).resolves.toEqual({
+      success: false,
+      error: 'Offer availability, vessel capacity, or funds changed. Please reopen the market.',
+    });
   });
 
   it('keeps a paid purchase when a UI update listener fails', async () => {

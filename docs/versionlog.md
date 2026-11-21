@@ -61,6 +61,22 @@ Use this structure for every new entry:
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.3501 - Grape Market Purchase Repair
+**Date:** 2026-11-21 | **Commit(s):** 0a1f0f6563604ef791987ff1bb00b71fa4919428 | **Stats:** 56 insertions(+), 3 deletions(-)
+
+### Summary
+- Restored privileged execution for the atomic grape purchase RPC while keeping its idempotency table inaccessible to client roles.
+- Included the required wine batch update timestamp in purchase inserts and returned database failures separately from validation rejections.
+
+### Changes
+- **NEW FILE:** `migrations/20261121120000_restore_grape_purchase_rpc_security.sql` (35 lines) - restore `SECURITY DEFINER` and a fixed search path for the purchase RPC.
+- `src/lib/database/activities/inventoryDB.ts` (+4/-1) - add `updated_at` to the prepared insert payload used by local and global grape purchases.
+- `src/lib/services/sales/buyGrapeMarketService.ts` (+6/-1) and `tests/sales/buyGrapeMarketService.test.ts` (+11/-1) - distinguish database failures from atomic validation rejections and cover both outcomes.
+
+### Notes
+- `git diff --check` passed; tests were not run.
+
+---
 ## Version 0.338e-0.338i - Staff Feature Isolation and Cleanup
 **Date:** 2026-07-20 | **Commit(s):** e80c1a4, fb564e3, 3430044, 0a818f6, 8aa52ac | **Stats:** 1,189 insertions(+), 1,669 deletions(-)
 
